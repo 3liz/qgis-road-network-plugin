@@ -33,17 +33,25 @@ FIRST_VERSION = "0.1.0"
 # as it correspond to the list of tables
 # created for the first version
 TABLES_FOR_FIRST_VERSION = [
-    "glossary_test_category",
+    "edges",
+    "glossary_road_class",
+    "markers",
     "metadata",
-    "test",
+    "nodes",
+    "roads",
+    "v_road_without_zero_marker",
 ]
 
 # Expected list of tables for current version
 # Must be changed any time the SQL structure is changed
 TABLES_FOR_CURRENT_VERSION = [
-    "glossary_test_category",
+    "edges",
+    "glossary_road_class",
+    "markers",
     "metadata",
-    "test",
+    "nodes",
+    "roads",
+    "v_road_without_zero_marker",
 ]
 
 
