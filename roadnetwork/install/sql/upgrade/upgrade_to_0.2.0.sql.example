@@ -1,0 +1,2 @@
+-- Rename file into upgrade_to_0.2.0.sql to use it for upgrading to 0.2.0
+-- CREATE TABLE road_graph.foo (id serial primary key);

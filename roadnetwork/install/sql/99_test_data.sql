@@ -1,0 +1,5 @@
+BEGIN;
+
+-- TABLES
+
+COMMIT;

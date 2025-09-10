@@ -1,0 +1,28 @@
+variables:
+  PLUGIN_NAME: "roadnetwork"
+  GIT_SUBMODULE_STRATEGY: recursive
+
+stages:
+- package 📦
+
+package:
+  stage: package 📦
+  only:
+    - schedules
+    - tags
+  script:
+    - >
+      docker run
+      --rm -w /plugin
+      -v ${CI_PROJECT_DIR}:/plugin
+      -u $(id -u):$(id -g)
+      3liz/qgis-plugin-ci:latest
+      package ${CI_COMMIT_REF_NAME}
+      --allow-uncommitted-changes
+      --disable-submodule-update
+  tags:
+    - factory
+  artifacts:
+    expose_as: 'QGIS package'
+    paths:
+      - ${PLUGIN_NAME}.${CI_COMMIT_REF_NAME}.zip
