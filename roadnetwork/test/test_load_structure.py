@@ -5,7 +5,7 @@ import time
 
 import psycopg2
 
-from qgis.core import Qgis, QgsApplication, QgsProcessingException
+from qgis.core import Qgis, QgsApplication
 from qgis.testing import unittest
 
 if Qgis.QGIS_VERSION_INT >= 30800:
