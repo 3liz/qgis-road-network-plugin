@@ -12,3 +12,4 @@ flake8-isort
 isort
 pylint
 pre-commit
+ruff
