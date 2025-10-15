@@ -1,0 +1,30 @@
+[general]
+name=roadnetwork
+qgisMinimumVersion=3.40
+description=roadnetwork
+
+# Done by qgis-plugin-ci
+version=master
+changelog=
+commitNumber=
+commitSha1=
+dateTime=
+# End of qgis-plugin-ci
+
+author=3Liz
+email=info@3liz.com
+tags=roadnetwork
+about=roadnetwork
+icon=resources/icons/icon.png
+category=
+tracker=https://github.com/3liz/qgis-liz-example-plugin
+repository=https://github.com/3liz/qgis-liz-example-plugin
+homepage=https://github.com/3liz/qgis-liz-example-plugin
+experimental=True
+deprecated=False
+
+hasProcessingProvider=True
+
+[roadnetwork]
+schemaVersion=1
+schemaName=road_graph

@@ -1,0 +1,140 @@
+# This section is not used for building anything
+# but it is informative and most of theses informations
+# should be the same as the plugin's metatada.txt
+[project]
+name = "roadnetwork"
+version = "0.1.0a1"
+description = "An exemple of plugin development setup"
+authors = [
+    { name = "3Liz", email = "info@3liz.com" }
+]
+requires-python = ">= 3.10"
+license = "GPL-2.0-only"
+license-files = ["LICENSE"]
+readme = "README.md"
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+
+# See https://packaging.python.org/en/latest/specifications/well-known-project-urls/
+# for wellknown urls
+[projects.urls]
+tracker = "https://github.com/3liz/qgis-road-network-plugin"
+repository = "https://github.com/3liz/qgis-road-network-plugin"
+homepage = "https://github.com/3liz/qgis-road-network-plugin"
+
+# Organize dependencies so that uv can build appropriates
+# requirement files for CI
+[dependency-groups]
+dev = [
+    "pre-commit",
+    {include-group = "tests"},
+    {include-group = "lint"},
+]
+tests = [
+    "pytest >= 5.3",
+    "psycopg[binary]",
+]
+lint = [
+    "ruff",
+    "mypy",
+    "bandit",
+    "vulture",
+]
+packaging = [
+    "qgis-plugin-ci>= 2.7.0",
+]
+doc = [
+    "mkdocs-material>=7.0.0,<10.0.0",
+    "mkdocs-git-revision-date-localized-plugin",
+]
+
+#
+# Qgis plugin ci
+#
+# https://opengisch.github.io/qgis-plugin-ci/index.html
+#
+
+[qgis-plugin-ci]
+plugin_path = "roadnetwork"
+github_organization_slug = "3liz"
+project_slug = "qgis-road-network-plugin"
+transifex_organization = "3liz-1"
+transifex_project = "road-network"
+transifex_resource = "road-network"
+transifex_coordinator = "mdouchin"
+changelog_include = true
+
+#
+# Ruff
+#
+# https://doc.astral.sh/ruff/configuration
+#
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+exclude = [
+    ".venv",
+    ".local",
+]
+
+[tool.ruff.format]
+indent-style = "space"
+
+[tool.ruff.lint]
+extend-select = ["E", "F", "I", "ANN", "W", "T", "COM", "RUF"]
+# COM812 conflict with formatter
+ignore = [
+    "ANN002",
+    "ANN003",
+    "T201",
+    "COM812",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"test/*" = [
+    "T201",
+]
+"__init__.py" = [
+    "F401",
+]
+
+[tool.ruff.lint.isort]
+lines-between-types = 1
+known-first-party = [
+    "roadnetwork",
+]
+known-third-party = [
+    "qgis",
+]
+order-by-type = true
+
+[tool.ruff.lint.flake8-annotations]
+ignore-fully-untyped = true
+suppress-none-returning = true
+suppress-dummy-args = true
+
+#
+# Mypy
+#
+[tool.mypy]
+python_version = "3.10"
+
+[[tool.mypy.overrides]]
+module = "qgis.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "osgeo.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "processing.*"
+ignore_missing_imports = true

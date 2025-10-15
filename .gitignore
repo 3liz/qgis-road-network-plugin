@@ -1,0 +1,67 @@
+# IDE
+.idea/
+*.code-workspace
+
+# Python
+*.py[cod]
+.venv
+venv
+
+# C extensions
+*.so
+
+# Packages
+*.egg
+*.egg-info
+# dist Needed for schemaspy
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+
+# Translations
+*.mo
+*.ts
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+*.orig
+*.rej
+*~
+*.o
+*.swp
+*.pyc
+*.DS_Store
+
+*.zip
+*.bak
+
+.localconfig.mk
+.docker-venv-*
+
+# QGIS-Plugin-CI
+plugins.xml
+roadnetwork.*.zip
+roadnetwork/i18n/
+
+docs/database
+
+.docker/road_graph/
+.test-migration-*

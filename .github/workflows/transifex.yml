@@ -1,0 +1,26 @@
+name: Transifex 🗺
+
+on:
+  push:
+    paths:
+      - '**.py'
+      - '**.ui'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.repository == '3liz/qgis-liz-example-plugin'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2.2.2
+      with:
+        python-version: "3.10"
+
+    - name: Install qgis-plugin-ci
+      run: pip install -r requirements/packaging.txt
+
+    - name: Push to Transifex
+      run: qgis-plugin-ci push-translation ${{ secrets.TRANSIFEX_TOKEN }}
