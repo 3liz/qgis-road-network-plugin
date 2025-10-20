@@ -7,6 +7,7 @@ from ..plugin_tools.resources import (
 )
 from .alg_configure_plugin import ConfigurePlugin
 from .alg_create_database_local_interface import CreateDatabaseLocalInterface
+from .alg_import_data import ImportData
 from .database import (
     CreateDatabaseStructure,
     UpgradeDatabaseStructure,
@@ -30,6 +31,7 @@ class Provider(QgsProcessingProvider):
         self.addAlgorithm(UpgradeDatabaseStructure())
 
         self.addAlgorithm(CreateDatabaseLocalInterface())
+        self.addAlgorithm(ImportData())
 
         # Put the flag back to yes
         QgsExpressionContextUtils.setGlobalVariable(f"{self.id()}_get_database_data", "yes")
