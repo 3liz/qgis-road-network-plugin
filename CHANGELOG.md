@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-## 0.1.0 - 2025-07-22
+## 0.1.0 - 2025-10-31
 
-### Changed
+### Added
 
 First version of the plugin
