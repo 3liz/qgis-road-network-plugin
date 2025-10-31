@@ -29,10 +29,10 @@ class ImportData(BaseProcessingAlgorithm):
         return tr("Import data")
 
     def group(self):
-        return tr("Import/export")
+        return tr("Editing")
 
     def groupId(self):
-        return f"{plugin_name_normalized()}_import_export"
+        return f"{plugin_name_normalized()}_editing"
 
     def shortHelpString(self):
         short_help = tr(
