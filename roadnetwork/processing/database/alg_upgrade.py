@@ -160,7 +160,7 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
         migrations = resources.available_migrations(db_version)
 
         # Loop sql files and run SQL code
-        for new_db_version, version, sql_file in migrations:
+        for new_db_version, sql_file in migrations:
             with sql_file.open() as f:
                 sql = f.read()
                 if len(sql.strip()) == 0:
@@ -175,7 +175,7 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
                     sql = sql.replace(f" {resources.schema_name()};", f" {schema};")
 
                 # Add SQL database version in adresse.metadata
-                feedback.pushInfo(tr("* NEW DB VERSION ") + new_db_version)
+                feedback.pushInfo(tr("* NEW DB VERSION ") + str(new_db_version))
                 sql += f"""
                     UPDATE {schema}.metadata
                     SET (me_version, me_version_date)
