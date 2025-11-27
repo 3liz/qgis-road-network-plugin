@@ -188,22 +188,6 @@
          </widget>
         </item>
         <item>
-         <widget class="QGroupBox" name="groupBox_4">
-          <property name="title">
-           <string>Help</string>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_5">
-           <item>
-            <widget class="QPushButton" name="button_online_help">
-             <property name="text">
-              <string>Online help</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -229,7 +213,6 @@
   <tabstop>button_create_database_structure</tabstop>
   <tabstop>button_create_database_local_interface</tabstop>
   <tabstop>button_upgrade_database_structure</tabstop>
-  <tabstop>button_online_help</tabstop>
  </tabstops>
  <resources/>
  <connections/>

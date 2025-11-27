@@ -1,5 +1,3 @@
-import webbrowser
-
 from functools import partial
 from typing import Optional
 
@@ -59,11 +57,6 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
 
         # Buttons not linked to algs
         # todo
-
-        # Open online help
-        button = self.findChild(QPushButton, "button_online_help")
-        if button:
-            button.clicked.connect(self.on_line_help)
 
         # Connect on project load or new
         self.project = QgsProject.instance()
@@ -204,20 +197,3 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
-
-    @staticmethod
-    def open_external_resource(uri, is_url=True):
-        """
-        Opens a file with default system app
-        """
-        prefix = ""
-        if not is_url:
-            prefix = "file://"
-        webbrowser.open_new(rf"{prefix}{uri}")
-
-    def on_line_help(self):
-        """
-        Display the help on concepts
-        """
-        url = "https://docs.3liz.org/qgis-liz-example-plugin/"
-        self.open_external_resource(url)

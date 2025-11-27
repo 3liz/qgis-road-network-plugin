@@ -18,6 +18,7 @@ from .plugin_tools.resources import (
 from .processing.provider import Provider
 from .processing.tools import plugin_name_normalized
 
+import webbrowser
 
 class Plugin:
     def __init__(self, iface):
@@ -26,6 +27,7 @@ class Plugin:
         self.iface = iface
         self.action_toggle_hover_tool = None
         self.action_toggle_dock = None
+        self.action_open_help = None
         self.hover_map_tool = HoverMapTool(iface.mapCanvas())
 
         try:
@@ -79,6 +81,18 @@ class Plugin:
         self.action_toggle_dock.triggered.connect(self.toggle_dock)
         self.action_toggle_dock.setChecked(self.dock.isUserVisible())
 
+        # Add help action
+        self.action_open_help = QAction(
+            QIcon(str(resources_path('icons', 'open_help_32.png'))),
+            tr('Open online help'),
+            self.iface.mainWindow()
+        )
+        self.iface.addPluginToMenu(
+            '&RoadNetwork',
+            self.action_open_help
+        )
+        self.action_open_help.triggered.connect(self.open_help)
+
         # Plugin toolbar
         self.toolbar = self.iface.addToolBar('&Road Network')
         self.toolbar.setObjectName("RoadNetworkToolbar")
@@ -112,6 +126,23 @@ class Plugin:
             (self.iface.mapCanvas().mapTool() == self.hover_map_tool)
         )
 
+    @staticmethod
+    def open_external_resource(uri, is_url=True):
+        """
+        Opens a file with default system app
+        """
+        prefix = ""
+        if not is_url:
+            prefix = "file://"
+        webbrowser.open_new(rf"{prefix}{uri}")
+
+    def open_help(self):
+        """
+        Open online help
+        """
+        url = "https://docs.3liz.org/qgis-road-network-plugin/"
+        self.open_external_resource(url)
+
     def unload(self):
         """ Unload plugin """
         if self.dock:
@@ -130,6 +161,13 @@ class Plugin:
                 self.action_toggle_dock
             )
             del self.action_toggle_dock
+        if self.action_open_help:
+            self.toolbar.removeAction(self.action_open_help)
+            self.iface.removePluginMenu(
+                '&RoadNetwork',
+                self.action_open_help
+            )
+            del self.action_open_help
 
         if self.provider:
             QgsApplication.processingRegistry().removeProvider(self.provider)
