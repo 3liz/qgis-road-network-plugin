@@ -47,7 +47,6 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
             "upgrade_database_structure",
             "create_database_local_interface",
             "import_data",
-            "create_editing_session",
         ]
         for alg in self.algorithms:
             button = self.findChild(QPushButton, f"button_{alg}")

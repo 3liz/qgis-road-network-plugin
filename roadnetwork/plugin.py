@@ -15,10 +15,13 @@ from .plugin_tools.resources import (
     resources_path,
 )
 
+import processing
+
 from .processing.provider import Provider
 from .processing.tools import plugin_name_normalized
 
 import webbrowser
+
 
 class Plugin:
     def __init__(self, iface):
@@ -28,6 +31,7 @@ class Plugin:
         self.action_toggle_hover_tool = None
         self.action_toggle_dock = None
         self.action_open_help = None
+        self.action_clone_data_to_editing_session = None
         self.hover_map_tool = HoverMapTool(iface.mapCanvas())
 
         try:
@@ -69,7 +73,7 @@ class Plugin:
 
         # Add plugin menu Open/close the dock from plugin menu
         self.action_toggle_dock = QAction(
-            QIcon(str(resources_path('icons', 'toggle_dock_32.png'))),
+            QIcon(str(resources_path('icons', 'toggle_dock.png'))),
             tr('Show/hide administration dock'),
             self.iface.mainWindow()
         )
@@ -83,7 +87,7 @@ class Plugin:
 
         # Add help action
         self.action_open_help = QAction(
-            QIcon(str(resources_path('icons', 'open_help_32.png'))),
+            QIcon(str(resources_path('icons', 'open_help.png'))),
             tr('Open online help'),
             self.iface.mainWindow()
         )
@@ -93,12 +97,23 @@ class Plugin:
         )
         self.action_open_help.triggered.connect(self.open_help)
 
+        # Create editing session action
+        self.action_clone_data_to_editing_session = QAction(
+            QIcon(str(resources_path('icons', 'clone_to_editing_session.png'))),
+            tr('Clone data to editing session'),
+            self.iface.mainWindow()
+        )
+        self.action_clone_data_to_editing_session.triggered.connect(
+            self.clone_data_to_editing_session
+        )
+
         # Plugin toolbar
         self.toolbar = self.iface.addToolBar('&Road Network')
         self.toolbar.setObjectName("RoadNetworkToolbar")
 
         # Ajout des actions dans la barre
         self.toolbar.addAction(self.action_toggle_hover_tool)
+        self.toolbar.addAction(self.action_clone_data_to_editing_session)
         self.toolbar.addAction(self.action_toggle_dock)
 
     def toggle_hover_tool(self):
@@ -111,8 +126,6 @@ class Plugin:
             self.iface.actionIdentify().trigger()
         else:
             self.iface.mapCanvas().setMapTool(self.hover_map_tool)
-
-        # self.action_toggle_hover_tool.setChecked(not is_active)
 
     def toggle_dock(self):
         """ Open the dock. """
@@ -143,6 +156,15 @@ class Plugin:
         url = "https://docs.3liz.org/qgis-road-network-plugin/"
         self.open_external_resource(url)
 
+    def clone_data_to_editing_session(self):
+        """
+        Run the alg which clone data from road_graph to editing_session
+        """
+        # Run alg
+        param = {}
+        alg_name = "roadnetwork:create_editing_session"
+        processing.execAlgorithmDialog(alg_name, param)
+
     def unload(self):
         """ Unload plugin """
         if self.dock:
@@ -152,8 +174,11 @@ class Plugin:
         if self.action_toggle_hover_tool:
             self.toolbar.removeAction(self.action_toggle_hover_tool)
             del self.action_toggle_hover_tool
-        self.iface.mainWindow().removeToolBar(self.toolbar)
+        if self.action_clone_data_to_editing_session:
+            self.toolbar.removeAction(self.action_clone_data_to_editing_session)
+            del self.action_clone_data_to_editing_session
 
+        # Remove plugin menu actions
         if self.action_toggle_dock:
             self.toolbar.removeAction(self.action_toggle_dock)
             self.iface.removePluginMenu(
@@ -169,5 +194,9 @@ class Plugin:
             )
             del self.action_open_help
 
+        # Remove toolbar
+        self.iface.mainWindow().removeToolBar(self.toolbar)
+
+        # Remove processing provider
         if self.provider:
             QgsApplication.processingRegistry().removeProvider(self.provider)
