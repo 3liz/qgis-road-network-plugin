@@ -25,6 +25,7 @@ class Plugin:
         self.dock = None
         self.iface = iface
         self.action_toggle_hover_tool = None
+        self.action_toggle_dock = None
         self.hover_map_tool = HoverMapTool(iface.mapCanvas())
 
         try:
@@ -64,12 +65,27 @@ class Plugin:
             self.toggle_hover_tool
         )
 
+        # Add plugin menu Open/close the dock from plugin menu
+        self.action_toggle_dock = QAction(
+            QIcon(str(resources_path('icons', 'toggle_dock_32.png'))),
+            tr('Show/hide administration dock'),
+            self.iface.mainWindow()
+        )
+        self.action_toggle_dock.setCheckable(True)
+        self.iface.addPluginToMenu(
+            '&RoadNetwork',
+            self.action_toggle_dock
+        )
+        self.action_toggle_dock.triggered.connect(self.toggle_dock)
+        self.action_toggle_dock.setChecked(self.dock.isUserVisible())
+
         # Plugin toolbar
-        self.toolbar = self.iface.addToolBar('&RoadNetwork')
-        self.toolbar.setObjectName("roadNetworkToolbar")
+        self.toolbar = self.iface.addToolBar('&Road Network')
+        self.toolbar.setObjectName("RoadNetworkToolbar")
 
         # Ajout des actions dans la barre
         self.toolbar.addAction(self.action_toggle_hover_tool)
+        self.toolbar.addAction(self.action_toggle_dock)
 
     def toggle_hover_tool(self):
         """ Toggle the map hover tool used to find references"""
@@ -83,6 +99,12 @@ class Plugin:
             self.iface.mapCanvas().setMapTool(self.hover_map_tool)
 
         # self.action_toggle_hover_tool.setChecked(not is_active)
+
+    def toggle_dock(self):
+        """ Open the dock. """
+        is_open = self.dock.isUserVisible()
+        self.dock.setUserVisible(not is_open)
+        self.action_toggle_dock.setChecked(not is_open)
 
     def on_map_tool_set(self, new_map_tool, old_map_tool):
         """Detect change on map canvas map tool"""
@@ -100,6 +122,14 @@ class Plugin:
             self.toolbar.removeAction(self.action_toggle_hover_tool)
             del self.action_toggle_hover_tool
         self.iface.mainWindow().removeToolBar(self.toolbar)
+
+        if self.action_toggle_dock:
+            self.toolbar.removeAction(self.action_toggle_dock)
+            self.iface.removePluginMenu(
+                '&RoadNetwork',
+                self.action_toggle_dock
+            )
+            del self.action_toggle_dock
 
         if self.provider:
             QgsApplication.processingRegistry().removeProvider(self.provider)

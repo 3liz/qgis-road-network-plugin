@@ -8,6 +8,7 @@ from qgis.core import (
     QgsExpressionContextUtils,
     QgsProject,
 )
+from qgis.gui import QgsDockWidget
 from qgis.processing import execAlgorithmDialog
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtCore import pyqtSignal
@@ -31,7 +32,7 @@ from .processing.tools import (
 FORM_CLASS = load_ui("dockwidget_base.ui")
 
 
-class PluginDockWidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore [misc, valid-type]
+class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore [misc, valid-type]
     closingPlugin = pyqtSignal()
 
     def __init__(self, iface, parent=None):
