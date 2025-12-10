@@ -55,7 +55,7 @@ class HoverMapTool(QgsMapTool):
     def isEditTool(self):
         return False
 
-    def getReferenceFromLonLat(self, connection_name, lon, lat):
+    def getReferenceFromLonLat(self, connection_name, schema, lon, lat):
         """
         Query the database to get the references under the given coordinates
         """
@@ -63,7 +63,7 @@ class HoverMapTool(QgsMapTool):
             SELECT x.*
             FROM
                 jsonb_to_record(
-                    road_graph.get_reference_from_point(
+                    "{schema}".get_reference_from_point(
                         ST_SetSrid(
                             ST_MakePoint({lon}, {lat}),
                             2154
@@ -97,33 +97,46 @@ class HoverMapTool(QgsMapTool):
         project = QgsProject.instance()
         connection_name = get_connection_name(project)
 
+        # Check connection
+        if connection_name not in get_postgis_connection_list():
+            iface.messageBar().pushMessage(
+                'RoadNetwork',
+                tr('The current project does not have a suitable road network connection'),
+                Qgis.MessageLevel.Warning
+            )
+            return
+
         # Display references or error message
-        if connection_name in get_postgis_connection_list():
+        # editing_sessions
+        messages = []
+        for schema in ('editing_session', 'road_graph'):
             references, error = self.getReferenceFromLonLat(
                 connection_name,
+                schema,
                 point.x(),
                 point.y()
             )
-            message = ''
             if str(references[0][0]) != 'NULL':
-                message += tr(f"""{references[0][0]} PR {references[0][1]} + {references[0][2]}
-                decal {references[0][3]} {references[0][4]}
-                cumul {references[0][5]}
-                """)
-                iface.messageBar().pushMessage(
-                    'RoadNetwork',
-                    message,
-                    Qgis.MessageLevel.Success
-                )
-            if error:
+                messages.append(tr(
+                    f"""
+                    <b>{schema}</b>
+                    {references[0][0]}
+                    PR {references[0][1]} + {references[0][2]}
+                    @ {references[0][3]} {references[0][4]}
+                    C {references[0][5]}
+                    """
+                ))
+            if error and schema == 'road_graph':
                 iface.messageBar().pushMessage(
                     'RoadNetwork',
                     error,
                     Qgis.MessageLevel.Critical
                 )
-        else:
+        if messages:
+            message = f'''
+                {'/'.join(messages)}
+            '''
             iface.messageBar().pushMessage(
-                'RoadNetwork',
-                tr('The current project does not have a suitable road network connection'),
-                Qgis.MessageLevel.Warning
+                message,
+                Qgis.MessageLevel.Success
             )
