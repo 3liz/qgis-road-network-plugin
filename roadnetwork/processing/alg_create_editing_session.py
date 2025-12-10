@@ -111,14 +111,15 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             )
             return False, msg
 
-        # Check if there
+        # Get database connection
         connection_name = self.parameterAsConnectionName(
             parameters, self.CONNECTION_NAME, context
         )
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
 
-        # Get the editing session data
+        # Get the editing session data for the last item
+        # with status 'edited'
         sql = """
             SELECT
                 id, label,
@@ -173,44 +174,11 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        # Drop et recreate existing editing_session schema
-        feedback.pushInfo(tr("Drop and recreate the 'editing_session' schema").upper())
-        editing_schema = 'editing_session'
-        sql = f"""
-            DROP SCHEMA IF EXISTS {editing_schema} CASCADE;
-            CREATE SCHEMA editing_session;
-            SELECT 1 AS test;
-        """
-        data = None
-        try:
-            data = connection.executeSql(sql)
-        except QgsProviderConnectionException as e:
-            raise QgsProcessingException(str(e))
-        if data:
-            feedback.pushInfo(tr(f'* Schema "{editing_schema}" has been dropped'))
-        feedback.pushInfo("")
-
-        # Fill the schema with structure
-        feedback.pushInfo(tr(f'Create the schema "{editing_schema}" and its tables').upper())
-        create_structure = processing.run(
-            f'{provider_id()}:create_database_structure',
-            {
-                'CONNECTION_NAME': connection_name,
-                'OVERRIDE': True,
-                'SCHEMA': editing_schema
-            },
-            is_child_algorithm=True,
-            context=context,
-            feedback=feedback
-        )
-        if create_structure['OUTPUT_STATUS'] == 1:
-            feedback.pushInfo(tr(f'{create_structure['OUTPUT_STRING']}'))
-        feedback.pushInfo(tr(f"* The schema {editing_schema} has been successfully created"))
-        feedback.pushInfo("")
-
         # Copy the production data into the editing_session schema
         editing_session_id = self.getLastCreatedEditingSessionId(parameters, context)
-        feedback.pushInfo(tr(f"Copy the production data for editing session n°{editing_session_id}").upper())
+        feedback.pushInfo(
+            tr(f"Copy the production data for editing session n°{editing_session_id}").upper()
+        )
         sql = f"""
             SELECT road_graph.copy_data_to_editing_session(
                 {editing_session_id}

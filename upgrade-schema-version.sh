@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Upgrade the schema version and 
+# Upgrade the schema version and
 # prepare migrations files
 #
 # Must be run with `make upgrade-schema-version`
@@ -27,13 +27,13 @@ if [[ "$schema_version" -eq 0 ]]; then
     exit 1
 fi
 
-migration_sql=$MODULE_NAME/install/sql/upgrade/upgrade_to_$schema_version.sql
+new_schema_version=$((schema_version+1))
+
+migration_sql=$MODULE_NAME/install/sql/upgrade/upgrade_to_$new_schema_version.sql
 if [[ -e $migration_sql ]]; then
     echo "ERROR: the file '$migration_sql' already exists"
     exit 1
 fi
-
-new_schema_version=$((schema_version+1))
 
 echo "Upgrading schema version from '$schema_version' to '$new_schema_version'"
 
@@ -50,4 +50,3 @@ touch $new_migration_sql
 
 echo "Updating schema version in metadadata.txt"
 sed -i "s/schemaVersion=.*/schemaVersion=$new_schema_version/" $MODULE_NAME/metadata.txt
-

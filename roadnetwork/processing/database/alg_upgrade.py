@@ -1,6 +1,7 @@
 
 from qgis.core import (
     QgsProcessingException,
+    QgsProcessingFeedback,
     QgsProcessingOutputNumber,
     QgsProcessingOutputString,
     QgsProcessingParameterBoolean,
@@ -107,19 +108,50 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
             )
             return False, msg
 
+        # Get the editing session data for the last item
+        # with status 'edited'
+        sql = """
+            SELECT
+                id, label,
+                to_char(created_at, 'YYYY-MM-DD HH24:MI:SS'),
+                to_char(updated_at, 'YYYY-MM-DD HH24:MI:SS')
+            FROM road_graph.editing_sessions
+            WHERE status IN ('edited', 'cloned')
+            ORDER BY created_at DESC
+            LIMIT 1;
+        """
+        try:
+            data = connection.executeSql(sql)
+        except QgsProviderConnectionException as e:
+            raise QgsProcessingException(str(e))
+        session_data = None
+        for a in data:
+            session_data = a if a else None
+        if session_data:
+            msg = tr(
+                "There is an editing session with status 'cloned' or 'edited' in the database"
+                " which has not yet been merged : \n"
+                f" * id = {session_data[0]}, \n"
+                f" * label is '{session_data[1]}', \n"
+                f" * created at {session_data[2]}, \n"
+                f" * updated at {session_data[3]}\n"
+                "\n"
+                " Please merge or delete this editing session beforehand."
+            )
+            return False, msg
+
         return super(UpgradeDatabaseStructure, self).checkParameterValues(parameters, context)
 
-    def processAlgorithm(self, parameters, context, feedback):
-        # Run migration
-        run_migrations = self.parameterAsBool(parameters, self.RUN_MIGRATIONS, context)
-        if not run_migrations:
-            msg = tr("Vous devez cocher cette case pour réaliser la mise à jour !")
-            raise QgsProcessingException(msg)
 
+    @staticmethod
+    def upgrade_database(
+        connection_name: str,
+        schema: str,
+        *,
+        run_migrations: bool,
+        feedback: QgsProcessingFeedback,
+    ):
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-        connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
-        schema = self.parameterAsString(parameters, self.SCHEMA, context)
-
         connection = metadata.findConnection(connection_name)
 
         # Get database version
@@ -148,17 +180,14 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
         current_version = resources.schema_version()
         feedback.pushInfo(tr("Schema version") + " = {}".format(current_version))
 
-        # Return if nothing to do
+        # Check if nothing to do
         if db_version == current_version:
-            return {
-                self.OUTPUT_STATUS: 1,
-                self.OUTPUT_STRING: tr(
-                    " The database version already matches the plugin version. No upgrade needed."
-                ),
-            }
+            feedback.pushInfo(
+                tr("The database version already matches the plugin version. No upgrade needed.")
+            )
+            return True
 
         migrations = resources.available_migrations(db_version)
-
         # Loop sql files and run SQL code
         for new_db_version, sql_file in migrations:
             with sql_file.open() as f:
@@ -202,6 +231,35 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
             connection.executeSql(sql)
         except QgsProviderConnectionException as e:
             raise QgsProcessingException(str(e))
+
+        return True
+
+    def processAlgorithm(self, parameters, context, feedback):
+        connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
+        schema = self.parameterAsString(parameters, self.SCHEMA, context)
+        # Run migration
+        run_migrations = self.parameterAsBool(parameters, self.RUN_MIGRATIONS, context)
+        if not run_migrations:
+            msg = tr("Vous devez cocher cette case pour réaliser la mise à jour !")
+            raise QgsProcessingException(msg)
+
+        # road_graph schema
+        feedback.pushInfo(tr('Upgrade schema "road_graph"'))
+        self.upgrade_database(
+            connection_name,
+            schema,
+            run_migrations=run_migrations,
+            feedback=feedback,
+        )
+
+        # editing_session schema
+        feedback.pushInfo(tr('Upgrade schema "editing_session"'))
+        self.upgrade_database(
+            connection_name,
+            'editing_session',
+            run_migrations=run_migrations,
+            feedback=feedback,
+        )
 
         msg = tr("*** THE DATABASE STRUCTURE HAS BEEN UPDATED ***")
         feedback.pushInfo(msg)

@@ -14,6 +14,8 @@ from qgis.core import (
     QgsProviderRegistry,
 )
 
+import processing
+
 from ..tools import get_connection_name
 from .base import BaseDatabaseAlgorithm, i18n, resources
 
@@ -212,6 +214,20 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
         )
 
         feedback.pushInfo(f"Database version '{version}'.")
+
+        # Launch also the algorithme on the editing_session schema
+        if feedback.isCanceled():
+            return {}
+
+        self.create_database(
+            connection_name,
+            'editing_session',
+            version=version,
+            override=override,
+            install_dir=install_dir,
+            feedback=feedback,
+        )
+
 
         return {
             self.OUTPUT_STATUS: 1,

@@ -1096,7 +1096,7 @@ COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'C
 
 -- copy_data_to_editing_session(integer)
 CREATE FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
+    LANGUAGE plpgsql
     AS $$
 DECLARE
     editing_session_record record;
@@ -1117,13 +1117,6 @@ BEGIN
 
     -- Disable triggers
     SET session_replication_role = replica;
-
-    -- Truncate tables
-    TRUNCATE editing_session.roads CASCADE;
-    TRUNCATE editing_session.markers CASCADE;
-    TRUNCATE editing_session.edges CASCADE;
-    TRUNCATE editing_session.nodes CASCADE;
-    TRUNCATE editing_session.editing_sessions CASCADE;
 
     -- Get roads to edit
     WITH
@@ -1212,24 +1205,24 @@ BEGIN
     ;
 
     -- Replace identities by road_schema sequences to get correct ids
-    BEGIN
-        ALTER TABLE editing_session.roads ALTER COLUMN id DROP IDENTITY;
-        ALTER TABLE editing_session.nodes ALTER COLUMN id DROP IDENTITY;
-        ALTER TABLE editing_session.markers ALTER COLUMN id DROP IDENTITY;
-        ALTER TABLE editing_session.edges ALTER COLUMN id DROP IDENTITY;
-    EXCEPTION WHEN OTHERS THEN
-        RAISE NOTICE 'Cannot drop identity in editing_session tables';
-    END;
     -- roads
+    ALTER TABLE editing_session.roads
+        ALTER COLUMN id DROP IDENTITY;
     ALTER TABLE editing_session.roads
         ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.roads', 'id'));
     -- nodes
     ALTER TABLE editing_session.nodes
+        ALTER COLUMN id DROP IDENTITY;
+    ALTER TABLE editing_session.nodes
         ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.nodes', 'id'));
     -- markers
     ALTER TABLE editing_session.markers
+        ALTER COLUMN id DROP IDENTITY;
+    ALTER TABLE editing_session.markers
         ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.markers', 'id'));
     -- edges
+    ALTER TABLE editing_session.edges
+        ALTER COLUMN id DROP IDENTITY;
     ALTER TABLE editing_session.edges
         ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.edges', 'id'));
 
@@ -1279,10 +1272,6 @@ BEGIN
     RETURN True;
 END;
 $$;
-
-
--- FUNCTION copy_data_to_editing_session(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) IS 'Copy production data from the road_graph shema to the editing_session schema corresponding to the given editing session ID.';
 
 
 -- editing_survey()
