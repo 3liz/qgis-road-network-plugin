@@ -8,6 +8,7 @@ from ..plugin_tools.resources import (
 from .alg_configure_plugin import ConfigurePlugin
 from .alg_create_database_local_interface import CreateDatabaseLocalInterface
 from .alg_create_editing_session import CreateEditingSession
+from .alg_merge_editing_session import MergeEditingSession
 from .alg_import_data import ImportData
 from .database import (
     CreateDatabaseStructure,
@@ -37,6 +38,7 @@ class Provider(QgsProcessingProvider):
         # Editing
         self.addAlgorithm(ImportData())
         self.addAlgorithm(CreateEditingSession())
+        self.addAlgorithm(MergeEditingSession())
 
         # Put the flag back to yes
         QgsExpressionContextUtils.setGlobalVariable(f"{self.id()}_get_database_data", "yes")

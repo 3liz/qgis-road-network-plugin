@@ -78,27 +78,27 @@ ALTER TABLE ONLY road_graph.roads
 
 -- edges edges_end_node_fkey
 ALTER TABLE ONLY road_graph.edges
-    ADD CONSTRAINT edges_end_node_fkey FOREIGN KEY (end_node) REFERENCES road_graph.nodes(id) ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT edges_end_node_fkey FOREIGN KEY (end_node) REFERENCES road_graph.nodes(id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 -- edges edges_road_code_fkey
 ALTER TABLE ONLY road_graph.edges
-    ADD CONSTRAINT edges_road_code_fkey FOREIGN KEY (road_code) REFERENCES road_graph.roads(road_code) ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT edges_road_code_fkey FOREIGN KEY (road_code) REFERENCES road_graph.roads(road_code) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 -- edges edges_start_node_fkey
 ALTER TABLE ONLY road_graph.edges
-    ADD CONSTRAINT edges_start_node_fkey FOREIGN KEY (start_node) REFERENCES road_graph.nodes(id) ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT edges_start_node_fkey FOREIGN KEY (start_node) REFERENCES road_graph.nodes(id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 -- markers markers_road_code_fkey
 ALTER TABLE ONLY road_graph.markers
-    ADD CONSTRAINT markers_road_code_fkey FOREIGN KEY (road_code) REFERENCES road_graph.roads(road_code) ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT markers_road_code_fkey FOREIGN KEY (road_code) REFERENCES road_graph.roads(road_code) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 -- roads roads_road_scale_fkey
 ALTER TABLE ONLY road_graph.roads
-    ADD CONSTRAINT roads_road_scale_fkey FOREIGN KEY (road_class) REFERENCES road_graph.glossary_road_class(code) ON UPDATE CASCADE DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT roads_road_scale_fkey FOREIGN KEY (road_class) REFERENCES road_graph.glossary_road_class(code) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 --

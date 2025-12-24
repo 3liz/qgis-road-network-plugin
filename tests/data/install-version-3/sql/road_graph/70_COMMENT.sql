@@ -74,10 +74,6 @@ COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'C
 COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) IS 'Copy production data from the road_graph shema to the editing_session schema corresponding to the given editing session ID.';
 
 
--- FUNCTION create_queries_from_editing_session(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.create_queries_from_editing_session(_editing_session_id integer) IS 'Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session';
-
-
 -- FUNCTION editing_survey()
 COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done inside the editing session schema tables.
 It also check that the edited geometries are inside the editing session polygon.';
@@ -116,10 +112,6 @@ COMMENT ON FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code te
 We need to delete this node and merge edges around it.
 This function does nothing if no node is found at the exact top position of the circle.
 ';
-
-
--- FUNCTION merge_editing_session_data(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
 
 
 -- FUNCTION update_edge_references(_road_code text, _edge_ids integer[])

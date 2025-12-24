@@ -13,17 +13,17 @@ from .base_algorithm import BaseProcessingAlgorithm
 from .tools import get_connection_name
 
 
-class CreateEditingSession(BaseProcessingAlgorithm):
+class MergeEditingSession(BaseProcessingAlgorithm):
     CONNECTION_NAME = "CONNECTION_NAME"
     OUTPUT_STATUS = "OUTPUT_STATUS"
     OUTPUT_STRING = "OUTPUT_STRING"
     editing_session_id = None
 
     def name(self):
-        return "create_editing_session"
+        return "merge_editing_session"
 
     def displayName(self):
-        return tr('Clone data to a new editing session')
+        return tr('Merge editing session data')
 
     def group(self):
         return tr("Editing")
@@ -106,37 +106,20 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         if layer.isEditable():
             msg = tr(
                 "The layers are in editing mode. "
-                " Please save your chages and deactivate editing beforehand !"
+                " Please save your changes and deactivate editing beforehand !"
             )
             return False, msg
 
-        # Get the editing session data for the last item
-        # with status 'edited'
-        session_data = self.getLastCreatedEditingSessionId('edited', parameters, context)
-        if session_data:
-            msg = tr(
-                "There is already an editing session with status 'edited' in the database"
-                " which has not yet been merged : \n"
-                f" * id = {session_data[0]}, \n"
-                f" * label is '{session_data[1]}', \n"
-                f" * created at {session_data[2]}, \n"
-                f" * updated at {session_data[3]}\n"
-                "\n"
-                " Please merge or delete this editing session beforehand."
-            )
-            return False, msg
-
-        # Get the last editing session ID with status 'created'
-        status = 'created'
+        # Get the last editing session ID with status 'edited'
+        status = 'edited'
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
         if not editing_session:
             msg = tr(
                 f"There is no editing session with status '{status}' in the database.\n"
             )
-            msg += " You must first create a new editing session polygon"
             return False, msg
 
-        return super(CreateEditingSession, self).checkParameterValues(parameters, context)
+        return super(MergeEditingSession, self).checkParameterValues(parameters, context)
 
     def processAlgorithm(self, parameters, context, feedback):
         # Get connection
@@ -151,14 +134,26 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        # Copy the production data into the editing_session schema
-        status = 'created'
+        # Get the last editing session ID with status 'edited'
+        status = 'edited'
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
+        if not editing_session:
+            msg = tr(
+                f"There is no editing session with status '{status}' in the database.\n"
+            )
+            feedback.pushInfo(msg)
+            return {}
+
+        # Check for cancellation
+        if feedback.isCanceled():
+            return {}
+
+        # Merge editing_session data to road_graph schema
         feedback.pushInfo(
-            tr(f"Copy the production data for editing session '{editing_session[1]}'").upper()
+            tr(f"Merge the 'editing_session' data to the production schema 'road_graph'").upper()
         )
         sql = f"""
-            SELECT road_graph.copy_data_to_editing_session(
+            SELECT road_graph.merge_editing_session_data(
                 {editing_session[0]}
             ) AS result
         """
@@ -171,55 +166,15 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             result = bool(a[0]) if a else None
         if not result:
             error_message = tr(
-                "A problem occurred while copying the production data "
-                " into the 'editing_session' schema."
+                "A problem occurred while merging the editing session data "
+                " into the 'road_graph' schema."
             )
             raise QgsProcessingException(error_message)
 
         feedback.pushInfo(
-            tr(f"* The production data has been successfully copied into editing session n°{editing_session[0]}")
+            tr(f"* The data of the editing session '{editing_session[1]}' has been successfully merged")
         )
-        feedback.pushInfo("")
-
-        # Check for cancellation
-        if feedback.isCanceled():
-            return {}
-
-        # Get statistics on copied data
-        feedback.pushInfo(tr(f"Get statistics about the copied objects").upper())
-        sql = f"""
-            SELECT
-                jsonb_array_length(cloned_ids['edges']),
-                jsonb_array_length(cloned_ids['nodes']),
-                jsonb_array_length(cloned_ids['markers']),
-                jsonb_array_length(cloned_ids['roads'])
-            FROM road_graph.editing_sessions
-            WHERE id = {editing_session[0]}
-        """
-        try:
-            data = connection.executeSql(sql)
-        except QgsProviderConnectionException as e:
-            raise QgsProcessingException(str(e))
-        stats = None
-        for a in data:
-            stats = a if a else None
-        if not stats:
-            error_message = tr(
-                "A problem occurred while getting statistics on copied objects "
-                " from the 'editing_session' schema."
-            )
-            raise QgsProcessingException(error_message)
-
-        feedback.pushInfo(
-            tr(
-                "Number of copied objects:\n"
-                f"* {stats[0]} edges\n"
-                f"* {stats[1]} nodes\n"
-                f"* {stats[2]} markers\n"
-                f"* {stats[3]} roads\n"
-                f" for editing session n°{editing_session[0]}"
-            )
-        )
+        feedback.pushInfo(tr("Data inside the 'editing_session' tables have been deleted"))
         feedback.pushInfo("")
 
         # Reload layers
@@ -227,8 +182,8 @@ class CreateEditingSession(BaseProcessingAlgorithm):
 
         # Results
         msg = tr(
-            "Editing sessions data has been successfully created"
-            " for the given area"
+            "Editing session data has been successfully merged"
+            " for the given area into the road_graph schema"
         )
         status = 1
 

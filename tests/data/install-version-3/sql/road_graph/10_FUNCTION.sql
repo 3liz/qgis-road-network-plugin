@@ -24,12 +24,6 @@ CREATE FUNCTION road_graph.aa_before_geometry_insert_or_update() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    -- Trigger disabled by session variable
-    IF coalesce((current_setting('road.graph.disable.trigger', true))::integer, 0) = 1
-    THEN
-        RETURN NEW;
-    END IF;
-
     -- Do not modify the geometry if geom field has not been changed
     IF
         (
@@ -67,15 +61,9 @@ DECLARE
     update_edge_references_result boolean;
     raise_notice text;
 BEGIN
-    -- Trigger disabled by session variable
-    IF coalesce((current_setting('road.graph.disable.trigger', true))::integer, 0) = 1
-    THEN
-        RETURN OLD;
-    END IF;
-
     -- Raise notice ?
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
-
+    
     -- Check if old referenced nodes are still referenced by edges
     -- If not, delete them
     -- Upstream node
@@ -144,16 +132,16 @@ BEGIN
     -- Update road references if there is at least one edge left
     -- for the road
     IF (
-        SELECT count(e.*)
+        SELECT count(e.*) 
         FROM road_graph.edges AS e
         WHERE e.road_code = OLD.road_code
         AND e.id != OLD.id
-    ) > 0
+    ) > 0 
     THEN
         -- First update previous and next edges
         -- previous
         SET road.graph.edge.ref.calc.disabled = 'yes';
-
+        
         UPDATE road_graph.edges AS e
         SET next_edge_id = (
             SELECT s.id
@@ -187,7 +175,7 @@ BEGIN
         ;
 
     END IF;
-
+    
     RETURN OLD;
 END;
 $$;
@@ -218,12 +206,6 @@ DECLARE
     edge_road record;
     is_roundabout boolean;
 BEGIN
-    -- Trigger disabled by session variable
-    IF coalesce((current_setting('road.graph.disable.trigger', true))::integer, 0) = 1
-    THEN
-        RETURN NEW;
-    END IF;
-
     -- Check if we must log
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
 
@@ -242,10 +224,10 @@ BEGIN
         RAISE EXCEPTION 'The road code given for this edge does not exist !';
     END IF;
     is_roundabout = (edge_road.road_type = 'roundabout');
-
+    
     IF TG_OP = 'UPDATE' THEN
         -- UPDATE - Move related upstream and downstream nodes if needed
-        IF NOT ST_Equals(ST_StartPoint(OLD.geom), ST_StartPoint(NEW.geom))
+        IF NOT ST_Equals(ST_StartPoint(OLD.geom), ST_StartPoint(NEW.geom)) 
             -- not just an inversion
             AND NOT (NEW.geom = ST_Reverse(OLD.geom))
         THEN
@@ -256,7 +238,7 @@ BEGIN
             AND NOT ST_Equals(n.geom, ST_StartPoint(NEW.geom))
             ;
         END IF;
-        IF NOT ST_Equals(ST_EndPoint(OLD.geom), ST_EndPoint(NEW.geom))
+        IF NOT ST_Equals(ST_EndPoint(OLD.geom), ST_EndPoint(NEW.geom)) 
             -- not just an inversion
             AND NOT (NEW.geom = ST_Reverse(OLD.geom))
         THEN
@@ -325,7 +307,7 @@ BEGIN
     THEN
         UPDATE road_graph.edges AS e
         SET next_edge_id = NEW.id
-        WHERE e.id != NEW.id
+        WHERE e.id != NEW.id 
         AND e.id = NEW.previous_edge_id
         AND (e.next_edge_id IS NULL OR e.next_edge_id != NEW.id)
         RETURNING e.id
@@ -333,11 +315,11 @@ BEGIN
         ;
         IF raise_notice IN ('info', 'debug') AND cascade_edge_id IS NOT NULL THEN
             RAISE NOTICE '% AFTER edge % n° %, cascade changes on previous edge id : changes made on edge n° %',
-                repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id,
+                repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, 
                 cascade_edge_id
             ;
         END IF;
-
+        
     END IF;
     -- next edge id
     IF (TG_OP = 'INSERT' AND NEW.next_edge_id IS NOT NULL AND NOT is_roundabout)
@@ -353,7 +335,7 @@ BEGIN
         ;
         IF raise_notice IN ('info', 'debug') AND cascade_edge_id IS NOT NULL THEN
             RAISE NOTICE '% AFTER edge % n° %, cascade changes on next edge id : changes made on edge n° %',
-                repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id,
+                repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, 
                 cascade_edge_id
             ;
         END IF;
@@ -401,10 +383,10 @@ BEGIN
             -- this will keep only crossing nodes to use
             WHERE n.id IS NULL
         LOOP
-            IF crossing_node.geom IS NOT NULL
-                AND ST_GeometryType(crossing_node.geom) = 'ST_Point'
+            IF crossing_node.geom IS NOT NULL 
+                AND ST_GeometryType(crossing_node.geom) = 'ST_Point' 
             THEN
-                -- Create the missing node, which will trigger the split of the edge
+                -- Create the missing node, which will trigger the split of the edge 
                 -- (see the trigger after_node_insert_or_update)
                 -- Set variable to avoid infinite loop & self-crossing detection
                 SET road.graph.edge.crossing.node.creation.pending = 'yes';
@@ -473,8 +455,8 @@ BEGIN
                     touching_node.id, ST_AsText(touching_node.geom)
                 ;
             END IF;
-
-            IF coalesce(current_setting('road.graph.edge.update.touching.node', true), 'no') != 'yes'
+            
+            IF coalesce(current_setting('road.graph.edge.update.touching.node', true), 'no') != 'yes' 
             THEN
                 SET road.graph.edge.update.touching.node = 'yes';
                 -- We do not create a new node (constraint on same geometry)
@@ -511,7 +493,7 @@ BEGIN
         ) AND NOT is_roundabout
     )
     THEN
-        IF coalesce(current_setting('road.graph.edge.ref.calc.disabled', true), 'no') = 'no'
+        IF coalesce(current_setting('road.graph.edge.ref.calc.disabled', true), 'no') = 'no' 
         THEN
             IF raise_notice IN ('info', 'debug') THEN
                 RAISE NOTICE '% AFTER EDGE % N° %, update all road edges references: %',
@@ -529,7 +511,7 @@ BEGIN
     RAISE NOTICE '% AFTER edge % n° % - End',
         repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
     ;
-
+    
     RETURN NEW;
 END;
 $$;
@@ -554,18 +536,9 @@ DECLARE
     update_edge_neighbours boolean;
     update_edge_references_result boolean;
 BEGIN
-    -- Trigger disabled by session variable
-    IF coalesce((current_setting('road.graph.disable.trigger', true))::integer, 0) = 1
-    THEN
-        IF TG_OP = 'DELETE' THEN
-            RETURN OLD;
-        END IF;
-        RETURN NEW;
-    END IF;
-
     -- Get log level
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
-
+    
     -- Get edge road
     SELECT INTO edge_road
         r.*
@@ -576,7 +549,7 @@ BEGIN
         RAISE EXCEPTION 'The road code given for this marker does not exist !';
     END IF;
     is_roundabout = (edge_road.road_type = 'roundabout');
-
+    
     -- Update : Do nothing if geometry has not changed
     IF TG_OP = 'UPDATE' AND ST_Equals(NEW.geom, OLD.geom) THEN
         RETURN NEW;
@@ -596,7 +569,7 @@ BEGIN
         )
         ORDER BY n.id
         LIMIT 1;
-
+        
         IF initial_roundabout_node IS NOT NULL
         THEN
             SELECT INTO update_edge_neighbours
@@ -604,12 +577,12 @@ BEGIN
                     NEW.road_code,
                     initial_roundabout_node
                 )
-            ;
+            ;        
         END IF;
     END IF;
 
     -- INSERT OR UPDATE - Update road references
-    IF TG_OP != 'DELETE'
+    IF TG_OP != 'DELETE' 
         AND coalesce(current_setting('road.graph.edge.ref.calc.disabled', true), 'no') = 'no'
     THEN
         IF raise_notice IN ('info', 'debug') THEN
@@ -633,11 +606,11 @@ BEGIN
     THEN
         IF raise_notice IN ('info', 'debug') THEN
             RAISE NOTICE '% AFTER MARKER % N° %, update all road % edges references: %',
-                REPEAT('    ', pg_trigger_depth()::INTEGER), TG_OP, OLD.id,
+                REPEAT('    ', pg_trigger_depth()::INTEGER), TG_OP, OLD.id, 
                 OLD.road_code,
                 update_edge_references_result::text
             ;
-        END IF;
+        END IF;    
         SELECT INTO update_edge_references_result
             road_graph.update_edge_references(OLD.road_code, NULL)
         ;
@@ -663,29 +636,24 @@ CREATE FUNCTION road_graph.after_node_insert_or_update() RETURNS trigger
 DECLARE
     edge_under_node record;
     id_new_edge integer;
+    _set_config text;
     raise_notice text;
 BEGIN
-    -- Trigger disabled by session variable
-    IF coalesce((current_setting('road.graph.disable.trigger', true))::integer, 0) = 1
-    THEN
-        RETURN NEW;
-    END IF;
-
     -- Check if we must log
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
-
+    
     -- Do nothing if geometry has not changed
     -- except road.graph.edge.update.touching.node equals yes
-    IF
-        TG_OP = 'UPDATE'
-        AND ST_Equals(NEW.geom, OLD.geom)
+    IF 
+        TG_OP = 'UPDATE' 
+        AND ST_Equals(NEW.geom, OLD.geom) 
         AND coalesce(current_setting('road.graph.edge.update.touching.node', true), 'no') = 'no'
     THEN
         IF raise_notice IN ('info', 'debug') THEN
             RAISE NOTICE '% AFTER node % n° %, OLD & NEW geometries are equal, return',
                 repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
             ;
-        END IF;
+        END IF;    
         RETURN NEW;
     END IF;
 
@@ -753,7 +721,7 @@ BEGIN
                 RAISE NOTICE 'EDGE TO BE SPLIT';
                 RAISE NOTICE '%', to_json(edge_under_node);
             END IF;
-
+            
             SELECT INTO id_new_edge
                 split_edge_by_node
             FROM road_graph.split_edge_by_node(
@@ -811,12 +779,6 @@ DECLARE
     edge_road record;
     is_roundabout boolean;
 BEGIN
-    -- Trigger disabled by session variable
-    IF coalesce((current_setting('road.graph.disable.trigger', true))::integer, 0) = 1
-    THEN
-        RETURN NEW;
-    END IF;
-
     -- log level
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
 
@@ -854,10 +816,10 @@ BEGIN
                 repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
             ;
         END IF;
-
+        
         RETURN NEW;
     END IF;
-
+    
     -- INSERT - create missing nodes if necessary
     -- start & end point
     start_point = ST_StartPoint(NEW.geom);
@@ -880,7 +842,7 @@ BEGIN
                 repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, upstream_node.id
             ;
         END IF;
-
+        
         -- Update the geometry
         NEW.geom = ST_SetPoint(NEW.geom, 0, upstream_node.geom);
         -- Update the node ID in upstream attribute
@@ -972,7 +934,7 @@ BEGIN
     -- Marker - Create marker 0 if needed
     -- it does not exists for the road
     -- only for roads, not for roundabout
-    IF TG_OP = 'INSERT'
+    IF TG_OP = 'INSERT' 
         AND NOT is_roundabout
         AND edge_road.road_type NOT IN ('roundabout')
         AND NOT ST_Equals(ST_StartPoint(NEW.geom), ST_EndPoint(NEW.geom))
@@ -994,9 +956,9 @@ BEGIN
     -- Move marker 0 if needed
     -- If the first edge of the road has changed
     -- move it to the start_point of the changed geometry
-    IF TG_OP = 'UPDATE'
+    IF TG_OP = 'UPDATE' 
         AND NOT is_roundabout
-        AND OLD.start_abscissa = 0 AND NEW.start_abscissa = 0
+        AND OLD.start_abscissa = 0 AND NEW.start_abscissa = 0 
         AND OLD.start_cumulative = 0 AND NEW.start_cumulative = 0
         AND OLD.start_marker = 0 AND NEW.start_marker = 0
         AND OLD.road_code = NEW.road_code
@@ -1026,15 +988,15 @@ BEGIN
             NEW.start_marker = (start_references->>'marker_code')::text::integer;
             NEW.start_abscissa = (start_references->>'abscissa')::text::real;
             NEW.start_cumulative = (start_references->>'cumulative')::text::real;
-
-            -- end point
+            
+            -- end point      
             SELECT INTO end_references
                 road_graph.get_reference_from_point(end_point, NEW.road_code) AS ref
             ;
             NEW.end_marker = (end_references->>'marker_code')::text::integer;
             NEW.end_abscissa = (end_references->>'abscissa')::text::real;
             NEW.end_cumulative = (end_references->>'cumulative')::text::real;
-
+    
         EXCEPTION WHEN OTHERS THEN
             IF raise_notice IN ('info', 'debug') THEN
                 RAISE NOTICE '% BEFORE edge % n° %, NEW references NOT calculated',
@@ -1043,7 +1005,7 @@ BEGIN
             END IF;
         END;
     END IF;
-
+    
     RETURN NEW;
 END;
 $$;
@@ -1138,7 +1100,6 @@ CREATE FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id inte
     AS $$
 DECLARE
     editing_session_record record;
-    _set_config text;
 BEGIN
     -- Get editing session record
     SELECT INTO editing_session_record
@@ -1155,8 +1116,7 @@ BEGIN
     END IF;
 
     -- Disable triggers
-    SELECT set_config('road.graph.disable.trigger', '1'::text, false)
-    INTO _set_config;
+    SET session_replication_role = replica;
 
     -- Truncate tables
     TRUNCATE editing_session.roads CASCADE;
@@ -1314,8 +1274,7 @@ BEGIN
     FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
 
     -- Re-enable triggers
-    SELECT set_config('road.graph.disable.trigger', '0'::text, false)
-    INTO _set_config;
+    SET session_replication_role = DEFAULT;
 
     RETURN True;
 END;
@@ -1326,71 +1285,6 @@ $$;
 COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) IS 'Copy production data from the road_graph shema to the editing_session schema corresponding to the given editing session ID.';
 
 
--- create_queries_from_editing_session(integer)
-CREATE FUNCTION road_graph.create_queries_from_editing_session(_editing_session_id integer) RETURNS TABLE(sql_text text)
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    editing_session_record record;
-BEGIN
-    RETURN QUERY
-    WITH
-    items AS (
-        SELECT unnest(array['nodes', 'roads', 'edges', 'markers']) AS item
-    ),
-    ids AS (
-        SELECT item, logged_ids->item AS item_ids
-        FROM items, "road_graph".editing_sessions
-        WHERE status = 'edited'
-        AND id = _editing_session_id
-    ),
-    item_cols AS (
-        SELECT item, string_agg(c.column_name, ', ' ORDER BY ordinal_position) AS cols
-        FROM items, information_schema.columns c
-        WHERE table_schema = 'road_graph'
-        AND table_name = item
-        AND c.column_name != 'id'
-        GROUP BY item
-    ),
-    queries AS (
-        SELECT item, "key"::integer AS id, "value" AS op
-        FROM ids, jsonb_each_text(item_ids)
-    )
-    SELECT concat(
-        CASE
-            WHEN op = 'I' THEN 'INSERT INTO'
-            WHEN op = 'U' THEN 'UPDATE'
-            WHEN op = 'D' THEN 'DELETE FROM'
-        END, ' ',
-        '"road_graph".', q.item, ' AS t ',
-        CASE
-            WHEN op = 'I' THEN 'SELECT * FROM editing_session.' || q.item || ' AS s '
-            WHEN op = 'U' THEN concat(
-                ' SET (', c.cols, ') = (',
-                's.', replace(c.cols, ', ', ', s.'),
-                ') FROM editing_session.',  q.item, ' AS s '
-            )
-            WHEN op = 'D' THEN ''
-        END, ' ',
-        CASE
-            WHEN op = 'I' THEN ' WHERE s.id = ' || id::text
-            WHEN op = 'U' THEN ' WHERE s.id = t.id AND t.id = ' || id::text
-            WHEN op = 'D' THEN ' WHERE t.id = ' || id::text
-        END,
-        ';'
-    ) AS sql
-    FROM queries AS q, item_cols AS c
-    WHERE q.item = c.item
-    ;
-
-END;
-$$;
-
-
--- FUNCTION create_queries_from_editing_session(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.create_queries_from_editing_session(_editing_session_id integer) IS 'Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session';
-
-
 -- editing_survey()
 CREATE FUNCTION road_graph.editing_survey() RETURNS trigger
     LANGUAGE plpgsql
@@ -1399,7 +1293,6 @@ DECLARE
     object_geom geometry;
     object_id integer;
     editing_session_geom geometry;
-    original_edge_object record;
     new_logged_ids jsonb;
 BEGIN
 
@@ -1415,34 +1308,6 @@ BEGIN
     -- Do nothing if the object has not changed for an update
     IF TG_OP = 'UPDATE' AND OLD IS NOT DISTINCT FROM NEW THEN
         RETURN NEW;
-    END IF;
-
-    -- Do nothing if data are the same as the road_graph data
-    -- Since UPDATEs can occur on newly created object in the editing_session schema
-    -- we must check if a corresponding object exists in the road_graph schema
-    -- before checking if they are equal
-    IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'edges' THEN
-        -- We need to defined the search_path to avoid using syntax
-        -- such as road_graph.xxxxx as it can be replaced by QGIS plugin
-        -- when creating an editing_session_xxx schema
-        SET search_path TO road_graph, public;
-
-        -- Get original edge
-        SELECT INTO original_edge_object
-            *
-        FROM edges
-        WHERE id = NEW.id
-        ;
-        IF
-            original_edge_object IS NOT NULL
-            AND md5(to_json(NEW.*)::text) = md5(to_json(original_edge_object.*)::text)
-        THEN
-            -- Reset the search path
-            RESET search_path;
-            RETURN NEW;
-        END IF;
-        -- Reset the search path
-        RESET search_path;
     END IF;
 
     -- 1/ Check if geometry is inside the editing session geometry
@@ -1465,14 +1330,9 @@ BEGIN
         -- The actual check depends on the operation
         IF TG_OP IN ('INSERT', 'DELETE') THEN
             -- INSERT AND DELETE must concern geometries which are fully inside the polygon
-            -- NB : We must be less rigid since split actions can insert or update
-            -- an edge which is not fully in the polygon
-            -- IF NOT ST_Within(object_geom, editing_session_geom) THEN
-            IF NOT ST_Intersects(object_geom, editing_session_geom) THEN
+            IF NOT ST_Within(object_geom, editing_session_geom) THEN
                 RAISE EXCEPTION
-                    -- 'The object geometry must be strictly inside the editing session polygon
-                    -- object = %, polygon = %',
-                    'The object geometry must intersect the editing session polygon
+                    'The object geometry must be strictly inside the editing session polygon
                     object = %, polygon = %',
                     ST_AsText(object_geom),
                     ST_AsText(editing_session_geom)
@@ -1490,21 +1350,16 @@ BEGIN
             OR (
                 -- For edges (linestrings) we must check the user did not change
                 -- the geometry outside the polygon
-                -- TODO : issue when deleting node which launches the merge of 2 edges
-                -- the edge which was outside the polygon has been merged which modifies its geometry
-                -- We do not enforce this constraint
+                -- TODO : issue when deleting node which launch the merge of 2 edges
                 TG_TABLE_NAME = 'edges'
-                /*
                 AND NOT ST_Equals(
                     ST_SymDifference(OLD.geom, editing_session_geom),
                     ST_SymDifference(NEW.geom, editing_session_geom)
                 )
-                */
-                AND NOT ST_Intersects(object_geom, editing_session_geom)
+                AND FALSE -- TODO corriger
             )
             THEN
-                -- RAISE EXCEPTION 'The updated geometry must be strictly inside the editing session polygon';
-                RAISE EXCEPTION 'The updated geometry must intersect the editing session polygon';
+                RAISE EXCEPTION 'The updated geometry must be strictly inside the editing session polygon';
             END IF;
         END IF;
     END IF;
@@ -2436,72 +2291,6 @@ BEGIN
 
 END;
 $$;
-
-
--- merge_editing_session_data(integer)
-CREATE FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-    editing_session_record record;
-    sql_record record;
-    _set_config text;
-BEGIN
-    -- Get editing session record
-    SET search_path TO road_graph, public;
-    SELECT INTO editing_session_record
-    *
-    FROM editing_sessions
-    WHERE id = _editing_session_id
-    ;
-    IF editing_session_record.id IS NULL THEN
-        RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
-    END IF;
-
-    IF editing_session_record.status != 'edited' THEN
-        RAISE EXCEPTION 'The given id % does not correspond to editing session with status ''edited'' !', _editing_session_id;
-    END IF;
-
-    -- Disable topology triggers
-    SELECT set_config('road.graph.disable.trigger', '1'::text, false)
-    INTO _set_config;
-
-    -- Create SQL to run for each edited data
-    FOR sql_record IN
-        SELECT
-            sql_text
-        FROM create_queries_from_editing_session(_editing_session_id)
-    LOOP
-	   RAISE NOTICE 'SQL = %', sql_record.sql_text;
-       EXECUTE sql_record.sql_text;
-    END LOOP;
-
-    -- Re-enable triggers
-    SELECT set_config('road.graph.disable.trigger', '0'::text, false)
-    INTO _set_config;
-
-    -- Truncate editing_session tables
-    TRUNCATE editing_session.roads CASCADE;
-    TRUNCATE editing_session.markers CASCADE;
-    TRUNCATE editing_session.edges CASCADE;
-    TRUNCATE editing_session.nodes CASCADE;
-    TRUNCATE editing_session.editing_sessions CASCADE;
-
-    -- Delete merged editing session
-    DELETE FROM editing_sessions
-    WHERE id = _editing_session_id
-    ;
-
-    -- Reset the search path
-    RESET search_path;
-
-    RETURN True;
-END;
-$$;
-
-
--- FUNCTION merge_editing_session_data(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
 
 
 -- split_edge_by_node(record, record, real, real)

@@ -32,6 +32,7 @@ class Plugin:
         self.action_toggle_dock = None
         self.action_open_help = None
         self.action_clone_data_to_editing_session = None
+        self.action_merge_editing_session_data = None
         self.hover_map_tool = HoverMapTool(iface.mapCanvas())
 
         try:
@@ -100,11 +101,21 @@ class Plugin:
         # Create editing session action
         self.action_clone_data_to_editing_session = QAction(
             QIcon(str(resources_path('icons', 'clone_to_editing_session.png'))),
-            tr('Clone data to editing session'),
+            tr('Clone data to a new editing session'),
             self.iface.mainWindow()
         )
         self.action_clone_data_to_editing_session.triggered.connect(
             self.clone_data_to_editing_session
+        )
+
+        # Merge editing session action
+        self.action_merge_editing_session_data = QAction(
+            QIcon(str(resources_path('icons', 'merge_editing_session.png'))),
+            tr('Merge editing session data'),
+            self.iface.mainWindow()
+        )
+        self.action_merge_editing_session_data.triggered.connect(
+            self.merge_editing_session_data
         )
 
         # Plugin toolbar
@@ -114,6 +125,7 @@ class Plugin:
         # Ajout des actions dans la barre
         self.toolbar.addAction(self.action_toggle_hover_tool)
         self.toolbar.addAction(self.action_clone_data_to_editing_session)
+        self.toolbar.addAction(self.action_merge_editing_session_data)
         self.toolbar.addAction(self.action_toggle_dock)
 
     def toggle_hover_tool(self):
@@ -165,6 +177,15 @@ class Plugin:
         alg_name = "roadnetwork:create_editing_session"
         processing.execAlgorithmDialog(alg_name, param)
 
+    def merge_editing_session_data(self):
+        """
+        Run the alg which merges the data from editing_session to road_graph
+        """
+        # Run alg
+        param = {}
+        alg_name = "roadnetwork:merge_editing_session"
+        processing.execAlgorithmDialog(alg_name, param)
+
     def unload(self):
         """ Unload plugin """
         if self.dock:
@@ -177,6 +198,9 @@ class Plugin:
         if self.action_clone_data_to_editing_session:
             self.toolbar.removeAction(self.action_clone_data_to_editing_session)
             del self.action_clone_data_to_editing_session
+        if self.action_merge_editing_session_data:
+            self.toolbar.removeAction(self.action_merge_editing_session_data)
+            del self.action_merge_editing_session_data
 
         # Remove plugin menu actions
         if self.action_toggle_dock:
