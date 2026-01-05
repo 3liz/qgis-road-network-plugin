@@ -11,9 +11,6 @@ on:
 jobs:
   test-migration:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .docker
     strategy:
       matrix:
         qgis_version: [
