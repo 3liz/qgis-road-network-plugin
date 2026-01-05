@@ -60,11 +60,26 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
         # Connect on project load or new
         self.project = QgsProject.instance()
         self.iface.projectRead.connect(self.set_information_from_project)
+        self.iface.projectRead.connect(self.on_project_read)
         self.iface.newProjectCreated.connect(self.set_information_from_project)
         self.project.customVariablesChanged.connect(self.set_information_from_project)
 
         # Set information from project
         self.set_information_from_project()
+
+    def on_project_read(self):
+        """
+        Refresh the snapping vertices cache when committing changes
+        """
+        get_edge_layer = self.project.mapLayersByName('edges')
+        if len(get_edge_layer) == 1:
+            get_edge_layer[0].afterCommitChanges.connect(self.reloadLayer)
+
+    def reloadLayer(self):
+        layer = self.project.mapLayersByName('edges')[0]
+        if layer:
+            layer.reload()
+            print('Layer edges reloaded')
 
     @staticmethod
     def check_database_version() -> Optional[int]:
