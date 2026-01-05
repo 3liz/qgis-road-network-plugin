@@ -71,7 +71,7 @@ class Plugin:
         # Add plugin menu Open/close the dock from plugin menu
         self.action_toggle_dock = QAction(
             QIcon(str(resources_path('icons', 'toggle_dock.png'))),
-            tr('Show/hide administration dock'),
+            tr('Show/hide the administration dock'),
             self.iface.mainWindow()
         )
         self.action_toggle_dock.setCheckable(True)
@@ -97,7 +97,7 @@ class Plugin:
         # Create editing session action
         self.action_clone_data_to_editing_session = QAction(
             QIcon(str(resources_path('icons', 'clone_to_editing_session.png'))),
-            tr('Clone data to a new editing session'),
+            tr('Clone data to the editing sandbox'),
             self.iface.mainWindow()
         )
         self.action_clone_data_to_editing_session.triggered.connect(
@@ -107,7 +107,7 @@ class Plugin:
         # Merge editing session action
         self.action_merge_editing_session_data = QAction(
             QIcon(str(resources_path('icons', 'merge_editing_session.png'))),
-            tr('Merge editing session data'),
+            tr('Merge editing sandbox data'),
             self.iface.mainWindow()
         )
         self.action_merge_editing_session_data.triggered.connect(
