@@ -14,7 +14,6 @@ jobs:
     defaults:
       run:
         working-directory: .docker
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         qgis_version: [
