@@ -16,10 +16,11 @@ jobs:
         working-directory: .docker
     runs-on: ubuntu-latest
     strategy:
-      qgis_version: [
-          "3.40",
-          "3.44",
-        ]
+      matrix:
+        qgis_version: [
+            "3.40",
+            "3.44",
+          ]
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
