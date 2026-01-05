@@ -8,8 +8,8 @@ from ..plugin_tools.resources import (
 from .alg_configure_plugin import ConfigurePlugin
 from .alg_create_database_local_interface import CreateDatabaseLocalInterface
 from .alg_create_editing_session import CreateEditingSession
-from .alg_merge_editing_session import MergeEditingSession
 from .alg_import_data import ImportData
+from .alg_merge_editing_session import MergeEditingSession
 from .database import (
     CreateDatabaseStructure,
     UpgradeDatabaseStructure,

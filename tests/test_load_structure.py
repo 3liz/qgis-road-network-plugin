@@ -10,11 +10,9 @@ from qgis import processing
 
 from roadnetwork.plugin_tools.feedback import LoggerProcessingFeedBack
 from roadnetwork.plugin_tools.resources import (
-    available_migrations,
     schema_version,
 )
-from roadnetwork.processing.database import CreateDatabaseStructure
-from roadnetwork.processing.database import UpgradeDatabaseStructure
+from roadnetwork.processing.database import CreateDatabaseStructure, UpgradeDatabaseStructure
 from roadnetwork.processing.provider import Provider
 
 # This list must not be changed
@@ -95,8 +93,6 @@ def test_upgrade_from(
     )
 
     case = unittest.TestCase()
-
-    provider_id = processing_provider.id()
 
     cursor = db_connection.cursor()
 

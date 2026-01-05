@@ -2,8 +2,8 @@ from qgis.core import (
     QgsProcessing,
     QgsProcessingOutputNumber,
     QgsProcessingOutputString,
-    QgsProcessingParameterProviderConnection,
     QgsProcessingParameterFeatureSource,
+    QgsProcessingParameterProviderConnection,
     QgsProject,
 )
 

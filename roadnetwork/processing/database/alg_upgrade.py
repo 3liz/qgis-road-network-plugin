@@ -142,7 +142,6 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
 
         return super(UpgradeDatabaseStructure, self).checkParameterValues(parameters, context)
 
-
     @staticmethod
     def upgrade_database(
         connection_name: str,
@@ -150,7 +149,7 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
         *,
         run_migrations: bool,
         feedback: QgsProcessingFeedback,
-    ):
+    ) -> bool:
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
 

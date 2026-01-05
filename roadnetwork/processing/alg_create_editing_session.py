@@ -1,4 +1,7 @@
+from typing import Any
+
 from qgis.core import (
+    QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingOutputNumber,
     QgsProcessingOutputString,
@@ -7,6 +10,7 @@ from qgis.core import (
     QgsProviderConnectionException,
     QgsProviderRegistry,
 )
+
 from ..plugin_tools.i18n import tr
 from ..plugin_tools.resources import plugin_name_normalized
 from .base_algorithm import BaseProcessingAlgorithm
@@ -64,7 +68,9 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             QgsProcessingOutputString(self.OUTPUT_STRING, tr("Output message"))
         )
 
-    def getLastCreatedEditingSessionId(self, status, parameters, context) -> tuple:
+    def getLastCreatedEditingSessionId(
+        self, status: str, parameters: dict[str, Any], context: QgsProcessingContext
+    ) -> tuple:
         """Get the ID of the last editing session with status 'created'"""
         connection_name = self.parameterAsConnectionName(
             parameters, self.CONNECTION_NAME, context
@@ -87,7 +93,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             raise QgsProcessingException(str(e))
         editing_session = ()
         for a in data:
-            editing_session = a if a else None
+            editing_session = a if a else ()
 
         return editing_session
 
@@ -177,7 +183,10 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             raise QgsProcessingException(error_message)
 
         feedback.pushInfo(
-            tr(f"* The production data has been successfully copied into editing session n°{editing_session[0]}")
+            tr(
+                "* The production data has been successfully copied "
+                f" into editing session n°{editing_session[0]}"
+            )
         )
         feedback.pushInfo("")
 
@@ -186,7 +195,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             return {}
 
         # Get statistics on copied data
-        feedback.pushInfo(tr(f"Get statistics about the copied objects").upper())
+        feedback.pushInfo(tr("Get statistics about the copied objects").upper())
         sql = f"""
             SELECT
                 jsonb_array_length(cloned_ids['edges']),

@@ -226,7 +226,6 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
             feedback=feedback,
         )
 
-
         return {
             self.OUTPUT_STATUS: 1,
             self.OUTPUT_VERSION: version,

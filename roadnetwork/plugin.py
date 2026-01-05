@@ -1,4 +1,7 @@
 import os
+import webbrowser
+
+import processing
 
 from qgis.core import QgsApplication, QgsSettings
 from qgis.PyQt.QtCore import QCoreApplication, Qt, QTranslator
@@ -6,21 +9,14 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
 from .dockwidget import PluginDockWidget
-
 from .hover_map_tool import HoverMapTool
-
 from .plugin_tools.i18n import tr
 from .plugin_tools.resources import (
     plugin_path,
     resources_path,
 )
-
-import processing
-
 from .processing.provider import Provider
 from .processing.tools import plugin_name_normalized
-
-import webbrowser
 
 
 class Plugin:

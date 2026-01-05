@@ -1,4 +1,7 @@
+from typing import Any
+
 from qgis.core import (
+    QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingOutputNumber,
     QgsProcessingOutputString,
@@ -7,6 +10,7 @@ from qgis.core import (
     QgsProviderConnectionException,
     QgsProviderRegistry,
 )
+
 from ..plugin_tools.i18n import tr
 from ..plugin_tools.resources import plugin_name_normalized
 from .base_algorithm import BaseProcessingAlgorithm
@@ -64,7 +68,9 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             QgsProcessingOutputString(self.OUTPUT_STRING, tr("Output message"))
         )
 
-    def getLastCreatedEditingSessionId(self, status, parameters, context) -> tuple:
+    def getLastCreatedEditingSessionId(
+        self, status: str, parameters: dict[str, Any], context: QgsProcessingContext
+    ) -> tuple:
         """Get the ID of the last editing session with status 'created'"""
         connection_name = self.parameterAsConnectionName(
             parameters, self.CONNECTION_NAME, context
@@ -87,7 +93,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             raise QgsProcessingException(str(e))
         editing_session = ()
         for a in data:
-            editing_session = a if a else None
+            editing_session = a if a else ()
 
         return editing_session
 
@@ -150,7 +156,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
 
         # Merge editing_session data to road_graph schema
         feedback.pushInfo(
-            tr(f"Merge the 'editing_session' data to the production schema 'road_graph'").upper()
+            tr("Merge the 'editing_session' data to the production schema 'road_graph'").upper()
         )
         sql = f"""
             SELECT road_graph.merge_editing_session_data(
