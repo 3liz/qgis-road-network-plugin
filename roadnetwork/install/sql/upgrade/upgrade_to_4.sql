@@ -523,9 +523,12 @@ Création des noeuds non existants à l''intersection avec les autres edges';
 
 
 -- after_marker_insert_or_update_or_delete()
-CREATE OR REPLACE FUNCTION road_graph.after_marker_insert_or_update_or_delete() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION road_graph.after_marker_insert_or_update_or_delete()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
 DECLARE
     raise_notice text;
     is_roundabout boolean;
@@ -557,13 +560,19 @@ BEGIN
     END IF;
     is_roundabout = (edge_road.road_type = 'roundabout');
 
+    -- Check if only a marker 0 is used
+    IF is_roundabout AND NEW.code != 0 AND TG_OP != 'DELETE' THEN
+        RAISE EXCEPTION 'The value of the roundabout marker code must be 0 !';
+    END IF;
+
     -- Update : Do nothing if geometry has not changed
     IF TG_OP = 'UPDATE' AND ST_Equals(NEW.geom, OLD.geom) THEN
         RETURN NEW;
     END IF;
 
-    -- For INSERT and roundabout, calculate edges previous and next ids
-    IF TG_OP = 'INSERT' AND is_roundabout
+    -- For roundabout, calculate edges previous and next ids
+    -- anytime geometry is modified
+    IF is_roundabout
     THEN
         SELECT INTO initial_roundabout_node
             n.id
@@ -585,6 +594,10 @@ BEGIN
                     initial_roundabout_node
                 )
             ;
+        ELSE
+        -- force inserted or updated roundabout marker
+        -- to be on top of a roundabout edge node
+            RAISE EXCEPTION 'The marker must be positionned at the start node of an existing roundabout edge !';
         END IF;
     END IF;
 
@@ -629,12 +642,10 @@ BEGIN
         RETURN OLD;
     END IF;
 END;
-$$;
+$BODY$;
 
-
--- FUNCTION after_marker_insert_or_update_or_delete()
-COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete() IS 'Update road edges references after a marker has been created, updated or deleted.';
-
+COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete()
+    IS 'Update road edges references after a marker has been created, updated or deleted.';
 
 -- after_node_insert_or_update()
 CREATE OR REPLACE FUNCTION road_graph.after_node_insert_or_update() RETURNS trigger
@@ -1044,27 +1055,27 @@ ALTER TABLE road_graph.roads DROP CONSTRAINT IF EXISTS  roads_road_scale_fkey;
 ALTER TABLE ONLY road_graph.edges
 ADD CONSTRAINT edges_end_node_fkey FOREIGN KEY (end_node) REFERENCES road_graph.nodes(id)
 ON UPDATE CASCADE
-ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+ON DELETE RESTRICT;
 -- edges edges_road_code_fkey
 ALTER TABLE ONLY road_graph.edges
 ADD CONSTRAINT edges_road_code_fkey FOREIGN KEY (road_code) REFERENCES road_graph.roads(road_code)
 ON UPDATE CASCADE
-ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+ON DELETE RESTRICT;
 -- edges edges_start_node_fkey
 ALTER TABLE ONLY road_graph.edges
 ADD CONSTRAINT edges_start_node_fkey FOREIGN KEY (start_node) REFERENCES road_graph.nodes(id)
 ON UPDATE CASCADE
-ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+ON DELETE RESTRICT;
 -- markers markers_road_code_fkey
 ALTER TABLE ONLY road_graph.markers
 ADD CONSTRAINT markers_road_code_fkey FOREIGN KEY (road_code) REFERENCES road_graph.roads(road_code)
 ON UPDATE CASCADE
-ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+ON DELETE RESTRICT;
 -- roads roads_road_scale_fkey
 ALTER TABLE ONLY road_graph.roads
 ADD CONSTRAINT roads_road_scale_fkey FOREIGN KEY (road_class) REFERENCES road_graph.glossary_road_class(code)
 ON UPDATE CASCADE
-ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED;
+ON DELETE RESTRICT;
 
 CREATE OR REPLACE FUNCTION road_graph.editing_survey()
     RETURNS trigger

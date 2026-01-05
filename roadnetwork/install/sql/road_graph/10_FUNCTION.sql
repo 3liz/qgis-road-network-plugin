@@ -577,13 +577,19 @@ BEGIN
     END IF;
     is_roundabout = (edge_road.road_type = 'roundabout');
 
+    -- Check if only a marker 0 is used
+    IF is_roundabout AND NEW.code != 0 AND TG_OP != 'DELETE' THEN
+        RAISE EXCEPTION 'The value of the roundabout marker code must be 0 !';
+    END IF;
+
     -- Update : Do nothing if geometry has not changed
     IF TG_OP = 'UPDATE' AND ST_Equals(NEW.geom, OLD.geom) THEN
         RETURN NEW;
     END IF;
 
-    -- For INSERT and roundabout, calculate edges previous and next ids
-    IF TG_OP = 'INSERT' AND is_roundabout
+    -- For roundabout, calculate edges previous and next ids
+    -- anytime geometry is modified
+    IF is_roundabout
     THEN
         SELECT INTO initial_roundabout_node
             n.id
@@ -605,6 +611,10 @@ BEGIN
                     initial_roundabout_node
                 )
             ;
+        ELSE
+        -- force inserted or updated roundabout marker
+        -- to be on top of a roundabout edge node
+            RAISE EXCEPTION 'The marker must be positionned at the start node of an existing roundabout edge !';
         END IF;
     END IF;
 
