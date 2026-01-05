@@ -14,8 +14,6 @@ from qgis.core import (
     QgsProviderRegistry,
 )
 
-import processing
-
 from ..tools import get_connection_name
 from .base import BaseDatabaseAlgorithm, i18n, resources
 

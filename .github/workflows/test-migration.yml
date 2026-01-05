@@ -14,13 +14,17 @@ jobs:
     defaults:
       run:
         working-directory: .docker
-
+    runs-on: ubuntu-latest
+    strategy:
+      qgis_version: [
+          "3.40",
+          "3.44",
+        ]
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
-
-      - name: Launching docker compose
-        run: ./start.sh
+        uses: actions/checkout@v6
+        with:
+          submodules: 'true'
 
       - name: Running tests
-        run: ./install_migrate_generate.sh
+        run: make docker-test QGIS_VERSION=${{ matrix.qgis_version }}

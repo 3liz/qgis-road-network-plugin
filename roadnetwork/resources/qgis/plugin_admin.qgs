@@ -1,4 +1,4 @@
-<qgis projectname="" saveDateTime="2026-01-05T09:46:42" saveUser="mdouchin" saveUserFull="mdouchin" version="3.40.5-Bratislava">
+<qgis projectname="" saveDateTime="2026-01-05T12:07:45" saveUser="mdouchin" saveUserFull="mdouchin" version="3.40.5-Bratislava">
   <homePath path=""></homePath>
   <title></title>
   <transaction mode="AutomaticGroups"></transaction>
@@ -34,9 +34,11 @@
     <customproperties>
       <Option></Option>
     </customproperties>
-    <layer-tree-layer checked="Qt::Checked" expanded="1" id="editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16" legend_exp="" legend_split_behavior="0" name="editing_sessions" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Polygon checkPrimaryKeyUnicity='1' table=&quot;road_graph&quot;.&quot;editing_sessions&quot; (geom)">
+    <layer-tree-layer checked="Qt::Unchecked" expanded="1" id="editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16" legend_exp="" legend_split_behavior="0" name="editing_sessions" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Polygon checkPrimaryKeyUnicity='1' table=&quot;road_graph&quot;.&quot;editing_sessions&quot; (geom)">
       <customproperties>
-        <Option></Option>
+        <Option type="Map">
+          <Option name="showFeatureCount" type="int" value="0"></Option>
+        </Option>
       </customproperties>
     </layer-tree-layer>
     <layer-tree-group checked="Qt::Checked" expanded="1" groupLayer="" name="Editing">
@@ -80,7 +82,7 @@
         </layer-tree-group>
       </layer-tree-group>
     </layer-tree-group>
-    <layer-tree-group checked="Qt::Checked" expanded="1" groupLayer="" name="Data">
+    <layer-tree-group checked="Qt::Unchecked" expanded="1" groupLayer="" name="Data">
       <customproperties>
         <Option></Option>
       </customproperties>
@@ -183,10 +185,10 @@
   <mapcanvas annotationsVisible="1" name="theMapCanvas">
     <units>meters</units>
     <extent>
-      <xmin>426912.3456194510217756</xmin>
-      <ymin>6903860.66073787957429886</ymin>
-      <xmax>444562.78654296929016709</xmax>
-      <ymax>6908973.58537613227963448</ymax>
+      <xmin>432208.16323669068515301</xmin>
+      <ymin>6903439.15378745086491108</ymin>
+      <xmax>432483.95137615315616131</xmax>
+      <ymax>6903519.04323466308414936</ymax>
     </extent>
     <rotation>0</rotation>
     <destinationsrs>
@@ -207,9 +209,9 @@
   </mapcanvas>
   <projectModels></projectModels>
   <legend updateDrawingOrder="true">
-    <legendlayer checked="Qt::Checked" drawingOrder="-1" name="editing_sessions" open="true" showFeatureCount="0">
+    <legendlayer checked="Qt::Unchecked" drawingOrder="-1" name="editing_sessions" open="true" showFeatureCount="0">
       <filegroup hidden="false" open="true">
-        <legendlayerfile isInOverview="0" layerid="editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16" visible="1"></legendlayerfile>
+        <legendlayerfile isInOverview="0" layerid="editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16" visible="0"></legendlayerfile>
       </filegroup>
     </legendlayer>
     <legendgroup checked="Qt::Checked" name="Editing" open="true">
@@ -238,25 +240,25 @@
         </legendgroup>
       </legendgroup>
     </legendgroup>
-    <legendgroup checked="Qt::Checked" name="Data" open="true">
+    <legendgroup checked="Qt::Unchecked" name="Data" open="true">
       <legendlayer checked="Qt::Checked" drawingOrder="-1" name="glossary_road_class" open="true" showFeatureCount="0">
         <filegroup hidden="false" open="true">
-          <legendlayerfile isInOverview="0" layerid="glossary_road_class_edc5b6e6_0346_4356_81ab_bafc1ef6a454" visible="1"></legendlayerfile>
+          <legendlayerfile isInOverview="0" layerid="glossary_road_class_edc5b6e6_0346_4356_81ab_bafc1ef6a454" visible="0"></legendlayerfile>
         </filegroup>
       </legendlayer>
       <legendlayer checked="Qt::Checked" drawingOrder="-1" name="roads" open="true" showFeatureCount="0">
         <filegroup hidden="false" open="true">
-          <legendlayerfile isInOverview="0" layerid="roads_7c31f0cc_a10a_4f30_9374_1a1d07197dc9" visible="1"></legendlayerfile>
+          <legendlayerfile isInOverview="0" layerid="roads_7c31f0cc_a10a_4f30_9374_1a1d07197dc9" visible="0"></legendlayerfile>
         </filegroup>
       </legendlayer>
       <legendlayer checked="Qt::Checked" drawingOrder="-1" name="markers" open="false" showFeatureCount="0">
         <filegroup hidden="false" open="false">
-          <legendlayerfile isInOverview="0" layerid="markers_2b4953d6_7270_4f11_bf8e_a5047f7e4717" visible="1"></legendlayerfile>
+          <legendlayerfile isInOverview="0" layerid="markers_2b4953d6_7270_4f11_bf8e_a5047f7e4717" visible="0"></legendlayerfile>
         </filegroup>
       </legendlayer>
       <legendlayer checked="Qt::Checked" drawingOrder="-1" name="edges" open="false" showFeatureCount="0">
         <filegroup hidden="false" open="false">
-          <legendlayerfile isInOverview="0" layerid="edges_7df8a321_25e8_4a67_9bf8_796e4782e147" visible="1"></legendlayerfile>
+          <legendlayerfile isInOverview="0" layerid="edges_7df8a321_25e8_4a67_9bf8_796e4782e147" visible="0"></legendlayerfile>
         </filegroup>
       </legendlayer>
       <legendgroup checked="Qt::Unchecked" name="Topology" open="true">
@@ -1231,7 +1233,19 @@
       </pipe>
       <blendMode>0</blendMode>
     </maplayer>
-    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Line" hasScaleBasedVisibilityFlag="0" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="100000000" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="1" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="LineString">
+    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" editable="1" geometry="Line" hasScaleBasedVisibilityFlag="0" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="100000000" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="1" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="LineString">
+      <extent>
+        <xmin>418154.5</xmin>
+        <ymin>6892875.5</ymin>
+        <xmax>437954</xmax>
+        <ymax>6913799.5</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-0.87288285395292964</xmin>
+        <ymin>49.07373759912577071</ymin>
+        <xmax>-0.58814851627716591</xmax>
+        <ymax>49.27005100932202453</ymax>
+      </wgs84extent>
       <id>edges_04f2ce69_def9_4ef8_a1f1_684d06eac806</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table="editing_session"."edges" (geom)</datasource>
       <keywordList>
@@ -3802,7 +3816,7 @@
           <actionScope id="Feature"></actionScope>
         </actionsetting>
       </attributeactions>
-      <attributetableconfig actionWidgetStyle="dropDown" sortExpression="&quot;id&quot;" sortOrder="0">
+      <attributetableconfig actionWidgetStyle="dropDown" sortExpression="&quot;start_abscissa&quot;" sortOrder="0">
         <columns>
           <column hidden="0" name="id" type="field" width="-1"></column>
           <column hidden="0" name="start_node" type="field" width="75"></column>
@@ -4026,6 +4040,18 @@ def my_form_open(dialog, layer, feature):
       <mapTip enabled="1"></mapTip>
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Line" hasScaleBasedVisibilityFlag="0" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="100000000" readOnly="1" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="1" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="LineString">
+      <extent>
+        <xmin>392522.59375</xmin>
+        <ymin>6856969.5</ymin>
+        <xmax>513939.625</xmax>
+        <ymax>6933086.5</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-1.23866175371299714</xmin>
+        <ymin>48.73952771667671868</ymin>
+        <xmax>0.46720939920681426</xmax>
+        <ymax>49.46995532312511301</ymax>
+      </wgs84extent>
       <id>edges_7df8a321_25e8_4a67_9bf8_796e4782e147</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='1' table="road_graph"."edges" (geom)</datasource>
       <keywordList>
@@ -6699,7 +6725,19 @@ def my_form_open(dialog, layer, feature):
       <previewExpression>concat("road_code", ' - ', "id")</previewExpression>
       <mapTip enabled="1"></mapTip>
     </maplayer>
-    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Polygon" hasScaleBasedVisibilityFlag="0" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="100000000" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="1" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Polygon">
+    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" editable="1" geometry="Polygon" hasScaleBasedVisibilityFlag="0" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="100000000" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="1" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Polygon">
+      <extent>
+        <xmin>421535.6875</xmin>
+        <ymin>6904920</ymin>
+        <xmax>439367.625</xmax>
+        <ymax>6910085.5</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-0.82402493457358572</xmin>
+        <ymin>49.18337816254946659</ymin>
+        <xmax>-0.57628290698801155</xmax>
+        <ymax>49.23727514777232273</ymax>
+      </wgs84extent>
       <id>editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Polygon checkPrimaryKeyUnicity='1' table="road_graph"."editing_sessions" (geom)</datasource>
       <keywordList>
@@ -7976,6 +8014,18 @@ def my_form_open(dialog, layer, feature):
       <mapTip enabled="1"></mapTip>
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="25100" readOnly="1" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+      <extent>
+        <xmin>392535.6875</xmin>
+        <ymin>6857042</ymin>
+        <xmax>513901.125</xmax>
+        <ymax>6932459</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-1.23801777409768321</xmin>
+        <ymin>48.74018511252946695</ymin>
+        <xmax>0.466654015912358</xmax>
+        <ymax>49.46430725537727824</ymax>
+      </wgs84extent>
       <id>markers_2b4953d6_7270_4f11_bf8e_a5047f7e4717</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='1' table="road_graph"."markers" (geom)</datasource>
       <keywordList>
@@ -8746,7 +8796,19 @@ def my_form_open(dialog, layer, feature):
       <previewExpression>"road_code"</previewExpression>
       <mapTip enabled="1"></mapTip>
     </maplayer>
-    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="25100" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" editable="1" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="25100" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+      <extent>
+        <xmin>418193.28125</xmin>
+        <ymin>6893167.5</ymin>
+        <xmax>437694</xmax>
+        <ymax>6913799.5</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-0.8723508088133991</xmin>
+        <ymin>49.07637697849770575</ymin>
+        <xmax>-0.59188549437181759</xmax>
+        <ymax>49.26994439729702435</ymax>
+      </wgs84extent>
       <id>markers_a7166a67_37f7_444b_a4d7_c14803e0667f</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table="editing_session"."markers" (geom)</datasource>
       <keywordList>
@@ -9583,7 +9645,19 @@ def my_form_open(dialog, layer, feature):
       <previewExpression>"road_code"</previewExpression>
       <mapTip enabled="1"></mapTip>
     </maplayer>
-    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="10100" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" editable="1" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="10100" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+      <extent>
+        <xmin>418154.5</xmin>
+        <ymin>6892875.5</ymin>
+        <xmax>437954</xmax>
+        <ymax>6913799.5</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-0.87288285395292964</xmin>
+        <ymin>49.07373759912577071</ymin>
+        <xmax>-0.58814851627716591</xmax>
+        <ymax>49.27005100932202453</ymax>
+      </wgs84extent>
       <id>nodes_8c608387_7be6_4e58_818a_1593dce53f8e</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table="editing_session"."nodes" (geom)</datasource>
       <keywordList>
@@ -11537,7 +11611,7 @@ def my_form_open(dialog, layer, feature):
       <previewExpression>"road_code"</previewExpression>
       <mapTip enabled="1"></mapTip>
     </maplayer>
-    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="No geometry" hasScaleBasedVisibilityFlag="0" legendPlaceholderImage="" maxScale="0" minScale="1e+08" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" styleCategories="AllStyleCategories" type="vector" wkbType="NoGeometry">
+    <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" editable="1" geometry="No geometry" hasScaleBasedVisibilityFlag="0" legendPlaceholderImage="" maxScale="0" minScale="1e+08" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" styleCategories="AllStyleCategories" type="vector" wkbType="NoGeometry">
       <id>roads_888c78ae_d774_46de_810c_0ff6be4d29f8</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table="editing_session"."roads"</datasource>
       <keywordList>
@@ -12184,102 +12258,102 @@ def my_form_open(dialog, layer, feature):
     <ExpressionFunctions></ExpressionFunctions>
     <Grid>
       <AnnotationDirection type="int">0</AnnotationDirection>
-      <AnnotationFont type="QString">Ubuntu Sans,11,-1,5,50,0,0,0,0,0</AnnotationFont>
+      <AnnotationFont type="QString">Arial,11,-1,5,50,0,0,0,0,0</AnnotationFont>
       <AnnotationFrameDistance type="double">0</AnnotationFrameDistance>
       <AnnotationPrecision type="int">3</AnnotationPrecision>
       <Enabled type="bool">false</Enabled>
-      <Font type="QString">&lt;text-style tabStopDistance="6" forcedItalic="0" allowHtml="0" previewBkgrdColor="255,255,255,255,rgb:1,1,1,1" fontWordSpacing="0" fontUnderline="0" fontLetterSpacing="0" blendMode="0" namedStyle="" fontStrikeout="0" fontSizeUnit="Point" multilineHeight="1" fontSize="10" fontFamily="Ubuntu Sans" tabStopDistanceUnit="Percentage" forcedBold="0" fontItalic="0" multilineHeightUnit="Percentage" fontWeight="50" fontKerning="1" fontSizeMapUnitScale="3x:0,0,0,0,0,0" textColor="0,0,0,255,rgb:0,0,0,1" textOpacity="1" tabStopDistanceMapUnitScale="3x:0,0,0,0,0,0" capitalization="0" textOrientation="horizontal"&gt;
+      <Font type="QString">&lt;text-style previewBkgrdColor="255,255,255,255,rgb:1,1,1,1" namedStyle="" tabStopDistanceUnit="Percentage" forcedBold="0" fontWordSpacing="0" tabStopDistanceMapUnitScale="3x:0,0,0,0,0,0" fontSize="10" fontFamily="Ubuntu Sans" forcedItalic="0" allowHtml="0" textOpacity="1" multilineHeight="1" capitalization="0" fontSizeUnit="Point" fontWeight="50" fontStrikeout="0" fontKerning="1" tabStopDistance="6" fontLetterSpacing="0" textOrientation="horizontal" fontUnderline="0" fontSizeMapUnitScale="3x:0,0,0,0,0,0" textColor="0,0,0,255,rgb:0,0,0,1" blendMode="0" fontItalic="0" multilineHeightUnit="Percentage"&gt;
  &lt;families/&gt;
- &lt;text-buffer bufferSizeUnits="MM" bufferSize="1" bufferJoinStyle="128" bufferDraw="0" bufferNoFill="1" bufferOpacity="1" bufferColor="255,255,255,255,rgb:1,1,1,1" bufferBlendMode="0" bufferSizeMapUnitScale="3x:0,0,0,0,0,0"/&gt;
- &lt;text-mask maskOpacity="1" maskSizeUnits="MM" maskType="0" maskSize="1.5" maskedSymbolLayers="" maskEnabled="0" maskSize2="1.5" maskSizeMapUnitScale="3x:0,0,0,0,0,0" maskJoinStyle="128"/&gt;
- &lt;background shapeRotation="0" shapeSizeX="0" shapeSVGFile="" shapeJoinStyle="64" shapeRadiiX="0" shapeFillColor="255,255,255,255,rgb:1,1,1,1" shapeOffsetUnit="MM" shapeOffsetY="0" shapeDraw="0" shapeBorderWidthUnit="MM" shapeSizeType="0" shapeSizeMapUnitScale="3x:0,0,0,0,0,0" shapeRadiiMapUnitScale="3x:0,0,0,0,0,0" shapeOpacity="1" shapeOffsetMapUnitScale="3x:0,0,0,0,0,0" shapeBorderWidth="0" shapeSizeY="0" shapeRadiiUnit="MM" shapeOffsetX="0" shapeRadiiY="0" shapeType="0" shapeBorderColor="128,128,128,255,rgb:0.50196078431372548,0.50196078431372548,0.50196078431372548,1" shapeBlendMode="0" shapeRotationType="0" shapeSizeUnit="MM" shapeBorderWidthMapUnitScale="3x:0,0,0,0,0,0"&gt;
-  &lt;symbol alpha="1" force_rhr="0" frame_rate="10" name="fillSymbol" clip_to_extent="1" type="fill" is_animated="0"&gt;
+ &lt;text-buffer bufferSizeUnits="MM" bufferNoFill="1" bufferSize="1" bufferColor="255,255,255,255,rgb:1,1,1,1" bufferOpacity="1" bufferSizeMapUnitScale="3x:0,0,0,0,0,0" bufferDraw="0" bufferBlendMode="0" bufferJoinStyle="128"/&gt;
+ &lt;text-mask maskSize2="1.5" maskSizeMapUnitScale="3x:0,0,0,0,0,0" maskJoinStyle="128" maskEnabled="0" maskType="0" maskedSymbolLayers="" maskOpacity="1" maskSizeUnits="MM" maskSize="1.5"/&gt;
+ &lt;background shapeRotation="0" shapeSizeUnit="MM" shapeRadiiY="0" shapeSizeY="0" shapeBorderWidthUnit="MM" shapeOffsetUnit="MM" shapeBorderWidth="0" shapeSizeMapUnitScale="3x:0,0,0,0,0,0" shapeOpacity="1" shapeBlendMode="0" shapeSizeType="0" shapeRotationType="0" shapeOffsetX="0" shapeRadiiX="0" shapeType="0" shapeOffsetY="0" shapeFillColor="255,255,255,255,rgb:1,1,1,1" shapeRadiiMapUnitScale="3x:0,0,0,0,0,0" shapeSVGFile="" shapeRadiiUnit="MM" shapeBorderWidthMapUnitScale="3x:0,0,0,0,0,0" shapeOffsetMapUnitScale="3x:0,0,0,0,0,0" shapeBorderColor="128,128,128,255,rgb:0.50196078431372548,0.50196078431372548,0.50196078431372548,1" shapeSizeX="0" shapeDraw="0" shapeJoinStyle="64"&gt;
+  &lt;symbol name="fillSymbol" is_animated="0" frame_rate="10" force_rhr="0" alpha="1" type="fill" clip_to_extent="1"&gt;
    &lt;data_defined_properties&gt;
     &lt;Option type="Map"&gt;
-     &lt;Option name="name" type="QString" value=""/&gt;
+     &lt;Option name="name" value="" type="QString"/&gt;
      &lt;Option name="properties"/&gt;
-     &lt;Option name="type" type="QString" value="collection"/&gt;
+     &lt;Option name="type" value="collection" type="QString"/&gt;
     &lt;/Option&gt;
    &lt;/data_defined_properties&gt;
-   &lt;layer class="SimpleFill" id="" enabled="1" locked="0" pass="0"&gt;
+   &lt;layer enabled="1" locked="0" id="" class="SimpleFill" pass="0"&gt;
     &lt;Option type="Map"&gt;
-     &lt;Option name="border_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-     &lt;Option name="color" type="QString" value="255,255,255,255,rgb:1,1,1,1"/&gt;
-     &lt;Option name="joinstyle" type="QString" value="bevel"/&gt;
-     &lt;Option name="offset" type="QString" value="0,0"/&gt;
-     &lt;Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-     &lt;Option name="offset_unit" type="QString" value="MM"/&gt;
-     &lt;Option name="outline_color" type="QString" value="128,128,128,255,rgb:0.50196078431372548,0.50196078431372548,0.50196078431372548,1"/&gt;
-     &lt;Option name="outline_style" type="QString" value="no"/&gt;
-     &lt;Option name="outline_width" type="QString" value="0"/&gt;
-     &lt;Option name="outline_width_unit" type="QString" value="MM"/&gt;
-     &lt;Option name="style" type="QString" value="solid"/&gt;
+     &lt;Option name="border_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+     &lt;Option name="color" value="255,255,255,255,rgb:1,1,1,1" type="QString"/&gt;
+     &lt;Option name="joinstyle" value="bevel" type="QString"/&gt;
+     &lt;Option name="offset" value="0,0" type="QString"/&gt;
+     &lt;Option name="offset_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+     &lt;Option name="offset_unit" value="MM" type="QString"/&gt;
+     &lt;Option name="outline_color" value="128,128,128,255,rgb:0.50196078431372548,0.50196078431372548,0.50196078431372548,1" type="QString"/&gt;
+     &lt;Option name="outline_style" value="no" type="QString"/&gt;
+     &lt;Option name="outline_width" value="0" type="QString"/&gt;
+     &lt;Option name="outline_width_unit" value="MM" type="QString"/&gt;
+     &lt;Option name="style" value="solid" type="QString"/&gt;
     &lt;/Option&gt;
     &lt;data_defined_properties&gt;
      &lt;Option type="Map"&gt;
-      &lt;Option name="name" type="QString" value=""/&gt;
+      &lt;Option name="name" value="" type="QString"/&gt;
       &lt;Option name="properties"/&gt;
-      &lt;Option name="type" type="QString" value="collection"/&gt;
+      &lt;Option name="type" value="collection" type="QString"/&gt;
      &lt;/Option&gt;
     &lt;/data_defined_properties&gt;
    &lt;/layer&gt;
   &lt;/symbol&gt;
  &lt;/background&gt;
- &lt;shadow shadowOffsetMapUnitScale="3x:0,0,0,0,0,0" shadowRadius="1.5" shadowDraw="0" shadowRadiusMapUnitScale="3x:0,0,0,0,0,0" shadowRadiusAlphaOnly="0" shadowUnder="0" shadowOffsetDist="1" shadowOffsetUnit="MM" shadowScale="100" shadowOffsetGlobal="1" shadowRadiusUnit="MM" shadowOffsetAngle="135" shadowOpacity="0.69999999999999996" shadowColor="0,0,0,255,rgb:0,0,0,1" shadowBlendMode="6"/&gt;
+ &lt;shadow shadowRadiusUnit="MM" shadowRadiusMapUnitScale="3x:0,0,0,0,0,0" shadowRadiusAlphaOnly="0" shadowOffsetGlobal="1" shadowOffsetDist="1" shadowOffsetAngle="135" shadowOffsetUnit="MM" shadowOpacity="0.69999999999999996" shadowBlendMode="6" shadowOffsetMapUnitScale="3x:0,0,0,0,0,0" shadowScale="100" shadowDraw="0" shadowUnder="0" shadowRadius="1.5" shadowColor="0,0,0,255,rgb:0,0,0,1"/&gt;
  &lt;dd_properties&gt;
   &lt;Option type="Map"&gt;
-   &lt;Option name="name" type="QString" value=""/&gt;
+   &lt;Option name="name" value="" type="QString"/&gt;
    &lt;Option name="properties"/&gt;
-   &lt;Option name="type" type="QString" value="collection"/&gt;
+   &lt;Option name="type" value="collection" type="QString"/&gt;
   &lt;/Option&gt;
  &lt;/dd_properties&gt;
 &lt;/text-style&gt;
 </Font>
       <IntervalX type="double">0.1</IntervalX>
       <IntervalY type="double">0.1</IntervalY>
-      <LineSymbol type="QString">&lt;symbol alpha="1" force_rhr="0" frame_rate="10" name="line symbol" clip_to_extent="1" type="line" is_animated="0"&gt;
+      <LineSymbol type="QString">&lt;symbol name="line symbol" is_animated="0" frame_rate="10" force_rhr="0" alpha="1" type="line" clip_to_extent="1"&gt;
  &lt;data_defined_properties&gt;
   &lt;Option type="Map"&gt;
-   &lt;Option name="name" type="QString" value=""/&gt;
+   &lt;Option name="name" value="" type="QString"/&gt;
    &lt;Option name="properties"/&gt;
-   &lt;Option name="type" type="QString" value="collection"/&gt;
+   &lt;Option name="type" value="collection" type="QString"/&gt;
   &lt;/Option&gt;
  &lt;/data_defined_properties&gt;
- &lt;layer class="SimpleLine" id="{54368aec-2153-4558-a68a-80e7c8a4ba8e}" enabled="1" locked="0" pass="0"&gt;
+ &lt;layer enabled="1" locked="0" id="{54368aec-2153-4558-a68a-80e7c8a4ba8e}" class="SimpleLine" pass="0"&gt;
   &lt;Option type="Map"&gt;
-   &lt;Option name="align_dash_pattern" type="QString" value="0"/&gt;
-   &lt;Option name="capstyle" type="QString" value="square"/&gt;
-   &lt;Option name="customdash" type="QString" value="5;2"/&gt;
-   &lt;Option name="customdash_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-   &lt;Option name="customdash_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="dash_pattern_offset" type="QString" value="0"/&gt;
-   &lt;Option name="dash_pattern_offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-   &lt;Option name="dash_pattern_offset_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="draw_inside_polygon" type="QString" value="0"/&gt;
-   &lt;Option name="joinstyle" type="QString" value="bevel"/&gt;
-   &lt;Option name="line_color" type="QString" value="35,35,35,255,rgb:0.13725490196078433,0.13725490196078433,0.13725490196078433,1"/&gt;
-   &lt;Option name="line_style" type="QString" value="solid"/&gt;
-   &lt;Option name="line_width" type="QString" value="0.26"/&gt;
-   &lt;Option name="line_width_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="offset" type="QString" value="0"/&gt;
-   &lt;Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-   &lt;Option name="offset_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="ring_filter" type="QString" value="0"/&gt;
-   &lt;Option name="trim_distance_end" type="QString" value="0"/&gt;
-   &lt;Option name="trim_distance_end_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-   &lt;Option name="trim_distance_end_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="trim_distance_start" type="QString" value="0"/&gt;
-   &lt;Option name="trim_distance_start_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-   &lt;Option name="trim_distance_start_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="tweak_dash_pattern_on_corners" type="QString" value="0"/&gt;
-   &lt;Option name="use_custom_dash" type="QString" value="0"/&gt;
-   &lt;Option name="width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
+   &lt;Option name="align_dash_pattern" value="0" type="QString"/&gt;
+   &lt;Option name="capstyle" value="square" type="QString"/&gt;
+   &lt;Option name="customdash" value="5;2" type="QString"/&gt;
+   &lt;Option name="customdash_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+   &lt;Option name="customdash_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="dash_pattern_offset" value="0" type="QString"/&gt;
+   &lt;Option name="dash_pattern_offset_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+   &lt;Option name="dash_pattern_offset_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="draw_inside_polygon" value="0" type="QString"/&gt;
+   &lt;Option name="joinstyle" value="bevel" type="QString"/&gt;
+   &lt;Option name="line_color" value="35,35,35,255,rgb:0.13725490196078433,0.13725490196078433,0.13725490196078433,1" type="QString"/&gt;
+   &lt;Option name="line_style" value="solid" type="QString"/&gt;
+   &lt;Option name="line_width" value="0.26" type="QString"/&gt;
+   &lt;Option name="line_width_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="offset" value="0" type="QString"/&gt;
+   &lt;Option name="offset_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+   &lt;Option name="offset_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="ring_filter" value="0" type="QString"/&gt;
+   &lt;Option name="trim_distance_end" value="0" type="QString"/&gt;
+   &lt;Option name="trim_distance_end_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+   &lt;Option name="trim_distance_end_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="trim_distance_start" value="0" type="QString"/&gt;
+   &lt;Option name="trim_distance_start_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+   &lt;Option name="trim_distance_start_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="tweak_dash_pattern_on_corners" value="0" type="QString"/&gt;
+   &lt;Option name="use_custom_dash" value="0" type="QString"/&gt;
+   &lt;Option name="width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
   &lt;/Option&gt;
   &lt;data_defined_properties&gt;
    &lt;Option type="Map"&gt;
-    &lt;Option name="name" type="QString" value=""/&gt;
+    &lt;Option name="name" value="" type="QString"/&gt;
     &lt;Option name="properties"/&gt;
-    &lt;Option name="type" type="QString" value="collection"/&gt;
+    &lt;Option name="type" value="collection" type="QString"/&gt;
    &lt;/Option&gt;
   &lt;/data_defined_properties&gt;
  &lt;/layer&gt;
@@ -12287,41 +12361,41 @@ def my_form_open(dialog, layer, feature):
 </LineSymbol>
       <MapUnits type="int">0</MapUnits>
       <MarginUnit type="QString">MM</MarginUnit>
-      <MarkerSymbol type="QString">&lt;symbol alpha="1" force_rhr="0" frame_rate="10" name="marker symbol" clip_to_extent="1" type="marker" is_animated="0"&gt;
+      <MarkerSymbol type="QString">&lt;symbol name="marker symbol" is_animated="0" frame_rate="10" force_rhr="0" alpha="1" type="marker" clip_to_extent="1"&gt;
  &lt;data_defined_properties&gt;
   &lt;Option type="Map"&gt;
-   &lt;Option name="name" type="QString" value=""/&gt;
+   &lt;Option name="name" value="" type="QString"/&gt;
    &lt;Option name="properties"/&gt;
-   &lt;Option name="type" type="QString" value="collection"/&gt;
+   &lt;Option name="type" value="collection" type="QString"/&gt;
   &lt;/Option&gt;
  &lt;/data_defined_properties&gt;
- &lt;layer class="SimpleMarker" id="{ff666d9e-9421-421c-9295-6a80695549d5}" enabled="1" locked="0" pass="0"&gt;
+ &lt;layer enabled="1" locked="0" id="{ff666d9e-9421-421c-9295-6a80695549d5}" class="SimpleMarker" pass="0"&gt;
   &lt;Option type="Map"&gt;
-   &lt;Option name="angle" type="QString" value="0"/&gt;
-   &lt;Option name="cap_style" type="QString" value="square"/&gt;
-   &lt;Option name="color" type="QString" value="255,0,0,255,rgb:1,0,0,1"/&gt;
-   &lt;Option name="horizontal_anchor_point" type="QString" value="1"/&gt;
-   &lt;Option name="joinstyle" type="QString" value="bevel"/&gt;
-   &lt;Option name="name" type="QString" value="cross"/&gt;
-   &lt;Option name="offset" type="QString" value="0,0"/&gt;
-   &lt;Option name="offset_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-   &lt;Option name="offset_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="outline_color" type="QString" value="35,35,35,255,rgb:0.13725490196078433,0.13725490196078433,0.13725490196078433,1"/&gt;
-   &lt;Option name="outline_style" type="QString" value="solid"/&gt;
-   &lt;Option name="outline_width" type="QString" value="0"/&gt;
-   &lt;Option name="outline_width_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-   &lt;Option name="outline_width_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="scale_method" type="QString" value="diameter"/&gt;
-   &lt;Option name="size" type="QString" value="3"/&gt;
-   &lt;Option name="size_map_unit_scale" type="QString" value="3x:0,0,0,0,0,0"/&gt;
-   &lt;Option name="size_unit" type="QString" value="MM"/&gt;
-   &lt;Option name="vertical_anchor_point" type="QString" value="1"/&gt;
+   &lt;Option name="angle" value="0" type="QString"/&gt;
+   &lt;Option name="cap_style" value="square" type="QString"/&gt;
+   &lt;Option name="color" value="255,0,0,255,rgb:1,0,0,1" type="QString"/&gt;
+   &lt;Option name="horizontal_anchor_point" value="1" type="QString"/&gt;
+   &lt;Option name="joinstyle" value="bevel" type="QString"/&gt;
+   &lt;Option name="name" value="cross" type="QString"/&gt;
+   &lt;Option name="offset" value="0,0" type="QString"/&gt;
+   &lt;Option name="offset_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+   &lt;Option name="offset_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="outline_color" value="35,35,35,255,rgb:0.13725490196078433,0.13725490196078433,0.13725490196078433,1" type="QString"/&gt;
+   &lt;Option name="outline_style" value="solid" type="QString"/&gt;
+   &lt;Option name="outline_width" value="0" type="QString"/&gt;
+   &lt;Option name="outline_width_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+   &lt;Option name="outline_width_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="scale_method" value="diameter" type="QString"/&gt;
+   &lt;Option name="size" value="3" type="QString"/&gt;
+   &lt;Option name="size_map_unit_scale" value="3x:0,0,0,0,0,0" type="QString"/&gt;
+   &lt;Option name="size_unit" value="MM" type="QString"/&gt;
+   &lt;Option name="vertical_anchor_point" value="1" type="QString"/&gt;
   &lt;/Option&gt;
   &lt;data_defined_properties&gt;
    &lt;Option type="Map"&gt;
-    &lt;Option name="name" type="QString" value=""/&gt;
+    &lt;Option name="name" value="" type="QString"/&gt;
     &lt;Option name="properties"/&gt;
-    &lt;Option name="type" type="QString" value="collection"/&gt;
+    &lt;Option name="type" value="collection" type="QString"/&gt;
    &lt;/Option&gt;
   &lt;/data_defined_properties&gt;
  &lt;/layer&gt;
@@ -12770,7 +12844,7 @@ p, li { white-space: pre-wrap; }
   <Sensors></Sensors>
   <ProjectViewSettings UseProjectScales="0" rotation="0">
     <Scales></Scales>
-    <DefaultViewExtent xmax="444562.78654296929016709" xmin="426912.3456194510217756" ymax="6910583.89381326641887426" ymin="6902250.35230074543505907">
+    <DefaultViewExtent xmax="432483.95137615315616131" xmin="432208.16323669068515301" ymax="6903544.20430413074791431" ymin="6903413.99271798320114613">
       <spatialrefsys nativeFormat="Wkt">
         <wkt>PROJCRS["RGF93 v1 / Lambert-93",BASEGEOGCRS["RGF93 v1",DATUM["Reseau Geodesique Francais 1993 v1",ELLIPSOID["GRS 1980",6378137,298.257222101,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],ID["EPSG",4171]],CONVERSION["Lambert-93",METHOD["Lambert Conic Conformal (2SP)",ID["EPSG",9802]],PARAMETER["Latitude of false origin",46.5,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8821]],PARAMETER["Longitude of false origin",3,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8822]],PARAMETER["Latitude of 1st standard parallel",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8823]],PARAMETER["Latitude of 2nd standard parallel",44,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8824]],PARAMETER["Easting at false origin",700000,LENGTHUNIT["metre",1],ID["EPSG",8826]],PARAMETER["Northing at false origin",6600000,LENGTHUNIT["metre",1],ID["EPSG",8827]]],CS[Cartesian,2],AXIS["easting (X)",east,ORDER[1],LENGTHUNIT["metre",1]],AXIS["northing (Y)",north,ORDER[2],LENGTHUNIT["metre",1]],USAGE[SCOPE["Engineering survey, topographic mapping."],AREA["France - onshore and offshore, mainland and Corsica (France métropolitaine including Corsica)."],BBOX[41.15,-9.86,51.56,10.38]],ID["EPSG",2154]]</wkt>
         <proj4>+proj=lcc +lat_0=46.5 +lon_0=3 +lat_1=49 +lat_2=44 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
@@ -12835,7 +12909,7 @@ p, li { white-space: pre-wrap; }
       </spatialrefsys>
     </CoordinateCustomCrs>
   </ProjectDisplaySettings>
-  <ProjectGpsSettings autoAddTrackVertices="0" autoCommitFeatures="0" destinationFollowsActiveLayer="1" destinationLayer="editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16" destinationLayerName="editing_sessions" destinationLayerProvider="postgres" destinationLayerSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Polygon checkPrimaryKeyUnicity='1' table=&quot;road_graph&quot;.&quot;editing_sessions&quot; (geom)">
+  <ProjectGpsSettings autoAddTrackVertices="0" autoCommitFeatures="0" destinationFollowsActiveLayer="1" destinationLayer="markers_a7166a67_37f7_444b_a4d7_c14803e0667f" destinationLayerName="markers copie" destinationLayerProvider="postgres" destinationLayerSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;markers&quot; (geom)">
     <timeStampFields></timeStampFields>
   </ProjectGpsSettings>
 </qgis>
