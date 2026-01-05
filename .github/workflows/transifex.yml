@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.repository == '3liz/qgis-liz-example-plugin'
+    if: github.repository == '3liz/qgis-road-network-plugin'
 
     steps:
     - uses: actions/checkout@v2
