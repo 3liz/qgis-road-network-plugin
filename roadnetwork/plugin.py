@@ -85,7 +85,7 @@ class Plugin:
         # Add help action
         self.action_open_help = QAction(
             QIcon(str(resources_path('icons', 'open_help.png'))),
-            tr('Open the online help'),
+            tr('Open online help'),
             self.iface.mainWindow()
         )
         self.iface.addPluginToMenu(
