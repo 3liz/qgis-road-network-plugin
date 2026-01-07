@@ -25,6 +25,7 @@ pyseeyou==1.0.2
 python-slugify==8.0.4
 pyyaml==6.0.2
 qgis-plugin-ci==2.8.10
+qgis-plugin-transifex-ci @ git+https://github.com/3liz/qgis-plugin-transifex-ci@78c2c211efafc3e3c583f5c112fe0765169c2c93
 regex==2025.9.1
 requests==2.32.5
 six==1.17.0
