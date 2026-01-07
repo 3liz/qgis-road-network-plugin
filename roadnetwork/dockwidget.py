@@ -123,7 +123,9 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
                 connection_info = tr(f'The connection "{connection_name}" does not exist')
                 connection_stylesheet += "color: red;"
         else:
-            connection_info = tr('No connection has been set for this project. Use the "Configure plugin" algorithm')
+            connection_info = tr(
+                'No connection has been set for this project. Use the "Configure plugin" algorithm'
+            )
             connection_stylesheet += "color: red;"
 
         # Check database version against plugin version
