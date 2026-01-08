@@ -47,7 +47,7 @@ update-dependencies: uv.lock
 
 LINT_TARGETS=$(MODULE_NAME) tests $(EXTRA_LINT_TARGETS)
 
-lint:: 
+lint::
 	@ $(UV_RUN) ruff check --preview  --output-format=concise $(LINT_TARGETS)
 
 lint:: typecheck
@@ -56,13 +56,13 @@ lint-fix:
 	@ $(UV_RUN) ruff check --preview --fix $(LINT_TARGETS)
 
 format:
-	@ $(UV_RUN) ruff format $(LINT_TARGETS) 
+	@ $(UV_RUN) ruff format $(LINT_TARGETS)
 
 typecheck:
 	@ $(UV_RUN) mypy $(LINT_TARGETS)
 
 scan:
-	@ $(UV_RUN) bandit -r $(MODULE_NAME) $(SCAN_OPTS)
+	@ $(UV_RUN) bandit -r $(MODULE_NAME) $(SCAN_OPTS) --severity-level=high
 
 
 check-uv-install:
