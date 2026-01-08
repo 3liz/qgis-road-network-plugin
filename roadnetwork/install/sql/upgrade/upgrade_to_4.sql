@@ -1666,3 +1666,12 @@ BEGIN
     RETURN True;
 END;
 $$;
+
+
+
+ALTER TABLE road_graph.markers ALTER COLUMN "code" SET DEFAULT 0;
+ALTER TABLE road_graph.markers ALTER COLUMN "abscissa" SET NOT NULL;
+ALTER TABLE road_graph.markers DROP CONSTRAINT IF EXISTS markers_code_check_positive;
+ALTER TABLE road_graph.markers ADD CONSTRAINT markers_code_check_positive CHECK ("code" >= 0);
+ALTER TABLE road_graph.markers DROP CONSTRAINT IF EXISTS markers_abscissa_check_positive;
+ALTER TABLE road_graph.markers ADD CONSTRAINT markers_abscissa_check_positive CHECK ("abscissa" >= 0);
