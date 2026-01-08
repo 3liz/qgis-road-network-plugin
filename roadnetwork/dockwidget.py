@@ -79,7 +79,7 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
         layer = self.project.mapLayersByName('edges')[0]
         if layer:
             layer.reload()
-            print('Layer edges reloaded')
+            print(tr('Layer edges has been reloaded'))
 
     @staticmethod
     def check_database_version() -> Optional[int]:
