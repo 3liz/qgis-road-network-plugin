@@ -1,4 +1,4 @@
-<qgis projectname="" saveDateTime="2026-01-08T16:09:29" saveUser="mdouchin" saveUserFull="mdouchin" version="3.40.5-Bratislava">
+<qgis projectname="" saveDateTime="2026-01-08T16:21:48" saveUser="mdouchin" saveUserFull="mdouchin" version="3.40.5-Bratislava">
   <homePath path=""></homePath>
   <title></title>
   <transaction mode="AutomaticGroups"></transaction>
@@ -41,7 +41,7 @@
         </Option>
       </customproperties>
     </layer-tree-layer>
-    <layer-tree-group checked="Qt::Unchecked" expanded="1" groupLayer="" name="Editing">
+    <layer-tree-group checked="Qt::Checked" expanded="1" groupLayer="" name="Editing">
       <customproperties>
         <Option></Option>
       </customproperties>
@@ -161,9 +161,9 @@
   </layer-tree-group>
   <snapping-settings enabled="1" intersection-snapping="1" maxScale="0" minScale="0" mode="2" scaleDependencyMode="0" self-snapping="0" tolerance="13" type="3" unit="1">
     <individual-layer-settings>
+      <layer-setting enabled="0" id="editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16" maxScale="0" minScale="0" tolerance="12" type="1" units="1"></layer-setting>
       <layer-setting enabled="0" id="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" maxScale="0" minScale="0" tolerance="12" type="1" units="1"></layer-setting>
       <layer-setting enabled="0" id="markers_a7166a67_37f7_444b_a4d7_c14803e0667f" maxScale="0" minScale="0" tolerance="12" type="1" units="1"></layer-setting>
-      <layer-setting enabled="0" id="editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16" maxScale="0" minScale="0" tolerance="12" type="1" units="1"></layer-setting>
       <layer-setting enabled="0" id="nodes_8c608387_7be6_4e58_818a_1593dce53f8e" maxScale="0" minScale="0" tolerance="12" type="1" units="1"></layer-setting>
     </individual-layer-settings>
   </snapping-settings>
@@ -185,10 +185,10 @@
   <mapcanvas annotationsVisible="1" name="theMapCanvas">
     <units>meters</units>
     <extent>
-      <xmin>437528.17177761963102967</xmin>
-      <ymin>6894980.40551045443862677</ymin>
-      <xmax>470536.81177760532591492</xmax>
-      <ymax>6906377.52550938632339239</ymax>
+      <xmin>421585.51393060112604871</xmin>
+      <ymin>6892978.49078010674566031</ymin>
+      <xmax>487602.79393057251581922</xmax>
+      <ymax>6915772.73077797051519156</ymax>
     </extent>
     <rotation>0</rotation>
     <destinationsrs>
@@ -214,7 +214,7 @@
         <legendlayerfile isInOverview="0" layerid="editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16" visible="1"></legendlayerfile>
       </filegroup>
     </legendlayer>
-    <legendgroup checked="Qt::Unchecked" name="Editing" open="true">
+    <legendgroup checked="Qt::Checked" name="Editing" open="true">
       <legendgroup checked="Qt::Checked" name="Edited data" open="true">
         <legendlayer checked="Qt::Unchecked" drawingOrder="-1" name="roads copie" open="true" showFeatureCount="0">
           <filegroup hidden="false" open="true">
@@ -223,18 +223,18 @@
         </legendlayer>
         <legendlayer checked="Qt::Checked" drawingOrder="-1" name="markers copie" open="false" showFeatureCount="0">
           <filegroup hidden="false" open="false">
-            <legendlayerfile isInOverview="0" layerid="markers_a7166a67_37f7_444b_a4d7_c14803e0667f" visible="0"></legendlayerfile>
+            <legendlayerfile isInOverview="0" layerid="markers_a7166a67_37f7_444b_a4d7_c14803e0667f" visible="1"></legendlayerfile>
           </filegroup>
         </legendlayer>
         <legendlayer checked="Qt::Checked" drawingOrder="-1" name="edges copie" open="true" showFeatureCount="0">
           <filegroup hidden="false" open="true">
-            <legendlayerfile isInOverview="0" layerid="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" visible="0"></legendlayerfile>
+            <legendlayerfile isInOverview="0" layerid="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" visible="1"></legendlayerfile>
           </filegroup>
         </legendlayer>
         <legendgroup checked="Qt::Checked" name="topology" open="true">
           <legendlayer checked="Qt::Checked" drawingOrder="-1" name="nodes copie" open="true" showFeatureCount="0">
             <filegroup hidden="false" open="true">
-              <legendlayerfile isInOverview="0" layerid="nodes_8c608387_7be6_4e58_818a_1593dce53f8e" visible="0"></legendlayerfile>
+              <legendlayerfile isInOverview="0" layerid="nodes_8c608387_7be6_4e58_818a_1593dce53f8e" visible="1"></legendlayerfile>
             </filegroup>
           </legendlayer>
         </legendgroup>
@@ -1234,6 +1234,18 @@
       <blendMode>0</blendMode>
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Line" hasScaleBasedVisibilityFlag="0" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="100000000" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="1" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="LineString">
+      <extent>
+        <xmin>442172.28125</xmin>
+        <ymin>6905702</ymin>
+        <xmax>452870.125</xmax>
+        <ymax>6916275</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-0.54484048209602653</xmin>
+        <ymin>49.19904312879646824</ymin>
+        <xmax>-0.39170213528895498</xmax>
+        <ymax>49.29822342766811971</ymax>
+      </wgs84extent>
       <id>edges_04f2ce69_def9_4ef8_a1f1_684d06eac806</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table="editing_session"."edges" (geom)</datasource>
       <keywordList>
@@ -3237,11 +3249,11 @@
         <Option type="Map">
           <Option name="QFieldSync/action" type="QString" value="offline"></Option>
           <Option name="QFieldSync/attachment_naming" type="QString" value="{}"></Option>
-          <Option name="QFieldSync/attribute_editing_locked_expression" type="invalid"></Option>
+          <Option name="QFieldSync/attribute_editing_locked_expression" type="QString" value=""></Option>
           <Option name="QFieldSync/cloud_action" type="QString" value="offline"></Option>
-          <Option name="QFieldSync/feature_addition_locked_expression" type="invalid"></Option>
-          <Option name="QFieldSync/feature_deletion_locked_expression" type="invalid"></Option>
-          <Option name="QFieldSync/geometry_editing_locked_expression" type="invalid"></Option>
+          <Option name="QFieldSync/feature_addition_locked_expression" type="QString" value=""></Option>
+          <Option name="QFieldSync/feature_deletion_locked_expression" type="QString" value=""></Option>
+          <Option name="QFieldSync/geometry_editing_locked_expression" type="QString" value=""></Option>
           <Option name="QFieldSync/photo_naming" type="QString" value="{}"></Option>
           <Option name="QFieldSync/relationship_maximum_visible" type="QString" value="{&quot;edges_7df8_next_edge_id_edges_7df8_id&quot;: 4, &quot;edges_7df8_previous_edge_id_edges_7df8_id&quot;: 4, &quot;edges_04f2_next_edge_id_edges_04f2_id&quot;: 4, &quot;edges_04f2_previous_edge_id_edges_04f2_id&quot;: 4}"></Option>
           <Option name="QFieldSync/tracking_distance_requirement_minimum_meters" type="int" value="30"></Option>
@@ -3253,8 +3265,8 @@
             <Option type="QString" value="concat(&quot;road_code&quot;, ' - ', &quot;id&quot;)"></Option>
           </Option>
           <Option name="embeddedWidgets/count" type="int" value="0"></Option>
-          <Option name="variableNames" type="invalid"></Option>
-          <Option name="variableValues" type="invalid"></Option>
+          <Option name="variableNames"></Option>
+          <Option name="variableValues"></Option>
         </Option>
       </customproperties>
       <blendMode>0</blendMode>
@@ -3800,7 +3812,7 @@
       <expressionfields></expressionfields>
       <attributeactions>
         <defaultAction key="Canvas" value="{00000000-0000-0000-0000-000000000000}"></defaultAction>
-        <actionsetting action="from qgis.utils import iface&#xA;&#xA;project = QgsProject.instance()&#xA;layer = QgsProject.instance().mapLayer('[% @layer_id %]')&#xA;keep_going = True&#xA;if not layer.isEditable():&#xA;    qgis.utils.iface.messageBar().pushMessage(&#xA;        'Cannot finalize the roundabout',&#xA;        f'You must first activate editable mode on layer {layer.name()}',&#xA;        level=Qgis.Warning,&#xA;        duration=5&#xA;    )&#xA;    keep_going = False&#xA;else:&#xA;    road_code = '[% road_code %]'&#xA;    road_type = '[% roads_road_type %]'&#xA;    if road_type != 'roundabout':&#xA;        qgis.utils.iface.messageBar().pushMessage(&#xA;            'The edge is not part a roundabout',&#xA;            f'its road_type is {road_type}. No action.',&#xA;            level=Qgis.Warning,&#xA;            duration=5&#xA;        )&#xA;        keep_going = False&#xA;&#xA;if keep_going:&#xA;    # Merge the top edges around the circle top node&#xA;    # generated by QGIS circle digitizing tool&#xA;    sql = &quot;SELECT editing_session.clean_digitized_roundabout(&quot;&#xA;    sql += f&quot;    '{road_code}'&quot;&#xA;    sql += &quot;) AS returned_result&quot;&#xA;    result = layer.dataProvider().transaction().executeSql(sql, True, '')&#xA;    if not result[0]:&#xA;        qgis.utils.iface.messageBar().pushMessage(&#xA;            'Error occurred while cleaning the roundabout',&#xA;            result[1],&#xA;            level=Qgis.Critical&#xA;        )&#xA;        keep_going = False&#xA;&#xA;if keep_going:&#xA;    qgis.utils.iface.messageBar().pushMessage(&#xA;        f'The roundabout {road_code} has been successfully finalized',&#xA;        'You may have to refresh map canvas to see the changes',&#xA;        level=Qgis.Success,&#xA;        duration=5&#xA;    )" capture="1" icon="" id="{d99a0c18-74e3-4171-a80d-298a37b309af}" isEnabledOnlyWhenEditable="0" name="Finalize the roundabout : delete internal edges and merge top edges" notificationMessage="" shortTitle="Finalize the roundabout" type="1">
+        <actionsetting action="from qgis.utils import iface&#xA;&#xA;project = QgsProject.instance()&#xA;layer = QgsProject.instance().mapLayer('[% @layer_id %]')&#xA;keep_going = True&#xA;if not layer.isEditable():&#xA;    qgis.utils.iface.messageBar().pushMessage(&#xA;        'Cannot finalize the roundabout',&#xA;        f'You must first activate editable mode on layer {layer.name()}',&#xA;        level=Qgis.Warning,&#xA;        duration=5&#xA;    )&#xA;    keep_going = False&#xA;else:&#xA;    road_code = '[% road_code %]'&#xA;    road_type = '[% roads_road_type %]'&#xA;    if road_type != 'roundabout':&#xA;        qgis.utils.iface.messageBar().pushMessage(&#xA;            'The edge is not part a roundabout',&#xA;            f'its road_type is {road_type}. No action.',&#xA;            level=Qgis.Warning,&#xA;            duration=5&#xA;        )&#xA;        keep_going = False&#xA;&#xA;if keep_going:&#xA;    # Merge the top edges around the circle top node&#xA;    # generated by QGIS circle digitizing tool&#xA;    sql = &quot;SELECT editing_session.clean_digitized_roundabout(&quot;&#xA;    sql += f&quot;    '{road_code}'&quot;&#xA;    sql += &quot;) AS returned_result&quot;&#xA;    result = layer.dataProvider().transaction().executeSql(sql, True, '')&#xA;    if not result[0]:&#xA;        qgis.utils.iface.messageBar().pushMessage(&#xA;            'Error occurred while cleaning the roundabout',&#xA;            result[1],&#xA;            level=Qgis.Critical&#xA;        )&#xA;        keep_going = False&#xA;&#xA;if keep_going:&#xA;    qgis.utils.iface.messageBar().pushMessage(&#xA;        f'The roundabout {road_code} has been successfully finalized',&#xA;        'You may have to refresh map canvas to see the changes',&#xA;        level=Qgis.Success,&#xA;        duration=5&#xA;    )&#xA;    layer.triggerRepaint()" capture="1" icon="" id="{d99a0c18-74e3-4171-a80d-298a37b309af}" isEnabledOnlyWhenEditable="0" name="Finalize the roundabout : delete internal edges and merge top edges" notificationMessage="" shortTitle="Finalize the roundabout" type="1">
           <actionScope id="Feature"></actionScope>
         </actionsetting>
       </attributeactions>
@@ -6711,6 +6723,18 @@ def my_form_open(dialog, layer, feature):
       <mapTip enabled="1"></mapTip>
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Polygon" hasScaleBasedVisibilityFlag="0" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="100000000" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="1" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Polygon">
+      <extent>
+        <xmin>432311.78125</xmin>
+        <ymin>6903409.5</ymin>
+        <xmax>432433.21875</xmax>
+        <ymax>6903527</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-0.67207412577437886</xmin>
+        <ymin>49.17440810906263238</ymin>
+        <xmax>-0.67033581089156768</xmax>
+        <ymax>49.17551409161298892</ymax>
+      </wgs84extent>
       <id>editing_sessions_c8b77b19_742c_4e72_9dc1_3d1c8b009f16</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Polygon checkPrimaryKeyUnicity='1' table="road_graph"."editing_sessions" (geom)</datasource>
       <keywordList>
@@ -7987,6 +8011,18 @@ def my_form_open(dialog, layer, feature):
       <mapTip enabled="1"></mapTip>
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="25100" readOnly="1" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+      <extent>
+        <xmin>392535.6875</xmin>
+        <ymin>6857042</ymin>
+        <xmax>513901.125</xmax>
+        <ymax>6932459</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-1.23801777409768321</xmin>
+        <ymin>48.74018511252946695</ymin>
+        <xmax>0.466654015912358</xmax>
+        <ymax>49.46430725537727824</ymax>
+      </wgs84extent>
       <id>markers_2b4953d6_7270_4f11_bf8e_a5047f7e4717</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='1' table="road_graph"."markers" (geom)</datasource>
       <keywordList>
@@ -8765,6 +8801,18 @@ def my_form_open(dialog, layer, feature):
       <mapTip enabled="1"></mapTip>
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="25100" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+      <extent>
+        <xmin>442398.59375</xmin>
+        <ymin>6905702</ymin>
+        <xmax>452870.125</xmax>
+        <ymax>6916275</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-0.54173311374616751</xmin>
+        <ymin>49.19913422982736506</ymin>
+        <xmax>-0.39170213528895498</xmax>
+        <ymax>49.29822342766811971</ymax>
+      </wgs84extent>
       <id>markers_a7166a67_37f7_444b_a4d7_c14803e0667f</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table="editing_session"."markers" (geom)</datasource>
       <keywordList>
@@ -9602,6 +9650,18 @@ def my_form_open(dialog, layer, feature):
       <mapTip enabled="1"></mapTip>
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="10100" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+      <extent>
+        <xmin>442172.28125</xmin>
+        <ymin>6905702</ymin>
+        <xmax>452870.125</xmax>
+        <ymax>6916275</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-0.54484048209602653</xmin>
+        <ymin>49.19904312879646824</ymin>
+        <xmax>-0.39170213528895498</xmax>
+        <ymax>49.29822342766811971</ymax>
+      </wgs84extent>
       <id>nodes_8c608387_7be6_4e58_818a_1593dce53f8e</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table="editing_session"."nodes" (geom)</datasource>
       <keywordList>
@@ -10268,6 +10328,18 @@ def my_form_open(dialog, layer, feature):
       <mapTip enabled="1"></mapTip>
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="Point" hasScaleBasedVisibilityFlag="1" labelsEnabled="1" legendPlaceholderImage="" maxScale="0" minScale="10100" readOnly="1" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" simplifyAlgorithm="0" simplifyDrawingHints="0" simplifyDrawingTol="1" simplifyLocal="0" simplifyMaxScale="1" styleCategories="AllStyleCategories" symbologyReferenceScale="-1" type="vector" wkbType="Point">
+      <extent>
+        <xmin>392535.6875</xmin>
+        <ymin>6857008.5</ymin>
+        <xmax>513939.125</xmax>
+        <ymax>6933086.5</ymax>
+      </extent>
+      <wgs84extent>
+        <xmin>-1.23848159923793699</xmin>
+        <ymin>48.73988423172150419</ymin>
+        <xmax>0.46718557420851142</xmax>
+        <ymax>49.46995517709041223</ymax>
+      </wgs84extent>
       <id>nodes_ed6e4fe1_6704_4d74_8c5d_de7e6bd2d1a5</id>
       <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='1' table="road_graph"."nodes" (geom)</datasource>
       <keywordList>
@@ -12788,7 +12860,7 @@ p, li { white-space: pre-wrap; }
   <Sensors></Sensors>
   <ProjectViewSettings UseProjectScales="0" rotation="0">
     <Scales></Scales>
-    <DefaultViewExtent xmax="470536.81177760532591492" xmin="437528.17177761963102967" ymax="6914954.65684135910123587" ymin="6886403.27417848166078329">
+    <DefaultViewExtent xmax="487602.79393057251581922" xmin="421585.51393060112604871" ymax="6932926.99344191607087851" ymin="6875824.22811616118997335">
       <spatialrefsys nativeFormat="Wkt">
         <wkt>PROJCRS["RGF93 v1 / Lambert-93",BASEGEOGCRS["RGF93 v1",DATUM["Reseau Geodesique Francais 1993 v1",ELLIPSOID["GRS 1980",6378137,298.257222101,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],ID["EPSG",4171]],CONVERSION["Lambert-93",METHOD["Lambert Conic Conformal (2SP)",ID["EPSG",9802]],PARAMETER["Latitude of false origin",46.5,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8821]],PARAMETER["Longitude of false origin",3,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8822]],PARAMETER["Latitude of 1st standard parallel",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8823]],PARAMETER["Latitude of 2nd standard parallel",44,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8824]],PARAMETER["Easting at false origin",700000,LENGTHUNIT["metre",1],ID["EPSG",8826]],PARAMETER["Northing at false origin",6600000,LENGTHUNIT["metre",1],ID["EPSG",8827]]],CS[Cartesian,2],AXIS["easting (X)",east,ORDER[1],LENGTHUNIT["metre",1]],AXIS["northing (Y)",north,ORDER[2],LENGTHUNIT["metre",1]],USAGE[SCOPE["Engineering survey, topographic mapping."],AREA["France - onshore and offshore, mainland and Corsica (France métropolitaine including Corsica)."],BBOX[41.15,-9.86,51.56,10.38]],ID["EPSG",2154]]</wkt>
         <proj4>+proj=lcc +lat_0=46.5 +lon_0=3 +lat_1=49 +lat_2=44 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
@@ -12853,7 +12925,7 @@ p, li { white-space: pre-wrap; }
       </spatialrefsys>
     </CoordinateCustomCrs>
   </ProjectDisplaySettings>
-  <ProjectGpsSettings autoAddTrackVertices="0" autoCommitFeatures="0" destinationFollowsActiveLayer="1" destinationLayer="edges_7df8a321_25e8_4a67_9bf8_796e4782e147" destinationLayerName="edges" destinationLayerProvider="postgres" destinationLayerSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='1' table=&quot;road_graph&quot;.&quot;edges&quot; (geom)">
+  <ProjectGpsSettings autoAddTrackVertices="0" autoCommitFeatures="0" destinationFollowsActiveLayer="1" destinationLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" destinationLayerName="edges copie" destinationLayerProvider="postgres" destinationLayerSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;edges&quot; (geom)">
     <timeStampFields></timeStampFields>
   </ProjectGpsSettings>
 </qgis>

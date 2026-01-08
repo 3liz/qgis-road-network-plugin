@@ -71,6 +71,14 @@ transifex_resource = "road-network"
 transifex_coordinator = "mdouchin"
 changelog_include = true
 
+[tool.package-ci]
+plugin_source = "roadnetwork"
+github_organization_slug = "3liz"
+
+[tool.qgis-transifex-ci]
+plugin_source = "roadnetwork"
+organization = "3liz-1"
+
 #
 # Ruff
 #
