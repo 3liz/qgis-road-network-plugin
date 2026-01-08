@@ -80,7 +80,6 @@ plugin_source = "roadnetwork"
 organization = "3liz-1"
 project = "road-network"
 resource = "road-network"
-coordinator = "mdouchin"
 minimum_translation = 25.0
 
 
