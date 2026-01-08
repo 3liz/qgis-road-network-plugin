@@ -9,6 +9,7 @@ from qgis.core import (
     QgsProject,
     QgsProviderConnectionException,
     QgsProviderRegistry,
+    QgsVectorLayerJoinInfo,
 )
 
 from ..plugin_tools.i18n import tr
@@ -127,6 +128,40 @@ class MergeEditingSession(BaseProcessingAlgorithm):
 
         return super(MergeEditingSession, self).checkParameterValues(parameters, context)
 
+    def reloadEdgeJoin(self):
+        """
+        Reload the join between edges and roads
+        This allow the symbology based on road class to be refreshed
+        """
+        layers = QgsProject.instance().mapLayersByName('edges')
+        if not layers:
+            return
+        layer = layers[0]
+
+        # Get join properties
+        join = layer.vectorJoins()[0]
+        join_layer = join.joinLayer()
+        join_field_name = join.joinFieldName()
+        join_target_field_name = join.targetFieldName()
+        join_fields = join.joinFieldNamesSubset()
+        join_prefix = join.prefix()
+
+        # Remove existing join
+        layer.removeJoin(join.joinLayerId())
+
+        # Create new join
+        newJoin = QgsVectorLayerJoinInfo()
+        newJoin.setJoinLayer(join_layer)
+        newJoin.setJoinFieldName(join_field_name)
+        newJoin.setTargetFieldName(join_target_field_name)
+        newJoin.setJoinFieldNamesSubset(join_fields)
+        newJoin.setPrefix(join_prefix)
+        newJoin.setUsingMemoryCache(True)
+        layer.addJoin(newJoin)
+
+        # Repaint layer
+        layer.triggerRepaint()
+
     def processAlgorithm(self, parameters, context, feedback):
         # Get connection
         connection_name = self.parameterAsConnectionName(
@@ -185,6 +220,9 @@ class MergeEditingSession(BaseProcessingAlgorithm):
 
         # Reload layers
         QgsProject.instance().reloadAllLayers()
+
+        # Reload edges join with roads for symbology
+        self.reloadEdgeJoin()
 
         # Results
         msg = tr(

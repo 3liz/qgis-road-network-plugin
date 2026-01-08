@@ -64,9 +64,10 @@ COMMENT ON FUNCTION road_graph.before_edge_insert_or_update() IS ' ';
 
 
 -- FUNCTION clean_digitized_roundabout(_road_code text)
-COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool: 
+COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
 * delete the edges inside the roundabout
 * remove the circle node added add 12 o''clock
+* add a marker for this roundabout if not already present
 ';
 
 
@@ -120,6 +121,10 @@ This function does nothing if no node is found at the exact top position of the 
 
 -- FUNCTION merge_editing_session_data(_editing_session_id integer)
 COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
+
+
+-- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
+COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate foreign key constraints to ease the merging editing_session data into road_graph schema';
 
 
 -- FUNCTION update_edge_references(_road_code text, _edge_ids integer[])

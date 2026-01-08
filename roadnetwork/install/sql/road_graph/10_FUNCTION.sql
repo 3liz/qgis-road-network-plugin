@@ -23,6 +23,9 @@ SET row_security = off;
 CREATE FUNCTION road_graph.aa_before_geometry_insert_or_update() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
+DECLARE
+    is_roundabout boolean;
+    _road_type text;
 BEGIN
     -- Trigger disabled by session variable
     IF coalesce((current_setting('road.graph.disable.trigger', true))::integer, 0) = 1
@@ -31,17 +34,31 @@ BEGIN
     END IF;
 
     -- Do not modify the geometry if geom field has not been changed
-    IF
-        (
-            TG_OP = 'INSERT' OR (
-                -- update
-                NOT ST_Equals(OLD.geom, NEW.geom)
-                AND NOT ST_Equals(NEW.geom, ST_ReducePrecision(NEW.geom, 0.10))
-            )
+    IF TG_OP = 'UPDATE' AND (
+            ST_Equals(OLD.geom, NEW.geom)
+            OR
+            ST_Equals(NEW.geom, ST_ReducePrecision(NEW.geom, 0.10))
         )
     THEN
-        NEW.geom = ST_ReducePrecision(NEW.geom, 0.10);
+        RETURN NEW;
     END IF;
+
+    -- Do not modifiy for roundabout, else we have weird aspect
+    IF TG_TABLE_NAME = 'edges'
+    THEN
+        -- Get edge road
+        SELECT INTO _road_type
+            r.road_type
+        FROM road_graph.roads AS r
+        WHERE r.road_code = NEW.road_code
+        ;
+        IF _road_type = 'roundabout' THEN
+            RETURN NEW;
+        END IF;
+    END IF;
+
+    -- Reduce geometry precision
+    NEW.geom = ST_ReducePrecision(NEW.geom, 0.10);
 
     RETURN NEW;
 END;
@@ -1069,8 +1086,10 @@ CREATE FUNCTION road_graph.clean_digitized_roundabout(_road_code text) RETURNS b
     AS $$
 DECLARE
     raise_notice text;
+    node_to_delete integer;
     delete_result bool;
     merge_edges_result bool;
+    left_node_geom geometry(Point, 2154);
 BEGIN
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
 
@@ -1079,30 +1098,30 @@ BEGIN
             _initial_id
         ;
     END IF;
-    
+
     -- Delete the edges inside the roundabout
     -- and update the roads remainging around the roundabout
     -- (previous & next edge ids)
     WITH del AS (
-        DELETE FROM road_graph.edges AS d 
+        DELETE FROM road_graph.edges AS d
         WHERE d.road_code != _road_code
         AND ST_ContainsProperly(
-            (   
-            SELECT 
+            (
+            SELECT
             ST_Buffer(ST_Polygonize(geom), 0.1)
-            FROM road_graph.edges AS e 
+            FROM road_graph.edges AS e
             WHERE e.road_code = _road_code
-            ), 
+            ),
             d.geom
         ) RETURNING d.id, d.previous_edge_id, d.next_edge_id
-    ), 
+    ),
     update_previous AS (
         UPDATE road_graph.edges AS e
         SET next_edge_id = d.next_edge_id
         FROM del AS d
         WHERE e.next_edge_id = d.id
         AND e.id != d.id
-    ), 
+    ),
     update_next AS (
         UPDATE road_graph.edges AS e
         SET previous_edge_id = d.previous_edge_id
@@ -1116,18 +1135,51 @@ BEGIN
     -- Remove the circle node added add 12 o'clock
     -- by QGIS digitizing tool
     -- We use the merge_edges function which does the job
-    WITH node AS (
-        SELECT road_graph.get_upper_roundabout_node_to_delete(
+    SELECT
+        INTO node_to_delete
+        road_graph.get_upper_roundabout_node_to_delete(
             _road_code
-        ) AS id
-    )
-    SELECT INTO merge_edges_result
-        road_graph.merge_edges(
-            (SELECT id FROM road_graph.edges WHERE end_node = n.id),
-            (SELECT id FROM road_graph.edges WHERE start_node = n.id)
         )
-    FROM node AS n
     ;
+    IF raise_notice in ('info', 'debug') THEN
+        RAISE NOTICE 'Node to delete % ', coalesce(node_to_delete, -1);
+    END IF;
+
+    IF node_to_delete IS NOT NULL THEN
+        SELECT
+            INTO merge_edges_result
+            road_graph.merge_edges(
+                (SELECT id FROM road_graph.edges WHERE end_node = node_to_delete LIMIT 1),
+                (SELECT id FROM road_graph.edges WHERE start_node = node_to_delete LIMIT 1)
+            )
+        ;
+    END IF;
+
+    -- Add marker 0 in the left node
+    SELECT
+        INTO left_node_geom
+        n.geom
+    FROM road_graph.nodes AS n
+    JOIN road_graph.edges AS e
+        ON e.start_node = n.id
+    WHERE True
+    AND e.road_code = _road_code
+    ORDER BY ST_X(n.geom)
+    LIMIT 1
+    ;
+    IF left_node_geom IS NOT NULL AND NOT EXISTS (
+        SELECT id
+        FROM road_graph.markers
+        WHERE road_code = _road_code
+        AND "code" = 0
+    )
+    THEN
+        INSERT INTO road_graph.markers (
+            road_code, "code", geom, abscissa
+        ) VALUES (
+            _road_code, 0, left_node_geom, 0
+        );
+    END IF;
 
     RETURN TRUE;
 
@@ -1136,9 +1188,10 @@ $$;
 
 
 -- FUNCTION clean_digitized_roundabout(_road_code text)
-COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool: 
+COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
 * delete the edges inside the roundabout
 * remove the circle node added add 12 o''clock
+* add a marker for this roundabout if not already present
 ';
 
 
@@ -1386,6 +1439,10 @@ BEGIN
             WHEN op = 'I' THEN ' WHERE s.id = ' || id::text
             WHEN op = 'U' THEN ' WHERE s.id = t.id AND t.id = ' || id::text
             WHEN op = 'D' THEN ' WHERE t.id = ' || id::text
+        END,
+        CASE
+            WHEN op = 'I' THEN ' ON CONFLICT DO NOTHING '
+            ELSE ''
         END,
         ';'
     ) AS sql
@@ -2456,6 +2513,7 @@ DECLARE
     editing_session_record record;
     sql_record record;
     _set_config text;
+    _toggle_triggers boolean;
 BEGIN
     -- Get editing session record
     SET search_path TO road_graph, public;
@@ -2474,7 +2532,9 @@ BEGIN
 
     -- Disable topology triggers
     SELECT set_config('road.graph.disable.trigger', '1'::text, false)
-    INTO _set_config;
+        INTO _set_config;
+    SELECT road_graph.toggle_foreign_key_constraints(FALSE)
+        INTO _toggle_triggers;
 
     -- Create SQL to run for each edited data
     FOR sql_record IN
@@ -2489,6 +2549,8 @@ BEGIN
     -- Re-enable triggers
     SELECT set_config('road.graph.disable.trigger', '0'::text, false)
     INTO _set_config;
+    SELECT road_graph.toggle_foreign_key_constraints(TRUE)
+        INTO _toggle_triggers;
 
     -- Truncate editing_session tables
     TRUNCATE editing_session.roads CASCADE;
@@ -2692,6 +2754,29 @@ BEGIN
 
 END;
 $_$;
+
+
+-- toggle_foreign_key_constraints(boolean)
+CREATE FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+
+    IF _toggle THEN
+        -- re-activate all triggers and foreign key constraint
+        SET session_replication_role = 'origin';
+    ELSE
+        -- deactivate all triggers and foreign key constraint
+        SET session_replication_role = 'replica';
+    END IF;
+
+    RETURN _toggle;
+END;
+$$;
+
+
+-- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
+COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate foreign key constraints to ease the merging editing_session data into road_graph schema';
 
 
 -- update_edge_references(text, integer[])
