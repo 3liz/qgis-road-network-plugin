@@ -4,7 +4,7 @@
 [project]
 name = "roadnetwork"
 version = "0.1.0a1"
-description = "An exemple of plugin development setup"
+description = "Road network plugin"
 authors = [
     { name = "3Liz", email = "info@3liz.com" }
 ]
@@ -78,6 +78,11 @@ github_organization_slug = "3liz"
 [tool.qgis-transifex-ci]
 plugin_source = "roadnetwork"
 organization = "3liz-1"
+project = "road-network"
+resource = "road-network"
+coordinator = "mdouchin"
+minimum_translation = 25.0
+
 
 #
 # Ruff
