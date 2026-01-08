@@ -32,4 +32,5 @@ jobs:
 
       - name: Push to Transifex
         run: >-
-          qgis-plugin-ci -vv push-translation "${{ secrets.TRANSIFEX_TOKEN }}"
+          qgis-transifex-ci -vv push
+          --transifex-token "${{ secrets.TRANSIFEX_TOKEN }}"
