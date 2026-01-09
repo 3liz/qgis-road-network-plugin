@@ -48,12 +48,18 @@ lint = [
     "vulture",
 ]
 packaging = [
-    "qgis-plugin-ci>= 2.7.0",
+    "qgis-plugin-package-ci; python_full_version >= '3.12'",
+    "qgis-plugin-transifex-ci; python_full_version >= '3.12'",
 ]
 doc = [
     "mkdocs-material>=7.0.0,<10.0.0",
     "mkdocs-git-revision-date-localized-plugin",
 ]
+
+
+[tool.uv.sources]
+qgis-plugin-package-ci = { git = "https://github.com/3liz/qgis-plugin-package-ci.git" }
+qgis-plugin-transifex-ci =  { git = "https://github.com/3liz/qgis-plugin-transifex-ci" }
 
 #
 # Qgis plugin ci
