@@ -63,6 +63,10 @@ Rq :
 COMMENT ON FUNCTION road_graph.before_edge_insert_or_update() IS ' ';
 
 
+-- FUNCTION before_editing_sessions_update()
+COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the editing_session schema';
+
+
 -- FUNCTION clean_digitized_roundabout(_road_code text)
 COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
 * delete the edges inside the roundabout

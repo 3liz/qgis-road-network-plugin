@@ -1080,6 +1080,26 @@ $$;
 COMMENT ON FUNCTION road_graph.before_edge_insert_or_update() IS ' ';
 
 
+-- before_editing_sessions_update()
+CREATE FUNCTION road_graph.before_editing_sessions_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+
+    -- Geometry must not be updated if the status is not created
+    IF NOT ST_Equals(OLD.geom, NEW.geom) AND NEW."status" != 'created' THEN
+        RAISE EXCEPTION 'The geometry of the editing session cannot be updated after data has been cloned or edited !';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+-- FUNCTION before_editing_sessions_update()
+COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the editing_session schema';
+
+
 -- clean_digitized_roundabout(text)
 CREATE FUNCTION road_graph.clean_digitized_roundabout(_road_code text) RETURNS boolean
     LANGUAGE plpgsql

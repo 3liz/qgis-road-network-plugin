@@ -1841,3 +1841,29 @@ COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'C
 * remove the circle node added add 12 o''clock
 * add a marker for this roundabout if not already present
 ';
+
+
+CREATE OR REPLACE FUNCTION road_graph.before_editing_sessions_update()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
+BEGIN
+
+    -- Geometry must not be updated if the status is not created
+    IF NOT ST_Equals(OLD.geom, NEW.geom) AND NEW."status" != 'created' THEN
+        RAISE EXCEPTION 'The geometry of the editing session cannot be updated after data has been cloned or edited !';
+    END IF;
+
+    RETURN NEW;
+END;
+$BODY$;
+
+COMMENT ON FUNCTION road_graph.before_editing_sessions_update()
+    IS 'Prevent from updating an editing session geometry if there is data inside the editing_session schema';
+
+DROP TRIGGER IF EXISTS trg_before_editing_sessions_update ON road_graph.editing_sessions;
+CREATE TRIGGER trg_before_editing_sessions_update
+BEFORE UPDATE OF geom ON road_graph.editing_sessions
+FOR EACH ROW EXECUTE PROCEDURE road_graph.before_editing_sessions_update();

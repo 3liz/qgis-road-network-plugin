@@ -55,6 +55,10 @@ CREATE TRIGGER trg_after_node_insert_or_update AFTER INSERT OR UPDATE ON road_gr
 CREATE TRIGGER trg_before_edge_insert_or_update BEFORE INSERT OR UPDATE ON road_graph.edges FOR EACH ROW EXECUTE PROCEDURE road_graph.before_edge_insert_or_update();
 
 
+-- editing_sessions trg_before_editing_sessions_update
+CREATE TRIGGER trg_before_editing_sessions_update BEFORE UPDATE OF geom ON road_graph.editing_sessions FOR EACH ROW EXECUTE PROCEDURE road_graph.before_editing_sessions_update();
+
+
 --
 -- PostgreSQL database dump complete
 --
