@@ -114,6 +114,7 @@ ignore = [
     "ANN003",
     "T201",
     "COM812",
+    "RUF067",
 ]
 
 [tool.ruff.lint.per-file-ignores]
