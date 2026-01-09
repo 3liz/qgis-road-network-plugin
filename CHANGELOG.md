@@ -2,6 +2,6 @@
 
 ## Unreleased
 
-## 0.1.0 - 2026-01-01
+## 0.1.0 - 2026-01-09
 
-First version of the plugin
+* First version of the plugin
