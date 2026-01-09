@@ -76,7 +76,7 @@ jobs:
       - name: Install Qt lrelease
         run: |
           sudo apt-get update
-          sudo apt-get install qttools5-dev-tools
+          sudo apt-get -qq install qttools5-dev-tools pyqt5-dev-tools
 
       - name: Install Python requirements
         run: pip install -r requirements/packaging.txt
