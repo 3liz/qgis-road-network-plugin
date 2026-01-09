@@ -80,6 +80,7 @@ changelog_include = true
 [tool.package-ci]
 plugin_source = "roadnetwork"
 github_organization_slug = "3liz"
+project_slug = "qgis-road-network-plugin"
 
 [tool.qgis-transifex-ci]
 plugin_source = "roadnetwork"
