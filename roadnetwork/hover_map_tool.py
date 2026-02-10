@@ -5,6 +5,9 @@ from qgis.core import (
 from qgis.gui import (
     QgsMapTool,
 )
+from qgis.PyQt.QtCore import (
+    pyqtSignal,
+)
 from qgis.PyQt.QtGui import (
     QCursor,
     QPixmap,
@@ -21,11 +24,15 @@ from .processing.tools import (
 
 
 class HoverMapTool(QgsMapTool):
+
+    # Signals
+    references_received = pyqtSignal(dict)
+
     def __init__(self, canvas):
         QgsMapTool.__init__(self, canvas)
         self.canvas = canvas
         hover_cursor = QCursor(QPixmap(
-            str(resources_path('icons', 'hover_map_tool_32.png'))
+            str(resources_path('icons', 'hover_map_tool.png'))
         ))
         self.cursor = hover_cursor
 
@@ -108,7 +115,7 @@ class HoverMapTool(QgsMapTool):
 
         # Display references or error message
         # editing_sessions
-        messages = []
+        emitted_references = {}
         for schema in ('editing_session', 'road_graph'):
             references, error = self.getReferenceFromLonLat(
                 connection_name,
@@ -116,27 +123,19 @@ class HoverMapTool(QgsMapTool):
                 point.x(),
                 point.y()
             )
+            emitted_references[schema] = {}
             if str(references[0][0]) != 'NULL':
-                messages.append(tr(
-                    f"""
-                    <b>{schema}</b>
-                    {references[0][0]}
-                    PR {references[0][1]} + {references[0][2]}
-                    @ {references[0][3]} {references[0][4]}
-                    C {references[0][5]}
-                    """
-                ))
+                emitted_references[schema]['road_code'] = references[0][0]
+                emitted_references[schema]['marker'] = references[0][1]
+                emitted_references[schema]['abscissa'] = references[0][2]
+                emitted_references[schema]['offset'] = references[0][3]
+                emitted_references[schema]['side'] = references[0][4]
+                emitted_references[schema]['cumulative'] = references[0][5]
+
             if error and schema == 'road_graph':
                 iface.messageBar().pushMessage(
                     'RoadNetwork',
                     error,
                     Qgis.MessageLevel.Critical
                 )
-        if messages:
-            message = f'''
-                {'/'.join(messages)}
-            '''
-            iface.messageBar().pushMessage(
-                message,
-                Qgis.MessageLevel.Success
-            )
+        self.references_received.emit(emitted_references)

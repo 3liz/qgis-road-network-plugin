@@ -4,11 +4,13 @@ import webbrowser
 import processing
 
 from qgis.core import QgsApplication, QgsSettings
+from qgis.gui import QgsFilterLineEdit
 from qgis.PyQt.QtCore import QCoreApplication, Qt, QTranslator
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QIcon, QKeySequence
+from qgis.PyQt.QtWidgets import QAction, QShortcut
 
 from .dockwidget import PluginDockWidget
+from .dockwidget_tools import ToolsDockWidget
 from .hover_map_tool import HoverMapTool
 from .plugin_tools.i18n import tr
 from .plugin_tools.resources import (
@@ -23,6 +25,7 @@ class Plugin:
     def __init__(self, iface):
         self.provider = None
         self.dock = None
+        self.tools_dock = None
         self.iface = iface
         self.action_toggle_hover_tool = None
         self.action_toggle_dock = None
@@ -42,6 +45,11 @@ class Plugin:
             self.translator.load(locale_path)
             QCoreApplication.installTranslator(self.translator)
 
+        # Connect hover map tool signal
+        self.hover_map_tool.references_received.connect(
+            self.on_hover_references_received
+        )
+
     # noinspection PyPep8Naming
     def initProcessing(self):
         """Load the Processing provider."""
@@ -51,8 +59,13 @@ class Plugin:
     # noinspection PyPep8Naming
     def initGui(self):
         self.initProcessing()
+        # Admin dock
         self.dock = PluginDockWidget(self.iface)
         self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock)
+
+        # Tools dock
+        self.tools_dock = ToolsDockWidget(self.iface)
+        self.iface.addDockWidget(Qt.RightDockWidgetArea, self.tools_dock)
 
         # Map hover references tool
         self.action_toggle_hover_tool = QAction(
@@ -67,6 +80,15 @@ class Plugin:
         self.action_toggle_hover_tool.triggered.connect(
             self.toggle_hover_tool
         )
+        # Toggle hover tool on key shortcut
+        shortcut = QShortcut(
+            QKeySequence(
+                Qt.ControlModifier + Qt.ShiftModifier + Qt.Key_K
+            ),
+            self.iface.mainWindow()
+        )
+        shortcut.setContext(Qt.ApplicationShortcut)
+        shortcut.activated.connect(self.toggle_hover_tool)
 
         # Add plugin menu Open/close the dock from plugin menu
         self.action_toggle_dock = QAction(
@@ -182,11 +204,25 @@ class Plugin:
         alg_name = "roadnetwork:merge_editing_session"
         processing.execAlgorithmDialog(alg_name, param)
 
+    def on_hover_references_received(self, references: dict):
+        """Receive the references from the hover tool and display them in the dock"""
+        # Print the references in the tools dock
+        for schema, refs in references.items():
+            for key, value in refs.items():
+                line_edit = self.tools_dock.findChild(QgsFilterLineEdit, f"{key}_sandbox" if schema == 'editing_session' else key)
+                if not line_edit:
+                    continue
+                value = str(value) if value is not None else ''
+                line_edit.setValue(value)
+
     def unload(self):
         """ Unload plugin """
         if self.dock:
             self.iface.removeDockWidget(self.dock)
             self.dock.deleteLater()
+        if self.tools_dock:
+            self.iface.removeDockWidget(self.tools_dock)
+            self.tools_dock.deleteLater()
 
         if self.action_toggle_hover_tool:
             self.toolbar.removeAction(self.action_toggle_hover_tool)

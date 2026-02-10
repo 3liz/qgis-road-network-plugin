@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ToolsDockWidgetBase</class>
+ <widget class="QDockWidget" name="ToolsDockWidgetBase">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>411</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>RoadNetwork tools</string>
+  </property>
+  <widget class="QWidget" name="toolsDockWidgetContents">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <widget class="QScrollArea" name="scrollArea">
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>391</width>
+         <height>759</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QGroupBox" name="groupbox_localisation">
+          <property name="title">
+           <string>Localisation</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <layout class="QGridLayout" name="grid_localisation">
+             <item row="2" column="0" colspan="3">
+              <widget class="QgsFilterLineEdit" name="road_code">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="road_code_label">
+               <property name="text">
+                <string>Road</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="marker_label">
+               <property name="text">
+                <string>Marker</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QgsFilterLineEdit" name="marker">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLabel" name="abscissa_label">
+               <property name="text">
+                <string>Abscissa</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QgsFilterLineEdit" name="abscissa">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="2">
+              <widget class="QLabel" name="cumulative_label">
+               <property name="text">
+                <string>Cumulative</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="2">
+              <widget class="QgsFilterLineEdit" name="cumulative">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="offset_label">
+               <property name="text">
+                <string>Offset</string>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="0">
+              <widget class="QgsFilterLineEdit" name="offset">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QLabel" name="side_label">
+               <property name="text">
+                <string>Side</string>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="1">
+              <widget class="QgsFilterLineEdit" name="side">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QgsCollapsibleGroupBox" name="groupbox_localisation_sandbox">
+          <property name="title">
+           <string>Localisation (sandbox)</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <layout class="QGridLayout" name="grid_localisation_sandbox">
+             <item row="0" column="0">
+              <widget class="QLabel" name="road_code_label_sandbox">
+               <property name="text">
+                <string>Road</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0" colspan="3">
+              <widget class="QgsFilterLineEdit" name="road_code_sandbox">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="marker_label_sandbox">
+               <property name="text">
+                <string>Marker</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QgsFilterLineEdit" name="marker_sandbox">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLabel" name="abscissa_label_sandbox">
+               <property name="text">
+                <string>Abscissa</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QgsFilterLineEdit" name="abscissa_sandbox">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="2">
+              <widget class="QgsFilterLineEdit" name="cumulative_sandbox">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="2">
+              <widget class="QLabel" name="cumulative_label_sandbox">
+               <property name="text">
+                <string>Cumulative</string>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="offset_label_sandbox">
+               <property name="text">
+                <string>Offset</string>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="0">
+              <widget class="QgsFilterLineEdit" name="offset_sandbox">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QLabel" name="side_label_sandbox">
+               <property name="text">
+                <string>Side</string>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="1">
+              <widget class="QgsFilterLineEdit" name="side_sandbox">
+               <property name="qgisRelation" stdset="0">
+                <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QgsCollapsibleGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>qgscollapsiblegroupbox.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsFilterLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>qgsfilterlineedit.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>groupbox_localisation_sandbox</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
