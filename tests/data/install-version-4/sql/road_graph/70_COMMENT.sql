@@ -88,10 +88,6 @@ COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done 
 It also check that the edited geometries are inside the editing session polygon.';
 
 
--- FUNCTION get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text)
-COMMENT ON FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.';
-
-
 -- FUNCTION get_edge_references(edge_id integer)
 COMMENT ON FUNCTION road_graph.get_edge_references(edge_id integer) IS 'Return the references of the given edge start and end point.
 Could be used to UPDATE the edges of a road.
@@ -100,10 +96,6 @@ Could be used to UPDATE the edges of a road.
 
 -- FUNCTION get_ordered_edges(_road_code text, _initial_id integer, _direction text)
 COMMENT ON FUNCTION road_graph.get_ordered_edges(_road_code text, _initial_id integer, _direction text) IS 'Get the list of edge id with order for a given road, edge and the direction (downtream or upstream). It always includes the given edge';
-
-
--- FUNCTION get_road_point_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text)
-COMMENT ON FUNCTION road_graph.get_road_point_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the corresponding point';
 
 
 -- FUNCTION get_road_previous_marker_from_point(_road_code text, _point geometry)
@@ -118,10 +110,6 @@ The function also returns
 * the simple linestring (no gaps) made by merging all edges linestrings from the start to the point
 * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
 ';
-
-
--- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text)
-COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the built linestring';
 
 
 -- FUNCTION get_spatial_road(_road_code text)
@@ -147,10 +135,6 @@ COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) I
 COMMENT ON FUNCTION road_graph.update_edge_references(_road_code text, _edge_ids integer[]) IS 'Find the edges corresponding to the optionaly given _road_code and _edges_ids
 and calculate their start and end points references
 ';
-
-
--- FUNCTION update_managed_objects_on_graph_change(_schema_name text, _table_name text, _ids integer[])
-COMMENT ON FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _ids integer[]) IS 'Updates managed objects geometries based on their references when the road graph changes';
 
 
 -- FUNCTION update_road_edges_neighbours(_road_code text, _start_node integer)
@@ -217,30 +201,6 @@ COMMENT ON COLUMN road_graph.editing_sessions.cloned_ids IS 'Object containing t
 
 -- glossary_road_class
 COMMENT ON TABLE road_graph.glossary_road_class IS 'Glossary for the column road_scale of the table roads';
-
-
--- managed_objects
-COMMENT ON TABLE road_graph.managed_objects IS 'Table listing all managed objects in the road graph system';
-
-
--- managed_objects.schema_name
-COMMENT ON COLUMN road_graph.managed_objects.schema_name IS 'Schema name of the managed object table';
-
-
--- managed_objects.table_name
-COMMENT ON COLUMN road_graph.managed_objects.table_name IS 'Table name of the managed object table';
-
-
--- managed_objects.object_type
-COMMENT ON COLUMN road_graph.managed_objects.object_type IS 'Type of the managed object (e.g., tree, sign, etc.)';
-
-
--- managed_objects.geometry_type
-COMMENT ON COLUMN road_graph.managed_objects.geometry_type IS 'Geometry type of the managed object (e.g., POINT, LINESTRING, etc.)';
-
-
--- managed_objects.update_policy_on_graph_change
-COMMENT ON COLUMN road_graph.managed_objects.update_policy_on_graph_change IS 'Policy for updating the managed object on graph changes: ''geometry'', ''references''';
 
 
 -- markers

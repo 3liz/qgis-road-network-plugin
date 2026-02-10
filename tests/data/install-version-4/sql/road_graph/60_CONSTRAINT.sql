@@ -46,11 +46,6 @@ ALTER TABLE ONLY road_graph.glossary_road_class
     ADD CONSTRAINT glossary_road_scale_pkey PRIMARY KEY (id);
 
 
--- managed_objects managed_objects_pkey
-ALTER TABLE ONLY road_graph.managed_objects
-    ADD CONSTRAINT managed_objects_pkey PRIMARY KEY (id);
-
-
 -- markers markers_pkey
 ALTER TABLE ONLY road_graph.markers
     ADD CONSTRAINT markers_pkey PRIMARY KEY (id);
@@ -79,11 +74,6 @@ ALTER TABLE ONLY road_graph.roads
 -- roads roads_road_code_key
 ALTER TABLE ONLY road_graph.roads
     ADD CONSTRAINT roads_road_code_key UNIQUE (road_code);
-
-
--- managed_objects unique_managed_object
-ALTER TABLE ONLY road_graph.managed_objects
-    ADD CONSTRAINT unique_managed_object UNIQUE (schema_name, table_name);
 
 
 -- edges edges_end_node_fkey
