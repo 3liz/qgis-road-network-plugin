@@ -37,13 +37,14 @@ class HoverMapTool(QgsMapTool):
         self.cursor = hover_cursor
 
     def canvasPressEvent(self, event):
+        self.emitMapCursorReferences(event)
         pass
 
     def canvasMoveEvent(self, event):
-        self.displayReferences(event)
+        pass
 
     def canvasReleaseEvent(self, event):
-        self.displayReferences(event)
+        pass
 
     def activate(self):
         self.canvas.setCursor(self.cursor)
@@ -88,8 +89,8 @@ class HoverMapTool(QgsMapTool):
 
         return result, error
 
-    def displayReferences(self, event):
-        """ Show the references or an error message"""
+    def emitMapCursorReferences(self, event):
+        """ Show the references or"""
         # Get canvas coordinates
         x = event.pos().x()
         y = event.pos().y()

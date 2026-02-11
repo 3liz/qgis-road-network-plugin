@@ -61,6 +61,9 @@
              </item>
              <item row="4" column="0">
               <widget class="QgsFilterLineEdit" name="marker">
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -75,6 +78,9 @@
              </item>
              <item row="4" column="1">
               <widget class="QgsFilterLineEdit" name="abscissa">
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -89,6 +95,15 @@
              </item>
              <item row="4" column="2">
               <widget class="QgsFilterLineEdit" name="cumulative">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -103,6 +118,9 @@
              </item>
              <item row="6" column="0">
               <widget class="QgsFilterLineEdit" name="offset">
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -117,8 +135,24 @@
              </item>
              <item row="6" column="1">
               <widget class="QgsFilterLineEdit" name="side">
+               <property name="inputMethodHints">
+                <set>Qt::ImhLowercaseOnly</set>
+               </property>
+               <property name="inputMask">
+                <string/>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="2">
+              <widget class="QPushButton" name="button_find_point_from_references">
+               <property name="text">
+                <string>Find</string>
+               </property>
+               <property name="autoDefault">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -144,6 +178,9 @@
              </item>
              <item row="1" column="0" colspan="3">
               <widget class="QgsFilterLineEdit" name="road_code_sandbox">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -158,6 +195,9 @@
              </item>
              <item row="4" column="0">
               <widget class="QgsFilterLineEdit" name="marker_sandbox">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -172,6 +212,9 @@
              </item>
              <item row="4" column="1">
               <widget class="QgsFilterLineEdit" name="abscissa_sandbox">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -179,6 +222,9 @@
              </item>
              <item row="4" column="2">
               <widget class="QgsFilterLineEdit" name="cumulative_sandbox">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -200,6 +246,9 @@
              </item>
              <item row="6" column="0">
               <widget class="QgsFilterLineEdit" name="offset_sandbox">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -214,6 +263,9 @@
              </item>
              <item row="6" column="1">
               <widget class="QgsFilterLineEdit" name="side_sandbox">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
                </property>
@@ -259,7 +311,20 @@
  </customwidgets>
  <tabstops>
   <tabstop>scrollArea</tabstop>
+  <tabstop>road_code</tabstop>
+  <tabstop>marker</tabstop>
+  <tabstop>abscissa</tabstop>
+  <tabstop>cumulative</tabstop>
+  <tabstop>offset</tabstop>
+  <tabstop>side</tabstop>
+  <tabstop>button_find_point_from_references</tabstop>
   <tabstop>groupbox_localisation_sandbox</tabstop>
+  <tabstop>road_code_sandbox</tabstop>
+  <tabstop>marker_sandbox</tabstop>
+  <tabstop>abscissa_sandbox</tabstop>
+  <tabstop>cumulative_sandbox</tabstop>
+  <tabstop>offset_sandbox</tabstop>
+  <tabstop>side_sandbox</tabstop>
  </tabstops>
  <resources/>
  <connections/>
