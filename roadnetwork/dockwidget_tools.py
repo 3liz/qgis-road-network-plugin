@@ -1,3 +1,4 @@
+from functools import partial
 from qgis.core import (
     Qgis,
     QgsExpressionContextUtils,
@@ -45,51 +46,70 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
         self.abscissa.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+(\.\d+)?$')))
         self.offset.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+(\.\d+)?$')))
         self.side.setValidator(QRegularExpressionValidator(QRegularExpression(r'^(left|right)$')))
+        self.marker_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+$')))
+        self.abscissa_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+(\.\d+)?$')))
+        self.offset_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+(\.\d+)?$')))
+        self.side_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r'^(left|right)$')))
 
         # Signals/Slots
-        self.button_find_point_from_references.clicked.connect(
-            self.find_point_from_references
-        )
-        self.road_code.returnPressed.connect(self.button_find_point_from_references.click)
-        self.marker.returnPressed.connect(self.button_find_point_from_references.click)
-        self.abscissa.returnPressed.connect(self.button_find_point_from_references.click)
-        self.offset.returnPressed.connect(self.button_find_point_from_references.click)
-        self.side.returnPressed.connect(self.button_find_point_from_references.click)
-        self.cumulative.returnPressed.connect(self.button_find_point_from_references.click)
 
-    def find_point_from_references(self) -> str | None:
+        # Find point based on given references
+        find_buttons = {
+            'road_graph': self.button_find_point_from_references,
+            'editing_session': self.button_find_point_from_references_sandbox,
+        }
+        form_fields = (
+            'road_code', 'marker', 'abscissa',
+            'offset', 'side', 'cumulative',
+        )
+        for schema, button in find_buttons.items():
+            slot = partial(self.find_point_from_references, schema)
+            # Click on the find button
+            button.clicked.connect(slot)
+
+            # Press return on any form key
+            suffix = '' if schema == 'road_graph' else '_sandbox'
+            for key in form_fields:
+                input = self.findChild(QgsFilterLineEdit, f'key{suffix}')
+                if input:
+                    input.returnPressed.connect(button.click)
+
+
+
+    def find_point_from_references(self, schema: str = 'road_graph') -> str | None:
         """Get WKT geometry returned by the given references."""
+        suffix = '' if schema == 'road_graph' else '_sandbox'
         # Get input values
         # road_code
-        item = self.findChild(QgsFilterLineEdit, 'road_code')
+        item = self.findChild(QgsFilterLineEdit, 'road_code' + suffix)
         road_code = 'D1'
         if item and item.value():
             road_code = item.value()
         else:
             item.setValue(str(road_code))
         # marker
-        item = self.findChild(QgsFilterLineEdit, 'marker')
+        item = self.findChild(QgsFilterLineEdit, 'marker' + suffix)
         marker = 0
         if item and item.value():
             marker = item.value()
         else:
             item.setValue(str(marker))
         # abscissa
-        item = self.findChild(QgsFilterLineEdit, 'abscissa')
+        item = self.findChild(QgsFilterLineEdit, 'abscissa' + suffix)
         abscissa = 0.0
         if item and item.value():
             abscissa = item.value()
         else:
             item.setValue(str(abscissa))
         # offset
-        item = self.findChild(QgsFilterLineEdit, 'offset')
+        item = self.findChild(QgsFilterLineEdit, 'offset' + suffix)
         offset = 0.0
         if item and item.value():
             offset = item.value()
         else:
             item.setValue(str(offset))
         # side
-        item = self.findChild(QgsFilterLineEdit, 'side')
+        item = self.findChild(QgsFilterLineEdit, 'side' + suffix)
         side = 'right'
         if item and item.value():
             side = item.value()
@@ -99,7 +119,7 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
         # Query the database
         sql = f"""
             WITH get AS (
-                SELECT road_graph.get_point_from_reference(
+                SELECT {schema}.get_road_point_from_reference(
                     '{road_code}',
                     {marker},
                     {abscissa},

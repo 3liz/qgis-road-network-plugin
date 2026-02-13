@@ -179,7 +179,7 @@
              <item row="1" column="0" colspan="3">
               <widget class="QgsFilterLineEdit" name="road_code_sandbox">
                <property name="readOnly">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
@@ -195,8 +195,11 @@
              </item>
              <item row="4" column="0">
               <widget class="QgsFilterLineEdit" name="marker_sandbox">
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
                <property name="readOnly">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
@@ -212,8 +215,11 @@
              </item>
              <item row="4" column="1">
               <widget class="QgsFilterLineEdit" name="abscissa_sandbox">
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
                <property name="readOnly">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
@@ -222,6 +228,9 @@
              </item>
              <item row="4" column="2">
               <widget class="QgsFilterLineEdit" name="cumulative_sandbox">
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
                </property>
@@ -246,8 +255,11 @@
              </item>
              <item row="6" column="0">
               <widget class="QgsFilterLineEdit" name="offset_sandbox">
+               <property name="inputMethodHints">
+                <set>Qt::ImhDigitsOnly</set>
+               </property>
                <property name="readOnly">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
@@ -263,11 +275,21 @@
              </item>
              <item row="6" column="1">
               <widget class="QgsFilterLineEdit" name="side_sandbox">
+               <property name="inputMethodHints">
+                <set>Qt::ImhLowercaseOnly</set>
+               </property>
                <property name="readOnly">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="2">
+              <widget class="QPushButton" name="button_find_point_from_references_sandbox">
+               <property name="text">
+                <string>Find</string>
                </property>
               </widget>
              </item>
@@ -345,6 +367,9 @@
   <tabstop>cumulative_sandbox</tabstop>
   <tabstop>offset_sandbox</tabstop>
   <tabstop>side_sandbox</tabstop>
+  <tabstop>button_find_point_from_references_sandbox</tabstop>
+  <tabstop>mGroupBox</tabstop>
+  <tabstop>cb_listen_move_event</tabstop>
  </tabstops>
  <resources/>
  <connections/>
