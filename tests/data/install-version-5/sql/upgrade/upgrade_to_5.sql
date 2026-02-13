@@ -1,3 +1,4 @@
+-- FUNCTION: road_graph.get_point_from_reference(text, integer, real, real, text)
 CREATE OR REPLACE FUNCTION road_graph.get_downstream_multilinestring_from_reference(
 	_road_code text,
 	_marker_code integer,
@@ -166,6 +167,7 @@ IS 'Returns a JSON object with the given references and the MULTILINESTRING down
 ;
 
 
+-- FUNCTION: road_graph.get_point_from_reference(text, integer, real, real, text)
 CREATE OR REPLACE FUNCTION road_graph.get_road_point_from_reference(
 	_road_code text,
 	_marker_code integer,
@@ -254,6 +256,8 @@ IS 'Returns a JSON object with the given references and the geometry of the corr
 ;
 
 
+
+-- FUNCTION: road_graph.get_point_from_reference(text, integer, real, real, text)
 CREATE OR REPLACE FUNCTION road_graph.get_road_substring_from_references(
 	_road_code text,
 	_start_marker_code integer,
