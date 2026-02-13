@@ -146,6 +146,11 @@ class Plugin:
         self.toolbar.addAction(self.action_merge_editing_session_data)
         self.toolbar.addAction(self.action_toggle_dock)
 
+        # Toggle hover of the map tool
+        self.tools_dock.cb_listen_move_event.stateChanged.connect(
+            self.on_listen_move_event_changed
+        )
+
     def toggle_hover_tool(self):
         """ Toggle the map hover tool used to find references"""
         # Toggle action
@@ -207,13 +212,22 @@ class Plugin:
     def on_hover_references_received(self, references: dict):
         """Receive the references from the hover tool and display them in the dock"""
         # Print the references in the tools dock
-        for schema, refs in references.items():
-            for key, value in refs.items():
-                line_edit = self.tools_dock.findChild(QgsFilterLineEdit, f"{key}_sandbox" if schema == 'editing_session' else key)
+        for schema in ('editing_session', 'road_graph'):
+            refs = references[schema]
+            for key in ('road_code', 'marker', 'abscissa', 'offset', 'side', 'cumulative'):
+                value = str(refs[key]) if key in refs and refs[key] else ''
+                line_edit = self.tools_dock.findChild(
+                    QgsFilterLineEdit,
+                    f"{key}_sandbox" if schema == 'editing_session' else key
+                )
                 if not line_edit:
                     continue
-                value = str(value) if value is not None else ''
                 line_edit.setValue(value)
+
+    def on_listen_move_event_changed(self):
+        """Listen to the state change of the cb_listen_move_event checkbox"""
+        toggle = self.tools_dock.cb_listen_move_event.isChecked()
+        self.hover_map_tool.toggleMoveEvent(toggle)
 
     def unload(self):
         """ Unload plugin """

@@ -35,12 +35,15 @@ class HoverMapTool(QgsMapTool):
             str(resources_path('icons', 'hover_map_tool.png'))
         ))
         self.cursor = hover_cursor
+        self.listen_move_event = False
 
     def canvasPressEvent(self, event):
         self.emitMapCursorReferences(event)
         pass
 
     def canvasMoveEvent(self, event):
+        if self.listen_move_event:
+            self.emitMapCursorReferences(event)
         pass
 
     def canvasReleaseEvent(self, event):
@@ -62,6 +65,10 @@ class HoverMapTool(QgsMapTool):
 
     def isEditTool(self):
         return False
+
+    def toggleMoveEvent(self, toggle: bool = False):
+        """ Sets the move event flag"""
+        self.listen_move_event = toggle
 
     def getReferenceFromLonLat(self, connection_name, schema, lon, lat):
         """
@@ -139,4 +146,6 @@ class HoverMapTool(QgsMapTool):
                     error,
                     Qgis.MessageLevel.Critical
                 )
+
+        # Emit references
         self.references_received.emit(emitted_references)

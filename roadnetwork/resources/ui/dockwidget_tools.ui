@@ -164,7 +164,7 @@
         <item>
          <widget class="QgsCollapsibleGroupBox" name="groupbox_localisation_sandbox">
           <property name="title">
-           <string>Localisation (sandbox)</string>
+           <string>Localisation (editing)</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
@@ -268,6 +268,26 @@
                </property>
                <property name="qgisRelation" stdset="0">
                 <string notr="true"/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QgsCollapsibleGroupBox" name="mGroupBox">
+          <property name="title">
+           <string>Options</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <layout class="QGridLayout" name="gridLayout_2">
+             <item row="0" column="0">
+              <widget class="QCheckBox" name="cb_listen_move_event">
+               <property name="text">
+                <string>Get references on hover ?</string>
                </property>
               </widget>
              </item>
