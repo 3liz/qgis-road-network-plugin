@@ -60,11 +60,30 @@ Rq :
 
 
 -- FUNCTION before_edge_insert_or_update()
-COMMENT ON FUNCTION road_graph.before_edge_insert_or_update() IS ' ';
+COMMENT ON FUNCTION road_graph.before_edge_insert_or_update() IS 'During the creation or modification of an edge, we verify that the upstream and downstream nodes exist
+within 50 cm of the start and end of the edge. If they do, we use them
+and update the edge geometry so that the start and end are exactly on these nodes.
+Otherwise, we create the missing nodes.
+Additionally, during the creation of an edge, if the road code is provided and no marker 0 exists for this road,
+we automatically create one at the start of the edge.
+During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point,
+we move marker 0 to this new starting point.
+Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge
+based on its geometry and position on the road.
+';
 
 
 -- FUNCTION before_editing_sessions_update()
 COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the editing_session schema';
+
+
+-- FUNCTION build_road_cached_objects(_road_code text)
+COMMENT ON FUNCTION road_graph.build_road_cached_objects(_road_code text) IS 'Calculate the given road geometries used in linear referencing tools & the road marker locations:
+* the simple linestring (no gaps) made by merging all edges linestrings after connecting edges
+* the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
+
+Cached data is store in a temporary table living only until COMMIT
+';
 
 
 -- FUNCTION clean_digitized_roundabout(_road_code text)
@@ -88,13 +107,21 @@ COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done 
 It also check that the edited geometries are inside the editing session polygon.';
 
 
+-- FUNCTION get_current_setting(setting_name text, default_value text, value_type text)
+COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_value text, value_type text) IS 'Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid.
+The function is used to avoid repeating the coalesce(current_setting(...))::TYPE, 0) = 1
+and to have a single point of maintenance for getting settings.';
+
+
 -- FUNCTION get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text)
 COMMENT ON FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.';
 
 
--- FUNCTION get_edge_references(edge_id integer)
-COMMENT ON FUNCTION road_graph.get_edge_references(edge_id integer) IS 'Return the references of the given edge start and end point.
+-- FUNCTION get_edge_references(_edge_id integer, _use_cache boolean)
+COMMENT ON FUNCTION road_graph.get_edge_references(_edge_id integer, _use_cache boolean) IS 'Return the references of the given edge start and end point.
 Could be used to UPDATE the edges of a road.
+By default does not use road object cache store in a temporary table.
+This behaviour can be overriden by setting _use_cache TO True;
 ';
 
 
@@ -106,14 +133,18 @@ COMMENT ON FUNCTION road_graph.get_ordered_edges(_road_code text, _initial_id in
 COMMENT ON FUNCTION road_graph.get_road_point_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the corresponding point';
 
 
--- FUNCTION get_road_previous_marker_from_point(_road_code text, _point geometry)
-COMMENT ON FUNCTION road_graph.get_road_previous_marker_from_point(_road_code text, _point geometry) IS 'Get the closest upstream marker for the given road from a given point.
-|m0----m1----|  |----m2----m3----|   |--------m4---|
+-- FUNCTION get_road_previous_marker_from_point(_road_code text, _point geometry, _use_cache boolean)
+COMMENT ON FUNCTION road_graph.get_road_previous_marker_from_point(_road_code text, _point geometry, _use_cache boolean) IS 'Get the closest upstream marker for the given road from a given point.
+This function can use roads cached objects generated beforehand via function build_road_cached_objects.
+Or use a full SQL query with no use of temporary tables, depending of the paramter _use_cache
+
+Illustration
+|m0----m1----|  |-m2-m2b----m3----|   |--------m4---|
                  p0    p1               p2
 p0 -> marker is m1
-p1 -> marker is m2
+p1 -> marker is m2b (virtual marker with a non-null abscissa)
 p2 -> marker is m3
-The function also returns 
+The function also returns
 * the simple linestring (no gaps) made by merging all edges linestrings from the marker to the point
 * the simple linestring (no gaps) made by merging all edges linestrings from the start to the point
 * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
@@ -135,6 +166,14 @@ This function does nothing if no node is found at the exact top position of the 
 ';
 
 
+-- FUNCTION merge_edges(id_edge_a integer, id_edge_b integer)
+COMMENT ON FUNCTION road_graph.merge_edges(id_edge_a integer, id_edge_b integer) IS 'Merge two edges by their geometry.
+The merged edge is the one with the lowest id. The other edge is deleted.
+The node between the two edges is not deleted but its id is stored
+in the session variable ''road.graph.merge.edges.useless.node'' for further use if needed.
+';
+
+
 -- FUNCTION merge_editing_session_data(_editing_session_id integer)
 COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
 
@@ -145,7 +184,9 @@ COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) I
 
 -- FUNCTION update_edge_references(_road_code text, _edge_ids integer[])
 COMMENT ON FUNCTION road_graph.update_edge_references(_road_code text, _edge_ids integer[]) IS 'Find the edges corresponding to the optionaly given _road_code and _edges_ids
-and calculate their start and end points references
+and calculate their start and end points references.
+This method calculates the road cached objects to speed of the process
+for big roads with many edges
 ';
 
 

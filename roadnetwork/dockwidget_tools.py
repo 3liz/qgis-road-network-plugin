@@ -1,4 +1,5 @@
 from functools import partial
+
 from qgis.core import (
     Qgis,
     QgsExpressionContextUtils,
@@ -7,14 +8,15 @@ from qgis.core import (
 )
 from qgis.gui import QgsDockWidget, QgsFilterLineEdit
 from qgis.PyQt import QtWidgets
-from qgis.PyQt.QtGui import (
-    QColor,
-    QRegularExpressionValidator,
-)
 from qgis.PyQt.QtCore import (
     QRegularExpression,
     pyqtSignal,
 )
+from qgis.PyQt.QtGui import (
+    QColor,
+    QRegularExpressionValidator,
+)
+
 from .plugin_tools.i18n import tr
 from .plugin_tools.resources import (
     load_ui,
@@ -73,8 +75,6 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
                 input = self.findChild(QgsFilterLineEdit, f'key{suffix}')
                 if input:
                     input.returnPressed.connect(button.click)
-
-
 
     def find_point_from_references(self, schema: str = 'road_graph') -> str | None:
         """Get WKT geometry returned by the given references."""

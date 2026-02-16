@@ -215,7 +215,7 @@ class Plugin:
         for schema in ('editing_session', 'road_graph'):
             refs = references[schema]
             for key in ('road_code', 'marker', 'abscissa', 'offset', 'side', 'cumulative'):
-                value = str(refs[key]) if key in refs and refs[key] else ''
+                value = str(refs[key]) if refs.get(key) else ''
                 line_edit = self.tools_dock.findChild(
                     QgsFilterLineEdit,
                     f"{key}_sandbox" if schema == 'editing_session' else key
