@@ -1,5 +1,8 @@
+import time
+
 from qgis.core import (
     Qgis,
+    QgsPointXY,
     QgsProject,
 )
 from qgis.gui import (
@@ -28,6 +31,17 @@ class HoverMapTool(QgsMapTool):
     # Signals
     references_received = pyqtSignal(dict)
 
+    # Active tool
+    # Can be 'maptool' or 'canvas'
+    active_tool = None
+
+    # If we should listen to move event
+    listen_move_event = False
+
+    # Number of milliseconds since last emission of references, used to limit the number of emissions
+    minimum_time_between_emissions_ms = 150
+    emitted_since_ms = 0
+
     def __init__(self, canvas):
         QgsMapTool.__init__(self, canvas)
         self.canvas = canvas
@@ -38,12 +52,13 @@ class HoverMapTool(QgsMapTool):
         self.listen_move_event = False
 
     def canvasPressEvent(self, event):
-        self.emitMapCursorReferences(event)
+        if self.active_tool == 'maptool':
+            self.emitMapCursorReferences(event.originalMapPoint(), 'click')
         pass
 
     def canvasMoveEvent(self, event):
-        if self.listen_move_event:
-            self.emitMapCursorReferences(event)
+        if self.listen_move_event and self.active_tool == 'maptool':
+            self.emitMapCursorReferences(event.originalMapPoint(), 'move')
         pass
 
     def canvasReleaseEvent(self, event):
@@ -51,10 +66,12 @@ class HoverMapTool(QgsMapTool):
 
     def activate(self):
         self.canvas.setCursor(self.cursor)
+        self.active_tool = 'maptool'
         self.activated.emit()
 
     def deactivate(self):
         QgsMapTool.deactivate(self)
+        self.active_tool = None if not self.listen_move_event else 'canvas'
         self.deactivated.emit()
 
     def isZoomTool(self):
@@ -69,6 +86,13 @@ class HoverMapTool(QgsMapTool):
     def toggleMoveEvent(self, toggle: bool = False):
         """ Sets the move event flag"""
         self.listen_move_event = toggle
+        # Change the active tool
+        if not toggle:
+            if self.active_tool == 'canvas':
+                self.active_tool = None
+        else:
+            if not self.active_tool:
+                self.active_tool = 'canvas'
 
     def getReferenceFromLonLat(self, connection_name, schema, lon, lat):
         """
@@ -96,14 +120,32 @@ class HoverMapTool(QgsMapTool):
 
         return result, error
 
-    def emitMapCursorReferences(self, event):
-        """ Show the references or"""
-        # Get canvas coordinates
-        x = event.pos().x()
-        y = event.pos().y()
+    def emitMapCursorReferences(self, map_position: QgsPointXY, event_name: str = 'move'):
+        """
+        Emit the references at the given cursor X and Y position on the map canvas.
+
+        References are emitted only
+        if the active tool is 'maptool' and if the event is a click
+        or if the move event is enabled.
+        """
+        # Do nothing if conditions are not met
+        if not self.active_tool:
+            return
+        if not self.listen_move_event:
+            if self.active_tool == 'canvas':
+                return
+            if event_name != 'click':
+                return
+
+        # Very basic limitation of number of time the function is called
+        current_time_ms = int(time.perf_counter_ns() / 1000000)
+        if current_time_ms - self.emitted_since_ms < self.minimum_time_between_emissions_ms:
+            return
+        self.emitted_since_ms = current_time_ms
 
         # Get map coordinates
-        point = self.canvas.getCoordinateTransform().toMapCoordinates(x, y)
+        x = map_position.x()
+        y = map_position.y()
 
         # Clean previous message
         iface.messageBar().clearWidgets()
@@ -119,6 +161,9 @@ class HoverMapTool(QgsMapTool):
                 tr('The current project does not have a suitable road network connection'),
                 Qgis.MessageLevel.Warning
             )
+            self.listen_move_event = False
+            self.deactivate()
+
             return
 
         # Display references or error message
@@ -128,8 +173,8 @@ class HoverMapTool(QgsMapTool):
             references, error = self.getReferenceFromLonLat(
                 connection_name,
                 schema,
-                point.x(),
-                point.y()
+                x,
+                y
             )
             emitted_references[schema] = {}
             if str(references[0][0]) != 'NULL':

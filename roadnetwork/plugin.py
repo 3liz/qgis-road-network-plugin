@@ -151,6 +151,12 @@ class Plugin:
             self.on_listen_move_event_changed
         )
 
+        # Get references when the cursor is moving
+        # Only if conditions are met
+        # See the hover_map_tool properties listen_move_event & active_tool
+        mc = self.iface.mapCanvas()
+        mc.xyCoordinates.connect(self.hover_map_tool.emitMapCursorReferences)
+
     def toggle_hover_tool(self):
         """ Toggle the map hover tool used to find references"""
         # Toggle action
