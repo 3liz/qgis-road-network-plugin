@@ -107,10 +107,9 @@ COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done 
 It also check that the edited geometries are inside the editing session polygon.';
 
 
--- FUNCTION get_current_setting(setting_name text, default_value text, value_type text)
-COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_value text, value_type text) IS 'Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid.
-The function is used to avoid repeating the coalesce(current_setting(...))::TYPE, 0) = 1
-and to have a single point of maintenance for getting settings.';
+-- FUNCTION get_current_setting(setting_name text, default_value text)
+COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_value text) IS 'Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid.
+The function is used to have a single point of maintenance for getting settings.';
 
 
 -- FUNCTION get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text)

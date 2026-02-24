@@ -28,7 +28,7 @@ DECLARE
     _road_type text;
 BEGIN
     -- Trigger disabled by session variable
-    IF road_graph.get_current_setting('road.graph.disable.trigger', '0', 'integer') = 1
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
     THEN
         RETURN NEW;
     END IF;
@@ -85,13 +85,13 @@ DECLARE
     raise_notice text;
 BEGIN
     -- Trigger disabled by session variable
-    IF road_graph.get_current_setting('road.graph.disable.trigger', '0', 'integer') = 1
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
     THEN
         RETURN OLD;
     END IF;
 
     -- Raise notice ?
-    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no', 'text');
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
 
     -- Check if old referenced nodes are still referenced by edges
     -- If not, delete them
@@ -236,13 +236,13 @@ DECLARE
     is_roundabout boolean;
 BEGIN
     -- Trigger disabled by session variable
-    IF road_graph.get_current_setting('road.graph.disable.trigger', '0', 'integer') = 1
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
     THEN
         RETURN NEW;
     END IF;
 
     -- Check if we must log
-    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no', 'text');
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
 
     -- Notice used for big imports
     RAISE NOTICE '% AFTER edge % n° % - Start',
@@ -338,11 +338,13 @@ BEGIN
     -- (this is a choice, to let the user choose the first road and position manually the marker 0)
     -- previous edge id
     IF (TG_OP = 'INSERT' AND NEW.previous_edge_id IS NOT NULL AND NOT is_roundabout)
-        OR (TG_OP = 'UPDATE' AND NEW.previous_edge_id != OLD.previous_edge_id AND NOT is_roundabout)
+        OR (TG_OP = 'UPDATE' AND NEW.previous_edge_id != Coalesce(OLD.previous_edge_id, -1) AND NOT is_roundabout)
     THEN
         UPDATE road_graph.edges AS e
         SET next_edge_id = NEW.id
-        WHERE e.id != NEW.id
+        WHERE TRUE
+        AND e.road_code = NEW.road_code
+        AND e.id != NEW.id
         AND e.id = NEW.previous_edge_id
         AND (e.next_edge_id IS NULL OR e.next_edge_id != NEW.id)
         RETURNING e.id
@@ -358,11 +360,13 @@ BEGIN
     END IF;
     -- next edge id
     IF (TG_OP = 'INSERT' AND NEW.next_edge_id IS NOT NULL AND NOT is_roundabout)
-        OR (TG_OP = 'UPDATE' AND NEW.next_edge_id != OLD.next_edge_id AND NOT is_roundabout)
+        OR (TG_OP = 'UPDATE' AND NEW.next_edge_id != Coalesce(OLD.next_edge_id, -1) AND NOT is_roundabout)
     THEN
         UPDATE road_graph.edges AS e
         SET previous_edge_id = NEW.id
-        WHERE e.id != NEW.id
+        WHERE TRUE
+        AND e.road_code = NEW.road_code
+        AND e.id != NEW.id
         AND e.id = NEW.next_edge_id
         AND (e.previous_edge_id IS NULL OR e.previous_edge_id != NEW.id)
         RETURNING e.id
@@ -383,7 +387,7 @@ BEGIN
     created_nodes_at_intersection = ARRAY[]::integer[];
     IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NOT ST_Equals(OLD.geom, NEW.geom))
         -- avoid infinite loop and self-crossing
-        AND road_graph.get_current_setting('road.graph.edge.crossing.node.creation.pending', 'no', 'text') != 'yes'
+        AND road_graph.get_current_setting('road.graph.edge.crossing.node.creation.pending', 'no') != 'yes'
 
     THEN
         IF raise_notice IN ('info', 'debug') THEN
@@ -458,7 +462,7 @@ BEGIN
         -- We do it by updating the already existing nodes
         -- this will run the trigger after_node_update which will split the corresponding edge
         -- WARNING : this should not be done if this node concerns only two edges already been merging
-        node_to_be_deleted = road_graph.get_current_setting('road.graph.merge.edges.useless.node', '-1', 'integer');
+        node_to_be_deleted = road_graph.get_current_setting('road.graph.merge.edges.useless.node', '-1');
 
         -- RAISE NOTICE '% AFTER edge % n° %, list touching nodes, useless node = %',
         ---    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, node_to_be_deleted
@@ -480,7 +484,7 @@ BEGIN
             -- node not concerned by two edges already been merging
             -- to avoid infinite loop
             -- The variable road.graph.merge.edges.useless.node is set in the function road_graph.merge_edges
-            AND n.id != node_to_be_deleted
+            AND n.id != node_to_be_deleted::integer
         LOOP
             IF raise_notice IN ('info', 'debug') THEN
                 RAISE NOTICE '% AFTER EDGE % n° % start % end %, update existing node under new edge to launch the split : % %',
@@ -490,7 +494,7 @@ BEGIN
                 ;
             END IF;
 
-            IF road_graph.get_current_setting('road.graph.edge.update.touching.node', 'no', 'text') != 'yes'
+            IF road_graph.get_current_setting('road.graph.edge.update.touching.node', 'no') != 'yes'
             THEN
                 SET road.graph.edge.update.touching.node = 'yes';
                 -- We do not create a new node (constraint on same geometry)
@@ -522,22 +526,22 @@ BEGIN
     IF (TG_OP = 'INSERT' AND NOT is_roundabout) OR (
         TG_OP = 'UPDATE' AND (
             NOT ST_Equals(OLD.geom, NEW.geom)
-            OR OLD.previous_edge_id != NEW.previous_edge_id
-            OR OLD.next_edge_id != NEW.next_edge_id
+            OR Coalesce(OLD.previous_edge_id, -1) != NEW.previous_edge_id
+            OR Coalesce(OLD.next_edge_id, -1) != NEW.next_edge_id
         ) AND NOT is_roundabout
     )
     THEN
-        IF road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no', 'text') = 'no'
+        IF road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
         THEN
+            SELECT INTO update_edge_references_result
+                road_graph.update_edge_references(NEW.road_code, NULL)
+            ;
             IF raise_notice IN ('info', 'debug') THEN
                 RAISE NOTICE '% AFTER EDGE % N° %, update all road edges references: %',
                     REPEAT('    ', pg_trigger_depth()::INTEGER), TG_OP, NEW.id,
                     update_edge_references_result::text
                 ;
             END IF;
-            SELECT INTO update_edge_references_result
-                road_graph.update_edge_references(NEW.road_code, NULL)
-            ;
         END IF;
     END IF;
 
@@ -571,7 +575,7 @@ DECLARE
     update_edge_references_result boolean;
 BEGIN
     -- Trigger disabled by session variable
-    IF road_graph.get_current_setting('road.graph.disable.trigger', '0', 'integer') = 1
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
     THEN
         IF TG_OP = 'DELETE' THEN
             RETURN OLD;
@@ -580,7 +584,7 @@ BEGIN
     END IF;
 
     -- Get log level
-    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no', 'text');
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
 
     -- Get edge road
     SELECT INTO edge_road
@@ -636,7 +640,7 @@ BEGIN
 
     -- INSERT OR UPDATE - Update road references
     IF TG_OP != 'DELETE'
-        AND road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no', 'text') = 'no'
+        AND road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
     THEN
         IF raise_notice IN ('info', 'debug') THEN
             RAISE NOTICE '% AFTER MARKER % N° %, update all road % edges references: %',
@@ -655,7 +659,7 @@ BEGIN
         (TG_OP = 'UPDATE' AND NEW.road_code != OLD.road_code)
             OR (TG_OP = 'DELETE')
         )
-        AND road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no', 'text') = 'no'
+        AND road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
     THEN
         IF raise_notice IN ('info', 'debug') THEN
             RAISE NOTICE '% AFTER MARKER % N° %, update all road % edges references: %',
@@ -692,20 +696,20 @@ DECLARE
     raise_notice text;
 BEGIN
     -- Trigger disabled by session variable
-    IF road_graph.get_current_setting('road.graph.disable.trigger', '0', 'integer') = 1
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
     THEN
         RETURN NEW;
     END IF;
 
     -- Check if we must log
-    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no', 'text');
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
 
     -- Do nothing if geometry has not changed
     -- except road.graph.edge.update.touching.node equals yes
     IF
         TG_OP = 'UPDATE'
         AND ST_Equals(NEW.geom, OLD.geom)
-        AND road_graph.get_current_setting('road.graph.edge.update.touching.node', 'no', 'text') = 'no'
+        AND road_graph.get_current_setting('road.graph.edge.update.touching.node', 'no') = 'no'
     THEN
         IF raise_notice IN ('info', 'debug') THEN
             RAISE NOTICE '% AFTER node % n° %, OLD & NEW geometries are equal, return',
@@ -838,13 +842,13 @@ DECLARE
     is_roundabout boolean;
 BEGIN
     -- Trigger disabled by session variable
-    IF road_graph.get_current_setting('road.graph.disable.trigger', '0', 'integer') = 1
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
     THEN
         RETURN NEW;
     END IF;
 
     -- log level
-    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no', 'text');
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
 
     -- Get road
     SELECT INTO edge_road
@@ -1169,11 +1173,9 @@ BEGIN
             _road_code AS road_code,
             l.geom AS simple_linestring,
             l.closing_multilinestring,
-            jsonb_agg(
-                jsonb_build_object(
-                    m.id,
-                    ST_LineLocatePoint(l.geom, m.geom)
-                )
+            jsonb_object_agg(
+                m.id,
+                ST_LineLocatePoint(l.geom, m.geom)
             ) AS marker_locations
         FROM
             road_line as l,
@@ -1781,8 +1783,8 @@ COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done 
 It also check that the edited geometries are inside the editing session polygon.';
 
 
--- get_current_setting(text, text, text)
-CREATE FUNCTION road_graph.get_current_setting(setting_name text, default_value text, value_type text DEFAULT 'text'::text) RETURNS text
+-- get_current_setting(text, text)
+CREATE FUNCTION road_graph.get_current_setting(setting_name text, default_value text) RETURNS text
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -1790,34 +1792,15 @@ DECLARE
 BEGIN
     -- Get current setting value, if not set return default value
     setting_value = coalesce(current_setting(setting_name, true), default_value);
-    -- Try to cast the setting value to the expected type, if it fails return the default value
-    BEGIN
-        IF value_type = 'integer' THEN
-            RETURN setting_value::integer;
-        ELSIF value_type = 'boolean' THEN
-            RETURN  setting_value::boolean;
-        ELSIF value_type = 'real' THEN
-            RETURN  setting_value::real;
-        END IF;
-    EXCEPTION WHEN OTHERS THEN
-        IF value_type = 'integer' THEN
-            RETURN default_value::integer;
-        ELSIF value_type = 'boolean' THEN
-            RETURN  default_value::boolean;
-        ELSIF value_type = 'real' THEN
-            RETURN  default_value::real;
-        END IF;
-    END;
 
     RETURN setting_value;
 END;
 $$;
 
 
--- FUNCTION get_current_setting(setting_name text, default_value text, value_type text)
-COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_value text, value_type text) IS 'Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid.
-The function is used to avoid repeating the coalesce(current_setting(...))::TYPE, 0) = 1
-and to have a single point of maintenance for getting settings.';
+-- FUNCTION get_current_setting(setting_name text, default_value text)
+COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_value text) IS 'Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid.
+The function is used to have a single point of maintenance for getting settings.';
 
 
 -- get_downstream_multilinestring_from_reference(text, integer, real, real, text)
@@ -2241,13 +2224,8 @@ DECLARE
     found_side text;
     found_cumulative real;
     raise_notice text;
-    -- timing variables
-   _timing1  timestamptz;
-   _start_ts timestamptz;
-   _end_ts   timestamptz;
-   _overhead numeric;     -- in ms
 BEGIN
-    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no', 'text');
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
     IF raise_notice IN ('info', 'debug') THEN
         RAISE NOTICE '% get_reference_from_point - _point = % & _road_code = %',
             REPEAT('    ', pg_trigger_depth()::INTEGER),
@@ -2255,14 +2233,6 @@ BEGIN
             _road_code
         ;
     END IF;
-    -- timing
-    _timing1  := clock_timestamp();
-    _start_ts := clock_timestamp();
-    _end_ts   := clock_timestamp();
-    -- take minimum duration as conservative estimate
-    _overhead := 1000 * extract(epoch FROM LEAST(_start_ts - _timing1, _end_ts   - _start_ts));
-    _start_ts := clock_timestamp();
-    RAISE NOTICE 'START get_reference_from_point';
 
     -- Get the splitted closest road depending on given road_code
     -- we keep only the edge part between start point and given _point
@@ -2333,8 +2303,6 @@ BEGIN
         RAISE NOTICE 'CLOSEST_EDGE subgeom %', ST_AsText(closest_edge.sub_geom);
     END IF;
 
-    RAISE NOTICE '% = %' , 'CLOSEST_EDGE', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
-
     -- Get road_code
     found_road_code = closest_edge.road_code;
 
@@ -2381,7 +2349,6 @@ BEGIN
         RAISE NOTICE 'CLOSEST_EDGE_MARKER %', to_json(closest_edge_marker);
         RAISE NOTICE '-';
     END IF;
-    RAISE NOTICE '% = %' , 'CLOSEST_EDGE_MARKER', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
 
     -- Calculate values to return based on the generated geometries
     found_marker_code = closest_edge_marker.code;
@@ -2399,8 +2366,6 @@ BEGIN
             ) THEN 'left' ELSE 'right'
         END
     );
-    RAISE NOTICE '% = %' , 'VALUES', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
-    RAISE NOTICE 'END';
 
     -- Build the JSON to return
     RETURN json_build_object(
@@ -2504,6 +2469,15 @@ DECLARE
     _road_info record;
     _run_build_cache boolean;
 BEGIN
+    -- If there is less than 2 edges, we do not use cache
+    -- since it will not be useful and will raise an exception ( by function get_ordered_edges)
+    SELECT INTO _use_cache
+        CASE
+            WHEN (SELECT COUNT(*) FROM editing_session.edges  AS e WHERE e.road_code = _road_code) < 2 THEN False
+            ELSE _use_cache
+        END
+    ;
+
     -- Retrieve cached objects such as road simple linestring and closing multilinestring
     -- and also the road markers locations agains the simple road linestring
     -- from the temporary table generated beforehand (see update_edge_references)
@@ -2530,7 +2504,7 @@ BEGIN
             -- Linestring (with no gaps) between the marker and the point
             ST_LineSubstring(
                 _road_info.simple_linestring,
-                (_road_info.marker_locations->>(m.id))::float8,
+                (_road_info.marker_locations->>(m.id::text))::float8,
                 _road_info.point_location
             ) AS road_linestring_from_marker_to_point,
             -- Linestring (with no gaps) between the start of the road and the point
@@ -2548,8 +2522,8 @@ BEGIN
         FROM
             road_graph.markers AS m
         WHERE True
-        AND m.marker_location <= _road_info.point_location
-        ORDER BY m.marker_location DESC
+        AND (_road_info.marker_locations->>(m.id::text))::float8 <= _road_info.point_location
+        ORDER BY (_road_info.marker_locations->>(m.id::text))::float8 DESC
         LIMIT 1
         ;
     ELSE
@@ -3334,14 +3308,36 @@ DECLARE
     edge record;
     _run_build_cache boolean;
     _set_config text;
+    _use_cache boolean;
+    raise_notice text;
 BEGIN
+    -- Check if we must log
+    raise_notice = editing_session.get_current_setting('road.graph.raise.notice', 'no');
+
     -- Deactivate triggers
     SELECT set_config('road.graph.disable.trigger', '1'::text, true)
     INTO _set_config;
 
+    -- If there is less than 2 edges, we do not use cache
+    -- since it will not be useful and will raise an exception ( by function get_ordered_edges)
+    SELECT INTO _use_cache
+        CASE
+            WHEN (SELECT COUNT(*) FROM road_graph.edges AS e WHERE e.road_code = _road_code) < 2 THEN False
+            ELSE True
+        END
+    ;
+    IF raise_notice IN ('info', 'debug') IS NOT NULL THEN
+        RAISE NOTICE '% update_edge_references road n° % - Use cache %',
+            repeat('    ', pg_trigger_depth()::integer), _road_code, _use_cache
+        ;
+    END IF;
+
     -- Build road & marker objects cache for speeding up linear referencing
-    SELECT road_graph.build_road_cached_objects(_road_code)
-    INTO _run_build_cache;
+    -- only if it exists at least one edge for the road
+    IF _use_cache THEN
+        SELECT road_graph.build_road_cached_objects(_road_code)
+        INTO _run_build_cache;
+    END IF;
 
     -- Get edges references
     WITH s AS (
@@ -3352,7 +3348,7 @@ BEGIN
             road_graph.edges AS e,
             json_to_record(
                 -- 2nd parameter is TRUE so that we use precomputed object cache
-                road_graph.get_edge_references(e.id, true)
+                road_graph.get_edge_references(e.id, _use_cache)
             ) AS x (
                 start_marker integer, start_abscissa real, start_cumulative real,
                 end_marker integer, end_abscissa real, end_cumulative real
