@@ -168,7 +168,7 @@ class HoverMapTool(QgsMapTool):
 
         # Display references or error message
         # editing_sessions
-        emitted_references = {}
+        emitted_references: dict[str, dict[str, str | int | float]] = {}
         for schema in ('editing_session', 'road_graph'):
             references, error = self.getReferenceFromLonLat(
                 connection_name,
