@@ -81,7 +81,6 @@ DECLARE
     has_changed boolean;
     test_edges record;
     merge_result boolean;
-    node_already_deleted integer;
     update_edge_references_result boolean;
     raise_notice text;
 BEGIN
@@ -94,16 +93,11 @@ BEGIN
     -- Raise notice ?
     raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
 
-    -- Get node ID which has been manually deleted by user
-    -- and must not be deleted twice
-    node_already_deleted = road_graph.get_current_setting('road.graph.node.already.deleted', '-1');
-
     -- Check if old referenced nodes are still referenced by edges
     -- If not, delete them
     -- Upstream node
     DELETE FROM road_graph.nodes
     WHERE id = OLD.start_node
-    AND id != node_already_deleted
     AND NOT EXISTS (
         SELECT id
         FROM road_graph.edges
@@ -114,7 +108,6 @@ BEGIN
     -- Downstream node
     DELETE FROM road_graph.nodes
     WHERE id = OLD.end_node
-    AND id != node_already_deleted
     AND NOT EXISTS (
         SELECT id
         FROM road_graph.edges
@@ -236,7 +229,6 @@ DECLARE
     id_new_edge integer;
     created_nodes_at_intersection integer[];
     node_to_be_deleted integer;
-    node_already_deleted integer;
     update_edge_references_result boolean;
     raise_notice text;
     cascade_edge_id integer;
@@ -295,16 +287,11 @@ BEGIN
 
         -- Check if old referenced nodes are still referenced by edges
         -- If not, delete them
-        -- Get node ID which has been manually deleted by user
-        -- and must not be deleted twice
-        node_already_deleted = road_graph.get_current_setting('road.graph.node.already.deleted', '-1');
-
         -- Upstream node
         IF OLD.start_node != NEW.start_node THEN
             WITH del AS (
                 DELETE FROM road_graph.nodes
                 WHERE id = OLD.start_node
-                AND id != node_already_deleted
                 AND NOT EXISTS (
                     SELECT id
                     FROM road_graph.edges
@@ -328,7 +315,6 @@ BEGIN
             WITH del AS (
                 DELETE FROM road_graph.nodes
                 WHERE id = OLD.end_node
-                AND id != node_already_deleted
                 AND NOT EXISTS (
                     SELECT id
                     FROM road_graph.edges
@@ -1125,89 +1111,6 @@ $$;
 
 -- FUNCTION before_editing_sessions_update()
 COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the editing_session schema';
-
-
--- before_node_delete()
-CREATE FUNCTION road_graph.before_node_delete() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    edges_data record;
-    merge_result boolean;
-    _set_config text;
-    raise_notice text;
-BEGIN
-    -- Set config to avoid the other triggers (after edge actions)
-    -- to delete it again, which will raise an exception
-    SELECT set_config('road.graph.node.already.deleted', OLD.id::text, true)
-    INTO _set_config
-    ;
-
-    -- Trigger disabled by session variable
-    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
-    THEN
-        RETURN OLD;
-    END IF;
-
-    -- Check if we must log
-    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
-
-    -- Check if the node is linked to exactly two edges of the same road
-    -- If not, raise an exception
-    -- If yes, merge the two edges
-    SELECT INTO edges_data
-        count(*) AS nb_edges,
-        array_agg(DISTINCT e.road_code) AS road_codes,
-        array_agg(e.id) AS edge_ids
-    FROM road_graph.edges AS e
-    WHERE True
-    AND OLD.id IN (e.start_node, e.end_node)
-    ;
-    -- Return OLD if the node is not linked to an edge
-    IF edges_data.nb_edges = 0 THEN
-        IF raise_notice IN ('info', 'debug') THEN
-            RAISE NOTICE '% BEFORE NODE % n° % %, node is not linked to any edge',
-                repeat('    ', pg_trigger_depth()::integer),
-                TG_OP, OLD.id, ST_AsText(OLD.geom)
-            ;
-        END IF;
-        RETURN OLD;
-    END IF;
-
-    -- Log
-    IF raise_notice IN ('info', 'debug') THEN
-        RAISE NOTICE '% BEFORE NODE % n° % %, node is linked to % edge(s) and % road code(s)',
-            repeat('    ', pg_trigger_depth()::integer),
-            TG_OP, OLD.id, ST_AsText(OLD.geom),
-            edges_data.nb_edges,
-            array_length(edges_data.road_codes, 1)
-        ;
-    END IF;
-
-    -- Raise an exception if the node is linked to more than two edges or to two edges with different road codes
-    IF edges_data.nb_edges != 2 OR array_length(edges_data.road_codes, 1) != 1 THEN
-        RAISE EXCEPTION 'Node n° % cannot be deleted because it is linked to % edge(s) and % road code(s)',
-            OLD.id, edges_data.nb_edges, array_length(edges_data.road_codes, 1);
-    END IF;
-
-    -- Merge the two edges
-    IF raise_notice IN ('info', 'debug') THEN
-        RAISE NOTICE 'We must merge - % ',
-            array_to_string(edges_data.edge_ids, ' et ')
-        ;
-    END IF;
-    SELECT road_graph.merge_edges(edges_data.edge_ids[1], edges_data.edge_ids[2]) AS merge_edges
-    INTO merge_result;
-
-    RETURN OLD;
-END;
-$$;
-
-
--- FUNCTION before_node_delete()
-COMMENT ON FUNCTION road_graph.before_node_delete() IS 'When a node is deleted, we update all the edges linked to it to keep the graph consistent.
-We also merge edges if the deleted node was between two edges.
-';
 
 
 -- build_road_cached_objects(text)

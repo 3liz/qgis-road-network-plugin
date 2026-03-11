@@ -77,12 +77,6 @@ based on its geometry and position on the road.
 COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the editing_session schema';
 
 
--- FUNCTION before_node_delete()
-COMMENT ON FUNCTION road_graph.before_node_delete() IS 'When a node is deleted, we update all the edges linked to it to keep the graph consistent.
-We also merge edges if the deleted node was between two edges.
-';
-
-
 -- FUNCTION build_road_cached_objects(_road_code text)
 COMMENT ON FUNCTION road_graph.build_road_cached_objects(_road_code text) IS 'Calculate the given road geometries used in linear referencing tools & the road marker locations:
 * the simple linestring (no gaps) made by merging all edges linestrings after connecting edges
