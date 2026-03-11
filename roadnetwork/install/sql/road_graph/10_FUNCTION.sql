@@ -604,7 +604,7 @@ BEGIN
     SELECT INTO edge_road
         r.*
     FROM road_graph.roads AS r
-    WHERE r.road_code = NEW.road_code
+    WHERE r.road_code = Coalesce(NEW.road_code, OLD.road_code)
     ;
     IF edge_road.id IS NULL THEN
         RAISE EXCEPTION 'The road code given for this marker does not exist !';
@@ -612,7 +612,7 @@ BEGIN
     is_roundabout = (edge_road.road_type = 'roundabout');
 
     -- Check if only a marker 0 is used
-    IF is_roundabout AND NEW.code != 0 AND TG_OP != 'DELETE' THEN
+    IF TG_OP != 'DELETE' AND is_roundabout AND NEW.code != 0 THEN
         RAISE EXCEPTION 'The value of the roundabout marker code must be 0 !';
     END IF;
 
@@ -623,7 +623,7 @@ BEGIN
 
     -- For roundabout, calculate edges previous and next ids
     -- anytime geometry is modified
-    IF is_roundabout
+    IF TG_OP != 'DELETE' AND is_roundabout
     THEN
         SELECT INTO initial_roundabout_node
             n.id

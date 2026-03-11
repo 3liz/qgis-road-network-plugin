@@ -595,3 +595,128 @@ COMMENT ON FUNCTION road_graph.after_edge_insert_or_update() IS 'Multiples opér
 Déplacement du noeud initial et terminal liés si besoin.
 Suppression des noeuds orphelins si besoin.
 Création des noeuds non existants à l''intersection avec les autres edges';
+
+
+
+-- after_marker_insert_or_update_or_delete()
+CREATE OR REPLACE FUNCTION road_graph.after_marker_insert_or_update_or_delete() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    raise_notice text;
+    is_roundabout boolean;
+    edge_road record;
+    initial_roundabout_node integer;
+    update_edge_neighbours boolean;
+    update_edge_references_result boolean;
+BEGIN
+    -- Trigger disabled by session variable
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
+    THEN
+        IF TG_OP = 'DELETE' THEN
+            RETURN OLD;
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    -- Get log level
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
+
+    -- Get edge road
+    SELECT INTO edge_road
+        r.*
+    FROM road_graph.roads AS r
+    WHERE r.road_code = Coalesce(NEW.road_code, OLD.road_code)
+    ;
+    IF edge_road.id IS NULL THEN
+        RAISE EXCEPTION 'The road code given for this marker does not exist !';
+    END IF;
+    is_roundabout = (edge_road.road_type = 'roundabout');
+
+    -- Check if only a marker 0 is used
+    IF TG_OP != 'DELETE' AND is_roundabout AND NEW.code != 0 THEN
+        RAISE EXCEPTION 'The value of the roundabout marker code must be 0 !';
+    END IF;
+
+    -- Update : Do nothing if geometry has not changed
+    IF TG_OP = 'UPDATE' AND ST_Equals(NEW.geom, OLD.geom) THEN
+        RETURN NEW;
+    END IF;
+
+    -- For roundabout, calculate edges previous and next ids
+    -- anytime geometry is modified
+    IF TG_OP != 'DELETE' AND is_roundabout
+    THEN
+        SELECT INTO initial_roundabout_node
+            n.id
+        FROM road_graph.nodes AS n
+        WHERE ST_DWithin(n.geom, NEW.geom, 0.5)
+        AND n.id IN (
+            SELECT start_node FROM road_graph.edges WHERE road_code = edge_road.road_code
+            UNION ALL
+            SELECT end_node FROM road_graph.edges WHERE road_code = edge_road.road_code
+        )
+        ORDER BY n.id
+        LIMIT 1;
+
+        IF initial_roundabout_node IS NOT NULL
+        THEN
+            SELECT INTO update_edge_neighbours
+                road_graph.update_road_edges_neighbours(
+                    NEW.road_code,
+                    initial_roundabout_node
+                )
+            ;
+        ELSE
+        -- force inserted or updated roundabout marker
+        -- to be on top of a roundabout edge node
+            RAISE EXCEPTION 'The marker must be positionned at the start node of an existing roundabout edge !';
+        END IF;
+    END IF;
+
+    -- INSERT OR UPDATE - Update road references
+    IF TG_OP != 'DELETE'
+        AND road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
+    THEN
+        IF raise_notice IN ('info', 'debug') THEN
+            RAISE NOTICE '% AFTER MARKER % N° %, update all road % edges references: %',
+                REPEAT('    ', pg_trigger_depth()::INTEGER), TG_OP, NEW.id,
+                NEW.road_code,
+                update_edge_references_result::text
+            ;
+        END IF;
+        SELECT INTO update_edge_references_result
+            road_graph.update_edge_references(NEW.road_code, NULL)
+        ;
+    END IF;
+
+    -- Also update old road if marker road has changed
+    IF (
+        (TG_OP = 'UPDATE' AND NEW.road_code != OLD.road_code)
+            OR (TG_OP = 'DELETE')
+        )
+        AND road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
+    THEN
+        IF raise_notice IN ('info', 'debug') THEN
+            RAISE NOTICE '% AFTER MARKER % N° %, update all road % edges references: %',
+                REPEAT('    ', pg_trigger_depth()::INTEGER), TG_OP, OLD.id,
+                OLD.road_code,
+                update_edge_references_result::text
+            ;
+        END IF;
+        SELECT INTO update_edge_references_result
+            road_graph.update_edge_references(OLD.road_code, NULL)
+        ;
+    END IF;
+
+    IF TG_OP IN ('INSERT', 'UPDATE') THEN
+        RETURN NEW;
+    ELSE
+        RETURN OLD;
+    END IF;
+END;
+$$;
+
+
+-- FUNCTION after_marker_insert_or_update_or_delete()
+COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete() IS 'Update road edges references after a marker has been created, updated or deleted.';
