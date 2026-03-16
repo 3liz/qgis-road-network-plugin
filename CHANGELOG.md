@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## 0.2.0
+
+User interface:
+
+* Toolbar
+  - Change map tool behaviour: the user needs to click on the map
+    to get the references under the cursor instead of a simple hover
+  - add the shortcut `CTRL+MAJ+K` to activate/deactivate the map tool
+* New RoadNetwork tool QGIS panel:
+  - Visualize the references of the `road_graph` and the `editing_schema` database schemas data
+  - Add an checkbox to allow displaying the references when the mouse pointer moves
+  - Add the possibility to search for a reference for the edited data:
+    change a value and press Enter, or click on the `Find` button
+* Work in progress - Prepare functions for applying graph changes to external data
+
+SQL functions improvements and fixes:
+
+* Performance - Improve the calculation of a point reference, especially for big roads
+* Edges - Correctly update references of the new & old road when changing an edge `road_code` value
+* Fix wrong update of edges references when a new edge is added or its `previous_edge_id` is changed
+* Markers - Fix an error when deleting a marker
+* Nodes - Add logic to control actions when a node is manually deleted
+
 ## 0.1.0 - 2026-01-09
 
 * First version of the plugin
