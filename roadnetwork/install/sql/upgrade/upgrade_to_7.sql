@@ -1,3 +1,164 @@
+-- get_ordered_edges(text, integer, text)
+CREATE OR REPLACE FUNCTION road_graph.get_ordered_edges(
+    _road_code text,
+    _initial_id integer DEFAULT '-1'::integer,
+    _direction text DEFAULT 'downstream'::text
+)
+RETURNS TABLE(id integer, edge_order integer, road_code text, geom geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    raise_notice text;
+    initial_edge record;
+BEGIN
+    raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
+
+    -- If there is only on edge for this road, return it directly
+    IF (
+        SELECT count(*)
+        FROM road_graph.edges AS e
+        WHERE e.road_code = _road_code
+    ) = 1
+    THEN
+        RETURN QUERY
+        SELECT
+            e.id, 1 AS edge_order, e.road_code, e.geom
+        FROM road_graph.edges AS e
+        WHERE e.road_code = _road_code
+        ;
+    END IF;
+
+    -- Get initial edge. If not given, get the first road edge
+    IF _initial_id = -1 THEN
+        IF _direction = 'downstream' THEN
+            SELECT into initial_edge
+                e.id, e.start_node, e.end_node
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code
+            AND previous_edge_id IS NULL
+            ORDER BY start_cumulative, e.id
+            LIMIT 1
+            ;
+            _initial_id = initial_edge.id;
+        ELSE
+            SELECT INTO initial_edge
+                e.id, e.start_node, e.end_node
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code
+            AND next_edge_id IS NULL
+            ORDER BY start_cumulative DESC, e.id DESC
+            LIMIT 1
+            ;
+            _initial_id = initial_edge.id;
+        END IF;
+        IF _initial_id IS NULL THEN
+            RAISE EXCEPTION 'No edge found for the road %s initial edge',
+                _road_code
+            ;
+        END IF;
+    ELSE
+        SELECT INTO initial_edge
+            e.id, e.start_node, e.end_node
+        FROM road_graph.edges AS e
+        WHERE e.id = _initial_id
+        ;
+    END IF;
+    IF raise_notice in ('info', 'debug') THEN
+        RAISE NOTICE 'get_ordered_edges - _initial_id = %',
+            _initial_id
+        ;
+    END IF;
+
+    IF _direction = 'downstream' THEN
+        -- Get downstream edges
+        RETURN QUERY
+        WITH RECURSIVE ordered_edges
+        AS(
+            -- anchor member
+            SELECT
+                e.id, next_edge_id,
+                -- add id to the list of processed ids
+                ARRAY[e.id] AS ids,
+                1 AS edge_order,
+                e.start_node, e.end_node,
+                e.geom --, 0.0::numeric AS distance
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code AND e.id = _initial_id
+            UNION ALL
+            -- recursive term
+            SELECT
+                e.id, e.next_edge_id,
+                -- add id to the list of processed ids
+                array_append(o.ids, e.id) AS ids,
+                o.edge_order + 1 AS edge_order,
+                e.start_node, e.end_node,
+                e.geom --, ST_Distance(ST_StartPoint(e.geom), ST_EndPoint(o.geom))::numeric AS distance
+            FROM road_graph.edges AS e
+            JOIN ordered_edges AS o
+                ON e.id = o.next_edge_id
+                -- We try to get the next edge which can be far
+                -- limit search radius to 200m
+                -- NOT EFFICIENT FOR BIG ROADS
+                -- OR ST_DWithin(ST_StartPoint(e.geom), ST_EndPoint(o.geom), 200)
+                -- for roundabout, when previous and next edge ids are not set
+                OR ST_DWithin(ST_StartPoint(e.geom), ST_EndPoint(o.geom), 0.20)
+            WHERE e.road_code = _road_code
+        	-- avoir infinite loop
+            AND NOT (ARRAY[e.id] && o.ids)
+        )
+        SELECT --DISTINCT ON (o.edge_order)
+            o.id, o.edge_order, _road_code AS road_code, o.geom
+        FROM ordered_edges AS o
+        ORDER BY o.edge_order --, distance
+        ;
+    ELSE
+        RETURN QUERY
+        WITH RECURSIVE ordered_edges
+        AS(
+            -- anchor member
+            SELECT
+                e.id, previous_edge_id,
+                -- add id to the list of processed ids
+                ARRAY[e.id] AS ids,
+                1 AS edge_order,
+                e.start_node, e.end_node,
+                e.geom --, 0.0::numeric AS distance
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code AND e.id = _initial_id
+            UNION ALL
+            -- recursive term
+            SELECT
+                e.id, e.previous_edge_id,
+                -- add id to the list of processed ids
+                array_append(o.ids, e.id) AS ids,
+                o.edge_order + 1 AS edge_order,
+                e.start_node, e.end_node,
+                e.geom --, ST_Distance(ST_EndPoint(e.geom), ST_StartPoint(o.geom))::numeric AS distance
+            FROM road_graph.edges AS e
+            JOIN ordered_edges AS o
+                ON e.id = o.previous_edge_id
+                -- We try to get the next edge which can be far
+                -- limit search radius to 200m
+                -- OR ST_DWithin(ST_EndPoint(e.geom), ST_StartPoint(o.geom), 200)
+                -- for roundabout, when previous and next edge ids are not set
+                OR ST_DWithin(ST_EndPoint(e.geom), ST_StartPoint(o.geom), 0.20)
+            WHERE e.road_code = _road_code
+        	-- avoir infinite loop
+            AND NOT (ARRAY[e.id] && o.ids)
+        )
+        SELECT --DISTINCT ON (o.edge_order)
+            o.id, o.edge_order, _road_code AS road_code, o.geom
+        FROM ordered_edges AS o
+        ORDER BY o.edge_order--, distance
+        ;
+    END IF;
+END;
+$$;
+
+
+-- FUNCTION get_ordered_edges(_road_code text, _initial_id integer, _direction text)
+COMMENT ON FUNCTION road_graph.get_ordered_edges(_road_code text, _initial_id integer, _direction text) IS 'Get the list of edge id with order for a given road, edge and the direction (downtream or upstream). It always includes the given edge';
+
 
 
 -- before_node_delete()
@@ -415,6 +576,34 @@ BEGIN
         END IF;
     END IF;
 
+    -- For UPDATE, if the edge road_code has changed,
+    -- we must also edit the previous and next edge ids of the old road edges
+    IF TG_OP = 'UPDATE'
+        AND OLD.road_code IS NOT NULL
+        AND Coalesce(NEW.road_code, '') != OLD.road_code
+    THEN
+        -- Update OLD previous edge field "next_edge_id" if concerned
+        UPDATE road_graph.edges AS e
+        SET next_edge_id = OLD.next_edge_id
+        WHERE TRUE
+        -- same road
+        AND e.road_code = OLD.road_code
+        -- reference as the next_edge_id by the OLD edge
+        AND e.next_edge_id = OLD.id
+        AND e.id != NEW.id
+        ;
+        -- Update OLD next edge field "previous_edge_id" if concerned
+        UPDATE road_graph.edges AS e
+        SET previous_edge_id = OLD.previous_edge_id
+        WHERE TRUE
+        -- same road
+        AND e.road_code = OLD.road_code
+        -- reference as the previous_edge_id by the OLD edge
+        AND e.previous_edge_id = OLD.id
+        AND e.id != NEW.id
+        ;
+    END IF;
+
     -- For INSERT OR UPDATE
     -- Create nodes at intersection with other edges if needed
     -- This will then run the trigger after_node_insert_or_update
@@ -554,31 +743,72 @@ BEGIN
         END LOOP;
     END IF;
 
+    -- Create a new marker feature with code 0 if needed
+    IF TG_OP IN ('INSERT', 'UPDATE')
+        AND NEW.geom IS NOT NULL
+        AND NEW.previous_edge_id IS NULL
+        AND NEW.road_code IS NOT NULL
+        AND NOT is_roundabout
+        AND Coalesce(edge_road.road_type, '') NOT IN ('roundabout')
+        -- the marker does not exists yet
+        AND NOT EXISTS (
+            SELECT m.id
+            FROM road_graph.markers AS m
+            WHERE m.road_code = NEW.road_code
+            AND m.code = 0
+        )
+        -- There is no edge with the same road_code and without previous_edge_id (which means the first edge of the road)
+        AND NOT EXISTS (
+            SELECT e.id
+            FROM road_graph.edges AS e
+            WHERE e.road_code = NEW.road_code
+            AND e.id != NEW.id
+            AND (
+                e.previous_edge_id IS NULL
+                OR ST_DWithin(ST_EndPoint(e.geom), ST_StartPoint(NEW.geom), 0.50)
+            )
+        )
+    THEN
+        INSERT INTO road_graph.markers (road_code, code, abscissa, geom)
+        VALUES (NEW.road_code, 0, 0, ST_StartPoint(NEW.geom))
+        ON CONFLICT DO NOTHING
+        ;
+    END IF;
+
     -- Calculate references of the edge whole road
     -- Beware to choose correct conditions
     -- For roundabout, do not do it
     -- (this is a choice, to let the user choose the first road and marker)
-    IF (TG_OP = 'INSERT' AND NOT is_roundabout) OR (
-        TG_OP = 'UPDATE' AND (
-            NOT ST_Equals(OLD.geom, NEW.geom)
-            OR Coalesce(OLD.previous_edge_id, -1) != NEW.previous_edge_id
-            OR Coalesce(OLD.next_edge_id, -1) != NEW.next_edge_id
-        ) AND NOT is_roundabout
-    )
-    THEN
-        IF road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
+    IF NOT is_roundabout THEN
+        IF TG_OP = 'INSERT'
+        OR (
+            TG_OP = 'UPDATE' AND (
+                NOT ST_Equals(OLD.geom, NEW.geom)
+                OR Coalesce(OLD.previous_edge_id, -1) != NEW.previous_edge_id
+                OR Coalesce(OLD.next_edge_id, -1) != NEW.next_edge_id
+            )
+        )
         THEN
-            SELECT INTO update_edge_references_result
-                road_graph.update_edge_references(NEW.road_code, NULL)
-            ;
-            IF raise_notice IN ('info', 'debug') THEN
-                RAISE NOTICE '% AFTER EDGE % N° %, update all road edges references: %',
-                    REPEAT('    ', pg_trigger_depth()::INTEGER), TG_OP, NEW.id,
-                    update_edge_references_result::text
+            IF road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
+            THEN
+                IF raise_notice IN ('info', 'debug') THEN
+                    RAISE NOTICE '% AFTER EDGE % N° %, update all NEW road edges references: %',
+                        REPEAT('    ', pg_trigger_depth()::INTEGER), TG_OP, NEW.id,
+                        update_edge_references_result::text
+                    ;
+                END IF;
+                SELECT INTO update_edge_references_result
+                    road_graph.update_edge_references(NEW.road_code, NULL)
                 ;
             END IF;
         END IF;
     END IF;
+
+
+    -- Also update old road references if road code has changed
+    -- and it remains at least one edge for this old road code
+    -- No need, it is done as a consequence of updating the edges
+    -- of the OLD road code which referenced this edge in next_edge_id or previous_edge_id
 
     -- Notice used for big imports
     RAISE NOTICE '% AFTER edge % n° % - End',
@@ -720,3 +950,278 @@ $$;
 
 -- FUNCTION after_marker_insert_or_update_or_delete()
 COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete() IS 'Update road edges references after a marker has been created, updated or deleted.';
+
+
+
+-- before_edge_insert_or_update()
+CREATE OR REPLACE FUNCTION road_graph.before_edge_insert_or_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    start_point geometry(point);
+    end_point geometry(point);
+    upstream_node record;
+    downstream_node record;
+    distance real;
+    start_references jsonb;
+    end_references jsonb;
+    marker_zero record;
+    raise_notice text;
+    edge_road record;
+    is_roundabout boolean;
+    has_changed_road_code boolean;
+	v_sqlstate text;
+	v_message text;
+	v_context text;
+BEGIN
+    -- Trigger disabled by session variable
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- log level
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
+
+    -- Get road
+    SELECT INTO edge_road
+        r.*
+    FROM road_graph.roads AS r
+    WHERE r.road_code = NEW.road_code
+    ;
+    IF edge_road.id IS NULL THEN
+        RAISE EXCEPTION 'The road code given for this edge does not exist !';
+    END IF;
+
+    -- check if edge is a part of a roundabout
+    is_roundabout = (edge_road.road_type = 'roundabout' AND ST_IsRing(NEW.geom));
+    IF raise_notice IN ('info', 'debug') THEN
+        RAISE NOTICE '% BEFORE edge % n° %, edge is_roundabout %,
+        %',
+            repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, is_roundabout,
+            to_json(edge_road)
+        ;
+    END IF;
+
+    -- If it is a new roundabout, reverse the geometry if needed
+    -- QGIS digitizing circle tool create counter-clockwise polygons
+    IF is_roundabout AND ST_IsPolygonCW(ST_MakePolygon(NEW.geom))
+    THEN
+        NEW.geom = ST_Reverse(NEW.geom);
+    END IF;
+
+    -- For UPDATE, check if the road_code has changed
+    -- If so, we need to empty the next_edge_id and previous_edge_id to avoid wrong calculations
+    has_changed_road_code = false;
+    IF NOT is_roundabout
+        AND TG_OP = 'UPDATE'
+        AND Coalesce(OLD.road_code, '') != Coalesce(NEW.road_code, '')
+    THEN
+        has_changed_road_code = true;
+        IF Coalesce(OLD.previous_edge_id, -1) = Coalesce(NEW.previous_edge_id, -1) THEN
+            NEW.previous_edge_id = NULL;
+        END IF;
+        IF Coalesce(OLD.next_edge_id, -1) = Coalesce(NEW.next_edge_id, -1) THEN
+            NEW.next_edge_id = NULL;
+        END IF;
+    END IF;
+
+    -- Create missing nodes if necessary
+    -- start & end point
+    start_point = ST_StartPoint(NEW.geom);
+    end_point = ST_EndPoint(NEW.geom);
+
+    IF TG_OP = 'INSERT'
+    OR (TG_OP = 'UPDATE' AND NOT ST_Equals(NEW.geom, OLD.geom) AND NEW.geom IS NOT NULL)
+    THEN
+
+        -- Get first nodes < 0.5 m - If found, edit NEW geom
+        -- upstream
+        SELECT INTO upstream_node
+            n.id, n.geom
+        FROM road_graph.nodes AS n
+        WHERE ST_DWithin(n.geom, start_point, 0.50)
+        ORDER BY n.id, n.geom <-> start_point
+        LIMIT 1
+        ;
+
+        -- upstream - create node or just update value
+        IF upstream_node IS NOT NULL THEN
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, upstream_node NOT NULL : % -> use it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, upstream_node.id
+                ;
+            END IF;
+
+            -- Update the geometry
+            NEW.geom = ST_SetPoint(NEW.geom, 0, upstream_node.geom);
+            -- Update the node ID in upstream attribute
+            NEW.start_node = upstream_node.id;
+        ELSE
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, upstream node IS NULL -> create it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
+                ;
+            END IF;
+
+            -- Create the missing node
+            -- only for INSERT
+            -- or for UPDATE if the start_node value has been deleted
+            IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.start_node IS NULL) THEN
+                WITH new_node AS (
+                    INSERT INTO road_graph.nodes
+                    (geom)
+                    VALUES
+                    (start_point)
+                    ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING
+                    RETURNING id
+                )
+                SELECT new_node.id
+                FROM new_node
+                INTO NEW.start_node
+                ;
+                IF NEW.start_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
+                    RAISE NOTICE '% BEFORE edge % n° %, upstream node created : % %',
+                        repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.start_node,
+                        (SELECT ST_AsText(geom) FROM road_graph.nodes WHERE id = NEW.start_node)
+                    ;
+                END IF;
+            END IF;
+        END IF;
+
+        -- get downstream node
+        SELECT INTO downstream_node
+            n.id, n.geom
+        FROM road_graph.nodes AS n
+        WHERE ST_DWithin(n.geom, end_point, 0.50)
+        ORDER BY n.id, n.geom <-> end_point
+        LIMIT 1
+        ;
+        -- downstream node - create or update value
+        IF downstream_node IS NOT NULL THEN
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, downstream node NOT NULL : % -> use it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, downstream_node.id
+                ;
+            END IF;
+            -- Update the geometry
+            NEW.geom = ST_SetPoint(NEW.geom, ST_NPoints(NEW.geom) - 1, downstream_node.geom);
+            -- Update the node ID in downstream attribute
+            NEW.end_node = downstream_node.id;
+        ELSE
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, downstream node IS NULL -> create it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
+                ;
+            END IF;
+
+            -- Create the missing node
+            -- only for INSERT
+            -- or for UPDATE if the end_node value has been deleted
+            IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.end_node IS NULL) THEN
+                -- Create the missing node
+                WITH new_node AS (
+                    INSERT INTO road_graph.nodes
+                    (geom)
+                    VALUES
+                    (end_point)
+                    ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING
+                    RETURNING id
+                )
+                SELECT new_node.id
+                FROM new_node
+                INTO NEW.end_node
+                ;
+                IF NEW.end_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
+                    RAISE NOTICE '% BEFORE edge % n° %, downstream node created : % %',
+                        repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.end_node,
+                        (SELECT ST_AsText(geom) FROM road_graph.nodes WHERE id = NEW.end_node)
+                    ;
+                END IF;
+            END IF;
+        END IF;
+    END IF;
+
+    -- Move marker 0 if needed
+    -- If the first edge of the road has changed
+    -- move it to the start_point of the changed geometry
+    IF TG_OP = 'UPDATE'
+        AND NOT is_roundabout
+        AND NOT has_changed_road_code
+        AND OLD.start_abscissa = 0 AND NEW.start_abscissa = 0
+        AND OLD.start_cumulative = 0 AND NEW.start_cumulative = 0
+        AND OLD.start_marker = 0 AND NEW.start_marker = 0
+        AND OLD.road_code = NEW.road_code
+        AND NOT ST_Equals(ST_StartPoint(NEW.geom), ST_StartPoint(OLD.geom))
+    THEN
+        -- Do not run the function update_edge_references
+        -- on the road triggered inside the after_marker_insert_or_update_or_delete
+        -- trigger since it will already been triggered with the edge geometry change
+        SET road.graph.edge.ref.calc.disabled = 'yes';
+        UPDATE road_graph.markers AS m
+        SET geom = ST_StartPoint(NEW.geom)
+        WHERE m.road_code = NEW.road_code
+        AND m.code = 0
+        AND ST_Equals(m.geom, ST_StartPoint(OLD.geom))
+        ;
+        SET road.graph.edge.ref.calc.disabled = 'no';
+    END IF;
+
+    -- Calculate references
+    IF NOT is_roundabout
+    THEN
+        BEGIN
+            -- start point
+            SELECT INTO start_references
+                road_graph.get_reference_from_point(start_point, NEW.road_code) AS ref
+            ;
+            NEW.start_marker = (start_references->>'marker_code')::text::integer;
+            NEW.start_abscissa = (start_references->>'abscissa')::text::real;
+            NEW.start_cumulative = (start_references->>'cumulative')::text::real;
+
+            -- end point
+            SELECT INTO end_references
+                road_graph.get_reference_from_point(end_point, NEW.road_code) AS ref
+            ;
+            NEW.end_marker = (end_references->>'marker_code')::text::integer;
+            NEW.end_abscissa = (end_references->>'abscissa')::text::real;
+            NEW.end_cumulative = (end_references->>'cumulative')::text::real;
+
+        EXCEPTION WHEN OTHERS THEN
+            IF raise_notice IN ('info', 'debug') THEN
+                GET STACKED DIAGNOSTICS
+                    v_sqlstate = returned_sqlstate,
+                    v_message = message_text,
+                    v_context = pg_exception_context
+                ;
+                RAISE NOTICE '% BEFORE edge % n° %, NEW references NOT calculated, error = %',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP,
+                    NEW.id, v_sqlstate || ' - ' || v_message
+                ;
+            END IF;
+        END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+-- FUNCTION before_edge_insert_or_update()
+COMMENT ON FUNCTION road_graph.before_edge_insert_or_update() IS 'During the creation or modification of an edge, we verify that the upstream and downstream nodes exist
+within 50 cm of the start and end of the edge. If they do, we use them
+and update the edge geometry so that the start and end are exactly on these nodes.
+Otherwise, we create the missing nodes.
+Additionally, during the creation of an edge, if the road code is provided and no marker 0 exists for this road,
+we automatically create one at the start of the edge.
+During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point,
+we move marker 0 to this new starting point.
+Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge
+based on its geometry and position on the road.
+';
+
+
+
+
+-- TODO
+-- Insérer automatiquement un marker si la route du nouveau road code ne contient qu'un edge et qu'il ny a pas de marker 0
