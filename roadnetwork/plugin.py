@@ -28,7 +28,7 @@ class Plugin:
         self.tools_dock = None
         self.iface = iface
         self.action_toggle_hover_tool = None
-        self.action_toggle_dock = None
+        self.action_toggle_administration_dock = None
         self.action_open_help = None
         self.action_clone_data_to_editing_session = None
         self.action_merge_editing_session_data = None
@@ -90,19 +90,33 @@ class Plugin:
         shortcut.setContext(Qt.ApplicationShortcut)
         shortcut.activated.connect(self.toggle_hover_tool)
 
-        # Add plugin menu Open/close the dock from plugin menu
-        self.action_toggle_dock = QAction(
-            QIcon(str(resources_path('icons', 'toggle_dock.png'))),
+        # Add plugin menu Open/close the tools dock from plugin menu
+        self.action_toggle_tools_dock = QAction(
+            QIcon(str(resources_path('icons', 'toggle_tools_dock.png'))),
+            tr('Show/hide the tools dock'),
+            self.iface.mainWindow()
+        )
+        self.action_toggle_tools_dock.setCheckable(True)
+        self.iface.addPluginToMenu(
+            '&RoadNetwork',
+            self.action_toggle_tools_dock
+        )
+        self.action_toggle_tools_dock.triggered.connect(self.toggle_tools_dock)
+        self.action_toggle_tools_dock.setChecked(self.tools_dock.isUserVisible())
+
+        # Add plugin menu Open/close the administration dock from plugin menu
+        self.action_toggle_administration_dock = QAction(
+            QIcon(str(resources_path('icons', 'toggle_administration_dock.png'))),
             tr('Show/hide the administration dock'),
             self.iface.mainWindow()
         )
-        self.action_toggle_dock.setCheckable(True)
+        self.action_toggle_administration_dock.setCheckable(True)
         self.iface.addPluginToMenu(
             '&RoadNetwork',
-            self.action_toggle_dock
+            self.action_toggle_administration_dock
         )
-        self.action_toggle_dock.triggered.connect(self.toggle_dock)
-        self.action_toggle_dock.setChecked(self.dock.isUserVisible())
+        self.action_toggle_administration_dock.triggered.connect(self.toggle_administration_dock)
+        self.action_toggle_administration_dock.setChecked(self.dock.isUserVisible())
 
         # Add help action
         self.action_open_help = QAction(
@@ -144,7 +158,8 @@ class Plugin:
         self.toolbar.addAction(self.action_toggle_hover_tool)
         self.toolbar.addAction(self.action_clone_data_to_editing_session)
         self.toolbar.addAction(self.action_merge_editing_session_data)
-        self.toolbar.addAction(self.action_toggle_dock)
+        self.toolbar.addAction(self.action_toggle_tools_dock)
+        self.toolbar.addAction(self.action_toggle_administration_dock)
 
         # Toggle hover of the map tool
         self.tools_dock.cb_listen_move_event.stateChanged.connect(
@@ -168,11 +183,17 @@ class Plugin:
         else:
             self.iface.mapCanvas().setMapTool(self.hover_map_tool)
 
-    def toggle_dock(self):
+    def toggle_administration_dock(self):
         """ Open the dock. """
         is_open = self.dock.isUserVisible()
         self.dock.setUserVisible(not is_open)
-        self.action_toggle_dock.setChecked(not is_open)
+        self.action_toggle_administration_dock.setChecked(not is_open)
+
+    def toggle_tools_dock(self):
+        """ Open the dock. """
+        is_open = self.tools_dock.isUserVisible()
+        self.tools_dock.setUserVisible(not is_open)
+        self.action_toggle_tools_dock.setChecked(not is_open)
 
     def on_map_tool_set(self, new_map_tool, old_map_tool):
         """Detect change on map canvas map tool"""
@@ -237,6 +258,7 @@ class Plugin:
 
     def unload(self):
         """ Unload plugin """
+        # Remove docks
         if self.dock:
             self.iface.removeDockWidget(self.dock)
             self.dock.deleteLater()
@@ -244,6 +266,7 @@ class Plugin:
             self.iface.removeDockWidget(self.tools_dock)
             self.tools_dock.deleteLater()
 
+        # Remove toolbar actions
         if self.action_toggle_hover_tool:
             self.toolbar.removeAction(self.action_toggle_hover_tool)
             del self.action_toggle_hover_tool
@@ -255,13 +278,20 @@ class Plugin:
             del self.action_merge_editing_session_data
 
         # Remove plugin menu actions
-        if self.action_toggle_dock:
-            self.toolbar.removeAction(self.action_toggle_dock)
+        if self.action_toggle_tools_dock:
+            self.toolbar.removeAction(self.action_toggle_tools_dock)
             self.iface.removePluginMenu(
                 '&RoadNetwork',
-                self.action_toggle_dock
+                self.action_toggle_tools_dock
             )
-            del self.action_toggle_dock
+            del self.action_toggle_tools_dock
+        if self.action_toggle_administration_dock:
+            self.toolbar.removeAction(self.action_toggle_administration_dock)
+            self.iface.removePluginMenu(
+                '&RoadNetwork',
+                self.action_toggle_administration_dock
+            )
+            del self.action_toggle_administration_dock
         if self.action_open_help:
             self.toolbar.removeAction(self.action_open_help)
             self.iface.removePluginMenu(

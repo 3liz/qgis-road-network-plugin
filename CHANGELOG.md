@@ -7,14 +7,17 @@
 User interface:
 
 * Toolbar
-  - Change map tool behaviour: the user needs to click on the map
-    to get the references under the cursor instead of a simple hover
+  - Change map tool behaviour: the user now needs to click on the map
+    to get the references under the cursor instead of a simple hover.
   - add the shortcut `CTRL+MAJ+K` to activate/deactivate the map tool
+  - New button to toggle the new tools dock
 * New RoadNetwork tool QGIS panel:
   - Visualize the references of the `road_graph` and the `editing_schema` database schemas data
   - Add an checkbox to allow displaying the references when the mouse pointer moves
   - Add the possibility to search for a reference for the edited data:
-    change a value and press Enter, or click on the `Find` button
+    change a value and click on the `Find` button
+* Editing session - Add an action available with right-clic on the editing session polygon
+  to let the user drop the editing session and all its related data
 * Work in progress - Prepare functions for applying graph changes to external data
 
 SQL functions improvements and fixes:

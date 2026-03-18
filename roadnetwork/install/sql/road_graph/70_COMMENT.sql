@@ -108,6 +108,10 @@ COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id 
 COMMENT ON FUNCTION road_graph.create_queries_from_editing_session(_editing_session_id integer) IS 'Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session';
 
 
+-- FUNCTION drop_editing_session(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.drop_editing_session(_editing_session_id integer) IS 'Delete the given editing session and truncate all the table of the editing_session schema';
+
+
 -- FUNCTION editing_survey()
 COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done inside the editing session schema tables.
 It also check that the edited geometries are inside the editing session polygon.';

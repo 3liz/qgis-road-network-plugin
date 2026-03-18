@@ -1221,7 +1221,66 @@ based on its geometry and position on the road.
 ';
 
 
+-- Empty editing session
+CREATE OR REPLACE FUNCTION road_graph.drop_editing_session(_editing_session_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+    editing_session_record record;
+    _set_config text;
+    _set_val bigint;
+BEGIN
+    -- Get editing session record
+    -- We set the search path to avoid using the schema in the request
+    -- since we need to get information from the road_graph schema,
+    -- not the copy
+    SET search_path TO road_graph, public;
+    SELECT INTO editing_session_record
+        *
+    FROM editing_sessions
+    WHERE id = _editing_session_id
+    ;
+
+    -- Raise exception if no record found
+    IF editing_session_record.id IS NULL THEN
+        RESET search_path;
+        RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
+    END IF;
+
+    -- Truncate editing_session tables
+    TRUNCATE editing_session.roads CASCADE;
+    TRUNCATE editing_session.markers CASCADE;
+    TRUNCATE editing_session.edges CASCADE;
+    TRUNCATE editing_session.nodes CASCADE;
+    TRUNCATE editing_session.editing_sessions CASCADE;
+
+    -- Set the sequences back to the maximum id in the main tables
+    SELECT INTO _set_val
+        setval(pg_get_serial_sequence('roads', 'id'), (SELECT max(id) FROM roads))
+    ;
+    SELECT INTO _set_val
+        setval(pg_get_serial_sequence('markers', 'id'), (SELECT max(id) FROM markers))
+    ;
+    SELECT INTO _set_val
+        setval(pg_get_serial_sequence('edges', 'id'), (SELECT max(id) FROM edges))
+    ;
+    SELECT INTO _set_val
+        setval(pg_get_serial_sequence('nodes', 'id'), (SELECT max(id) FROM nodes))
+    ;
+
+    -- Delete merged editing session
+    DELETE FROM editing_sessions
+    WHERE id = _editing_session_id
+    ;
+
+    -- Reset the search path
+    RESET search_path;
+
+    RETURN True;
+END;
+$$;
 
 
--- TODO
--- Insérer automatiquement un marker si la route du nouveau road code ne contient qu'un edge et qu'il ny a pas de marker 0
+-- FUNCTION copy_data_to_editing_session(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.drop_editing_session(integer)
+IS 'Delete the given editing session and truncate all the table of the editing_session schema';
