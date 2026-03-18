@@ -28,6 +28,10 @@ SQL functions improvements and fixes:
 * Markers - Fix an error when deleting a marker
 * Nodes - Add logic to control actions when a node is manually deleted
 
+CI
+
+* Migrate Transifex tools from qgis-plugin-ci to qt-transifex
+
 ## 0.1.0 - 2026-01-09
 
 * First version of the plugin
