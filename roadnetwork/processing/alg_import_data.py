@@ -55,9 +55,7 @@ class ImportData(BaseProcessingAlgorithm):
             defaultValue=connection_name,
             optional=False,
         )
-        param.setHelp(
-            tr("The database where the plugin structure will be installed.")
-        )
+        param.setHelp(tr("The database where the plugin structure will be installed."))
         self.addParameter(param)
 
         # Road source table
@@ -98,18 +96,12 @@ class ImportData(BaseProcessingAlgorithm):
 
         # OUTPUTS
         # Add output for status (integer)
-        self.addOutput(
-            QgsProcessingOutputNumber(self.OUTPUT_STATUS, tr("Output status"))
-        )
+        self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_STATUS, tr("Output status")))
         # Add output for message
-        self.addOutput(
-            QgsProcessingOutputString(self.OUTPUT_STRING, tr("Output message"))
-        )
+        self.addOutput(QgsProcessingOutputString(self.OUTPUT_STRING, tr("Output message")))
 
     def processAlgorithm(self, parameters, context, feedback):
-        connection_name = self.parameterAsConnectionName(
-            parameters, self.CONNECTION_NAME, context
-        )
+        connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
 
         # Set project variable
         feedback.pushInfo(tr(f"Using connection : {connection_name}"))

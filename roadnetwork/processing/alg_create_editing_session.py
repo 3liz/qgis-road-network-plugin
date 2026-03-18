@@ -27,7 +27,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         return "create_editing_session"
 
     def displayName(self):
-        return tr('Clone data to a new editing session')
+        return tr("Clone data to a new editing session")
 
     def group(self):
         return tr("Editing")
@@ -53,28 +53,20 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             defaultValue=connection_name,
             optional=False,
         )
-        param.setHelp(
-            tr("The connection to the database.")
-        )
+        param.setHelp(tr("The connection to the database."))
         self.addParameter(param)
 
         # OUTPUTS
         # Add output for status (integer)
-        self.addOutput(
-            QgsProcessingOutputNumber(self.OUTPUT_STATUS, tr("Output status"))
-        )
+        self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_STATUS, tr("Output status")))
         # Add output for message
-        self.addOutput(
-            QgsProcessingOutputString(self.OUTPUT_STRING, tr("Output message"))
-        )
+        self.addOutput(QgsProcessingOutputString(self.OUTPUT_STRING, tr("Output message")))
 
     def getLastCreatedEditingSessionId(
         self, status: str, parameters: dict[str, Any], context: QgsProcessingContext
     ) -> tuple:
         """Get the ID of the last editing session with status 'created'"""
-        connection_name = self.parameterAsConnectionName(
-            parameters, self.CONNECTION_NAME, context
-        )
+        connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
         sql = f"""
@@ -101,24 +93,20 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         # Check if an editing session is active
         # If so, cancel
         project = QgsProject.instance()
-        editing_session_layers = project.mapLayersByName('editing_sessions')
+        editing_session_layers = project.mapLayersByName("editing_sessions")
         if not editing_session_layers:
-            msg = tr(
-                "Cannot find the layer 'editing_sessions'."
-                " Have you opened the correct project ?"
-            )
+            msg = tr("Cannot find the layer 'editing_sessions'. Have you opened the correct project ?")
             return False, msg
         layer = editing_session_layers[0]
         if layer.isEditable():
             msg = tr(
-                "The layers are in editing mode. "
-                " Please save your chages and deactivate editing beforehand !"
+                "The layers are in editing mode.  Please save your chages and deactivate editing beforehand !"
             )
             return False, msg
 
         # Get the editing session data for the last item
         # with status 'edited'
-        session_data = self.getLastCreatedEditingSessionId('edited', parameters, context)
+        session_data = self.getLastCreatedEditingSessionId("edited", parameters, context)
         if session_data:
             msg = tr(
                 "There is already an editing session with status 'edited' in the database"
@@ -133,12 +121,10 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             return False, msg
 
         # Get the last editing session ID with status 'created'
-        status = 'created'
+        status = "created"
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
         if not editing_session:
-            msg = tr(
-                f"There is no editing session with status '{status}' in the database.\n"
-            )
+            msg = tr(f"There is no editing session with status '{status}' in the database.\n")
             msg += " You must first create a new editing session polygon"
             return False, msg
 
@@ -146,9 +132,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         # Get connection
-        connection_name = self.parameterAsConnectionName(
-            parameters, self.CONNECTION_NAME, context
-        )
+        connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
         feedback.pushInfo(tr(f"Using connection : {connection_name}"))
@@ -158,11 +142,9 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             return {}
 
         # Copy the production data into the editing_session schema
-        status = 'created'
+        status = "created"
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
-        feedback.pushInfo(
-            tr(f"Copy the production data for editing session '{editing_session[1]}'").upper()
-        )
+        feedback.pushInfo(tr(f"Copy the production data for editing session '{editing_session[1]}'").upper())
         sql = f"""
             SELECT road_graph.copy_data_to_editing_session(
                 {editing_session[0]}
@@ -177,8 +159,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             result = bool(a[0]) if a else None
         if not result:
             error_message = tr(
-                "A problem occurred while copying the production data "
-                " into the 'editing_session' schema."
+                "A problem occurred while copying the production data  into the 'editing_session' schema."
             )
             raise QgsProcessingException(error_message)
 
@@ -235,10 +216,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         QgsProject.instance().reloadAllLayers()
 
         # Results
-        msg = tr(
-            "Editing sessions data has been successfully created"
-            " for the given area"
-        )
+        msg = tr("Editing sessions data has been successfully created for the given area")
         status = 1
 
         return {self.OUTPUT_STATUS: status, self.OUTPUT_STRING: msg}

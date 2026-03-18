@@ -44,25 +44,29 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
         self.project = QgsProject.instance()
 
         # Restrict input values
-        self.marker.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+$')))
-        self.abscissa.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+(\.\d+)?$')))
-        self.offset.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+(\.\d+)?$')))
-        self.side.setValidator(QRegularExpressionValidator(QRegularExpression(r'^(left|right)$')))
-        self.marker_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+$')))
-        self.abscissa_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+(\.\d+)?$')))
-        self.offset_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r'^\d+(\.\d+)?$')))
-        self.side_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r'^(left|right)$')))
+        self.marker.setValidator(QRegularExpressionValidator(QRegularExpression(r"^\d+$")))
+        self.abscissa.setValidator(QRegularExpressionValidator(QRegularExpression(r"^\d+(\.\d+)?$")))
+        self.offset.setValidator(QRegularExpressionValidator(QRegularExpression(r"^\d+(\.\d+)?$")))
+        self.side.setValidator(QRegularExpressionValidator(QRegularExpression(r"^(left|right)$")))
+        self.marker_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r"^\d+$")))
+        self.abscissa_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r"^\d+(\.\d+)?$")))
+        self.offset_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r"^\d+(\.\d+)?$")))
+        self.side_sandbox.setValidator(QRegularExpressionValidator(QRegularExpression(r"^(left|right)$")))
 
         # Signals/Slots
 
         # Find point based on given references
         find_buttons = {
-            'road_graph': self.button_find_point_from_references,
-            'editing_session': self.button_find_point_from_references_sandbox,
+            "road_graph": self.button_find_point_from_references,
+            "editing_session": self.button_find_point_from_references_sandbox,
         }
         form_fields = (
-            'road_code', 'marker', 'abscissa',
-            'offset', 'side', 'cumulative',
+            "road_code",
+            "marker",
+            "abscissa",
+            "offset",
+            "side",
+            "cumulative",
         )
         for schema, button in find_buttons.items():
             slot = partial(self.find_point_from_references, schema)
@@ -70,47 +74,47 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
             button.clicked.connect(slot)
 
             # Press return on any form key
-            suffix = '' if schema == 'road_graph' else '_sandbox'
+            suffix = "" if schema == "road_graph" else "_sandbox"
             for key in form_fields:
-                input = self.findChild(QgsFilterLineEdit, f'key{suffix}')
+                input = self.findChild(QgsFilterLineEdit, f"key{suffix}")
                 if input:
                     input.returnPressed.connect(button.click)
 
-    def find_point_from_references(self, schema: str = 'road_graph') -> str | None:
+    def find_point_from_references(self, schema: str = "road_graph") -> str | None:
         """Get WKT geometry returned by the given references."""
-        suffix = '' if schema == 'road_graph' else '_sandbox'
+        suffix = "" if schema == "road_graph" else "_sandbox"
         # Get input values
         # road_code
-        item = self.findChild(QgsFilterLineEdit, 'road_code' + suffix)
-        road_code = 'D1'
+        item = self.findChild(QgsFilterLineEdit, "road_code" + suffix)
+        road_code = "D1"
         if item and item.value():
             road_code = item.value()
         else:
             item.setValue(str(road_code))
         # marker
-        item = self.findChild(QgsFilterLineEdit, 'marker' + suffix)
+        item = self.findChild(QgsFilterLineEdit, "marker" + suffix)
         marker = 0
         if item and item.value():
             marker = item.value()
         else:
             item.setValue(str(marker))
         # abscissa
-        item = self.findChild(QgsFilterLineEdit, 'abscissa' + suffix)
+        item = self.findChild(QgsFilterLineEdit, "abscissa" + suffix)
         abscissa = 0.0
         if item and item.value():
             abscissa = item.value()
         else:
             item.setValue(str(abscissa))
         # offset
-        item = self.findChild(QgsFilterLineEdit, 'offset' + suffix)
+        item = self.findChild(QgsFilterLineEdit, "offset" + suffix)
         offset = 0.0
         if item and item.value():
             offset = item.value()
         else:
             item.setValue(str(offset))
         # side
-        item = self.findChild(QgsFilterLineEdit, 'side' + suffix)
-        side = 'right'
+        item = self.findChild(QgsFilterLineEdit, "side" + suffix)
+        side = "right"
         if item and item.value():
             side = item.value()
         else:
@@ -149,17 +153,14 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
             if result:
                 for a in result:
                     wkt = str(a[0])
-                    if wkt and wkt.startswith('POINT'):
+                    if wkt and wkt.startswith("POINT"):
                         point = wkt
                     break
 
         # Return if no point has been found
         if not point:
             self.iface.messageBar().pushMessage(
-                'RoadNetwork',
-                tr('No point found for the given references'),
-                Qgis.MessageLevel.Critical,
-                2
+                "RoadNetwork", tr("No point found for the given references"), Qgis.MessageLevel.Critical, 2
             )
             return None
 
@@ -171,12 +172,7 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
         # Flash point
         canvas = self.iface.mapCanvas()
         canvas.flashGeometries(
-            [geometry],
-            QgsProject.instance().crs(),
-            QColor(255, 0, 0, 255),
-            QColor(50, 0, 200, 200),
-            10,
-            500
+            [geometry], QgsProject.instance().crs(), QColor(255, 0, 0, 255), QColor(50, 0, 200, 200), 10, 500
         )
 
         # Center map

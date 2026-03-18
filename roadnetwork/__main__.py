@@ -1,4 +1,3 @@
-
 import argparse
 
 from typing import (
@@ -49,15 +48,18 @@ def argument(*args, **kwargs):
 # Commands
 #
 
+
 @command("install-version", help="Show current database install version")
 def show_install_version(args):
     from .plugin_tools import resources
+
     print(resources.schema_version())
 
 
 @command("default-schema", help="Show default schema name")
 def show_default_schema(args):
     from .plugin_tools import resources
+
     print(resources.schema_name())
 
 

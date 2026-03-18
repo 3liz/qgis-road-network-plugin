@@ -21,9 +21,7 @@ def provider_id() -> str:
 
 
 def set_connection_name(project: QgsProject, connection_name: str):
-    QgsExpressionContextUtils.setProjectVariable(
-        project, CONNECTION_NAME_CONTEXT_VAR, connection_name
-    )
+    QgsExpressionContextUtils.setProjectVariable(project, CONNECTION_NAME_CONTEXT_VAR, connection_name)
 
 
 def get_connection_name(project: QgsProject) -> str:

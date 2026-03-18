@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from qgis.core import (
@@ -219,7 +218,7 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
 
         self.create_database(
             connection_name,
-            'editing_session',
+            "editing_session",
             version=version,
             override=override,
             install_dir=install_dir,

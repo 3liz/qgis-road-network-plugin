@@ -27,7 +27,6 @@ from .processing.tools import (
 
 
 class HoverMapTool(QgsMapTool):
-
     # Signals
     references_received = pyqtSignal(dict)
 
@@ -45,20 +44,18 @@ class HoverMapTool(QgsMapTool):
     def __init__(self, canvas):
         QgsMapTool.__init__(self, canvas)
         self.canvas = canvas
-        hover_cursor = QCursor(QPixmap(
-            str(resources_path('icons', 'hover_map_tool.png'))
-        ))
+        hover_cursor = QCursor(QPixmap(str(resources_path("icons", "hover_map_tool.png"))))
         self.cursor = hover_cursor
         self.listen_move_event = False
 
     def canvasPressEvent(self, event):
-        if self.active_tool == 'maptool':
-            self.emitMapCursorReferences(event.originalMapPoint(), 'click')
+        if self.active_tool == "maptool":
+            self.emitMapCursorReferences(event.originalMapPoint(), "click")
         pass
 
     def canvasMoveEvent(self, event):
-        if self.listen_move_event and self.active_tool == 'maptool':
-            self.emitMapCursorReferences(event.originalMapPoint(), 'move')
+        if self.listen_move_event and self.active_tool == "maptool":
+            self.emitMapCursorReferences(event.originalMapPoint(), "move")
         pass
 
     def canvasReleaseEvent(self, event):
@@ -66,12 +63,12 @@ class HoverMapTool(QgsMapTool):
 
     def activate(self):
         self.canvas.setCursor(self.cursor)
-        self.active_tool = 'maptool'
+        self.active_tool = "maptool"
         self.activated.emit()
 
     def deactivate(self):
         QgsMapTool.deactivate(self)
-        self.active_tool = None if not self.listen_move_event else 'canvas'
+        self.active_tool = None if not self.listen_move_event else "canvas"
         self.deactivated.emit()
 
     def isZoomTool(self):
@@ -84,15 +81,15 @@ class HoverMapTool(QgsMapTool):
         return False
 
     def toggleMoveEvent(self, toggle: bool = False):
-        """ Sets the move event flag"""
+        """Sets the move event flag"""
         self.listen_move_event = toggle
         # Change the active tool
         if not toggle:
-            if self.active_tool == 'canvas':
+            if self.active_tool == "canvas":
                 self.active_tool = None
         else:
             if not self.active_tool:
-                self.active_tool = 'canvas'
+                self.active_tool = "canvas"
 
     def getReferenceFromLonLat(self, connection_name, schema, lon, lat):
         """
@@ -120,7 +117,7 @@ class HoverMapTool(QgsMapTool):
 
         return result, error
 
-    def emitMapCursorReferences(self, map_position: QgsPointXY, event_name: str = 'move'):
+    def emitMapCursorReferences(self, map_position: QgsPointXY, event_name: str = "move"):
         """
         Emit the references at the given cursor X and Y position on the map canvas.
 
@@ -132,9 +129,9 @@ class HoverMapTool(QgsMapTool):
         if not self.active_tool:
             return
         if not self.listen_move_event:
-            if self.active_tool == 'canvas':
+            if self.active_tool == "canvas":
                 return
-            if event_name != 'click':
+            if event_name != "click":
                 return
 
         # Very basic limitation of number of time the function is called
@@ -157,9 +154,9 @@ class HoverMapTool(QgsMapTool):
         # Check connection
         if connection_name not in get_postgis_connection_list():
             iface.messageBar().pushMessage(
-                'RoadNetwork',
-                tr('The current project does not have a suitable road network connection'),
-                Qgis.MessageLevel.Warning
+                "RoadNetwork",
+                tr("The current project does not have a suitable road network connection"),
+                Qgis.MessageLevel.Warning,
             )
             self.listen_move_event = False
             self.deactivate()
@@ -169,28 +166,19 @@ class HoverMapTool(QgsMapTool):
         # Display references or error message
         # editing_sessions
         emitted_references: dict[str, dict[str, str | int | float]] = {}
-        for schema in ('editing_session', 'road_graph'):
-            references, error = self.getReferenceFromLonLat(
-                connection_name,
-                schema,
-                x,
-                y
-            )
+        for schema in ("editing_session", "road_graph"):
+            references, error = self.getReferenceFromLonLat(connection_name, schema, x, y)
             emitted_references[schema] = {}
-            if str(references[0][0]) != 'NULL':
-                emitted_references[schema]['road_code'] = references[0][0]
-                emitted_references[schema]['marker'] = references[0][1]
-                emitted_references[schema]['abscissa'] = references[0][2]
-                emitted_references[schema]['offset'] = references[0][3]
-                emitted_references[schema]['side'] = references[0][4]
-                emitted_references[schema]['cumulative'] = references[0][5]
+            if str(references[0][0]) != "NULL":
+                emitted_references[schema]["road_code"] = references[0][0]
+                emitted_references[schema]["marker"] = references[0][1]
+                emitted_references[schema]["abscissa"] = references[0][2]
+                emitted_references[schema]["offset"] = references[0][3]
+                emitted_references[schema]["side"] = references[0][4]
+                emitted_references[schema]["cumulative"] = references[0][5]
 
-            if error and schema == 'road_graph':
-                iface.messageBar().pushMessage(
-                    'RoadNetwork',
-                    error,
-                    Qgis.MessageLevel.Critical
-                )
+            if error and schema == "road_graph":
+                iface.messageBar().pushMessage("RoadNetwork", error, Qgis.MessageLevel.Critical)
 
         # Emit references
         self.references_received.emit(emitted_references)

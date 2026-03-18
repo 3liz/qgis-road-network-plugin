@@ -1,4 +1,3 @@
-
 from qgis.core import (
     QgsProcessingException,
     QgsProcessingFeedback,
@@ -255,7 +254,7 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
         feedback.pushInfo(tr('Upgrade schema "editing_session"'))
         self.upgrade_database(
             connection_name,
-            'editing_session',
+            "editing_session",
             run_migrations=run_migrations,
             feedback=feedback,
         )

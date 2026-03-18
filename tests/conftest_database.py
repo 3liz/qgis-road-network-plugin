@@ -1,4 +1,5 @@
 """Base class for tests using a database."""
+
 import os
 
 from pathlib import Path
@@ -63,12 +64,6 @@ def db_test_sql(data: Path) -> Sequence[Path]:
 @pytest.fixture()
 def db_connection() -> psycopg.Connection:
     """Initialize (Override existing) and return a db connection"""
-    connection = psycopg.connect(
-        user="docker",
-        password="docker",
-        host="db",
-        port="5432",
-        dbname="gis"
-    )
+    connection = psycopg.connect(user="docker", password="docker", host="db", port="5432", dbname="gis")
 
     return connection

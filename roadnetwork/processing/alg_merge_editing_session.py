@@ -28,7 +28,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         return "merge_editing_session"
 
     def displayName(self):
-        return tr('Merge editing session data')
+        return tr("Merge editing session data")
 
     def group(self):
         return tr("Editing")
@@ -54,28 +54,20 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             defaultValue=connection_name,
             optional=False,
         )
-        param.setHelp(
-            tr("The connection to the database.")
-        )
+        param.setHelp(tr("The connection to the database."))
         self.addParameter(param)
 
         # OUTPUTS
         # Add output for status (integer)
-        self.addOutput(
-            QgsProcessingOutputNumber(self.OUTPUT_STATUS, tr("Output status"))
-        )
+        self.addOutput(QgsProcessingOutputNumber(self.OUTPUT_STATUS, tr("Output status")))
         # Add output for message
-        self.addOutput(
-            QgsProcessingOutputString(self.OUTPUT_STRING, tr("Output message"))
-        )
+        self.addOutput(QgsProcessingOutputString(self.OUTPUT_STRING, tr("Output message")))
 
     def getLastCreatedEditingSessionId(
         self, status: str, parameters: dict[str, Any], context: QgsProcessingContext
     ) -> tuple:
         """Get the ID of the last editing session with status 'created'"""
-        connection_name = self.parameterAsConnectionName(
-            parameters, self.CONNECTION_NAME, context
-        )
+        connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
         sql = f"""
@@ -102,12 +94,9 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         # Check if an editing session is active
         # If so, cancel
         project = QgsProject.instance()
-        editing_session_layers = project.mapLayersByName('editing_sessions')
+        editing_session_layers = project.mapLayersByName("editing_sessions")
         if not editing_session_layers:
-            msg = tr(
-                "Cannot find the layer 'editing_sessions'."
-                " Have you opened the correct project ?"
-            )
+            msg = tr("Cannot find the layer 'editing_sessions'. Have you opened the correct project ?")
             return False, msg
         layer = editing_session_layers[0]
         if layer.isEditable():
@@ -118,12 +107,10 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             return False, msg
 
         # Get the last editing session ID with status 'edited'
-        status = 'edited'
+        status = "edited"
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
         if not editing_session:
-            msg = tr(
-                f"There is no editing session with status '{status}' in the database.\n"
-            )
+            msg = tr(f"There is no editing session with status '{status}' in the database.\n")
             return False, msg
 
         return super(MergeEditingSession, self).checkParameterValues(parameters, context)
@@ -133,7 +120,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         Reload the join between edges and roads
         This allow the symbology based on road class to be refreshed
         """
-        layers = QgsProject.instance().mapLayersByName('edges')
+        layers = QgsProject.instance().mapLayersByName("edges")
         if not layers:
             return
         layer = layers[0]
@@ -164,9 +151,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         # Get connection
-        connection_name = self.parameterAsConnectionName(
-            parameters, self.CONNECTION_NAME, context
-        )
+        connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
         feedback.pushInfo(tr(f"Using connection : {connection_name}"))
@@ -176,12 +161,10 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             return {}
 
         # Get the last editing session ID with status 'edited'
-        status = 'edited'
+        status = "edited"
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
         if not editing_session:
-            msg = tr(
-                f"There is no editing session with status '{status}' in the database.\n"
-            )
+            msg = tr(f"There is no editing session with status '{status}' in the database.\n")
             feedback.pushInfo(msg)
             return {}
 
@@ -207,8 +190,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             result = bool(a[0]) if a else None
         if not result:
             error_message = tr(
-                "A problem occurred while merging the editing session data "
-                " into the 'road_graph' schema."
+                "A problem occurred while merging the editing session data  into the 'road_graph' schema."
             )
             raise QgsProcessingException(error_message)
 
@@ -226,8 +208,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
 
         # Results
         msg = tr(
-            "Editing session data has been successfully merged"
-            " for the given area into the road_graph schema"
+            "Editing session data has been successfully merged for the given area into the road_graph schema"
         )
         status = 1
 

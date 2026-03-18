@@ -51,9 +51,7 @@ class QgsLogHandler(logging.Handler):
                 logged.
         """
         try:
-            QgsMessageLog.logMessage(
-                record.getMessage(), self.plugin_name, qgis_level(record.levelname)
-            )
+            QgsMessageLog.logMessage(record.getMessage(), self.plugin_name, qgis_level(record.levelname))
         except MemoryError:
             message = tr(
                 "Due to memory limitations on this machine, "
@@ -101,9 +99,7 @@ def setup_logger(logger_name):
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
-    console_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    console_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     console_handler.setFormatter(console_formatter)
     add_logging_handler_once(logger, console_handler)
 

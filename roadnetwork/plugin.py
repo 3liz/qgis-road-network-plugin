@@ -46,9 +46,7 @@ class Plugin:
             QCoreApplication.installTranslator(self.translator)
 
         # Connect hover map tool signal
-        self.hover_map_tool.references_received.connect(
-            self.on_hover_references_received
-        )
+        self.hover_map_tool.references_received.connect(self.on_hover_references_received)
 
     # noinspection PyPep8Naming
     def initProcessing(self):
@@ -69,89 +67,69 @@ class Plugin:
 
         # Map hover references tool
         self.action_toggle_hover_tool = QAction(
-            QIcon(str(resources_path('icons', 'hover_map_tool.png'))),
+            QIcon(str(resources_path("icons", "hover_map_tool.png"))),
             tr("Get references under the cursor"),
-            self.iface.mainWindow()
+            self.iface.mainWindow(),
         )
         self.action_toggle_hover_tool.setCheckable(True)
-        self.iface.mapCanvas().mapToolSet.connect(
-            self.on_map_tool_set
-        )
-        self.action_toggle_hover_tool.triggered.connect(
-            self.toggle_hover_tool
-        )
+        self.iface.mapCanvas().mapToolSet.connect(self.on_map_tool_set)
+        self.action_toggle_hover_tool.triggered.connect(self.toggle_hover_tool)
         # Toggle hover tool on key shortcut
         shortcut = QShortcut(
-            QKeySequence(
-                Qt.ControlModifier + Qt.ShiftModifier + Qt.Key_K
-            ),
-            self.iface.mainWindow()
+            QKeySequence(Qt.ControlModifier + Qt.ShiftModifier + Qt.Key_K), self.iface.mainWindow()
         )
         shortcut.setContext(Qt.ApplicationShortcut)
         shortcut.activated.connect(self.toggle_hover_tool)
 
         # Add plugin menu Open/close the tools dock from plugin menu
         self.action_toggle_tools_dock = QAction(
-            QIcon(str(resources_path('icons', 'toggle_tools_dock.png'))),
-            tr('Show/hide the tools dock'),
-            self.iface.mainWindow()
+            QIcon(str(resources_path("icons", "toggle_tools_dock.png"))),
+            tr("Show/hide the tools dock"),
+            self.iface.mainWindow(),
         )
         self.action_toggle_tools_dock.setCheckable(True)
-        self.iface.addPluginToMenu(
-            '&RoadNetwork',
-            self.action_toggle_tools_dock
-        )
+        self.iface.addPluginToMenu("&RoadNetwork", self.action_toggle_tools_dock)
         self.action_toggle_tools_dock.triggered.connect(self.toggle_tools_dock)
         self.action_toggle_tools_dock.setChecked(self.tools_dock.isUserVisible())
 
         # Add plugin menu Open/close the administration dock from plugin menu
         self.action_toggle_administration_dock = QAction(
-            QIcon(str(resources_path('icons', 'toggle_administration_dock.png'))),
-            tr('Show/hide the administration dock'),
-            self.iface.mainWindow()
+            QIcon(str(resources_path("icons", "toggle_administration_dock.png"))),
+            tr("Show/hide the administration dock"),
+            self.iface.mainWindow(),
         )
         self.action_toggle_administration_dock.setCheckable(True)
-        self.iface.addPluginToMenu(
-            '&RoadNetwork',
-            self.action_toggle_administration_dock
-        )
+        self.iface.addPluginToMenu("&RoadNetwork", self.action_toggle_administration_dock)
         self.action_toggle_administration_dock.triggered.connect(self.toggle_administration_dock)
         self.action_toggle_administration_dock.setChecked(self.dock.isUserVisible())
 
         # Add help action
         self.action_open_help = QAction(
-            QIcon(str(resources_path('icons', 'open_help.png'))),
-            tr('Open online help'),
-            self.iface.mainWindow()
+            QIcon(str(resources_path("icons", "open_help.png"))),
+            tr("Open online help"),
+            self.iface.mainWindow(),
         )
-        self.iface.addPluginToMenu(
-            '&RoadNetwork',
-            self.action_open_help
-        )
+        self.iface.addPluginToMenu("&RoadNetwork", self.action_open_help)
         self.action_open_help.triggered.connect(self.open_help)
 
         # Create editing session action
         self.action_clone_data_to_editing_session = QAction(
-            QIcon(str(resources_path('icons', 'clone_to_editing_session.png'))),
-            tr('Clone data to the editing sandbox'),
-            self.iface.mainWindow()
+            QIcon(str(resources_path("icons", "clone_to_editing_session.png"))),
+            tr("Clone data to the editing sandbox"),
+            self.iface.mainWindow(),
         )
-        self.action_clone_data_to_editing_session.triggered.connect(
-            self.clone_data_to_editing_session
-        )
+        self.action_clone_data_to_editing_session.triggered.connect(self.clone_data_to_editing_session)
 
         # Merge editing session action
         self.action_merge_editing_session_data = QAction(
-            QIcon(str(resources_path('icons', 'merge_editing_session.png'))),
-            tr('Merge editing sandbox data'),
-            self.iface.mainWindow()
+            QIcon(str(resources_path("icons", "merge_editing_session.png"))),
+            tr("Merge editing sandbox data"),
+            self.iface.mainWindow(),
         )
-        self.action_merge_editing_session_data.triggered.connect(
-            self.merge_editing_session_data
-        )
+        self.action_merge_editing_session_data.triggered.connect(self.merge_editing_session_data)
 
         # Plugin toolbar
-        self.toolbar = self.iface.addToolBar('&Road Network')
+        self.toolbar = self.iface.addToolBar("&Road Network")
         self.toolbar.setObjectName("RoadNetworkToolbar")
 
         # Ajout des actions dans la barre
@@ -162,9 +140,7 @@ class Plugin:
         self.toolbar.addAction(self.action_toggle_administration_dock)
 
         # Toggle hover of the map tool
-        self.tools_dock.cb_listen_move_event.stateChanged.connect(
-            self.on_listen_move_event_changed
-        )
+        self.tools_dock.cb_listen_move_event.stateChanged.connect(self.on_listen_move_event_changed)
 
         # Get references when the cursor is moving
         # Only if conditions are met
@@ -173,7 +149,7 @@ class Plugin:
         mc.xyCoordinates.connect(self.hover_map_tool.emitMapCursorReferences)
 
     def toggle_hover_tool(self):
-        """ Toggle the map hover tool used to find references"""
+        """Toggle the map hover tool used to find references"""
         # Toggle action
         is_active = self.hover_map_tool.isActive()
         if is_active:
@@ -184,22 +160,20 @@ class Plugin:
             self.iface.mapCanvas().setMapTool(self.hover_map_tool)
 
     def toggle_administration_dock(self):
-        """ Open the dock. """
+        """Open the dock."""
         is_open = self.dock.isUserVisible()
         self.dock.setUserVisible(not is_open)
         self.action_toggle_administration_dock.setChecked(not is_open)
 
     def toggle_tools_dock(self):
-        """ Open the dock. """
+        """Open the dock."""
         is_open = self.tools_dock.isUserVisible()
         self.tools_dock.setUserVisible(not is_open)
         self.action_toggle_tools_dock.setChecked(not is_open)
 
     def on_map_tool_set(self, new_map_tool, old_map_tool):
         """Detect change on map canvas map tool"""
-        self.action_toggle_hover_tool.setChecked(
-            (self.iface.mapCanvas().mapTool() == self.hover_map_tool)
-        )
+        self.action_toggle_hover_tool.setChecked((self.iface.mapCanvas().mapTool() == self.hover_map_tool))
 
     @staticmethod
     def open_external_resource(uri, is_url=True):
@@ -239,13 +213,12 @@ class Plugin:
     def on_hover_references_received(self, references: dict):
         """Receive the references from the hover tool and display them in the dock"""
         # Print the references in the tools dock
-        for schema in ('editing_session', 'road_graph'):
+        for schema in ("editing_session", "road_graph"):
             refs = references[schema]
-            for key in ('road_code', 'marker', 'abscissa', 'offset', 'side', 'cumulative'):
-                value = str(refs[key]) if refs.get(key) else ''
+            for key in ("road_code", "marker", "abscissa", "offset", "side", "cumulative"):
+                value = str(refs[key]) if refs.get(key) else ""
                 line_edit = self.tools_dock.findChild(
-                    QgsFilterLineEdit,
-                    f"{key}_sandbox" if schema == 'editing_session' else key
+                    QgsFilterLineEdit, f"{key}_sandbox" if schema == "editing_session" else key
                 )
                 if not line_edit:
                     continue
@@ -257,7 +230,7 @@ class Plugin:
         self.hover_map_tool.toggleMoveEvent(toggle)
 
     def unload(self):
-        """ Unload plugin """
+        """Unload plugin"""
         # Remove docks
         if self.dock:
             self.iface.removeDockWidget(self.dock)
@@ -280,24 +253,15 @@ class Plugin:
         # Remove plugin menu actions
         if self.action_toggle_tools_dock:
             self.toolbar.removeAction(self.action_toggle_tools_dock)
-            self.iface.removePluginMenu(
-                '&RoadNetwork',
-                self.action_toggle_tools_dock
-            )
+            self.iface.removePluginMenu("&RoadNetwork", self.action_toggle_tools_dock)
             del self.action_toggle_tools_dock
         if self.action_toggle_administration_dock:
             self.toolbar.removeAction(self.action_toggle_administration_dock)
-            self.iface.removePluginMenu(
-                '&RoadNetwork',
-                self.action_toggle_administration_dock
-            )
+            self.iface.removePluginMenu("&RoadNetwork", self.action_toggle_administration_dock)
             del self.action_toggle_administration_dock
         if self.action_open_help:
             self.toolbar.removeAction(self.action_open_help)
-            self.iface.removePluginMenu(
-                '&RoadNetwork',
-                self.action_open_help
-            )
+            self.iface.removePluginMenu("&RoadNetwork", self.action_open_help)
             del self.action_open_help
 
         # Remove toolbar

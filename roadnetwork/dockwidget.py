@@ -71,15 +71,15 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
         """
         Refresh the snapping vertices cache when committing changes
         """
-        get_edge_layer = self.project.mapLayersByName('edges')
+        get_edge_layer = self.project.mapLayersByName("edges")
         if len(get_edge_layer) == 1:
             get_edge_layer[0].afterCommitChanges.connect(self.reloadLayer)
 
     def reloadLayer(self):
-        layer = self.project.mapLayersByName('edges')[0]
+        layer = self.project.mapLayersByName("edges")[0]
         if layer:
             layer.reload()
-            print(tr('Layer edges has been reloaded'))
+            print(tr("Layer edges has been reloaded"))
 
     @staticmethod
     def check_database_version() -> Optional[int]:

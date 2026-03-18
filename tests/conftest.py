@@ -23,6 +23,7 @@ from .qgis_testing import start_app
 
 def pytest_report_header(config):
     from osgeo import gdal
+
     message = (
         f"QGIS : {Qgis.QGIS_VERSION_INT}\n"
         f"Python GDAL : {gdal.VersionInfo('VERSION_NUM')}\n"
@@ -30,6 +31,7 @@ def pytest_report_header(config):
         f"QT : {Qt.QT_VERSION_STR}"
     )
     return message
+
 
 #
 # Fixtures
