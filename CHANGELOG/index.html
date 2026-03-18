@@ -826,6 +826,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#020" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#010-2026-01-09" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -858,6 +869,31 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<h2 id="020">0.2.0<a class="headerlink" href="#020" title="Permanent link">#</a></h2>
+<p>User interface:</p>
+<ul>
+<li>Toolbar</li>
+<li>Change map tool behaviour: the user now needs to click on the map
+    to get the references under the cursor instead of a simple hover.</li>
+<li>add the shortcut <code>CTRL+MAJ+K</code> to activate/deactivate the map tool</li>
+<li>New button to toggle the new tools dock</li>
+<li>New RoadNetwork tool QGIS panel:</li>
+<li>Visualize the references of the <code>road_graph</code> and the <code>editing_schema</code> database schemas data</li>
+<li>Add an checkbox to allow displaying the references when the mouse pointer moves</li>
+<li>Add the possibility to search for a reference for the edited data:
+    change a value and click on the <code>Find</code> button</li>
+<li>Editing session - Add an action available with right-clic on the editing session polygon
+  to let the user drop the editing session and all its related data</li>
+<li>Work in progress - Prepare functions for applying graph changes to external data</li>
+</ul>
+<p>SQL functions improvements and fixes:</p>
+<ul>
+<li>Performance - Improve the calculation of a point reference, especially for big roads</li>
+<li>Edges - Correctly update references of the new &amp; old road when changing an edge <code>road_code</code> value</li>
+<li>Fix wrong update of edges references when a new edge is added or its <code>previous_edge_id</code> is changed</li>
+<li>Markers - Fix an error when deleting a marker</li>
+<li>Nodes - Add logic to control actions when a node is manually deleted</li>
+</ul>
 <h2 id="010-2026-01-09">0.1.0 - 2026-01-09<a class="headerlink" href="#010-2026-01-09" title="Permanent link">#</a></h2>
 <ul>
 <li>First version of the plugin</li>
