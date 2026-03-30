@@ -33,10 +33,10 @@ INSERT INTO road_graph.glossary_road_class (id, code, label) VALUES (7, 'Départ
 
 
 --
--- Name: glossary_road_scale_id_seq; Type: SEQUENCE SET; Schema: road_graph; Owner: -
+-- Name: glossary_road_class_id_seq; Type: SEQUENCE SET; Schema: road_graph; Owner: -
 --
 
-SELECT pg_catalog.setval('road_graph.glossary_road_scale_id_seq', 7, true);
+SELECT pg_catalog.setval('road_graph.glossary_road_class_id_seq', 7, true);
 
 
 --

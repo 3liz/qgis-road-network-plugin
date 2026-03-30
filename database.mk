@@ -15,7 +15,7 @@ stop-db:
 #
 # Create a new migration scheme
 #
-# 
+#
 #
 
 upgrade-schema-version:
@@ -31,7 +31,7 @@ patch-install-files:
 	patch -u -p0 < $$patch_file; \
 
 
-run-db-command: 
+run-db-command:
 	{ \
 		cd .docker; \
 		export DB_COMMAND="${DB_COMMAND}"; \
@@ -59,5 +59,3 @@ schemaspy:
 			--exit-code-from schemaspy; \
 		docker compose --profile=schemaspy down -v; \
 	}
-
-

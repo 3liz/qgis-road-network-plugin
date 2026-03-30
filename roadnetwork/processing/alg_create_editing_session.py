@@ -94,15 +94,14 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         # If so, cancel
         project = QgsProject.instance()
         editing_session_layers = project.mapLayersByName("editing_sessions")
-        if not editing_session_layers:
-            msg = tr("Cannot find the layer 'editing_sessions'. Have you opened the correct project ?")
-            return False, msg
-        layer = editing_session_layers[0]
-        if layer.isEditable():
-            msg = tr(
-                "The layers are in editing mode.  Please save your chages and deactivate editing beforehand !"
-            )
-            return False, msg
+        if editing_session_layers:
+            layer = editing_session_layers[0]
+            if layer.isEditable():
+                msg = tr(
+                    "The layers are in editing mode."
+                    " Please save your chages and deactivate editing beforehand !"
+                )
+                return False, msg
 
         # Get the editing session data for the last item
         # with status 'edited'

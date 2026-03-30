@@ -1096,6 +1096,31 @@ BEGIN
         END IF;
     END IF;
 
+    -- Calculate previous_edge_id and next_edge_id values
+    -- for touching edges if the road_code has not changed
+    IF NOT is_roundabout AND NOT has_changed_road_code
+    THEN
+        IF NEW.previous_edge_id IS NULL THEN
+            -- Get the previous edge
+            NEW.previous_edge_id = (
+                SELECT e.id
+                FROM road_graph.edges AS e
+                WHERE e.road_code = NEW.road_code
+                AND e.end_node = NEW.start_node
+                LIMIT 1
+            );
+        END IF;
+        IF NEW.next_edge_id IS NULL THEN
+            -- Get the next edge
+            NEW.next_edge_id = (
+                SELECT e.id
+                FROM road_graph.edges AS e
+                WHERE e.road_code = NEW.road_code
+                AND e.start_node = NEW.end_node
+            );
+        END IF;
+    END IF;
+
     -- Move marker 0 if needed
     -- If the first edge of the road has changed
     -- move it to the start_point of the changed geometry
@@ -1513,6 +1538,13 @@ BEGIN
     TRUNCATE editing_session.edges CASCADE;
     TRUNCATE editing_session.nodes CASCADE;
     TRUNCATE editing_session.editing_sessions CASCADE;
+    TRUNCATE editing_session.glossary_road_class CASCADE;
+
+    -- Re-insert glossary
+    INSERT INTO editing_session.glossary_road_class
+    SELECT *
+    FROM road_graph.glossary_road_class
+    ;
 
     -- Get roads to edit
     WITH

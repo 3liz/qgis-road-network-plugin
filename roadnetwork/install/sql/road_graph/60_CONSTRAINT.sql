@@ -31,19 +31,19 @@ ALTER TABLE ONLY road_graph.editing_sessions
     ADD CONSTRAINT editing_sessions_pkey PRIMARY KEY (id);
 
 
--- glossary_road_class glossary_road_scale_code_key
+-- glossary_road_class glossary_road_class_code_key
 ALTER TABLE ONLY road_graph.glossary_road_class
-    ADD CONSTRAINT glossary_road_scale_code_key UNIQUE (code);
+    ADD CONSTRAINT glossary_road_class_code_key UNIQUE (code);
 
 
--- glossary_road_class glossary_road_scale_label_key
+-- glossary_road_class glossary_road_class_label_key
 ALTER TABLE ONLY road_graph.glossary_road_class
-    ADD CONSTRAINT glossary_road_scale_label_key UNIQUE (label);
+    ADD CONSTRAINT glossary_road_class_label_key UNIQUE (label);
 
 
--- glossary_road_class glossary_road_scale_pkey
+-- glossary_road_class glossary_road_class_pkey
 ALTER TABLE ONLY road_graph.glossary_road_class
-    ADD CONSTRAINT glossary_road_scale_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT glossary_road_class_pkey PRIMARY KEY (id);
 
 
 -- managed_objects managed_objects_pkey
