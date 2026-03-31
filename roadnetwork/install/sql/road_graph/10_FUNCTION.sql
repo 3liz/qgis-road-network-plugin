@@ -948,7 +948,7 @@ BEGIN
     END IF;
 
     -- check if edge is a part of a roundabout
-    is_roundabout = (edge_road.road_type = 'roundabout' AND ST_IsRing(NEW.geom));
+    is_roundabout = (edge_road.road_type = 'roundabout');
     IF raise_notice IN ('info', 'debug') THEN
         RAISE NOTICE '% BEFORE edge % n° %, edge is_roundabout %,
         %',
@@ -959,7 +959,7 @@ BEGIN
 
     -- If it is a new roundabout, reverse the geometry if needed
     -- QGIS digitizing circle tool create counter-clockwise polygons
-    IF is_roundabout AND ST_IsPolygonCW(ST_MakePolygon(NEW.geom))
+    IF is_roundabout AND ST_IsRing(NEW.geom) AND ST_IsPolygonCW(ST_MakePolygon(NEW.geom))
     THEN
         NEW.geom = ST_Reverse(NEW.geom);
     END IF;
@@ -1403,12 +1403,6 @@ DECLARE
     left_node_geom geometry(Point, 2154);
 BEGIN
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
-
-    IF raise_notice in ('info', 'debug') THEN
-        RAISE NOTICE 'get_ordered_edges - _initial_id = %',
-            _initial_id
-        ;
-    END IF;
 
     -- Delete the edges inside the roundabout
     -- and update the roads remainging around the roundabout
@@ -3166,17 +3160,25 @@ BEGIN
     WITH node AS (
         -- Get the node at the higher position in the roundabout
     	SELECT n.id, n.geom, e.id AS edge_id
-    	FROM road_graph.nodes AS n 
-    	JOIN road_graph.edges AS e 
+    	FROM road_graph.nodes AS n
+    	JOIN road_graph.edges AS e
     		ON e.road_code = _road_code
-    		AND n.id IN (e.start_node, e.end_node) 
+    		AND n.id IN (e.start_node, e.end_node)
+        -- Do not take into account nodes connected to other roads
+        -- since they are not only part of the roundabout but must be kept
+        WHERE NOT EXISTS (
+            SELECT f.id
+            FROM road_graph.edges AS f
+            WHERE f.road_code != _road_code
+            AND n.id IN (f.start_node, f.end_node)
+        )
     	ORDER BY ST_Y(n.geom) DESC LIMIT 1
     ),
     check_node AS (
         -- Intersects a circle of radius 1m around the node
-        -- with the related edges so that we can then compare 
+        -- with the related edges so that we can then compare
         -- the generated points Y to the node Y
-    	SELECT 
+    	SELECT
     		n.id, e.id AS edge_id,
     		n.geom,
     		ST_Intersection(ST_ExteriorRing(ST_Buffer(n.geom, 1)), e.geom) AS inter
@@ -3187,12 +3189,12 @@ BEGIN
     )
     -- Get id
     SELECT INTO check_record
-    	n.id, 
+    	n.id,
         bool_and(ST_Y(inter) <= ST_Y(n.geom)) AS ok
     FROM check_node AS n
     GROUP BY n.id
     ;
-    
+
     IF check_record.ok IS TRUE
     THEN
         RETURN check_record.id;

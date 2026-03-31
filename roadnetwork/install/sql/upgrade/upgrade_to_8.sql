@@ -249,7 +249,7 @@ BEGIN
     END IF;
 
     -- check if edge is a part of a roundabout
-    is_roundabout = (edge_road.road_type = 'roundabout' AND ST_IsRing(NEW.geom));
+    is_roundabout = (edge_road.road_type = 'roundabout');
     IF raise_notice IN ('info', 'debug') THEN
         RAISE NOTICE '% BEFORE edge % n° %, edge is_roundabout %,
         %',
@@ -260,7 +260,7 @@ BEGIN
 
     -- If it is a new roundabout, reverse the geometry if needed
     -- QGIS digitizing circle tool create counter-clockwise polygons
-    IF is_roundabout AND ST_IsPolygonCW(ST_MakePolygon(NEW.geom))
+    IF is_roundabout AND ST_IsRing(NEW.geom) AND ST_IsPolygonCW(ST_MakePolygon(NEW.geom))
     THEN
         NEW.geom = ST_Reverse(NEW.geom);
     END IF;
@@ -498,4 +498,176 @@ During the modification of an edge, if the starting point of the edge is modifie
 we move marker 0 to this new starting point.
 Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge
 based on its geometry and position on the road.
+';
+
+
+CREATE OR REPLACE FUNCTION road_graph.clean_digitized_roundabout(_road_code text) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    raise_notice text;
+    node_to_delete integer;
+    delete_result bool;
+    merge_edges_result bool;
+    left_node_geom geometry(Point, 2154);
+BEGIN
+    raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
+
+    -- Delete the edges inside the roundabout
+    -- and update the roads remainging around the roundabout
+    -- (previous & next edge ids)
+    WITH del AS (
+        DELETE FROM road_graph.edges AS d
+        WHERE d.road_code != _road_code
+        AND ST_ContainsProperly(
+            (
+            SELECT
+            ST_Buffer(ST_Polygonize(geom), 0.1)
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code
+            ),
+            d.geom
+        ) RETURNING d.id, d.previous_edge_id, d.next_edge_id
+    ),
+    update_previous AS (
+        UPDATE road_graph.edges AS e
+        SET next_edge_id = d.next_edge_id
+        FROM del AS d
+        WHERE e.next_edge_id = d.id
+        AND e.id != d.id
+    ),
+    update_next AS (
+        UPDATE road_graph.edges AS e
+        SET previous_edge_id = d.previous_edge_id
+        FROM del AS d
+        WHERE e.previous_edge_id = d.id
+        AND e.id != d.id
+    )
+    SELECT True
+    INTO delete_result;
+
+    -- Remove the circle node added add 12 o'clock
+    -- by QGIS digitizing tool
+    -- We use the merge_edges function which does the job
+    SELECT
+        INTO node_to_delete
+        road_graph.get_upper_roundabout_node_to_delete(
+            _road_code
+        )
+    ;
+    IF raise_notice in ('info', 'debug') THEN
+        RAISE NOTICE 'Node to delete % ', coalesce(node_to_delete, -1);
+    END IF;
+
+    IF node_to_delete IS NOT NULL THEN
+        SELECT
+            INTO merge_edges_result
+            road_graph.merge_edges(
+                (SELECT id FROM road_graph.edges WHERE end_node = node_to_delete LIMIT 1),
+                (SELECT id FROM road_graph.edges WHERE start_node = node_to_delete LIMIT 1)
+            )
+        ;
+    END IF;
+
+    -- Add marker 0 in the left node
+    SELECT
+        INTO left_node_geom
+        n.geom
+    FROM road_graph.nodes AS n
+    JOIN road_graph.edges AS e
+        ON e.start_node = n.id
+    WHERE True
+    AND e.road_code = _road_code
+    ORDER BY ST_X(n.geom)
+    LIMIT 1
+    ;
+    IF left_node_geom IS NOT NULL AND NOT EXISTS (
+        SELECT id
+        FROM road_graph.markers
+        WHERE road_code = _road_code
+        AND "code" = 0
+    )
+    THEN
+        INSERT INTO road_graph.markers (
+            road_code, "code", geom, abscissa
+        ) VALUES (
+            _road_code, 0, left_node_geom, 0
+        );
+    END IF;
+
+    RETURN TRUE;
+
+END;
+$$;
+
+
+-- FUNCTION clean_digitized_roundabout(_road_code text)
+COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
+* delete the edges inside the roundabout
+* remove the circle node added add 12 o''clock
+* add a marker for this roundabout if not already present
+';
+
+
+
+-- get_upper_roundabout_node_to_delete(text)
+CREATE OR REPLACE FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code text) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    check_record record;
+BEGIN
+    WITH node AS (
+        -- Get the node at the higher position in the roundabout
+    	SELECT n.id, n.geom, e.id AS edge_id
+    	FROM road_graph.nodes AS n
+    	JOIN road_graph.edges AS e
+    		ON e.road_code = _road_code
+    		AND n.id IN (e.start_node, e.end_node)
+        -- Do not take into account nodes connected to other roads
+        -- since they are not only part of the roundabout but must be kept
+        WHERE NOT EXISTS (
+            SELECT f.id
+            FROM road_graph.edges AS f
+            WHERE f.road_code != _road_code
+            AND n.id IN (f.start_node, f.end_node)
+        )
+    	ORDER BY ST_Y(n.geom) DESC LIMIT 1
+    ),
+    check_node AS (
+        -- Intersects a circle of radius 1m around the node
+        -- with the related edges so that we can then compare
+        -- the generated points Y to the node Y
+    	SELECT
+    		n.id, e.id AS edge_id,
+    		n.geom,
+    		ST_Intersection(ST_ExteriorRing(ST_Buffer(n.geom, 1)), e.geom) AS inter
+    	FROM node AS n
+    	JOIN road_graph.edges AS e
+    		ON n.id IN (e.start_node, e.end_node)
+    		AND e.road_code = _road_code
+    )
+    -- Get id
+    SELECT INTO check_record
+    	n.id,
+        bool_and(ST_Y(inter) <= ST_Y(n.geom)) AS ok
+    FROM check_node AS n
+    GROUP BY n.id
+    ;
+
+    IF check_record.ok IS TRUE
+    THEN
+        RETURN check_record.id;
+    ELSE
+        RETURN NULL::integer;
+    END IF;
+
+END;
+$$;
+
+
+-- FUNCTION get_upper_roundabout_node_to_delete(_road_code text)
+COMMENT ON FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code text) IS 'Get the roundabout node at the top of the circle. It only exists because QGIS creates a circle with a point at the top.
+We need to delete this node and merge edges around it.
+This function does nothing if no node is found at the exact top position of the circle.
 ';
