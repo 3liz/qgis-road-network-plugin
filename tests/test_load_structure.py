@@ -173,10 +173,7 @@ def test_upgrade_from(
     db_connection.close()
 
 
-def test_reset_test_data(
-    processing_provider: Provider,
-    data: Path
-):
+def test_reset_test_data(processing_provider: Provider, data: Path):
     params = {
         "CONNECTION_NAME": "test",
         "OVERRIDE": True,
@@ -193,7 +190,7 @@ def test_reset_test_data(
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-    connection_name = 'test'
+    connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
     # Remove previous data
@@ -230,13 +227,10 @@ def test_reset_test_data(
             raise QgsProcessingException(str(e))
 
 
-def test_create_editing_session(
-    processing_provider: Provider
-):
-
+def test_create_editing_session(processing_provider: Provider):
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-    connection_name = 'test'
+    connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
     # Create an editing session
@@ -303,12 +297,10 @@ def test_create_editing_session(
     assert (stats[0], stats[1], stats[2], stats[3]) == (173, 213, 165, 5)
 
 
-def test_create_edge(
-    processing_provider: Provider
-):
+def test_create_edge(processing_provider: Provider):
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-    connection_name = 'test'
+    connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
     # Create a new road and a new edges
@@ -348,7 +340,7 @@ def test_create_edge(
         edge = a if a else None
     assert edge is not None
     # Check the edge data
-    assert [edge[0], edge[1]] == [7830, 'T001']
+    assert [edge[0], edge[1]] == [7830, "T001"]
 
     # Check 2 new nodes have been created
     assert [edge[2], edge[3]] == [5758, 5759]
@@ -358,15 +350,13 @@ def test_create_edge(
     assert [edge[7], edge[8], edge[9]] == [0, 870.88, 870.88]
 
 
-def test_cut_edge_by_node(
-    processing_provider: Provider
-):
+def test_cut_edge_by_node(processing_provider: Provider):
     # Add a node in the middle of the new edge
     # which should cut the new edge in two parts
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-    connection_name = 'test'
+    connection_name = "test"
     connection = metadata.findConnection(connection_name)
     sql = """
         INSERT INTO editing_session.nodes (geom) VALUES (
@@ -397,10 +387,12 @@ def test_cut_edge_by_node(
 
     # Check the number of edges for the road
     assert len(edges) == 2
+    assert edges is not None
 
     # edge 1
+    assert edges[0] is not None
     # id and road code
-    assert [edges[0][0], edges[0][1]] == [7830, 'T001']
+    assert [edges[0][0], edges[0][1]] == [7830, "T001"]
     # Check the start and end nodes
     assert [edges[0][2], edges[0][3]] == [5758, 5760]
     # Check the references have been calculated for this edge
@@ -410,8 +402,9 @@ def test_cut_edge_by_node(
     assert [edges[0][10], edges[0][11]] == [None, 7831]
 
     # edge 2
+    assert edges[1] is not None
     # id and road code
-    assert [edges[1][0], edges[1][1]] == [7831, 'T001']
+    assert [edges[1][0], edges[1][1]] == [7831, "T001"]
     # Check the start and end nodes
     assert [edges[1][2], edges[1][3]] == [5760, 5759]
     # Check the references have been calculated for this edge
@@ -421,13 +414,10 @@ def test_cut_edge_by_node(
     assert [edges[1][10], edges[1][11]] == [7830, None]
 
 
-def test_insert_edge_at_the_end_of_a_road(
-    processing_provider: Provider
-):
-
+def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-    connection_name = 'test'
+    connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
     # Insert a new edge at the end (touching) of the last edge
@@ -469,6 +459,9 @@ def test_insert_edge_at_the_end_of_a_road(
     assert len(edges) == 3
 
     # Check the previous and next edges ids have been calculated for the new edge
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
     assert [edges[0][10], edges[0][11]] == [None, 7831]
     assert [edges[1][10], edges[1][11]] == [7830, 7832]
     assert [edges[2][10], edges[2][11]] == [7831, None]
@@ -482,16 +475,14 @@ def test_insert_edge_at_the_end_of_a_road(
     assert [edges[2][7], edges[2][8], edges[2][9]] == [0, 919.28, 919.28]
 
 
-def test_change_edge_road(
-    processing_provider: Provider
-):
+def test_change_edge_road(processing_provider: Provider):
     # Create a new road and change the middle edge to be part of this new road
     # Check the references have been calculated for the edge and the new road
     # And the old road
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-    connection_name = 'test'
+    connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
     # Insert a new edge at the end (touching) of the last edge
@@ -525,9 +516,12 @@ def test_change_edge_road(
         edges.append(a if a else None)
     # Check the number of edges for the road
     assert len(edges) == 3
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
 
     # Check the road code has been updated for the edges
-    assert [edges[0][1], edges[1][1], edges[2][1]] == ['T001', 'TC002', 'T001']
+    assert [edges[0][1], edges[1][1], edges[2][1]] == ["T001", "TC002", "T001"]
 
     # Check the previous and next edges ids have been updated
     assert [edges[0][10], edges[0][11]] == [None, 7832]
@@ -543,14 +537,12 @@ def test_change_edge_road(
     assert [edges[2][7], edges[2][8], edges[2][9]] == [0, 671.07, 671.07]
 
 
-def test_update_edge_and_cross_other_edge(
-    processing_provider: Provider
-):
+def test_update_edge_and_cross_other_edge(processing_provider: Provider):
     # Update the geometry of an edge to touch another edge of anoter road
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-    connection_name = 'test'
+    connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
     # Update the last edge and cut the road D138 in two edges
@@ -587,6 +579,8 @@ def test_update_edge_and_cross_other_edge(
         edges.append(a if a else None)
     # Check the number of edges for the road
     assert len(edges) == 2
+    assert edges[0] is not None
+    assert edges[1] is not None
 
     # Check the previous and next edges ids have been updated
     assert [edges[0][10], edges[0][11]] == [7830, 7834]
@@ -623,6 +617,8 @@ def test_update_edge_and_cross_other_edge(
         edges.append(a if a else None)
     # Check the number of edges for the road
     assert len(edges) == 2
+    assert edges[0] is not None
+    assert edges[1] is not None
 
     # Check the previous and next edges ids have been updated
     assert [edges[0][10], edges[0][11]] == [2264, 7833]
@@ -635,14 +631,12 @@ def test_update_edge_and_cross_other_edge(
     assert [edges[1][7], edges[1][8], edges[1][9]] == [14, 490.92, 14564.3]  # like previous edge
 
 
-def test_create_roundabout(
-    processing_provider: Provider
-):
+def test_create_roundabout(processing_provider: Provider):
     # Create a roundabout
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
-    connection_name = 'test'
+    connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
     # Create road
@@ -681,6 +675,10 @@ def test_create_roundabout(
 
     # Check the number of edges
     assert len(edges) == 4
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
 
     # Check the references of the crossing edges before creating the roundabout
     assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 242.6, 8257.66]
@@ -734,6 +732,10 @@ def test_create_roundabout(
 
     # Check the number of edges
     assert len(edges) == 4
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
 
     # Check the ids
     assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [2264, 2497, 7836, 7837]
@@ -767,8 +769,10 @@ def test_create_roundabout(
     for a in data:
         markers.append(a if a else None)
     assert len(markers) == 1
+    assert markers is not None
+    assert markers[0] is not None
     assert markers[0][0] == 8340
-    assert markers[0][1] == 'R001'
+    assert markers[0][1] == "R001"
     assert markers[0][2] == 0
     assert markers[0][3] == 0
     assert markers[0][4] == 474017.3
@@ -795,6 +799,10 @@ def test_create_roundabout(
     for a in data:
         edges.append(a if a else None)
     assert len(edges) == 4
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
 
     # Check the ids of the edges of the roundabout
     assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [7840, 7841, 7838, 7835]
