@@ -49,6 +49,8 @@ TABLES_FOR_CURRENT_VERSION = [
 
 
 def test_processing_create(processing_provider: Provider):
+    """Test the processing algorithm for creating the database structure."""
+
     params = {
         "CONNECTION_NAME": "test",
         "OVERRIDE": True,
@@ -174,6 +176,8 @@ def test_upgrade_from(
 
 
 def test_reset_test_data(processing_provider: Provider, data: Path):
+    """Reset the test data: vaccum the database and import again the test data"""
+
     params = {
         "CONNECTION_NAME": "test",
         "OVERRIDE": True,
@@ -228,6 +232,8 @@ def test_reset_test_data(processing_provider: Provider, data: Path):
 
 
 def test_create_editing_session(processing_provider: Provider):
+    """Test the creation of an editing session and the cloning of data into the editing_session schema."""
+
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
     connection_name = "test"
@@ -298,6 +304,8 @@ def test_create_editing_session(processing_provider: Provider):
 
 
 def test_create_edge(processing_provider: Provider):
+    """Test the creation of a new edge in the editing session and the calculation of its attributes"""
+
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
     connection_name = "test"
@@ -351,8 +359,9 @@ def test_create_edge(processing_provider: Provider):
 
 
 def test_cut_edge_by_node(processing_provider: Provider):
-    # Add a node in the middle of the new edge
-    # which should cut the new edge in two parts
+    """Add a node in the middle of the new edge
+    which should cut the new edge in two parts
+    and check the attributes of the two new edges"""
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
@@ -415,6 +424,9 @@ def test_cut_edge_by_node(processing_provider: Provider):
 
 
 def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
+    """Insert a new edge at the end of the road T001 and
+    check the attributes of the new edge and the previous last edge
+    """
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
     connection_name = "test"
@@ -476,9 +488,11 @@ def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
 
 
 def test_change_edge_road(processing_provider: Provider):
-    # Create a new road and change the middle edge to be part of this new road
-    # Check the references have been calculated for the edge and the new road
-    # And the old road
+    """Create a new road and change the middle edge of a road
+    to be part of this new road.
+    Check the references have been calculated for the modified edge
+    and for the remaining edges of the old road
+    """
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
@@ -538,7 +552,9 @@ def test_change_edge_road(processing_provider: Provider):
 
 
 def test_update_edge_and_cross_other_edge(processing_provider: Provider):
-    # Update the geometry of an edge to touch another edge of anoter road
+    """Update the geometry of an edge to cross another edge of anoter road
+    Check the edge is cut in two edges and the attributes of the new edges and of the crossed edge are updated
+    """
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
@@ -598,8 +614,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
             e.start_node, e.end_node,
             e.start_marker, e.start_abscissa, e.start_cumulative,
             e.end_marker, e.end_abscissa, e.end_cumulative,
-            e.previous_edge_id, e.next_edge_id,
-    e.updated_at, e.created_at
+            e.previous_edge_id, e.next_edge_id
 
     FROM editing_session.edges AS e
     WHERE
@@ -631,8 +646,58 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
     assert [edges[1][7], edges[1][8], edges[1][9]] == [14, 490.92, 14564.3]  # like previous edge
 
 
+def test_delete_road_edge(processing_provider: Provider):
+    """Delete an edge of a road and test consequences"""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Delete the edge 7832 which is in the middle of the road T001
+    sql = """
+    DELETE FROM editing_session.edges
+    WHERE id = 7832
+    ;
+    SELECT
+        e.id, e.road_code,
+        e.start_node, e.end_node,
+        e.start_marker, e.start_abscissa, e.start_cumulative,
+        e.end_marker, e.end_abscissa, e.end_cumulative,
+        e.previous_edge_id, e.next_edge_id
+    FROM editing_session.edges AS e
+    WHERE e.road_code = 'T001'
+    ORDER BY e.id
+    ;
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    edges = []
+    for a in data:
+        edges.append(a if a else None)
+    # Check the number of edges for the road
+    assert len(edges) == 2
+    assert edges[0] is not None
+    assert edges[1] is not None
+    # Check the edges ids
+    assert [edges[0][0], edges[1][0]] == [7830, 7834]
+    # Check the previous and next edges ids have been updated
+    assert [edges[0][10], edges[0][11]] == [None, 7834]
+    assert [edges[1][10], edges[1][11]] == [7830, None]
+    # Check the start and end nodes
+    assert [edges[0][2], edges[0][3]] == [5758, 5760]
+    assert [edges[1][2], edges[1][3]] == [5762, 5761]
+    # Check the references have been calculated for all the edges of the road
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
+    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.67, 622.67]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 622.67, 622.67]
+    assert [edges[1][7], edges[1][8], edges[1][9]] == [0, 762.77, 762.77]
+
+
 def test_create_roundabout(processing_provider: Provider):
-    # Create a roundabout
+    """Create a roundabout and check the result"""
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
@@ -822,3 +887,420 @@ def test_create_roundabout(processing_provider: Provider):
     assert [edges[1][10], edges[1][11]] == [7840, 7838]
     assert [edges[2][10], edges[2][11]] == [7841, 7835]
     assert [edges[3][10], edges[3][11]] == [7838, None]
+
+
+def test_move_road_marker():
+    """Move a marker and see if the edges are correctly updated."""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Get the edges data before moving the marker
+    sql = """
+    SELECT
+        e.id,
+        e.start_marker, e.start_abscissa, e.start_cumulative,
+        e.end_marker, e.end_abscissa, e.end_cumulative
+    FROM editing_session.edges AS e
+    WHERE road_code IN ('D138')
+    AND start_cumulative > 7930
+    ORDER BY start_cumulative
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    edges = []
+    for a in data:
+        edges.append(a if a else None)
+    assert len(edges) == 7
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
+    assert edges[4] is not None
+    assert edges[5] is not None
+    assert edges[6] is not None
+
+    # Data before
+    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
+    # ------+--------------+----------------+------------------+------------+--------------+---------------
+    #  2260 |            7 |         836.84 |          7930.99 |          8 |        242.6 |        8257.66
+    #  2264 |            8 |          242.6 |          8257.66 |          8 |       971.52 |        8986.58
+    #  7837 |            8 |         971.52 |          8986.58 |          9 |       740.82 |        9744.13
+    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
+    #  2266 |           14 |         490.92 |          14546.3 |         16 |       778.88 |          16857
+    #  4506 |           16 |         778.88 |            16857 |         16 |       813.14 |        16891.3
+    #  2267 |           16 |         813.14 |          16891.3 |         19 |       334.71 |        19428.7
+
+    # Check the references of the edges before moving the marker
+    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 242.6, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3]] == [8, 242.6, 8257.66]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [8, 971.52, 8986.58]
+    assert [edges[2][1], edges[2][2], edges[2][3]] == [8, 971.52, 8986.58]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
+    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+
+    # Move the marker 8 of the road D138 by 60 meters southwards
+    sql_update = """
+    UPDATE editing_session.markers
+    SET geom = ST_Translate(geom, 0, -60)
+    WHERE road_code = 'D138' AND code = 8
+    ;
+    """
+    try:
+        data = connection.executeSql(sql_update)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    # Get the edges data after moving the marker
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    edges = []
+    for a in data:
+        edges.append(a if a else None)
+
+    assert len(edges) == 7
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
+    assert edges[4] is not None
+    assert edges[5] is not None
+    assert edges[6] is not None
+
+    # Data after
+    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
+    # ------+--------------+----------------+------------------+------------+--------------+---------------
+    #  2260 |            7 |         836.84 |          7930.99 |          8 |       177.91 |        8257.66
+    #  2264 |            8 |         177.91 |          8257.66 |          8 |       906.83 |        8986.58
+    #  7837 |            8 |         906.83 |          8986.58 |          9 |       740.82 |        9744.13
+    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
+    #  2266 |           14 |         490.92 |          14546.3 |         16 |       778.88 |          16857
+    #  4506 |           16 |         778.88 |            16857 |         16 |       813.14 |        16891.3
+    #  2267 |           16 |         813.14 |          16891.3 |         19 |       334.71 |        19428.7
+
+    # Check the references of the edges after moving the marker
+    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 177.91, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3]] == [8, 177.91, 8257.66]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [8, 906.83, 8986.58]
+    assert [edges[2][1], edges[2][2], edges[2][3]] == [8, 906.83, 8986.58]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
+    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+
+
+def test_delete_road_marker():
+    """Delete markers of a road and see if the edges are correctly updated."""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Delete markers 8, 16 and 19 of the road D138
+    sql_delete = """
+    DELETE FROM editing_session.markers
+    WHERE road_code = 'D138' AND code IN (8, 16, 19)
+    ;
+    """
+    try:
+        data = connection.executeSql(sql_delete)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    # Get the edges data after deleting the markers
+    sql = """
+    SELECT
+        e.id,
+        e.start_marker, e.start_abscissa, e.start_cumulative,
+        e.end_marker, e.end_abscissa, e.end_cumulative
+    FROM editing_session.edges AS e
+    WHERE road_code IN ('D138')
+    AND start_cumulative > 7930
+    ORDER BY start_cumulative
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    edges = []
+    for a in data:
+        edges.append(a if a else None)
+    assert len(edges) == 7
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
+    assert edges[4] is not None
+    assert edges[5] is not None
+    assert edges[6] is not None
+
+    # Data after
+    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
+    # ------+--------------+----------------+------------------+------------+--------------+----------------
+    #  2260 |            7 |         836.84 |          7930.99 |          7 |       1163.5 |        8257.66
+    #  2264 |            7 |         1163.5 |          8257.66 |          7 |      1892.42 |        8986.58
+    #  7837 |            7 |        1892.42 |          8986.58 |          9 |       740.82 |        9744.13
+    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
+    #  2266 |           14 |         490.92 |          14546.3 |         15 |      1806.27 |          16857
+    #  4506 |           15 |        1806.27 |            16857 |         15 |      1840.53 |        16891.3
+    #  2267 |           15 |        1840.53 |          16891.3 |         18 |      1341.54 |        19428.7
+
+    # Check the references of the edges after deleting the markers
+    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [7, 1163.5, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3]] == [7, 1163.5, 8257.66]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [7, 1892.42, 8986.58]
+    assert [edges[2][1], edges[2][2], edges[2][3]] == [7, 1892.42, 8986.58]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
+    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+    assert [edges[4][1], edges[4][2], edges[4][3]] == [14, 490.92, 14546.3]
+    assert [edges[4][4], edges[4][5], edges[4][6]] == [15, 1806.27, 16857]
+    assert [edges[5][1], edges[5][2], edges[5][3]] == [15, 1806.27, 16857]
+    assert [edges[5][4], edges[5][5], edges[5][6]] == [15, 1840.53, 16891.3]
+    assert [edges[6][1], edges[6][2], edges[6][3]] == [15, 1840.53, 16891.3]
+    assert [edges[6][4], edges[6][5], edges[6][6]] == [18, 1341.54, 19428.7]
+
+
+def test_add_road_marker():
+    """
+    Add a marker and see if the edges are correctly updated.
+    """
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Get the edges data before moving the marker
+    sql = """
+    SELECT
+        e.id,
+        e.start_marker, e.start_abscissa, e.start_cumulative,
+        e.end_marker, e.end_abscissa, e.end_cumulative
+    FROM editing_session.edges AS e
+    WHERE road_code IN ('D138')
+    AND start_cumulative > 7930
+    ORDER BY start_cumulative
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    edges = []
+    for a in data:
+        edges.append(a if a else None)
+    assert len(edges) == 7
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
+
+    # Data before
+    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
+    # ------+--------------+----------------+------------------+------------+--------------+----------------
+    #  2260 |            7 |         836.84 |          7930.99 |          7 |       1163.5 |        8257.66
+    #  2264 |            7 |         1163.5 |          8257.66 |          7 |      1892.42 |        8986.58
+    #  7837 |            7 |        1892.42 |          8986.58 |          9 |       740.82 |        9744.13
+    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
+    #  2266 |           14 |         490.92 |          14546.3 |         15 |      1806.27 |          16857
+    #  4506 |           15 |        1806.27 |            16857 |         15 |      1840.53 |        16891.3
+    #  2267 |           15 |        1840.53 |          16891.3 |         18 |      1341.54 |        19428.7
+
+    # Check the references of the edges before adding the marker
+    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [7, 1163.5, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3]] == [7, 1163.5, 8257.66]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [7, 1892.42, 8986.58]
+    assert [edges[2][1], edges[2][2], edges[2][3]] == [7, 1892.42, 8986.58]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
+    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+
+    # Add the marker 8 for the road D138
+    sql_insert = """
+    INSERT INTO editing_session.markers (geom, road_code, code, abscissa) VALUES (
+        ST_SetSRID(
+            ST_GeomFromText(
+                'POINT (473524 6895644)'
+            ),
+            2154
+        ),
+        'D138', 8, 0
+    )
+    ;
+    """
+    try:
+        data = connection.executeSql(sql_insert)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    # Get the edges data after adding the marker
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    edges = []
+    for a in data:
+        edges.append(a if a else None)
+
+    assert len(edges) == 7
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
+
+    # Data after
+    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
+    # ------+--------------+----------------+------------------+------------+--------------+----------------
+    #  2260 |            7 |         836.84 |          7930.99 |          8 |       202.78 |        8257.66
+    #  2264 |            8 |         202.78 |          8257.66 |          8 |        931.7 |        8986.58
+    #  7837 |            8 |          931.7 |          8986.58 |          9 |       740.82 |        9744.13
+    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
+    #  2266 |           14 |         490.92 |          14546.3 |         15 |      1806.27 |          16857
+    #  4506 |           15 |        1806.27 |            16857 |         15 |      1840.53 |        16891.3
+    #  2267 |           15 |        1840.53 |          16891.3 |         18 |      1341.54 |        19428.7
+
+    # Check the references of the edges after moving the marker
+    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 202.78, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3]] == [8, 202.78, 8257.66]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [8, 931.7, 8986.58]
+    assert [edges[2][1], edges[2][2], edges[2][3]] == [8, 931.7, 8986.58]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
+    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+
+
+def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider: Provider):
+    """Delete an edge which ends on the marker 0 of a roundabout"""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Check the values of the edges of the road R001
+    sql = """
+    SELECT
+            e.id,
+            e.start_marker, e.start_abscissa, e.start_cumulative,
+            e.end_marker, e.end_abscissa, e.end_cumulative
+    FROM editing_session.edges AS e
+    WHERE road_code IN ('R001')
+    ORDER BY start_cumulative
+    ;
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    edges = []
+    for a in data:
+        edges.append(a if a else None)
+
+    # Data before deleting the edge
+    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
+    # ------+--------------+----------------+------------------+------------+--------------+----------------
+    #  7840 |            0 |              0 |                0 |          0 |        22.45 |          22.45
+    #  7841 |            0 |          22.45 |            22.45 |          0 |        30.52 |          30.52
+    #  7838 |            0 |          30.52 |            30.52 |          0 |        51.18 |          51.18
+    #  7835 |            0 |          51.18 |            51.18 |          0 |        56.46 |          56.46
+
+    assert len(edges) == 4
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+    assert edges[3] is not None
+
+    # Check the references of the edges before deleting the edge
+    assert [edges[0][1], edges[0][2], edges[0][3]] == [0, 0, 0]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 22.45, 22.45]
+    assert [edges[1][1], edges[1][2], edges[1][3]] == [0, 22.45, 22.45]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 30.52, 30.52]
+    assert [edges[2][1], edges[2][2], edges[2][3]] == [0, 30.52, 30.52]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 51.18, 51.18]
+    assert [edges[3][1], edges[3][2], edges[3][3]] == [0, 51.18, 51.18]
+    assert [edges[3][4], edges[3][5], edges[3][6]] == [0, 56.46, 56.46]
+
+    # Delete the edge of the road D138 which ends on the marker 0 of the roundabout R001
+    sql_delete = """
+    DELETE FROM editing_session.edges AS e
+    WHERE e.road_code = 'D138'
+    AND ST_DWithin(
+        ST_EndPoint(geom),
+        (
+            SELECT geom
+            FROM editing_session.markers
+            WHERE road_code = 'R001' AND code = 0
+        ),
+        0.10
+    )
+    ;
+    """
+    try:
+        connection.executeSql(sql_delete)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    # Check the values of the edges of the road R001 after deleting the edge
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    edges = []
+    for a in data:
+        edges.append(a if a else None)
+
+    # Data after deleting the edge
+    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
+    # ------+--------------+----------------+------------------+------------+--------------+----------------
+    #  7835 |            0 |              0 |                0 |          0 |        27.74 |          27.74
+    #  7841 |            0 |          27.74 |            27.74 |          0 |         35.8 |           35.8
+    #  7838 |            0 |           35.8 |             35.8 |          0 |        56.46 |          56.46
+
+    assert len(edges) == 3
+    assert edges[0] is not None
+    assert edges[1] is not None
+    assert edges[2] is not None
+
+    # Check the references of the edges after deleting the edge
+    assert [edges[0][1], edges[0][2], edges[0][3]] == [0, 0, 0]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 27.74, 27.74]
+    assert [edges[1][1], edges[1][2], edges[1][3]] == [0, 27.74, 27.74]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 35.8, 35.8]
+    assert [edges[2][1], edges[2][2], edges[2][3]] == [0, 35.8, 35.8]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 56.46, 56.46]
+
+
+def test_get_road_point_from_reference():
+    pass
+
+
+def test_get_downstream_multilinestring_from_reference():
+    pass
+
+
+def test_get_road_substring_from_references():
+    pass
+
+
+def test_merge_editing_session_data():
+    pass
+
+
+def test_update_managed_objects_on_graph_change():
+    pass

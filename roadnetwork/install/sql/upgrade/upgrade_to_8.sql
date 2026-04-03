@@ -671,3 +671,129 @@ COMMENT ON FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code te
 We need to delete this node and merge edges around it.
 This function does nothing if no node is found at the exact top position of the circle.
 ';
+
+
+-- get_current_setting(text, text)
+CREATE OR REPLACE FUNCTION road_graph.get_current_setting(setting_name text, default_value text) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    setting_value text;
+BEGIN
+    -- Get current setting value, if not set return default value
+    setting_value = coalesce(nullif(current_setting(setting_name, true), ''), default_value);
+
+    RETURN setting_value;
+END;
+$$;
+
+
+-- FUNCTION get_current_setting(setting_name text, default_value text)
+COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_value text) IS 'Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid.
+The function is used to have a single point of maintenance for getting settings.';
+
+
+
+-- merge_edges(integer, integer)
+CREATE OR REPLACE FUNCTION road_graph.merge_edges(id_edge_a integer, id_edge_b integer) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    edge_a record;
+    edge_b record;
+    edge_to_delete record;
+    node_to_be_deleted integer;
+    node_geom_to_be_deleted geometry(Point, 2154);
+    _set_config text;
+BEGIN
+
+    -- Get both edges
+    -- edge A
+    SELECT INTO edge_a
+    *
+    FROM road_graph.edges
+    WHERE id = id_edge_a;
+    IF edge_a.id IS NULL THEN
+        RAISE EXCEPTION 'No edge found with id = % ', id_edge_a;
+    END IF;
+
+    -- edge B
+    SELECT INTO edge_b
+    *
+    FROM road_graph.edges
+    WHERE id = id_edge_b;
+    IF edge_b.id IS NULL THEN
+        RAISE EXCEPTION 'No edge found with id = % ', id_edge_b;
+    END IF;
+
+    -- edge A and B touches
+    IF NOT ST_Touches(edge_a.geom, edge_b.geom) THEN
+        RAISE NOTICE 'Edges does not touch';
+        RETURN FALSE;
+    END IF;
+
+    -- RETURN FALSE;
+    -- Merge edges: keep the oldest one,
+    -- and add geometry from the other one
+    edge_to_delete = edge_a;
+    IF edge_a.id < edge_b.id OR edge_a.id < edge_b.id THEN
+        edge_to_delete = edge_b;
+    END IF;
+    RAISE NOTICE 'merge_edges - % and %. Delete %', id_edge_a, id_edge_b, edge_to_delete.id
+    ;
+
+    -- Get node to be deleted
+    node_to_be_deleted = -1;
+    IF edge_a.start_node = edge_b.end_node THEN
+        node_to_be_deleted = edge_a.start_node;
+    END IF;
+    IF edge_b.start_node = edge_a.end_node THEN
+        node_to_be_deleted = edge_b.start_node;
+    END IF;
+    node_geom_to_be_deleted = (SELECT geom FROM road_graph.nodes WHERE id = node_to_be_deleted);
+    SELECT set_config('road.graph.merge.edges.useless.node', node_to_be_deleted::text, true)
+    INTO _set_config
+    ;
+    RAISE NOTICE 'merge_edges -  % and %. node to be deleted = %', id_edge_a, id_edge_b, node_to_be_deleted
+    ;
+
+    -- Delete and UPDATE in the same request
+    WITH del AS (
+        DELETE FROM road_graph.edges
+        WHERE id = edge_to_delete.id
+        RETURNING *
+    ),
+    up AS (
+        UPDATE road_graph.edges
+        SET geom = ST_LineMerge(ST_Union(geom, edge_to_delete.geom))
+        WHERE True
+        AND id IN (id_edge_a, id_edge_b)
+        AND id != edge_to_delete.id
+        RETURNING id, geom
+    )
+    -- Move the marker 0 of the edge road if it was located on the node to be deleted
+    UPDATE road_graph.markers AS m
+    SET geom = ST_StartPoint(u.geom)
+    FROM up AS u
+    WHERE m.road_code = edge_a.road_code
+    AND m.code = 0
+    AND ST_DWithin(m.geom, node_geom_to_be_deleted, 0.50)
+    ;
+    SELECT set_config('road.graph.merge.edges.useless.node', '-1', true)
+    INTO _set_config
+    ;
+
+
+
+    RETURN TRUE;
+
+END;
+$$;
+
+
+-- FUNCTION merge_edges(id_edge_a integer, id_edge_b integer)
+COMMENT ON FUNCTION road_graph.merge_edges(id_edge_a integer, id_edge_b integer) IS 'Merge two edges by their geometry.
+The merged edge is the one with the lowest id. The other edge is deleted.
+The node between the two edges is not deleted but its id is stored
+in the session variable ''road.graph.merge.edges.useless.node'' for further use if needed.
+';

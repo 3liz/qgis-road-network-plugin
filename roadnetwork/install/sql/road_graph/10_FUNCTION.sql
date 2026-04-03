@@ -2046,7 +2046,7 @@ DECLARE
     setting_value text;
 BEGIN
     -- Get current setting value, if not set return default value
-    setting_value = coalesce(current_setting(setting_name, true), default_value);
+    setting_value = coalesce(nullif(current_setting(setting_name, true), ''), default_value);
 
     RETURN setting_value;
 END;
@@ -3222,6 +3222,7 @@ DECLARE
     edge_b record;
     edge_to_delete record;
     node_to_be_deleted integer;
+    node_geom_to_be_deleted geometry(Point, 2154);
     _set_config text;
 BEGIN
 
@@ -3268,6 +3269,7 @@ BEGIN
     IF edge_b.start_node = edge_a.end_node THEN
         node_to_be_deleted = edge_b.start_node;
     END IF;
+    node_geom_to_be_deleted = (SELECT geom FROM road_graph.nodes WHERE id = node_to_be_deleted);
     SELECT set_config('road.graph.merge.edges.useless.node', node_to_be_deleted::text, true)
     INTO _set_config
     ;
@@ -3279,18 +3281,29 @@ BEGIN
         DELETE FROM road_graph.edges
         WHERE id = edge_to_delete.id
         RETURNING *
+    ),
+    up AS (
+        UPDATE road_graph.edges
+        SET geom = ST_LineMerge(ST_Union(geom, edge_to_delete.geom))
+        WHERE True
+        AND id IN (id_edge_a, id_edge_b)
+        AND id != edge_to_delete.id
+        RETURNING id, geom
     )
-    UPDATE road_graph.edges
-    SET geom = ST_LineMerge(ST_Union(geom, edge_to_delete.geom))
-    WHERE True
-    AND id IN (id_edge_a, id_edge_b)
-    AND id != edge_to_delete.id
+    -- Move the marker 0 of the edge road if it was located on the node to be deleted
+    UPDATE road_graph.markers AS m
+    SET geom = ST_StartPoint(u.geom)
+    FROM up AS u
+    WHERE m.road_code = edge_a.road_code
+    AND m.code = 0
+    AND ST_DWithin(m.geom, node_geom_to_be_deleted, 0.50)
     ;
     SELECT set_config('road.graph.merge.edges.useless.node', '-1', true)
     INTO _set_config
     ;
 
-    -- Return True
+
+
     RETURN TRUE;
 
 END;
