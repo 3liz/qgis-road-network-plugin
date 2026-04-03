@@ -1286,12 +1286,9 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 56.46, 56.46]
 
 
-def test_get_road_point_from_reference():
-    pass
-
-
 def test_get_road_substring_from_references():
-    """Test the function get_road_substring_from_references which returns a substring of a road between two references."""
+    """Test the function get_road_substring_from_references
+    which returns a substring of a road between two references."""
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
@@ -1360,8 +1357,8 @@ def test_get_road_substring_from_references():
     assert result[0] == "124fc586378a3f996e514e65359d91b0"
 
 
-
-
+def test_get_road_point_from_reference():
+    pass
 
 
 def test_merge_editing_session_data():
