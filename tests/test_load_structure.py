@@ -1290,12 +1290,78 @@ def test_get_road_point_from_reference():
     pass
 
 
-def test_get_downstream_multilinestring_from_reference():
-    pass
-
-
 def test_get_road_substring_from_references():
-    pass
+    """Test the function get_road_substring_from_references which returns a substring of a road between two references."""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Check the value of the geometry returned by the function get_road_substring_from_references
+    # for a big road with many edges and roundabouts on the way
+    sql = """
+    SELECT md5(
+        ST_AsText(
+            (road_graph.get_road_substring_from_references(
+                'D613',
+                42,
+                120,
+                44,
+                10,
+                3.25,
+                'right'
+            )->>'geom')::geometry(MULTILINESTRING, 2154)::text
+        )
+    )
+    ;
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    result = None
+    for a in data:
+        result = a if a else None
+
+    assert result is not None
+    assert result[0] == "39adeaf34ed4b7f0b6d391eed5755f93"
+
+    # Same test for a roundabout
+    # TODO : il we pass a max value bigger than the roundabout length,
+    # the function should return the whole roundabout and not an empty geometry
+    sql = """
+    SELECT md5(
+        ST_AsText(
+            (editing_session.get_road_substring_from_references(
+                'R001',
+                0,
+                10,
+                0,
+                30,
+                2,
+                'right'
+            )->>'geom')::geometry(MULTILINESTRING, 2154)::text
+        )
+    )
+    ;
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    result = None
+    for a in data:
+        result = a if a else None
+
+    assert result is not None
+    assert result[0] == "124fc586378a3f996e514e65359d91b0"
+
+
+
+
 
 
 def test_merge_editing_session_data():

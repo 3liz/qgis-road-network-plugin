@@ -3024,71 +3024,74 @@ BEGIN
     END IF;
     -- Create substring lines
     -- start
-    _start_substring = ST_ReducePrecision(
-    -- NB : In some unpredictable cases, the use of offset gives error like
-    -- ERREUR:  MultiLineString cannot contain MultiLineString element
-    -- We can use ST_OffsetCurve instead
-        ST_OffsetCurve(
-            ST_LocateBetween(
-                _start_downstream_road_m,
-                CASE
-                    WHEN _start_marker_abscissa - _start_closest_marker_abscissa >= ST_Length(_start_downstream_road)
-                        THEN ST_Length(_start_downstream_road)
-                    ELSE _start_marker_abscissa - _start_closest_marker_abscissa
-                END,
-                ST_Length(_start_downstream_road)
-                --,
-                -- JSON helper to choose side and offset
-                -- ((json_build_object('left', +1, 'right', -1))->>("_side"))::integer * "_offset"
-            ),
-            ((json_build_object('left', +1, 'right', -1))->>("_side"))::integer * "_offset"
-        ),
-        0.10
-    );
+    _start_substring =
+        ST_Force2D(ST_LocateBetween(
+            _start_downstream_road_m,
+            CASE
+                WHEN _start_marker_abscissa - _start_closest_marker_abscissa >= ST_Length(_start_downstream_road)
+                    THEN ST_Length(_start_downstream_road)
+                ELSE _start_marker_abscissa - _start_closest_marker_abscissa
+            END,
+            ST_Length(_start_downstream_road)
+        ))
+    ;
     IF raise_notice = 'yes' THEN
         RAISE NOTICE '_start_substring  %', ST_AsText(_start_substring);
     END IF;
+
     -- end
-    -- NB : In some unpredictable cases, the use of offset gives error like
-    -- ERREUR:  MultiLineString cannot contain MultiLineString element
-    -- We can use ST_OffsetCurve instead
-    _end_substring = ST_ReducePrecision(
-        ST_OffsetCurve(
-            ST_LocateBetween(
-                _end_downstream_road_m,
-                CASE
-                    WHEN _end_marker_abscissa - _end_closest_marker_abscissa >= ST_Length(_end_downstream_road)
-                        THEN ST_Length(_end_downstream_road)
-                    ELSE _end_marker_abscissa - _end_closest_marker_abscissa
-                END,
-                ST_Length(_end_downstream_road)
-                --,
-                -- JSON helper to choose side and offset
-                -- ((json_build_object('left', +1, 'right', -1))->>("_side"))::integer * "_offset"
-            ),
-            ((json_build_object('left', +1, 'right', -1))->>("_side"))::integer * "_offset"
-        ),
-        0.10
-    );
+    _end_substring =
+        ST_Force2D(ST_LocateBetween(
+            _end_downstream_road_m,
+            CASE
+                WHEN _end_marker_abscissa - _end_closest_marker_abscissa >= ST_Length(_end_downstream_road)
+                    THEN ST_Length(_end_downstream_road)
+                ELSE _end_marker_abscissa - _end_closest_marker_abscissa
+            END,
+            ST_Length(_end_downstream_road)
+        ))
+    ;
     IF raise_notice = 'yes' THEN
         RAISE NOTICE '_end_substring  %', ST_AsText(_end_substring);
     END IF;
 
     -- Return multilinestring between given references
-    SELECT INTO result_multilinestring
-        -- MultiLinestring
-        -- ST_Multi
-        ST_Multi(
-            ST_Difference(
-                -- start
-                _start_substring,
-                --end
-                _end_substring,
-                -- We MUST use a grid size, else we have wrong results
-                0.10
-            )
-        )::geometry(MULTILINESTRING, 2154)
+    -- First we do the difference between start and end substrings to remove the common part between them
+    result_multilinestring :=
+        ST_Difference(
+            -- start
+            _start_substring,
+            --end
+            _end_substring,
+            -- we must use a tolerance to be sure the 2 lines are considered as equal
+            -- when they are very close but not exactly equal due to digitizing or calculation precision issues
+            0.01
+        )
     ;
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE 'result_multilinestring ST_Difference  %', ST_AsText(result_multilinestring);
+    END IF;
+
+    -- Then we must merge the touching lines to avoid the offset curve function to produce gaps or crossing lines
+    result_multilinestring = ST_LineMerge(result_multilinestring);
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE 'result_multilinestring ST_LineMerge  %', ST_AsText(result_multilinestring);
+    END IF;
+
+    -- Then we apply the offset curve on the result
+    result_multilinestring :=
+    ST_Multi(
+        ST_OffsetCurve(
+            ST_Multi(
+                result_multilinestring
+            )::geometry(MULTILINESTRING, 2154),
+            -- The offset value is multiplied by +1 or -1 depending on the side (right or left)
+            ((json_build_object('left', +1, 'right', -1))->>("_side"))::integer * "_offset"
+        )
+    )
+    ;
+
+    -- Raise notice with the final result
     IF raise_notice = 'yes'  THEN
         RAISE NOTICE 'result_multilinestring  %', ST_AsText(result_multilinestring);
     END IF;
