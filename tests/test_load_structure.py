@@ -1286,6 +1286,40 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 56.46, 56.46]
 
 
+def test_get_road_point_from_reference():
+    """Test the function get_road_point_from_reference which returns a point geometry"""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+    # Check the value of the geometry returned by the function get_road_point_from_reference
+    sql = """
+    WITH get AS (
+        SELECT
+        road_graph.get_road_point_from_reference(
+            'D613', 44, 154.5, 15, 'left'
+        )->'geom'->'coordinates' AS coords
+    )
+    SELECT
+        round((g.coords->0)::numeric, 2) AS x,
+        round((g.coords->1)::numeric, 2) AS y
+    FROM get AS g
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    result = None
+    for a in data:
+        result = a if a else None
+
+    assert result is not None
+    assert result[0] == 473136.27
+    assert result[1] == 6895774.58
+
+
 def test_get_road_substring_from_references():
     """Test the function get_road_substring_from_references
     which returns a substring of a road between two references."""
@@ -1355,10 +1389,6 @@ def test_get_road_substring_from_references():
 
     assert result is not None
     assert result[0] == "124fc586378a3f996e514e65359d91b0"
-
-
-def test_get_road_point_from_reference():
-    pass
 
 
 def test_merge_editing_session_data():
