@@ -8,15 +8,25 @@ export MODULE_NAME=roadnetwork
 # Configure
 #
 
-ifeq ($(USE_UV), 1)
-UV_RUN ?= uv run
+#
+# Configure
+#
+
+# Check if uv is available
+$(eval UV_PATH=$(shell which uv))
+ifdef UV_PATH
+ifdef VIRTUAL_ENV
+# Always prefer active environment
+ACTIVE_VENV=--active
+endif
+UV=uv run $(ACTIVE_VENV)
 endif
 
 
 REQUIREMENTS= \
 	dev \
 	tests \
-	packaging \
+	transifex \
 	doc \
 	$(NULL)
 
@@ -24,7 +34,7 @@ REQUIREMENTS= \
 
 # Require uv (https://docs.astral.sh/uv/) for extracting
 # infos from project's dependency-groups
-update-requirements: check-uv-install
+update-requirements: uv.lock
 	@for group in $(REQUIREMENTS); do \
 		echo "Updating requirements for '$$group'"; \
 		uv export --format requirements.txt \
@@ -48,28 +58,28 @@ update-dependencies: uv.lock
 LINT_TARGETS=$(MODULE_NAME) tests $(EXTRA_LINT_TARGETS)
 
 lint::
-	@ $(UV_RUN) ruff check --preview  --output-format=concise $(LINT_TARGETS)
+	@ $(UV_RUN) ruff check --output-format=concise $(LINT_TARGETS)
 
 lint:: typecheck
 
+lint-preview:
+	@ $(UV) ruff check \
+	  --output-format=concise \
+	  --preview \
+	  $(LINT_TARGETS)
+
 lint-fix:
-	@ $(UV_RUN) ruff check --preview --fix $(LINT_TARGETS)
+	@ $(UV) ruff check --fix $(LINT_TARGETS)
 
 format:
-	@ $(UV_RUN) ruff format $(LINT_TARGETS)
+	@ $(UV) ruff format $(LINT_TARGETS)
 
 typecheck:
-	@ $(UV_RUN) mypy $(LINT_TARGETS)
+	@ $(UV) mypy $(LINT_TARGETS)
 
 scan:
-	@ $(UV_RUN) bandit -r $(MODULE_NAME) $(SCAN_OPTS) --severity-level=high
+	@ $(UV) bandit -r $(MODULE_NAME) $(SCAN_OPTS) --severity-level=high
 
-
-check-uv-install:
-	@which uv > /dev/null || { \
-		echo "You must install uv (https://docs.astral.sh/uv/)"; \
-		exit 1; \
-	}
 
 # Database rules
 -include database.mk
@@ -79,12 +89,12 @@ check-uv-install:
 #
 
 test::
-	$(UV_RUN) pytest -v tests
+	$(UV) pytest -v tests
 
 #
 # Test using docker image
 #
-QGIS_VERSION ?= 3.40
+QGIS_VERSION ?= 3.44
 QGIS_IMAGE_REPOSITORY ?= qgis/qgis
 QGIS_IMAGE_TAG ?= $(QGIS_IMAGE_REPOSITORY):$(QGIS_VERSION)
 
@@ -111,6 +121,31 @@ docker-test:
 #processing-doc:
 #	cd .docker && ./processing_doc.sh
 #	@docker run --rm -w /plugin -v $(shell pwd):/plugin etrimaille/pymarkdown:latest docs/pro#cessing/README.md docs/processing/index.html
+#
+# Update the project's environment
+#
+sync:
+	@echo "Synchronizing python's environment with frozen dependencies"
+	@uv sync --all-groups --frozen $(ACTIVE_VENV)
+
+install-dev::
+	uv venv --system-site-packages --no-managed-python
+
+install-dev:: sync
+
+#
+# Coverage
+#
+
+# Run tests coverage
+covtests:
+	@echo "Running coverage tests"
+	@ $(UV) coverage run -m pytest tests/
+
+coverage: covtests
+	@echo "Building coverage html"
+	@ $(UV) coverage html
+
 
 #
 # Code managment
@@ -123,3 +158,4 @@ show-annotation-%:
 # Output variable
 echo-variable-%:
 	@echo "$($*)"
+

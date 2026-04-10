@@ -14,6 +14,7 @@ license-files = ["LICENSE"]
 readme = "README.md"
 classifiers = [
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.11",
@@ -33,12 +34,13 @@ homepage = "https://docs.3liz.org/qgis-road-network-plugin/"
 # requirement files for CI
 [dependency-groups]
 dev = [
-    "pre-commit",
+    "coverage[toml]",
     {include-group = "tests"},
     {include-group = "lint"},
 ]
 tests = [
-    "pytest >= 5.3",
+    "semver",
+    "pytest",
     "psycopg[binary]",
 ]
 lint = [
@@ -47,8 +49,7 @@ lint = [
     "bandit",
     "vulture",
 ]
-packaging = [
-    "qgis-plugin-package-ci; python_full_version >= '3.12'",
+transifex = [
     "qt-transifex; python_full_version >= '3.12'",
 ]
 doc = [
@@ -58,37 +59,16 @@ doc = [
 
 
 [tool.uv.sources]
-qgis-plugin-package-ci = { git = "https://github.com/3liz/qgis-plugin-package-ci.git" }
 qt-transifex =  { git = "https://github.com/3liz/qt-transifex" }
-
-#
-# Qgis plugin ci
-#
-# https://opengisch.github.io/qgis-plugin-ci/index.html
-#
-
-[qgis-plugin-ci]
-plugin_path = "roadnetwork"
-github_organization_slug = "3liz"
-project_slug = "qgis-road-network-plugin"
-transifex_organization = "3liz-1"
-transifex_project = "road-network"
-transifex_resource = "road-network"
-transifex_coordinator = "mdouchin"
-changelog_include = true
-
-[tool.package-ci]
-plugin_source = "roadnetwork"
-github_organization_slug = "3liz"
-project_slug = "qgis-road-network-plugin"
 
 [tool.qt-transifex]
 plugin_source = "roadnetwork"
 organization = "3liz-1"
 project = "road-network"
-resource = "road-network"
 minimum_translation = 25.0
 
+[tool.yapt]
+plugin_source = "stareau"
 
 #
 # Ruff

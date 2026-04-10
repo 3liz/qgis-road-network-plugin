@@ -1,0 +1,52 @@
+name: Tests 🎳
+
+on: [workflow_call]
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          architecture: x64
+          cache: "pip"
+          cache-dependency-path: "requirements/dev.txt"
+
+      - name: Install Python requirements
+        run: pip install -r requirements/dev.txt
+
+      - name: Set env
+        run: echo "PLUGIN_SOURCE=roadnetwork" >> $GITHUB_ENV
+
+      - name: Run linter
+        run: ruff check --output-format=concise ${{ env.PLUGIN_SOURCE }}
+            
+      - name: Run typechecker
+        run: mypy ${{ env.PLUGIN_SOURCE }}
+
+      - name: Run security check
+        run: bandit -r ${{ env.PLUGIN_SOURCE }} --severity-level=high
+
+  tests:
+    needs: [linter]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        qgis_version: [
+          "3.34",
+          "3.40",
+          "3.44",
+        ]
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Running tests
+        run: make docker-test QGIS_VERSION=${{ matrix.qgis_version }}
