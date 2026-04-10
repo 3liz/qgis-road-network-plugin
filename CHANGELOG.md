@@ -2,17 +2,26 @@
 
 ## Unreleased
 
+## 0.3.1-alpha.1 - 2026-04-10
+
+### Added
+
+* Locator : allow to use QGIS Locator bar (CTRL+K) with prefix `rr`
+  Usage :
+    * `D30` zoom to the full road
+    * `D30 3 150.5 10 left` : zoom to the corresponding location
+      (only some of the figures can be given)
+
+### Changed
+
+* Improve CI and packaging
+
 ## 0.3.0 - 2026-04-10
 
 ### Added
 
 * Processing
   * Add algorithm allowing to update a layer references or geometries from the road graph
-* Locator : allow to use QGIS Locator bar (CTRL+K) with prefix `rr`
-  Usage :
-    * `D30` zoom to the full road
-    * `D30 3 150.5 10 left` : zoom to the corresponding location
-      (only some of the figures can be given)
 * Tests - Add test data & test some of the main features
 
 ### Changed
