@@ -10,6 +10,7 @@ from .alg_create_database_local_interface import CreateDatabaseLocalInterface
 from .alg_create_editing_session import CreateEditingSession
 from .alg_import_data import ImportData
 from .alg_merge_editing_session import MergeEditingSession
+from .alg_update_managed_objects import UpdateManagedObjects
 from .database import (
     CreateDatabaseStructure,
     UpgradeDatabaseStructure,
@@ -39,6 +40,7 @@ class Provider(QgsProcessingProvider):
         self.addAlgorithm(ImportData())
         self.addAlgorithm(CreateEditingSession())
         self.addAlgorithm(MergeEditingSession())
+        self.addAlgorithm(UpdateManagedObjects())
 
         # Put the flag back to yes
         QgsExpressionContextUtils.setGlobalVariable(f"{self.id()}_get_database_data", "yes")
