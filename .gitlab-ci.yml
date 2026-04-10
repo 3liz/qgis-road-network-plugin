@@ -1,28 +1,91 @@
 variables:
-  PLUGIN_NAME: "roadnetwork"
-  GIT_SUBMODULE_STRATEGY: recursive
+  PRODUCT_NAME: "roadnetwork"
 
 stages:
-- package 📦
+- lint
+- test
+- build
+- deploy
+- release
 
-package:
-  stage: package 📦
-  only:
-    - schedules
-    - tags
-  script:
-    - >
-      docker run
-      --rm -w /plugin
-      -v ${CI_PROJECT_DIR}:/plugin
-      -u $(id -u):$(id -g)
-      3liz/qgis-plugin-ci:latest
-      package ${CI_COMMIT_REF_NAME}
-      --allow-uncommitted-changes
-      --disable-submodule-update
+# ------------
+# Lint
+# ------------
+lint:
+  image: ${REGISTRY_URL}/factory-ci-runner:qgis-${QGIS_VERSION}
   tags:
-    - factory
+    - factory-plain
+  stage: lint
+  script:
+    - pip install --quiet -r requirements/dev.txt
+    - make lint
+  parallel:
+    matrix:
+      - QGIS_VERSION: ["ltr", "release"]
+ 
+
+# ------------
+# Tests
+# ------------
+
+.tests:
+  image: ${REGISTRY_URL}/factory-ci-runner:factory-ci
+  tags:
+    - factory-dind
+  stage: test
+  script:
+    - make docker-test QGIS_VERSION=$QGIS_FLAVOR
+
+qgis-tests:
+  extends: .tests
+  parallel:
+    matrix:
+      - QGIS_FLAVOR: [
+        "3.34",
+        "3.40",
+        "3.44",
+      ]
+
+
+# NOTE: Following jobs are triggered only on RELEASE_BRANCH == "true"
+
+# 
+# Packages 
+#
+
+build:
+  image: $REGISTRY_URI/factory-ci-runner:qgis-plugin-ci
+  tags:
+    - factory-plain
+  stage: build
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^(?:release-|v)?\d+\.\d+\.\d+(?:-.*)?$/'
+      variables:
+        PRERELEASE: ""
+    - if: $RELEASE_BRANCH == "true"
+      variables:
+        PRERELEASE: "--pre"
+  script:
+    - echo "Building plugin ${PRODUCT_NAME}"
+    - yapt-pkg package $PRERELEASE
+    - echo "PACKAGE=`ls -1 *.zip`" > build.env
   artifacts:
-    expose_as: 'QGIS package'
+    reports:
+      dotenv: build.env  
     paths:
-      - ${PLUGIN_NAME}.${CI_COMMIT_REF_NAME}.zip
+      - "*.zip"
+
+
+deploy:
+  image: $REGISTRY_URI/factory-ci-runner:fabric-ci
+  tags:
+    - fabric
+  stage: deploy 
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^(?:release-|v)?\d+\.\d+\.\d+(?:-.*)?$/'
+    - if: $RELEASE_BRANCH == "true"
+  dependencies:
+    - build
+  script:
+    - upload_plugins ${PRODUCT_NAME} ${PACKAGE}
+

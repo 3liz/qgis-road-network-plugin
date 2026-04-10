@@ -22,13 +22,13 @@ jobs:
           python-version: "3.12"
           architecture: x64
           cache: "pip"
-          cache-dependency-path: "requirements/packaging.txt"
+          cache-dependency-path: "requirements/transifex.txt"
 
-      - name: Install Packaging CI
+      - name: Install transifex toolI
         run: |
             sudo apt-get -qq update
             sudo apt-get -qq install qttools5-dev-tools pyqt5-dev-tools
-            pip install --quiet -r requirements/packaging.txt
+            pip install --quiet -r requirements/transifex.txt
 
       - name: Push to Transifex
         run: qt-transifex -vv push --transifex-token "${{ secrets.TRANSIFEX_TOKEN }}"
