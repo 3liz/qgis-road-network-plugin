@@ -99,7 +99,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             if layer.isEditable():
                 msg = tr(
                     "The layers are in editing mode."
-                    " Please save your chages and deactivate editing beforehand !"
+                    " Please save your changes and deactivate editing beforehand !"
                 )
                 return False, msg
 
@@ -123,8 +123,10 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         status = "created"
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
         if not editing_session:
-            msg = tr(f"There is no editing session with status '{status}' in the database.\n")
-            msg += " You must first create a new editing session polygon"
+            msg = tr(
+                f"There is no editing session with status '{status}' in the database.\n"
+                " You must first create a new editing session polygon"
+            )
             return False, msg
 
         return super(CreateEditingSession, self).checkParameterValues(parameters, context)
