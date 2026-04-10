@@ -8,6 +8,11 @@
 
 * Processing
   * Add algorithm allowing to update a layer references or geometries from the road graph
+* Locator : allow to use QGIS Locator bar (CTRL+K) with prefix `rr`
+  Usage :
+    * `D30` zoom to the full road
+    * `D30 3 150.5 10 left` : zoom to the corresponding location
+      (only some of the figures can be given)
 * Tests - Add test data & test some of the main features
 
 ### Changed

@@ -12,6 +12,7 @@ from qgis.PyQt.QtWidgets import QAction, QShortcut
 from .dockwidget import PluginDockWidget
 from .dockwidget_tools import ToolsDockWidget
 from .hover_map_tool import HoverMapTool
+from .locator import LocatorFilter
 from .plugin_tools.i18n import tr
 from .plugin_tools.resources import (
     plugin_path,
@@ -24,6 +25,7 @@ from .processing.tools import plugin_name_normalized
 class Plugin:
     def __init__(self, iface):
         self.provider = None
+        self.locator_filter = None
         self.dock = None
         self.tools_dock = None
         self.iface = iface
@@ -148,6 +150,11 @@ class Plugin:
         mc = self.iface.mapCanvas()
         mc.xyCoordinates.connect(self.hover_map_tool.emitMapCursorReferences)
 
+        # Register locator filter
+        if not self.locator_filter:
+            self.locator_filter = LocatorFilter(self.iface)
+            self.iface.registerLocatorFilter(self.locator_filter)
+
     def toggle_hover_tool(self):
         """Toggle the map hover tool used to find references"""
         # Toggle action
@@ -270,3 +277,8 @@ class Plugin:
         # Remove processing provider
         if self.provider:
             QgsApplication.processingRegistry().removeProvider(self.provider)
+
+        # Remove locator filter
+        if self.locator_filter:
+            self.iface.deregisterLocatorFilter(self.locator_filter)
+            del self.locator_filter

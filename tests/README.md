@@ -1,6 +1,6 @@
 # Running tests
 
-## Running tests in local QGIS environment 
+## Running tests in local QGIS environment
 
 You must have an environment with a version of QGIS is installed with
 python support (which is available in most of the linux distributions).
@@ -21,8 +21,8 @@ First you must [install `uv`](https://docs.astral.sh/uv/getting-started/installa
 # Create a virtual env with access to system packages (required for using pyQGIS)
 > uv venv --system-site-packages
 # Update the project's environment
-> uv sync --frozen   
-# Tell make that we are using uv 
+> uv sync --frozen
+# Tell make that we are using uv
 > echo "USE_UV=1" >> .localconfig.mk
 ```
 
@@ -40,7 +40,7 @@ using tool command directly (`pytest`, ...) or just run your command with
 
 ```
 # Create a virtual env with access to system packages (required for using pyQGIS)
-> python -m venv .venv --system-site-packages 
+> python -m venv .venv --system-site-packages
 # Activate the environment
 > . ./venv/bin/activate
 # Update the project's environment
@@ -63,3 +63,23 @@ Tests are run in a docker QGIS image.
 make docker-test [QGIS_VERSION=<version>]
 ```
 
+## Tags, publication, packaging
+
+### Release
+
+To publish a new release, you must :
+
+* edit the `pyproject.toml`, change `version` and commit
+* add a new tag
+* push to Github
+
+Every tag pushed to Github will trigger a workflow dispach which will allow
+to create a Github release with a package for this version:
+
+* Go to Actions -> Release -> Run workflows -> Check options
+
+NB: The tag can be different that the version written in the file.
+
+### Publish to plugins.qgis.org
+
+TODO
