@@ -1,4 +1,5 @@
 import json
+import typing
 
 from qgis.core import (
     QgsAbstractDatabaseProviderConnection,
@@ -116,7 +117,9 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
 
         return True
 
-    def hasRequiredFields(self, fields: list, geometry_type: str, update_policy: str) -> bool:
+    def hasRequiredFields(
+        self, fields: list, geometry_type: str, update_policy: str
+    ) -> typing.Tuple[bool, str]:
         """Check if the layer has the required fields to run the algorithm."""
         print(f"Layer geometry type : {geometry_type}")
         print(f"Layer fields : {fields}")
@@ -136,23 +139,29 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
             ]
             # needed attributes are different if we want
             # to update the geometry or the references of the features
-            if update_policy == "update_geom":
-                needed_fields += [
-                    "road_code",
-                ]
-            else:
-                needed_fields += [
-                    "start_road_code",
-                    "end_road_code",
-                ]
+            # if update_policy == "update_geom":
+            #     needed_fields += [
+            #         "road_code",
+            #     ]
+            # else:
+            #     needed_fields += [
+            #         "start_road_code",
+            #         "end_road_code",
+            #     ]
+            needed_fields += ["road_code"]
 
         # Check if all needed fields are present in the layer
+        missing_fields = []
         for field in needed_fields:
             if field not in fields:
-                print(f"Missing field : {field}")
-                return False
+                missing_fields.append(field)
+        if missing_fields:
+            print(f"Missing fields : {missing_fields}")
+            message = tr("The input layer is missing the following required fields: ")
+            message += ", ".join(missing_fields)
+            return False, message
 
-        return True
+        return True, tr("All required fields are present")
 
     def checkParameterValues(self, parameters, context):
         """Check if all required conditions are met to run the algorithm"""
@@ -168,13 +177,9 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         update_policy = self.UPDATE_POLICY_VALUES[update_policy_index]
 
         # Check required fields
-        hasRequiredFields = self.hasRequiredFields(fields, geometry_type, update_policy)
+        hasRequiredFields, message = self.hasRequiredFields(fields, geometry_type, update_policy)
         if not hasRequiredFields:
-            # print("Layer is missing required fields")
-            return False, tr(
-                "The input layer is missing required fields."
-                " Please check the algorithm help for more information on the required fields."
-            )
+            return False, message
 
         return super(UpdateManagedObjects, self).checkParameterValues(parameters, context)
 
@@ -215,35 +220,51 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         print(tr(f"Requesting database for WKT of feature with reference : {references}"))
         if geometry_type == "point":
             sql = f"""
-            SELECT
-            ST_AsText(
-                ST_GeomFromGeoJSON(
-                    road_graph.get_road_point_from_reference(
-                        '{references["road_code"]}',
-                        {references["marker_code"]},
-                        {references["abscissa"]},
-                        {references["offset"]},
-                        '{references["side"]}'
-                    )->'geom'
-                )
+            WITH get_geom AS (
+                SELECT
+                road_graph.get_road_point_from_reference(
+                    '{references["road_code"]}',
+                    {references["marker_code"]},
+                    {references["abscissa"]},
+                    {references["offset"]},
+                    '{references["side"]}'
+                )->'geom' AS geom
             )
+            SELECT
+            CASE
+                WHEN geom = 'null'::jsonb THEN NULL
+                ELSE ST_AsText(
+                    ST_GeomFromGeoJSON(
+                        geom
+                    )
+                )
+            END
+            FROM get_geom
             """
         else:
             sql = f"""
-            SELECT
-            ST_AsText(
-                ST_GeomFromGeoJSON(
-                    road_graph.get_road_substring_from_references(
-                        '{references["road_code"]}',
-                        {references["start_marker_code"]},
-                        {references["start_abscissa"]},
-                        {references["end_marker_code"]},
-                        {references["end_abscissa"]},
-                        {references["offset"]},
-                        '{references["side"]}'
-                    )->'geom'
-                )
+            WITH get_geom AS (
+                SELECT
+                road_graph.get_road_substring_from_references(
+                    '{references["road_code"]}',
+                    {references["start_marker_code"]},
+                    {references["start_abscissa"]},
+                    {references["end_marker_code"]},
+                    {references["end_abscissa"]},
+                    {references["offset"]},
+                    '{references["side"]}'
+                )->'geom' AS geom
             )
+            SELECT
+            CASE
+                WHEN geom = 'null'::jsonb THEN NULL
+                ELSE ST_AsText(
+                    ST_GeomFromGeoJSON(
+                        geom
+                    )
+                )
+            END
+            FROM get_geom
             """
         try:
             data = connection.executeSql(sql)
@@ -301,6 +322,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         # For each feature, request the database and get the updated geometry or references
         feedback.pushInfo(tr("Processing features..."))
         feature_count = source.featureCount()
+        unchanged_count = 0
         for idx, feature in enumerate(source.getFeatures()):
             # Check for cancellation
             if feedback.isCanceled():
@@ -346,6 +368,9 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
                 if wkt_geometry:
                     qgis_geometry = QgsGeometry.fromWkt(wkt_geometry)
                     output_feature.setGeometry(qgis_geometry)
+                else:
+                    unchanged_count += 1
+
             else:
                 # We need to update the feature references from the feature geometry
                 if QgsWkbTypes.geometryType(source.wkbType()) == QgsWkbTypes.PointGeometry:
@@ -380,8 +405,10 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
                     references_keys = ["road_code", "marker_code", "abscissa", "cumulative", "side", "offset"]
                     for place in ("start", "end"):
                         if not result.get(place):
+                            unchanged_count += 1
                             continue
                         if not result[place]:
+                            unchanged_count += 1
                             continue
                         for ref in references_keys:
                             if f"{place}_{ref}" in feature.fields().names():
@@ -392,5 +419,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
 
             # Set progress
             feedback.setProgress(int(100 * idx / feature_count))
+        feedback.pushInfo(tr(f"* {feature_count} features processed."))
+        feedback.pushInfo(tr(f"* {unchanged_count} features left unchanged."))
 
         return {self.OUTPUT: dest_id}
