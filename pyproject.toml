@@ -3,7 +3,7 @@
 # should be the same as the plugin's metatada.txt
 [project]
 name = "roadnetwork"
-version = "0.1.0a1"
+version = "0.3.0"
 description = "Road network plugin"
 authors = [
     { name = "3Liz", email = "info@3liz.com" }
@@ -27,7 +27,7 @@ classifiers = [
 [projects.urls]
 tracker = "https://github.com/3liz/qgis-road-network-plugin"
 repository = "https://github.com/3liz/qgis-road-network-plugin"
-homepage = "https://github.com/3liz/qgis-road-network-plugin"
+homepage = "https://docs.3liz.org/qgis-road-network-plugin/"
 
 # Organize dependencies so that uv can build appropriates
 # requirement files for CI

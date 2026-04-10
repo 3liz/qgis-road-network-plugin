@@ -13,14 +13,14 @@ dateTime=
 
 author=3Liz
 email=info@3liz.com
-tags=roadnetwork
-about=roadnetwork
+tags=road network, linear referencing, editing
+about=This plugins allows to manage a topological road network : guided editing, linear referencing, references from geometries and geometry generation from references.
 icon=resources/icons/icon.png
 category=
 tracker=https://github.com/3liz/qgis-road-network-plugin
 repository=https://github.com/3liz/qgis-road-network-plugin
-homepage=https://github.com/3liz/qgis-road-network-plugin
-experimental=True
+homepage=https://docs.3liz.org/qgis-road-network-plugin/
+experimental=False
 deprecated=False
 
 hasProcessingProvider=True

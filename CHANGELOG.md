@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-04-10
+
+### Added
+
+* Processing
+  * Add algorithm allowing to update a layer references or geometries from the road graph
+* Tests - Add test data & test some of the main features
+
+### Changed
+
+* Documentation
+  * SchemaSpy: add functions
+  * Fix schemaspy generation errors by using option `-t pgsql11`
+
+### Fixed
+
+* Fix deletion of an edge ending on a roundabout marker 0
+* Fix wrong geometry generation for road substring (roads & roundabouts)
+* SQL - Make sure 90_GLOSSARY.sql is created even if no glossary table is found
+
 ## 0.2.0
 
 User interface:
