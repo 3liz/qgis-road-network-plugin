@@ -2106,21 +2106,38 @@ BEGIN
 
     -- find closest edge from marker and keep only the downstream part
     -- from the projected point
+    WITH get_closest_edge AS (
+        SELECT
+            e.*,
+            e.geom <-> marker.geom AS distance,
+            -- BEWARE: it can be a point e.g if the marker is at the end of the edge
+            -- it why we do not cast with
+            ST_LineSubstring(
+                e.geom,
+                ST_LineLocatePoint(e.geom, marker.geom),
+                1
+            )
+            AS sub_geom
+        FROM
+            road_graph.edges AS e
+        WHERE True
+        -- same road
+        AND e.road_code = _road_code
+        ORDER BY distance, start_cumulative
+        LIMIT 1
+    )
     SELECT INTO closest_edge
-        e.*,
-        e.geom <-> marker.geom AS distance,
-        ST_LineSubstring(
-            e.geom,
-            ST_LineLocatePoint(e.geom, marker.geom),
-            1
-        )::geometry(LINESTRING, 2154) AS sub_geom
-    FROM
-        road_graph.edges AS e
-    WHERE True
-    -- same road
-    AND e.road_code = _road_code
-    ORDER BY distance
-    LIMIT 1
+        e.id, e.road_code, e.start_node, e.end_node,
+        e.start_marker, e.start_abscissa, e.start_cumulative,
+        e.end_marker, e.end_abscissa, e.end_cumulative,
+        e.geom, e.previous_edge_id, e.next_edge_id,
+        distance,
+        (CASE
+            WHEN GeometryType(sub_geom) = 'POINT'
+                THEN ST_MakeLine(sub_geom, sub_geom)::geometry(LINESTRING, 2154)
+            ELSE sub_geom
+        END)::geometry(LINESTRING, 2154) AS sub_geom
+    FROM get_closest_edge AS e
     ;
     IF closest_edge IS NULL THEN
         IF raise_notice = 'yes' THEN
