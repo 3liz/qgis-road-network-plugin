@@ -4,12 +4,6 @@
 
 ## 0.3.1 - 2026-04-11
 
-### Changed
-
-* Locator : when searching for a road, show a small list of matching road names
-
-## 0.3.1-alpha.1 - 2026-04-10
-
 ### Added
 
 * Locator : allow to use QGIS Locator bar (CTRL+K) with prefix `rr`
