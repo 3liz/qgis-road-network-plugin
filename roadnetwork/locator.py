@@ -1,3 +1,5 @@
+import re
+
 from qgis.core import (
     Qgis,
     QgsGeometry,
@@ -63,20 +65,42 @@ class LocatorFilter(QgsLocatorFilter):
         # If only the road_code is provided, we aggregate all the road edges
         # If at least the road_code and the marker_code are provided,
         # we search for the corresponding point geometry
+        road_code = words[0]
+        if not re.match(r"(^[A-Za-z0-9À-ÿ_\-]+$)", road_code, re.UNICODE):
+            return
         if len(words) == 1:
-            road_code = words[0]
             sql = f"""
+                WITH get_road AS (
+                    SELECT
+                        road_code,
+                        CASE
+                            WHEN (road_code = '{road_code}') THEN 0
+                            WHEN (road_code ILIKE '{road_code}%') THEN 1
+                            ELSE 2
+                        END AS priority
+                    FROM road_graph.roads
+                    WHERE road_code ILIKE '%{road_code}%'
+                    ORDER BY priority, length(road_code)
+                    LIMIT 5
+                )
                 SELECT
+                    road_code,
                     ST_AsText(road_graph.get_spatial_road(road_code)) AS wkt
-                FROM road_graph.roads
-                WHERE road_code = '{road_code}'
+                FROM get_road
             """
         else:
-            road_code = words[0]
             marker_code = words[1]
-            abscissa = words[2] if len(words) > 2 else 0
-            offset = words[3] if len(words) > 3 else 0
+            abscissa = words[2] if len(words) > 2 else "0"
+            offset = words[3] if len(words) > 3 else "0"
             side = words[4] if len(words) > 4 else "right"
+            # Check marker_code, abscissa and offset
+            if not re.match(r"(^[0-9]+$)", marker_code, re.UNICODE):
+                marker_code = 0
+            if not re.match(r"(^[0-9\.]+$)", abscissa, re.UNICODE):
+                abscissa = 0
+            if not re.match(r"(^[0-9\.]+$)", offset, re.UNICODE):
+                offset = 0
+            # Check side
             if side.lower() in ["left", "l"]:
                 side = "left"
             else:
@@ -90,14 +114,20 @@ class LocatorFilter(QgsLocatorFilter):
                         {abscissa},
                         {offset},
                         '{side}'
-                    )->'geom' AS geom
+                    ) AS point
                 )
                 SELECT
                     CASE
-                        WHEN geom = 'null'::jsonb THEN NULL::text
+                        WHEN point->'road_code' = 'null'::jsonb
+                            THEN NULL::text
+                        ELSE point->>'road_code'
+                    END AS road_code,
+                    CASE
+                        WHEN point->'geom' = 'null'::jsonb
+                            THEN NULL::text
                         ELSE ST_AsText(
                             ST_GeomFromGeoJSON(
-                                geom
+                                point->'geom'
                             )
                         )
                     END AS wkt
@@ -117,13 +147,12 @@ class LocatorFilter(QgsLocatorFilter):
             result = QgsLocatorResult()
             result.filter = self
             if len(words) == 1:
-                result.displayString = road_code
+                result.displayString = item[0]
             else:
-                result.displayString = f"{road_code} PR {marker_code} +{abscissa} ({offset}m {side})"
-
+                result.displayString = f"{item[0]} PR {marker_code} +{abscissa} ({offset}m {side})"
             result.userData = {
-                "geometry_type": "point" if len(words) > 1 else "linestring",
-                "wkt": item[0] if item[0] else None,
+                "road_code": item[0],
+                "wkt": item[1] if item[1] else None,
             }
             self.resultFetched.emit(result)
 
@@ -153,6 +182,4 @@ class LocatorFilter(QgsLocatorFilter):
             canvas.setExtent(geometry.boundingBox())
         canvas.refresh()
 
-        # We could use a QgsRubberBand to display the geometry on the canvas
-        # https://github.com/opengisch/qgis_geomapfish_locator/blob/main/geomapfish_locator/core/locator_filter.py#L185
-        # https://github.com/webgeodatavore/pyqgis-samples/blob/master/gui/qgis-sample-QgsGeometryRubberBand.py
+        # NB: We could use a QgsRubberBand to display the geometry on the canvas
