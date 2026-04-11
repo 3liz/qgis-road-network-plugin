@@ -815,6 +815,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#tags-publication-packaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tags, publication, packaging
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#documentation" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -846,6 +857,23 @@
 
 
 <h1 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">#</a></h1>
+<h2 id="tags-publication-packaging">Tags, publication, packaging<a class="headerlink" href="#tags-publication-packaging" title="Permanent link">#</a></h2>
+<p>Tags and version numbers must follow <a href="https://semver.org/">SemVer convention</a>.</p>
+<p>To publish a new <strong>release</strong>, you must:</p>
+<ul>
+<li>edit the <code>pyproject.toml</code>, change the <code>version</code> number and commit</li>
+<li>add a new tag (it can be different that the version written in the file.)</li>
+<li>push to Github (changes and tag)</li>
+</ul>
+<p>Every tag <strong>pushed to Github</strong> will trigger a <strong>workflow dispach</strong> which will allow
+to create a Github release with a package for this version:</p>
+<ul>
+<li>In the project Github repository, go to the tab <code>Actions</code>, menu <code>Release</code>,
+  press the button <code>Run workflows</code> and check the needed options among:</li>
+<li>Execute dry run</li>
+<li>Publish to qgis.org
+  then <code>Run workflow</code></li>
+</ul>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">#</a></h2>
 <p>The documentation is using <a href="https://www.mkdocs.org/">MkDocs</a> with <a href="https://squidfunk.github.io/mkdocs-material/">Material</a> :</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
