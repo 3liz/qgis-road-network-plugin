@@ -123,61 +123,42 @@ BEGIN
     );
 
     -- Merge edges which were linked to the deleted node
-    -- ONLY if
-    -- there are only 2 edges linked to the node
-    -- AND if these edges have the same road code
-    -- AND the road_code is not the same as the deleted edge
-    -- to avoid merging the remaining edge with the next one which has the same road code
-    -- a/ Node A - OLD.end_node
+    -- Node A - OLD.end_node
     -- RAISE NOTICE 'Node A - %', OLD.end_node;
     SELECT INTO test_edges
         count(DISTINCT t.id) AS nb,
         array_agg(DISTINCT t.id) AS ids,
-        count(DISTINCT t.road_code) AS nb_road_codes,
-        max(t.road_code) AS road_code
+        count(DISTINCT t.road_code) AS nb_road_codes
     FROM road_graph.edges AS t
-    WHERE TRUE
-    AND (OLD.end_node = t.end_node OR OLD.end_node = t.start_node)
+    WHERE OLD.end_node = t.end_node OR OLD.end_node = t.start_node
     AND t.id != OLD.id
     ;
     -- Only merge edges if they are only 2 and if road_code is the same
-    -- And if road_code is not the same as the deleted edge
-    IF
-        test_edges.nb = 2
-        AND test_edges.nb_road_codes = 1
-        -- prevent to merge the remaining edge with the next one which has the same road code as the deleted edge
-        AND test_edges.road_code != OLD.road_code
-    THEN
-        IF raise_notice IN ('yes', 'info', 'debug') THEN
-            RAISE NOTICE 'after_edge_delete % OLD.end_node - We must merge - % ',
-                OLD.id, array_to_string(test_edges.ids, ' et ')
+    IF test_edges.nb = 2 AND test_edges.nb_road_codes = 1 THEN
+        IF raise_notice IN ('info', 'debug') THEN
+            RAISE NOTICE 'We must merge - % ',
+                array_to_string(test_edges.ids, ' et ')
             ;
         END IF;
         SELECT road_graph.merge_edges(test_edges.ids[1], test_edges.ids[2]) AS merge_edges
         INTO merge_result;
     END IF;
 
-    -- b/ Node B - OLD.start_node
+    -- Node B - OLD.start_node
     -- RAISE NOTICE 'Node B - %', OLD.start_node;
     SELECT INTO test_edges
         count(DISTINCT t.id) AS nb,
         array_agg(DISTINCT t.id) AS ids,
-        count(DISTINCT t.road_code) AS nb_road_codes,
-        max(t.road_code) AS road_code
+        count(DISTINCT t.road_code) AS nb_road_codes
     FROM road_graph.edges AS t
-    WHERE TRUE
-    AND (OLD.start_node = t.end_node OR OLD.start_node = t.start_node)
+    WHERE OLD.start_node = t.end_node OR OLD.start_node = t.start_node
     AND t.id != OLD.id
     ;
     -- Only merge edges if they are only 2 and if road_code is the same
-    IF
-        test_edges.nb = 2
-        AND test_edges.nb_road_codes = 1
-        AND test_edges.road_code != OLD.road_code
-    THEN
-        IF raise_notice IN ('yes', 'info', 'debug') THEN
-            RAISE NOTICE 'after_edge_delete % OLD.start_node - We must merge - % ',
-                OLD.id, array_to_string(test_edges.ids, ' et ')
+    IF test_edges.nb = 2 AND test_edges.nb_road_codes = 1 THEN
+        IF raise_notice IN ('info', 'debug') THEN
+            RAISE NOTICE 'We must merge - % ',
+                array_to_string(test_edges.ids, ' et ')
             ;
         END IF;
         SELECT road_graph.merge_edges(test_edges.ids[1], test_edges.ids[2]) AS merge_edges
