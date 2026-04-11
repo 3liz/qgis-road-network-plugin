@@ -62,24 +62,3 @@ Tests are run in a docker QGIS image.
 ```
 make docker-test [QGIS_VERSION=<version>]
 ```
-
-## Tags, publication, packaging
-
-### Release
-
-To publish a new release, you must :
-
-* edit the `pyproject.toml`, change `version` and commit
-* add a new tag
-* push to Github
-
-Every tag pushed to Github will trigger a workflow dispach which will allow
-to create a Github release with a package for this version:
-
-* Go to Actions -> Release -> Run workflows -> Check options
-
-NB: The tag can be different that the version written in the file.
-
-### Publish to plugins.qgis.org
-
-TODO

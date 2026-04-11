@@ -68,7 +68,7 @@ project = "road-network"
 minimum_translation = 25.0
 
 [tool.yapt]
-plugin_source = "stareau"
+plugin_source = "roadnetwork"
 
 #
 # Ruff
