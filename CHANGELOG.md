@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.3.2 - 2026-04-12
+
+### Fixed
+
+* SQL
+  * Fix the creation of roundabout by avoiding to insert edges which geometry
+    already exists for another edge
+  * Fix error when deleting a node (wrong merge edges attempt)
+
 ## 0.3.1 - 2026-04-11
 
 ### Added
