@@ -187,6 +187,11 @@ in the session variable ''road.graph.merge.edges.useless.node'' for further use 
 COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
 
 
+-- FUNCTION split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real)
+COMMENT ON FUNCTION road_graph.split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real) IS 'Split an edge by a node. The node must be close enough to the edge and not too close from the edge start or end point.
+The function returns the id of the new created edge or null if the edge has not been split.';
+
+
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
 COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate foreign key constraints to ease the merging editing_session data into road_graph schema';
 

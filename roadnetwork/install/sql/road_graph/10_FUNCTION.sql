@@ -3503,7 +3503,7 @@ BEGIN
     SET search_path TO road_graph, public;
     id_new_object = nextval(pg_get_serial_sequence('edges', 'id'));
     RESET search_path;
-    
+
     UPDATE road_graph.edges
     SET
         -- Set the geometry
@@ -3525,20 +3525,26 @@ BEGIN
     INTO source_fields
     FROM fields
     WHERE field NOT IN (
-        'id', 'start_node', 'geom', 
+        'id', 'start_node', 'geom',
         'previous_edge_id', 'next_edge_id',
         'start_cumulative', 'uid'
     )
     ;
 
     -- Check if the new edge geometry does not exists
+    -- This avoid to create 2 superimposed edges
+    -- especially for roundabouts.
     SELECT INTO new_edge_record
         e.id
     FROM road_graph.edges AS e
-    WHERE 
-        -- use ST_Intersects to use spatial indexing
-        ST_Intersects(e.geom, end_geom)
-        AND ST_Equals(e.geom, end_geom)
+    WHERE
+        -- use ST_DWithin and not ST_Intersects to use spatial indexing
+        -- but keep a tolerance to avoid precision issues
+        ST_DWithin(e.geom, end_geom, 1)
+        AND (
+            ST_Equals(e.geom, end_geom)
+            OR ST_Equals(e.geom, ST_ReducePrecision(end_geom, 0.10))
+        )
     LIMIT 1
     ;
 
@@ -3566,6 +3572,7 @@ BEGIN
                     JOIN road_graph.roads AS r
                         ON r.road_code = e.road_code
                     WHERE e.id = %2$s::integer
+                    LIMIT 1
                 )
                 SELECT
                     %5$s::integer AS id,
@@ -3577,6 +3584,7 @@ BEGIN
                     %7$s::real AS start_cumulative,
                     uuid_generate_v4()::text
                 FROM source
+                LIMIT 1
                 RETURNING id
             $$,
             source_fields,
@@ -3587,11 +3595,11 @@ BEGIN
             Coalesce(edge_record.next_edge_id, -1),
             Coalesce(edge_record.end_cumulative, 0)
         );
-    
+
         EXECUTE sql_text
         INTO id_new_object
         ;
-        
+
         IF raise_notice IN ('info', 'debug') THEN
             RAISE NOTICE '% split_edge_by_node - node n° % %- splitting edge n° % : created edge n° %',
                repeat('    ', pg_trigger_depth()::integer), node_record.id, ST_AsText(node_record.geom), edge_record.id, id_new_object
@@ -3600,12 +3608,17 @@ BEGIN
     ELSE
         id_new_object = -1;
     END IF;
-    
+
     -- Return True
     RETURN id_new_object;
 
 END;
 $_$;
+
+
+-- FUNCTION split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real)
+COMMENT ON FUNCTION road_graph.split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real) IS 'Split an edge by a node. The node must be close enough to the edge and not too close from the edge start or end point.
+The function returns the id of the new created edge or null if the edge has not been split.';
 
 
 -- toggle_foreign_key_constraints(boolean)
