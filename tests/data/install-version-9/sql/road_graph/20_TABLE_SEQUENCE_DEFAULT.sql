@@ -114,11 +114,10 @@ CREATE TABLE road_graph.managed_objects (
     id integer NOT NULL,
     schema_name text NOT NULL,
     table_name text NOT NULL,
+    object_type text NOT NULL,
     geometry_type text NOT NULL,
     update_policy_on_graph_change text DEFAULT 'references'::text NOT NULL,
-    last_update timestamp without time zone DEFAULT (now())::timestamp(0) without time zone,
-    last_updated_objects_ids integer[],
-    CONSTRAINT check_geometry_type CHECK ((lower(geometry_type) = ANY (ARRAY['point'::text, 'linestring'::text, 'multilinestring'::text]))),
+    CONSTRAINT check_geometry_type CHECK ((geometry_type = ANY (ARRAY['POINT'::text, 'LINESTRING'::text, 'MULTILINESTRING'::text]))),
     CONSTRAINT check_update_policy_on_graph_change CHECK ((update_policy_on_graph_change = ANY (ARRAY['geometry'::text, 'references'::text])))
 );
 

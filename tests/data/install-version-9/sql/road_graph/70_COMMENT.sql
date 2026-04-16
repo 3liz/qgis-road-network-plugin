@@ -204,9 +204,8 @@ for big roads with many edges
 ';
 
 
--- FUNCTION update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[])
-COMMENT ON FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[]) IS 'Updates managed objects geometries or references when the road graph changes.
-It uses the information stored in the road_graph.managed_objects table';
+-- FUNCTION update_managed_objects_on_graph_change(_schema_name text, _table_name text, _ids integer[])
+COMMENT ON FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _ids integer[]) IS 'Updates managed objects geometries based on their references when the road graph changes';
 
 
 -- FUNCTION update_road_edges_neighbours(_road_code text, _start_node integer)
@@ -280,30 +279,23 @@ COMMENT ON TABLE road_graph.managed_objects IS 'Table listing all managed object
 
 
 -- managed_objects.schema_name
-COMMENT ON COLUMN road_graph.managed_objects.schema_name IS 'The schema name of the managed object table';
+COMMENT ON COLUMN road_graph.managed_objects.schema_name IS 'Schema name of the managed object table';
 
 
 -- managed_objects.table_name
-COMMENT ON COLUMN road_graph.managed_objects.table_name IS 'The table name of the managed object table';
+COMMENT ON COLUMN road_graph.managed_objects.table_name IS 'Table name of the managed object table';
+
+
+-- managed_objects.object_type
+COMMENT ON COLUMN road_graph.managed_objects.object_type IS 'Type of the managed object (e.g., tree, sign, etc.)';
 
 
 -- managed_objects.geometry_type
-COMMENT ON COLUMN road_graph.managed_objects.geometry_type IS 'The geometry type of the managed object table. It can be POINT or LINESTRING or MULTILINESTRING.';
+COMMENT ON COLUMN road_graph.managed_objects.geometry_type IS 'Geometry type of the managed object (e.g., POINT, LINESTRING, etc.)';
 
 
 -- managed_objects.update_policy_on_graph_change
-COMMENT ON COLUMN road_graph.managed_objects.update_policy_on_graph_change IS 'The update policy to apply on the managed objects when the road graph changes.
-It can be "geometry" to update only the geometries based on the references,
-"references" to update only the references based on the geometries
-or "none" to not update anything.';
-
-
--- managed_objects.last_update
-COMMENT ON COLUMN road_graph.managed_objects.last_update IS 'The date and time of the last update of table objects based on the road graph.';
-
-
--- managed_objects.last_updated_objects_ids
-COMMENT ON COLUMN road_graph.managed_objects.last_updated_objects_ids IS 'The list of the last updated objects ids based on the road graph.';
+COMMENT ON COLUMN road_graph.managed_objects.update_policy_on_graph_change IS 'Policy for updating the managed object on graph changes: ''geometry'', ''references''';
 
 
 -- markers
