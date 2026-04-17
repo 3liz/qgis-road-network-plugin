@@ -168,6 +168,10 @@ COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code tex
 COMMENT ON FUNCTION road_graph.get_spatial_road(_road_code text) IS 'Build the road geometry for the given road id. It can then be used with ST_LocateAlong.';
 
 
+-- FUNCTION get_updated_roads_from_editing_session(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.get_updated_roads_from_editing_session(_editing_session_id integer) IS 'Get distinct road_code values from the objects concerned by editing_sessions.logged_ids column content for the given editing session';
+
+
 -- FUNCTION get_upper_roundabout_node_to_delete(_road_code text)
 COMMENT ON FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code text) IS 'Get the roundabout node at the top of the circle. It only exists because QGIS creates a circle with a point at the top.
 We need to delete this node and merge edges around it.

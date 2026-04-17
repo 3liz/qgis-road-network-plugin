@@ -3189,6 +3189,61 @@ $$;
 COMMENT ON FUNCTION road_graph.get_spatial_road(_road_code text) IS 'Build the road geometry for the given road id. It can then be used with ST_LocateAlong.';
 
 
+-- get_updated_roads_from_editing_session(integer)
+CREATE FUNCTION road_graph.get_updated_roads_from_editing_session(_editing_session_id integer) RETURNS TABLE(road_codes text[])
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    WITH
+    items AS (
+        SELECT unnest(array['edges', 'markers']) AS item
+    ),
+    ids AS (
+        SELECT item, logged_ids->item AS item_ids
+        FROM items, "road_graph".editing_sessions
+        WHERE status = 'edited'
+        AND id = _editing_session_id
+    ),
+    queries AS (
+        SELECT item, "key"::integer AS id, "value" AS op
+        FROM ids, jsonb_each_text(item_ids)
+    ),
+    objects_ids AS (
+        SELECT
+            item,
+            array_agg(id) AS o_ids
+        FROM queries
+        GROUP BY item
+    ),
+    codes AS (
+        SELECT
+            DISTINCT e.road_code
+        FROM
+            editing_session.edges AS e,
+            objects_ids AS o
+        WHERE o.item = 'edges' AND e.id = ANY(o.o_ids)
+        UNION
+        SELECT
+            DISTINCT m.road_code
+        FROM
+            editing_session.markers AS m,
+            objects_ids AS o
+        WHERE o.item = 'markers' AND m.id = ANY(o.o_ids)
+    )
+    SELECT
+        array_agg(DISTINCT road_code) AS road_codes
+    FROM codes
+    ;
+
+END;
+$$;
+
+
+-- FUNCTION get_updated_roads_from_editing_session(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.get_updated_roads_from_editing_session(_editing_session_id integer) IS 'Get distinct road_code values from the objects concerned by editing_sessions.logged_ids column content for the given editing session';
+
+
 -- get_upper_roundabout_node_to_delete(text)
 CREATE FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code text) RETURNS integer
     LANGUAGE plpgsql
@@ -3364,6 +3419,9 @@ CREATE FUNCTION road_graph.merge_editing_session_data(_editing_session_id intege
 DECLARE
     editing_session_record record;
     sql_record record;
+    road_codes text[];
+    managed_object record;
+    updated_objects_number integer;
     _set_config text;
     _toggle_triggers boolean;
 BEGIN
@@ -3388,13 +3446,20 @@ BEGIN
     SELECT road_graph.toggle_foreign_key_constraints(FALSE)
         INTO _toggle_triggers;
 
+    -- Get the road codes concerned by the editing session
+    -- no need to prefix the function by the schema name because we set it in the search path
+    SELECT INTO road_codes
+        get_updated_roads_from_editing_session(_editing_session_id)
+    ;
+
     -- Create SQL to run for each edited data
+    -- no need to prefix the function by the schema name because we set it in the search path
     FOR sql_record IN
         SELECT
             sql_text
         FROM create_queries_from_editing_session(_editing_session_id)
     LOOP
-       RAISE NOTICE 'SQL = %', sql_record.sql_text;
+       -- RAISE NOTICE 'SQL = %', sql_record.sql_text;
        EXECUTE sql_record.sql_text;
     END LOOP;
 
@@ -3403,6 +3468,28 @@ BEGIN
     INTO _set_config;
     SELECT road_graph.toggle_foreign_key_constraints(TRUE)
         INTO _toggle_triggers;
+
+    -- Update the managed objects concerned by the editing session changes
+    IF road_codes IS NOT NULL AND array_length(road_codes, 1) > 0 THEN
+        FOR managed_object IN
+            SELECT o.*
+            FROM "road_graph".managed_objects AS o
+        LOOP
+            SELECT INTO updated_objects_number
+                road_graph.update_managed_objects_on_graph_change(
+                    managed_object.schema_name,
+                    managed_object.table_name,
+                    road_codes
+                )
+            ;
+            RAISE NOTICE 'Number of updated managed objects for "%"."%": %',
+                managed_object.schema_name,
+                managed_object.table_name,
+                updated_objects_number
+            ;
+        END LOOP;
+
+    END IF;
 
     -- Truncate editing_session tables
     TRUNCATE editing_session.roads CASCADE;
@@ -3820,23 +3907,23 @@ BEGIN
                 last_updated_objects_ids,
                 last_update
             ) = (
-                string_to_array('%3$s', ','),
+                ARRAY[%3$s]::integer[],
                 now()::timestamp(0)
             )
-            WHERE o.schema_name = %1$I
-            AND o.table_name = %2$I
+            WHERE o.schema_name = '%1$I'
+            AND o.table_name = '%2$I'
         $SQL$,
         _schema_name,
         _table_name,
         -- convert json array to string like 1,3,10
         (
             SELECT array_to_string(array_agg(j)::text[], ',')
-            FROM jsonb_array_elements(updated_stats->last_updated_objects_ids) AS j
+            FROM jsonb_array_elements(updated_stats->'last_updated_objects_ids') AS j
         )
     );
 
     -- Return the number of updated features
-    RETURN updated_stats.nb;
+    RETURN (updated_stats->>'nb')::integer;
 
 END;
 $_$;
@@ -4036,11 +4123,17 @@ BEGIN
             run_update AS (
                 UPDATE %2$I.%3$I AS mo
                 SET
-                    geom = u.geom
+                    geom = ST_ReducePrecision(u.geom, 0.10)
                 FROM updated_objects AS u
                 WHERE mo.%1$I = u.id
                 AND u.geom IS NOT NULL
-                AND (mo.geom IS NULL OR NOT ST_Equals(mo.geom, u.geom))
+                AND (
+                    mo.geom IS NULL
+                    OR NOT ST_Equals(
+                        ST_ReducePrecision(mo.geom, 0.10),
+                        ST_ReducePrecision(u.geom, 0.10)
+                    )
+                )
                 RETURNING mo.*
             )
             SELECT
@@ -4248,18 +4341,18 @@ BEGIN
             -- 8 / Detect if we need to update or not
             concat(
                 $STR$
-                (r.ref->>'road_code') != mo.road_code
-                OR (r.ref->>'marker_code')::integer != mo.marker_code::integer
-                OR (r.ref->>'abscissa')::real != mo.abscissa::real
+                (r.ref->>'road_code') != Coalesce(mo.road_code, '')
+                OR (r.ref->>'marker_code')::integer != Coalesce(mo.marker_code, -1)::integer
+                OR (r.ref->>'abscissa')::real != Coalesce(mo.abscissa, -1)::real
                 $STR$,
                 CASE WHEN 'cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.ref->>'cumulative')::integer != mo.cumulative::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.ref->>'cumulative')::integer != Coalesce(mo.cumulative, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'offset' = ANY(table_cols)
-                    THEN $STR$ OR (r.ref->>'offset')::real != mo.offset::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'side' = ANY(table_cols)
-                    THEN $STR$ OR (r.ref->>'side')::text != mo.side::text $STR$ ELSE ''
+                    THEN $STR$ OR (r.ref->>'side')::text != Coalesce(mo.side, '')::text $STR$ ELSE ''
                 END
             )
         );
@@ -4343,29 +4436,29 @@ BEGIN
             -- 11 / Detect if we need to update or not
             concat(
                 $STR$
-                (r.start_ref->>'road_code') != mo.road_code
-                OR (r.start_ref->>'marker_code')::integer != mo.start_marker_code::integer
-                OR (r.start_ref->>'abscissa')::real != mo.start_abscissa::real
-                OR (r.end_ref->>'marker_code')::integer != mo.end_marker_code::integer
-                OR (r.end_ref->>'abscissa')::real != mo.end_abscissa::real
+                (r.start_ref->>'road_code') != Coalesce(mo.road_code, '')
+                OR (r.start_ref->>'marker_code')::integer != Coalesce(mo.start_marker_code, -1)::integer
+                OR (r.start_ref->>'abscissa')::real != Coalesce(mo.start_abscissa, -1)::real
+                OR (r.end_ref->>'marker_code')::integer != Coalesce(mo.end_marker_code, -1)::integer
+                OR (r.end_ref->>'abscissa')::real != Coalesce(mo.end_abscissa, -1)::real
                 $STR$,
                 CASE WHEN 'start_cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'cumulative')::integer != mo.start_cumulative::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.start_ref->>'cumulative')::integer != Coalesce(mo.start_cumulative, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'start_offset' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'offset')::real != mo.start_offset::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.start_ref->>'offset')::real != Coalesce(mo.start_offset, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'start_side' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'side')::text != mo.start_side::text $STR$ ELSE ''
+                    THEN $STR$ OR (r.start_ref->>'side')::text != Coalesce(mo.start_side, '')::text $STR$ ELSE ''
                 END,
                 CASE WHEN 'end_cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.end_ref->>'cumulative')::integer != mo.end_cumulative::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.end_ref->>'cumulative')::integer != Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'end_offset' = ANY(table_cols)
-                    THEN $STR$ OR (r.end_ref->>'offset')::real != mo.end_offset::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.end_ref->>'offset')::real != Coalesce(mo.end_offset, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'end_side' = ANY(table_cols)
-                    THEN $STR$ OR (r.end_ref->>'side')::text != mo.end_side::text $STR$ ELSE ''
+                    THEN $STR$ OR (r.end_ref->>'side')::text != Coalesce(mo.end_side, '')::text $STR$ ELSE ''
                 END
             )
         );
