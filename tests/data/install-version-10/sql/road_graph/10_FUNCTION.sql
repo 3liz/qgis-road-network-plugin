@@ -445,7 +445,6 @@ BEGIN
     -- Create nodes at intersection with other edges if needed
     -- This will then run the trigger after_node_insert_or_update
     -- which will eventually split the edges intersecting this NEW edge
-    -- DO IT ONLY FOR GEOMETRIES INSIDE THE EDITION AREA
     created_nodes_at_intersection = ARRAY[]::integer[];
     IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NOT ST_Equals(OLD.geom, NEW.geom))
         -- avoid infinite loop and self-crossing
@@ -484,15 +483,6 @@ BEGIN
                 AND ST_DWithin(n.geom, c.geom, 0.50)
             -- this will keep only crossing nodes to use
             WHERE n.id IS NULL
-            -- DO NOT USE NODE IF OUTSIDE THE EDITION AREA
-            AND ST_Intersects(
-                c.geom,
-                (
-                    SELECT es.geom
-                    FROM "road_graph".editing_sessions AS es
-                    LIMIT 1
-                )
-            )
         LOOP
             IF crossing_node.geom IS NOT NULL
                 AND ST_GeometryType(crossing_node.geom) = 'ST_Point'
@@ -556,15 +546,6 @@ BEGIN
             -- to avoid infinite loop
             -- The variable road.graph.merge.edges.useless.node is set in the function road_graph.merge_edges
             AND n.id != node_to_be_deleted::integer
-            -- DO NOT USE NODE IF OUTSIDE THE EDITION AREA
-            AND ST_Intersects(
-                n.geom,
-                (
-                    SELECT es.geom
-                    FROM "road_graph".editing_sessions AS es
-                    LIMIT 1
-                )
-            )
         LOOP
             IF raise_notice IN ('info', 'debug') THEN
                 RAISE NOTICE '% AFTER EDGE % n° % start % end %, update existing node under new edge to launch the split : % %',
