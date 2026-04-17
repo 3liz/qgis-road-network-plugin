@@ -3,7 +3,7 @@
 # should be the same as the plugin's metatada.txt
 [project]
 name = "roadnetwork"
-version = "0.3.2"
+version = "0.3.3"
 description = "Road network plugin"
 authors = [
     { name = "3Liz", email = "info@3liz.com" }

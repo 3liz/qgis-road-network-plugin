@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.3.3 - 2026-04-17
+
+### Changed
+
+* Editing session - Update the managed objects when merging the editing session data
+* Tests - Add more tests
+*
+### Fixed
+
+* SQL - Avoid to cut edges at intersections outside the editing session polygon
+* SQL - Separate methods to update geometries/references from the road graph
+
 ## 0.3.2 - 2026-04-12
 
 ### Fixed
