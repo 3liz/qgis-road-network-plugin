@@ -377,3 +377,101 @@ $BODY$;
 
 COMMENT ON FUNCTION road_graph.import_data_from_template_tables(text, text, text)
     IS 'Import data from the given schema and edges & markers source tables';
+
+
+-- Add trigger for timestamp columns
+CREATE OR REPLACE FUNCTION road_graph.get_merged_geom_from_table_and_ids(
+    _schema_name text,
+    _table_name text,
+    _ids integer[]
+)
+RETURNS geometry(MultiPolygon, 2154)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    primary_key_field text;
+    geometry_column text;
+    sql_text text;
+    merged_geom geometry(MultiPolygon, 2154);
+BEGIN
+    -- Return NULL if no ids are passed
+    IF _ids IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- Get the table primary key field
+    sql_text = format(
+        $SQL$
+        SELECT a.attname
+        FROM pg_index i
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = '%1$I.%2$I'::regclass AND i.indisprimary
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO primary_key_field
+    ;
+    IF primary_key_field IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" does not have a primary key !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Get geometry colmun name
+    sql_text = format(
+        $SQL$
+        SELECT f_geometry_column
+        FROM geometry_columns
+        WHERE f_table_schema = '%1$s' AND f_table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO geometry_column
+    ;
+    IF geometry_column IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" does not have a geometry column !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Get multi geometry of all given features ids
+    sql_text = format(
+        $SQL$
+        SELECT
+            ST_Multi(ST_Buffer(ST_Union(%1$I), 10)) AS geom
+            FROM %2$I.%3$I
+            WHERE %4$I IN (%5$s)
+        $SQL$,
+        geometry_column,
+        _schema_name,
+        _table_name,
+        primary_key_field,
+        array_to_string(_ids::text[], ', ')
+    );
+    EXECUTE sql_text
+    INTO merged_geom
+    ;
+
+    RETURN merged_geom;
+END;
+$$;
+
+COMMENT ON FUNCTION road_graph.get_merged_geom_from_table_and_ids(text, text, integer[])
+IS 'Compute the union geometry of all the features from a table and given feature ids';
+
+
+CREATE OR REPLACE VIEW road_graph.v_managed_objects AS
+SELECT
+    m.*,
+    road_graph.get_merged_geom_from_table_and_ids(
+        schema_name,
+        table_name,
+        last_updated_objects_ids
+    ) AS geom
+FROM road_graph.managed_objects AS m
+;
+COMMENT ON VIEW road_graph.v_managed_objects
+IS 'View allowing to see the merged geometries of each managed table for the last editing session merge. Useful to have a quick look at the edited objects.'
+;

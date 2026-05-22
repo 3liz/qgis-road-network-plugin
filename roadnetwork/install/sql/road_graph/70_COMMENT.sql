@@ -138,6 +138,10 @@ This behaviour can be overriden by setting _use_cache TO True;
 ';
 
 
+-- FUNCTION get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[])
+COMMENT ON FUNCTION road_graph.get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[]) IS 'Compute the union geometry of all the features from a table and given feature ids';
+
+
 -- FUNCTION get_ordered_edges(_road_code text, _initial_id integer, _direction text)
 COMMENT ON FUNCTION road_graph.get_ordered_edges(_road_code text, _initial_id integer, _direction text) IS 'Get the list of edge id with order for a given road, edge and the direction (downtream or upstream). It always includes the given edge';
 
@@ -356,6 +360,10 @@ COMMENT ON COLUMN road_graph.roads.id IS 'Unique integer ID (automatic)';
 
 -- roads.road_type
 COMMENT ON COLUMN road_graph.roads.road_type IS 'Type of the road : road, roundabout. It is used by the trigger functions: glossary must be respected';
+
+
+-- VIEW v_managed_objects
+COMMENT ON VIEW road_graph.v_managed_objects IS 'View allowing to see the merged geometries of each managed table for the last editing session merge. Useful to have a quick look at the edited objects.';
 
 
 --
