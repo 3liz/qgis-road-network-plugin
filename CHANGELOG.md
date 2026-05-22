@@ -2,13 +2,22 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-05-22
+
+### Added
+
+* Import - Add SQL function & a new algorithm to import data from edges & markers template files
+  (See example files `source_edges.fgb` & `source_markers.fgb` in plugin folder `/resources/import/`)
+* SQL & QGIS - Create a view `v_managed_objects` to see the MultiPolygon geometry
+  of the last updated objects of each managed table.
+
 ## 0.3.3 - 2026-04-17
 
 ### Changed
 
 * Editing session - Update the managed objects when merging the editing session data
 * Tests - Add more tests
-*
+
 ### Fixed
 
 * SQL - Avoid to cut edges at intersections outside the editing session polygon
