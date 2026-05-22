@@ -27,6 +27,10 @@ car l''ordre alphabétique compte.
 ';
 
 
+-- FUNCTION aa_before_record_insert_or_update()
+COMMENT ON FUNCTION road_graph.aa_before_record_insert_or_update() IS 'Set the created_at and updated_at fields';
+
+
 -- FUNCTION after_edge_delete()
 COMMENT ON FUNCTION road_graph.after_edge_delete() IS 'Lors de la suppression d''un tronçon, on supprime les Nodes qui étaient rattachés aux sommets amont et aval du tronçon,
 uniquement si ces derniers ne sont plus rattachés à aucun autre tronçon.
@@ -177,6 +181,10 @@ COMMENT ON FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code te
 We need to delete this node and merge edges around it.
 This function does nothing if no node is found at the exact top position of the circle.
 ';
+
+
+-- FUNCTION import_data_from_template_tables(_source_schema text, _source_edges_table text, _source_markers_table text)
+COMMENT ON FUNCTION road_graph.import_data_from_template_tables(_source_schema text, _source_edges_table text, _source_markers_table text) IS 'Import data from the given schema and edges & markers source tables';
 
 
 -- FUNCTION merge_edges(id_edge_a integer, id_edge_b integer)

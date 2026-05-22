@@ -1420,6 +1420,7 @@ def test_get_updated_roads_from_editing_session():
     assert result is not None
     assert result[0] == "D138,D152,R001,T001,TC002"
 
+
 def create_managed_objects(connection):
     """Create demo data for managed objects tests"""
 
@@ -1551,11 +1552,11 @@ def test_update_managed_objects():
     assert trees[2] is not None
     assert trees[3] is not None
     assert trees[4] is not None
-    assert trees[0] == [1, 'oak', 'D152', 9, 483.22, 'left', 8.19]
-    assert trees[1] == [2, 'Pine', 'D152', 11, 254.43, 'right', 9.36]
-    assert trees[2] == [3, 'Oak', 'D138B', 0, 369.09, 'right', 11.4]
-    assert trees[3] == [4, 'Palm', 'D138', 8, 587.07, 'right', 16.32]
-    assert trees[4] == [5, 'Palm', 'D613', 43, 450.3, 'left', 6.83]
+    assert trees[0] == [1, "oak", "D152", 9, 483.22, "left", 8.19]
+    assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36]
+    assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4]
+    assert trees[3] == [4, "Palm", "D138", 8, 587.07, "right", 16.32]
+    assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83]
 
     # Change the reference of a tree and check if the geometry is correctly updated
     sql = """
@@ -1581,7 +1582,7 @@ def test_update_managed_objects():
     for a in data:
         tree = a if a else None
     assert tree is not None
-    assert tree == [1, 'POINT(474053.5 6895544.5)']
+    assert tree == [1, "POINT(474053.5 6895544.5)"]
 
     # Table demo_safety_barriers: create geometries from references and check the values
     sql = """
@@ -1608,8 +1609,11 @@ def test_update_managed_objects():
     assert barriers[1] is not None
     assert barriers[2] is not None
     # do not test 1 as it is a very long multilinestring
-    assert barriers[1] == [2, 'MULTILINESTRING((474023.6 6895055.8,474025.8 6895107.7,474025.9 6895108.8))']
-    assert barriers[2] == [3, 'MULTILINESTRING((477047.8 6893031.1,477131.7 6893082.7,477186 6893116.3,477207.1 6893132.1,477217.2 6893143.1,477230.3 6893161,477238.5 6893183.9,477266.1 6893270.8,477288.7 6893358.6,477297.9 6893393.6,477316.3 6893442.4,477341.8 6893519.3,477354.1 6893567.2,477369.4 6893610.1,477389.8 6893662,477406.1 6893700.9,477427.4 6893746.7,477440.6 6893779.6,477448.2 6893812.7))'] # noqa: E501
+    assert barriers[1] == [2, "MULTILINESTRING((474023.6 6895055.8,474025.8 6895107.7,474025.9 6895108.8))"]
+    assert barriers[2] == [
+        3,
+        "MULTILINESTRING((477047.8 6893031.1,477131.7 6893082.7,477186 6893116.3,477207.1 6893132.1,477217.2 6893143.1,477230.3 6893161,477238.5 6893183.9,477266.1 6893270.8,477288.7 6893358.6,477297.9 6893393.6,477316.3 6893442.4,477341.8 6893519.3,477354.1 6893567.2,477369.4 6893610.1,477389.8 6893662,477406.1 6893700.9,477427.4 6893746.7,477440.6 6893779.6,477448.2 6893812.7))",  # noqa: E501
+    ]
 
 
 def test_merge_editing_session_data():

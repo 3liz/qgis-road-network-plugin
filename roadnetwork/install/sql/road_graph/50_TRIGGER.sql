@@ -35,6 +35,22 @@ CREATE TRIGGER trg_aa_before_geometry_insert_or_update BEFORE INSERT OR UPDATE O
 CREATE TRIGGER trg_aa_before_geometry_insert_or_update BEFORE INSERT OR UPDATE OF geom ON road_graph.nodes FOR EACH ROW EXECUTE PROCEDURE road_graph.aa_before_geometry_insert_or_update();
 
 
+-- edges trg_aa_before_record_insert_or_update
+CREATE TRIGGER trg_aa_before_record_insert_or_update BEFORE INSERT OR UPDATE ON road_graph.edges FOR EACH ROW EXECUTE PROCEDURE road_graph.aa_before_record_insert_or_update();
+
+
+-- markers trg_aa_before_record_insert_or_update
+CREATE TRIGGER trg_aa_before_record_insert_or_update BEFORE INSERT OR UPDATE ON road_graph.markers FOR EACH ROW EXECUTE PROCEDURE road_graph.aa_before_record_insert_or_update();
+
+
+-- nodes trg_aa_before_record_insert_or_update
+CREATE TRIGGER trg_aa_before_record_insert_or_update BEFORE INSERT OR UPDATE ON road_graph.nodes FOR EACH ROW EXECUTE PROCEDURE road_graph.aa_before_record_insert_or_update();
+
+
+-- roads trg_aa_before_record_insert_or_update
+CREATE TRIGGER trg_aa_before_record_insert_or_update BEFORE INSERT OR UPDATE ON road_graph.roads FOR EACH ROW EXECUTE PROCEDURE road_graph.aa_before_record_insert_or_update();
+
+
 -- edges trg_after_edge_delete
 CREATE TRIGGER trg_after_edge_delete AFTER DELETE ON road_graph.edges FOR EACH ROW EXECUTE PROCEDURE road_graph.after_edge_delete();
 
