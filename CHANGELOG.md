@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.4.1 - 2026-06-05
+
+### Fixed
+
+* Fix the error occurring when updating managed objects references
+  when the objects had a `cumulative` attribute
+
+### Changed
+
+* Minor changes on the QGIS project
+
+### Tests
+
+* Test the function `road_graph.merge_editing_session_data`
+  and the impact on the managed object geometries or references
+
 ## 0.4.0 - 2026-05-22
 
 ### Added
