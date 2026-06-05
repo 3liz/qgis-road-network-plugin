@@ -171,9 +171,11 @@ class ImportData(BaseProcessingAlgorithm):
             )
             try:
                 connection.executeSql(sql)
-                feedback.pushInfo(tr(f"* Temporary table {temp_table} has been dropped"))
+                # feedback.pushInfo(tr(f"* Temporary table {temp_table} has been dropped"))
             except QgsProviderConnectionException as e:
-                feedback.pushInfo(tr(f"* Failed to drop temporary table {temp_table}: {e!s}"))
+                msg = tr("* Failed to drop temporary table")
+                msg += f" {temp_table} ({e!s})"
+                feedback.pushInfo(msg)
 
     def processAlgorithm(self, parameters, context, feedback):
         """Run the algorithm to import data into the database."""

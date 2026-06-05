@@ -1,0 +1,1169 @@
+-- Rename sequence
+ALTER SEQUENCE road_graph.glossary_road_scale_id_seq RENAME TO glossary_road_class_id_seq;
+ALTER TABLE road_graph.glossary_road_class RENAME CONSTRAINT glossary_road_scale_code_key TO glossary_road_class_code_key;
+ALTER TABLE road_graph.glossary_road_class RENAME CONSTRAINT glossary_road_scale_label_key TO glossary_road_class_label_key;
+ALTER TABLE road_graph.glossary_road_class RENAME CONSTRAINT glossary_road_scale_pkey TO glossary_road_class_pkey;
+
+
+-- copy_data_to_editing_session(integer)
+CREATE OR REPLACE FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+    editing_session_record record;
+    _set_config text;
+BEGIN
+    -- Get editing session record
+    SELECT INTO editing_session_record
+    *
+    FROM road_graph.editing_sessions
+    WHERE id = _editing_session_id
+    ;
+    IF editing_session_record.id IS NULL THEN
+        RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
+    END IF;
+
+    IF editing_session_record.status != 'created' THEN
+        RAISE EXCEPTION 'The given id % does not correspond to editing session with status ''created'' !', _editing_session_id;
+    END IF;
+
+    -- Disable triggers
+    SELECT set_config('road.graph.disable.trigger', '1'::text, true)
+    INTO _set_config;
+
+    -- Truncate tables
+    TRUNCATE editing_session.roads CASCADE;
+    TRUNCATE editing_session.markers CASCADE;
+    TRUNCATE editing_session.edges CASCADE;
+    TRUNCATE editing_session.nodes CASCADE;
+    TRUNCATE editing_session.editing_sessions CASCADE;
+    TRUNCATE editing_session.glossary_road_class CASCADE;
+
+    -- Re-insert glossary
+    INSERT INTO editing_session.glossary_road_class
+    SELECT *
+    FROM road_graph.glossary_road_class
+    ;
+
+    -- Get roads to edit
+    WITH
+    edges_roads AS (
+        SELECT DISTINCT e.road_code
+        FROM road_graph.edges AS e
+        JOIN road_graph.editing_sessions AS s
+            ON ST_Intersects(s.geom, e.geom)
+        WHERE s.id = _editing_session_id
+    ),
+    roads AS (
+        SELECT DISTINCT r.*
+        FROM road_graph.roads AS r
+        JOIN edges_roads AS e
+            ON r.road_code = e.road_code
+    )
+    INSERT INTO editing_session.roads
+    SELECT *
+    FROM roads
+    ;
+
+    -- Get nodes to edit
+    WITH
+    edges_roads AS (
+        SELECT DISTINCT e.road_code
+        FROM road_graph.edges AS e
+        JOIN road_graph.editing_sessions AS s
+            ON ST_Intersects(s.geom, e.geom)
+        WHERE s.id = _editing_session_id
+    ),
+    edges AS (
+        SELECT DISTINCT e.start_node, e.end_node
+        FROM road_graph.edges AS e
+        JOIN edges_roads AS er
+            ON e.road_code = er.road_code
+    ),
+    nodes AS (
+        SELECT DISTINCT n.*
+        FROM road_graph.nodes AS n
+        JOIN edges AS e
+            ON n.id IN (e.start_node, e.end_node)
+    )
+    INSERT INTO editing_session.nodes
+    SELECT *
+    FROM nodes
+    ;
+
+    -- Get edges to edit
+    WITH
+    edges_roads AS (
+        SELECT DISTINCT e.road_code
+        FROM road_graph.edges AS e
+        JOIN road_graph.editing_sessions AS s
+            ON ST_Intersects(s.geom, e.geom)
+        WHERE s.id = _editing_session_id
+    ),
+    edges AS (
+        SELECT DISTINCT e.*
+        FROM road_graph.edges AS e
+        JOIN edges_roads AS er
+            ON e.road_code = er.road_code
+    )
+    INSERT INTO editing_session.edges
+    SELECT *
+    FROM edges
+    ;
+
+    -- Get markers to edit
+    WITH
+    edges_roads AS (
+        SELECT DISTINCT e.road_code
+        FROM road_graph.edges AS e
+        JOIN road_graph.editing_sessions AS s
+            ON ST_Intersects(s.geom, e.geom)
+        WHERE s.id = _editing_session_id
+    ),
+    markers AS (
+        SELECT DISTINCT m.*
+        FROM road_graph.markers AS m
+        JOIN edges_roads AS er
+            ON m.road_code = er.road_code
+    )
+    INSERT INTO editing_session.markers
+    SELECT *
+    FROM markers
+    ;
+
+    -- Replace identities by road_schema sequences to get correct ids
+    BEGIN
+        ALTER TABLE editing_session.roads ALTER COLUMN id DROP IDENTITY;
+        ALTER TABLE editing_session.nodes ALTER COLUMN id DROP IDENTITY;
+        ALTER TABLE editing_session.markers ALTER COLUMN id DROP IDENTITY;
+        ALTER TABLE editing_session.edges ALTER COLUMN id DROP IDENTITY;
+    EXCEPTION WHEN OTHERS THEN
+        RAISE NOTICE 'Cannot drop identity in editing_session tables';
+    END;
+    -- roads
+    ALTER TABLE editing_session.roads
+        ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.roads', 'id'));
+    -- nodes
+    ALTER TABLE editing_session.nodes
+        ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.nodes', 'id'));
+    -- markers
+    ALTER TABLE editing_session.markers
+        ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.markers', 'id'));
+    -- edges
+    ALTER TABLE editing_session.edges
+        ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.edges', 'id'));
+
+    -- Set ids in the editing_sessions
+    UPDATE road_graph.editing_sessions
+    SET cloned_ids = jsonb_build_object(
+        'roads', (SELECT jsonb_agg(id::text) FROM editing_session.roads),
+        'nodes', (SELECT jsonb_agg(id::text) FROM editing_session.nodes),
+        'markers', (SELECT jsonb_agg(id::text) FROM editing_session.markers),
+        'edges', (SELECT jsonb_agg(id::text) FROM editing_session.edges)
+    ),
+    "status" = 'cloned'
+    WHERE id = _editing_session_id
+    ;
+
+    -- In the table editing_session.editing_sessions
+    -- keep only the current editing session
+    -- This table will be used by the trigger editing_survey
+    -- to collect changes in the editing_sessions tables
+    TRUNCATE editing_session.editing_sessions RESTART IDENTITY;
+    INSERT INTO editing_session.editing_sessions
+    SELECT * FROM road_graph.editing_sessions
+    WHERE id = _editing_session_id
+    ;
+
+    -- Audit trigger on editing_session tables
+    DROP TRIGGER IF EXISTS trg_editing_survey ON editing_session.roads;
+    CREATE TRIGGER trg_editing_survey
+    AFTER INSERT OR UPDATE OR DELETE ON editing_session.roads
+    FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
+    DROP TRIGGER IF EXISTS trg_editing_survey ON editing_session.nodes;
+    CREATE TRIGGER trg_editing_survey
+    AFTER INSERT OR UPDATE OR DELETE ON editing_session.nodes
+    FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
+    DROP TRIGGER IF EXISTS trg_editing_survey ON editing_session.markers;
+    CREATE TRIGGER trg_editing_survey
+    AFTER INSERT OR UPDATE OR DELETE ON editing_session.markers
+    FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
+    DROP TRIGGER IF EXISTS trg_editing_survey ON editing_session.edges;
+    CREATE TRIGGER trg_editing_survey
+    AFTER INSERT OR UPDATE OR DELETE ON editing_session.edges
+    FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
+
+    -- Re-enable triggers
+    SELECT set_config('road.graph.disable.trigger', '0'::text, true)
+    INTO _set_config;
+
+    RETURN True;
+END;
+$$;
+
+
+-- FUNCTION copy_data_to_editing_session(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) IS 'Copy production data from the road_graph shema to the editing_session schema corresponding to the given editing session ID.';
+
+
+
+
+-- before_edge_insert_or_update()
+CREATE OR REPLACE FUNCTION road_graph.before_edge_insert_or_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    start_point geometry(point);
+    end_point geometry(point);
+    upstream_node record;
+    downstream_node record;
+    distance real;
+    start_references jsonb;
+    end_references jsonb;
+    marker_zero record;
+    raise_notice text;
+    edge_road record;
+    is_roundabout boolean;
+    has_changed_road_code boolean;
+	v_sqlstate text;
+	v_message text;
+	v_context text;
+BEGIN
+    -- Trigger disabled by session variable
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- log level
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
+
+    -- Get road
+    SELECT INTO edge_road
+        r.*
+    FROM road_graph.roads AS r
+    WHERE r.road_code = NEW.road_code
+    ;
+    IF edge_road.id IS NULL THEN
+        RAISE EXCEPTION 'The road code given for this edge does not exist !';
+    END IF;
+
+    -- check if edge is a part of a roundabout
+    is_roundabout = (edge_road.road_type = 'roundabout');
+    IF raise_notice IN ('info', 'debug') THEN
+        RAISE NOTICE '% BEFORE edge % n° %, edge is_roundabout %,
+        %',
+            repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, is_roundabout,
+            to_json(edge_road)
+        ;
+    END IF;
+
+    -- If it is a new roundabout, reverse the geometry if needed
+    -- QGIS digitizing circle tool create counter-clockwise polygons
+    IF is_roundabout AND ST_IsRing(NEW.geom) AND ST_IsPolygonCW(ST_MakePolygon(NEW.geom))
+    THEN
+        NEW.geom = ST_Reverse(NEW.geom);
+    END IF;
+
+    -- For UPDATE, check if the road_code has changed
+    -- If so, we need to empty the next_edge_id and previous_edge_id to avoid wrong calculations
+    has_changed_road_code = false;
+    IF NOT is_roundabout
+        AND TG_OP = 'UPDATE'
+        AND Coalesce(OLD.road_code, '') != Coalesce(NEW.road_code, '')
+    THEN
+        has_changed_road_code = true;
+        IF Coalesce(OLD.previous_edge_id, -1) = Coalesce(NEW.previous_edge_id, -1) THEN
+            NEW.previous_edge_id = NULL;
+        END IF;
+        IF Coalesce(OLD.next_edge_id, -1) = Coalesce(NEW.next_edge_id, -1) THEN
+            NEW.next_edge_id = NULL;
+        END IF;
+    END IF;
+
+    -- Create missing nodes if necessary
+    -- start & end point
+    start_point = ST_StartPoint(NEW.geom);
+    end_point = ST_EndPoint(NEW.geom);
+
+    IF TG_OP = 'INSERT'
+    OR (TG_OP = 'UPDATE' AND NOT ST_Equals(NEW.geom, OLD.geom) AND NEW.geom IS NOT NULL)
+    THEN
+
+        -- Get first nodes < 0.5 m - If found, edit NEW geom
+        -- upstream
+        SELECT INTO upstream_node
+            n.id, n.geom
+        FROM road_graph.nodes AS n
+        WHERE ST_DWithin(n.geom, start_point, 0.50)
+        ORDER BY n.id, n.geom <-> start_point
+        LIMIT 1
+        ;
+
+        -- upstream - create node or just update value
+        IF upstream_node IS NOT NULL THEN
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, upstream_node NOT NULL : % -> use it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, upstream_node.id
+                ;
+            END IF;
+
+            -- Update the geometry
+            NEW.geom = ST_SetPoint(NEW.geom, 0, upstream_node.geom);
+            -- Update the node ID in upstream attribute
+            NEW.start_node = upstream_node.id;
+        ELSE
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, upstream node IS NULL -> create it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
+                ;
+            END IF;
+
+            -- Create the missing node
+            -- only for INSERT
+            -- or for UPDATE if the start_node value has been deleted
+            IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.start_node IS NULL) THEN
+                WITH new_node AS (
+                    INSERT INTO road_graph.nodes
+                    (geom)
+                    VALUES
+                    (start_point)
+                    ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING
+                    RETURNING id
+                )
+                SELECT new_node.id
+                FROM new_node
+                INTO NEW.start_node
+                ;
+                IF NEW.start_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
+                    RAISE NOTICE '% BEFORE edge % n° %, upstream node created : % %',
+                        repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.start_node,
+                        (SELECT ST_AsText(geom) FROM road_graph.nodes WHERE id = NEW.start_node)
+                    ;
+                END IF;
+            END IF;
+        END IF;
+
+        -- get downstream node
+        SELECT INTO downstream_node
+            n.id, n.geom
+        FROM road_graph.nodes AS n
+        WHERE ST_DWithin(n.geom, end_point, 0.50)
+        ORDER BY n.id, n.geom <-> end_point
+        LIMIT 1
+        ;
+        -- downstream node - create or update value
+        IF downstream_node IS NOT NULL THEN
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, downstream node NOT NULL : % -> use it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, downstream_node.id
+                ;
+            END IF;
+            -- Update the geometry
+            NEW.geom = ST_SetPoint(NEW.geom, ST_NPoints(NEW.geom) - 1, downstream_node.geom);
+            -- Update the node ID in downstream attribute
+            NEW.end_node = downstream_node.id;
+        ELSE
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, downstream node IS NULL -> create it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
+                ;
+            END IF;
+
+            -- Create the missing node
+            -- only for INSERT
+            -- or for UPDATE if the end_node value has been deleted
+            IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.end_node IS NULL) THEN
+                -- Create the missing node
+                WITH new_node AS (
+                    INSERT INTO road_graph.nodes
+                    (geom)
+                    VALUES
+                    (end_point)
+                    ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING
+                    RETURNING id
+                )
+                SELECT new_node.id
+                FROM new_node
+                INTO NEW.end_node
+                ;
+                IF NEW.end_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
+                    RAISE NOTICE '% BEFORE edge % n° %, downstream node created : % %',
+                        repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.end_node,
+                        (SELECT ST_AsText(geom) FROM road_graph.nodes WHERE id = NEW.end_node)
+                    ;
+                END IF;
+            END IF;
+        END IF;
+    END IF;
+
+    -- Calculate previous_edge_id and next_edge_id values
+    -- for touching edges if the road_code has not changed
+    IF NOT is_roundabout AND NOT has_changed_road_code
+    THEN
+        IF NEW.previous_edge_id IS NULL THEN
+            -- Get the previous edge
+            NEW.previous_edge_id = (
+                SELECT e.id
+                FROM road_graph.edges AS e
+                WHERE e.road_code = NEW.road_code
+                AND e.end_node = NEW.start_node
+                LIMIT 1
+            );
+        END IF;
+        IF NEW.next_edge_id IS NULL THEN
+            -- Get the next edge
+            NEW.next_edge_id = (
+                SELECT e.id
+                FROM road_graph.edges AS e
+                WHERE e.road_code = NEW.road_code
+                AND e.start_node = NEW.end_node
+            );
+        END IF;
+    END IF;
+
+    -- Move marker 0 if needed
+    -- If the first edge of the road has changed
+    -- move it to the start_point of the changed geometry
+    IF TG_OP = 'UPDATE'
+        AND NOT is_roundabout
+        AND NOT has_changed_road_code
+        AND OLD.start_abscissa = 0 AND NEW.start_abscissa = 0
+        AND OLD.start_cumulative = 0 AND NEW.start_cumulative = 0
+        AND OLD.start_marker = 0 AND NEW.start_marker = 0
+        AND OLD.road_code = NEW.road_code
+        AND NOT ST_Equals(ST_StartPoint(NEW.geom), ST_StartPoint(OLD.geom))
+    THEN
+        -- Do not run the function update_edge_references
+        -- on the road triggered inside the after_marker_insert_or_update_or_delete
+        -- trigger since it will already been triggered with the edge geometry change
+        SET road.graph.edge.ref.calc.disabled = 'yes';
+        UPDATE road_graph.markers AS m
+        SET geom = ST_StartPoint(NEW.geom)
+        WHERE m.road_code = NEW.road_code
+        AND m.code = 0
+        AND ST_Equals(m.geom, ST_StartPoint(OLD.geom))
+        ;
+        SET road.graph.edge.ref.calc.disabled = 'no';
+    END IF;
+
+    -- Calculate references
+    IF NOT is_roundabout
+    THEN
+        BEGIN
+            -- start point
+            SELECT INTO start_references
+                road_graph.get_reference_from_point(start_point, NEW.road_code) AS ref
+            ;
+            NEW.start_marker = (start_references->>'marker_code')::text::integer;
+            NEW.start_abscissa = (start_references->>'abscissa')::text::real;
+            NEW.start_cumulative = (start_references->>'cumulative')::text::real;
+
+            -- end point
+            SELECT INTO end_references
+                road_graph.get_reference_from_point(end_point, NEW.road_code) AS ref
+            ;
+            NEW.end_marker = (end_references->>'marker_code')::text::integer;
+            NEW.end_abscissa = (end_references->>'abscissa')::text::real;
+            NEW.end_cumulative = (end_references->>'cumulative')::text::real;
+
+        EXCEPTION WHEN OTHERS THEN
+            IF raise_notice IN ('info', 'debug') THEN
+                GET STACKED DIAGNOSTICS
+                    v_sqlstate = returned_sqlstate,
+                    v_message = message_text,
+                    v_context = pg_exception_context
+                ;
+                RAISE NOTICE '% BEFORE edge % n° %, NEW references NOT calculated, error = %',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP,
+                    NEW.id, v_sqlstate || ' - ' || v_message
+                ;
+            END IF;
+        END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+-- FUNCTION before_edge_insert_or_update()
+COMMENT ON FUNCTION road_graph.before_edge_insert_or_update() IS 'During the creation or modification of an edge, we verify that the upstream and downstream nodes exist
+within 50 cm of the start and end of the edge. If they do, we use them
+and update the edge geometry so that the start and end are exactly on these nodes.
+Otherwise, we create the missing nodes.
+Additionally, during the creation of an edge, if the road code is provided and no marker 0 exists for this road,
+we automatically create one at the start of the edge.
+During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point,
+we move marker 0 to this new starting point.
+Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge
+based on its geometry and position on the road.
+';
+
+
+CREATE OR REPLACE FUNCTION road_graph.clean_digitized_roundabout(_road_code text) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    raise_notice text;
+    node_to_delete integer;
+    delete_result bool;
+    merge_edges_result bool;
+    left_node_geom geometry(Point, 2154);
+BEGIN
+    raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
+
+    -- Delete the edges inside the roundabout
+    -- and update the roads remainging around the roundabout
+    -- (previous & next edge ids)
+    WITH del AS (
+        DELETE FROM road_graph.edges AS d
+        WHERE d.road_code != _road_code
+        AND ST_ContainsProperly(
+            (
+            SELECT
+            ST_Buffer(ST_Polygonize(geom), 0.1)
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code
+            ),
+            d.geom
+        ) RETURNING d.id, d.previous_edge_id, d.next_edge_id
+    ),
+    update_previous AS (
+        UPDATE road_graph.edges AS e
+        SET next_edge_id = d.next_edge_id
+        FROM del AS d
+        WHERE e.next_edge_id = d.id
+        AND e.id != d.id
+    ),
+    update_next AS (
+        UPDATE road_graph.edges AS e
+        SET previous_edge_id = d.previous_edge_id
+        FROM del AS d
+        WHERE e.previous_edge_id = d.id
+        AND e.id != d.id
+    )
+    SELECT True
+    INTO delete_result;
+
+    -- Remove the circle node added add 12 o'clock
+    -- by QGIS digitizing tool
+    -- We use the merge_edges function which does the job
+    SELECT
+        INTO node_to_delete
+        road_graph.get_upper_roundabout_node_to_delete(
+            _road_code
+        )
+    ;
+    IF raise_notice in ('info', 'debug') THEN
+        RAISE NOTICE 'Node to delete % ', coalesce(node_to_delete, -1);
+    END IF;
+
+    IF node_to_delete IS NOT NULL THEN
+        SELECT
+            INTO merge_edges_result
+            road_graph.merge_edges(
+                (SELECT id FROM road_graph.edges WHERE end_node = node_to_delete LIMIT 1),
+                (SELECT id FROM road_graph.edges WHERE start_node = node_to_delete LIMIT 1)
+            )
+        ;
+    END IF;
+
+    -- Add marker 0 in the left node
+    SELECT
+        INTO left_node_geom
+        n.geom
+    FROM road_graph.nodes AS n
+    JOIN road_graph.edges AS e
+        ON e.start_node = n.id
+    WHERE True
+    AND e.road_code = _road_code
+    ORDER BY ST_X(n.geom)
+    LIMIT 1
+    ;
+    IF left_node_geom IS NOT NULL AND NOT EXISTS (
+        SELECT id
+        FROM road_graph.markers
+        WHERE road_code = _road_code
+        AND "code" = 0
+    )
+    THEN
+        INSERT INTO road_graph.markers (
+            road_code, "code", geom, abscissa
+        ) VALUES (
+            _road_code, 0, left_node_geom, 0
+        );
+    END IF;
+
+    RETURN TRUE;
+
+END;
+$$;
+
+
+-- FUNCTION clean_digitized_roundabout(_road_code text)
+COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
+* delete the edges inside the roundabout
+* remove the circle node added add 12 o''clock
+* add a marker for this roundabout if not already present
+';
+
+
+
+-- get_upper_roundabout_node_to_delete(text)
+CREATE OR REPLACE FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code text) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    check_record record;
+BEGIN
+    WITH node AS (
+        -- Get the node at the higher position in the roundabout
+    	SELECT n.id, n.geom, e.id AS edge_id
+    	FROM road_graph.nodes AS n
+    	JOIN road_graph.edges AS e
+    		ON e.road_code = _road_code
+    		AND n.id IN (e.start_node, e.end_node)
+        -- Do not take into account nodes connected to other roads
+        -- since they are not only part of the roundabout but must be kept
+        WHERE NOT EXISTS (
+            SELECT f.id
+            FROM road_graph.edges AS f
+            WHERE f.road_code != _road_code
+            AND n.id IN (f.start_node, f.end_node)
+        )
+    	ORDER BY ST_Y(n.geom) DESC LIMIT 1
+    ),
+    check_node AS (
+        -- Intersects a circle of radius 1m around the node
+        -- with the related edges so that we can then compare
+        -- the generated points Y to the node Y
+    	SELECT
+    		n.id, e.id AS edge_id,
+    		n.geom,
+    		ST_Intersection(ST_ExteriorRing(ST_Buffer(n.geom, 1)), e.geom) AS inter
+    	FROM node AS n
+    	JOIN road_graph.edges AS e
+    		ON n.id IN (e.start_node, e.end_node)
+    		AND e.road_code = _road_code
+    )
+    -- Get id
+    SELECT INTO check_record
+    	n.id,
+        bool_and(ST_Y(inter) <= ST_Y(n.geom)) AS ok
+    FROM check_node AS n
+    GROUP BY n.id
+    ;
+
+    IF check_record.ok IS TRUE
+    THEN
+        RETURN check_record.id;
+    ELSE
+        RETURN NULL::integer;
+    END IF;
+
+END;
+$$;
+
+
+-- FUNCTION get_upper_roundabout_node_to_delete(_road_code text)
+COMMENT ON FUNCTION road_graph.get_upper_roundabout_node_to_delete(_road_code text) IS 'Get the roundabout node at the top of the circle. It only exists because QGIS creates a circle with a point at the top.
+We need to delete this node and merge edges around it.
+This function does nothing if no node is found at the exact top position of the circle.
+';
+
+
+-- get_current_setting(text, text)
+CREATE OR REPLACE FUNCTION road_graph.get_current_setting(setting_name text, default_value text) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    setting_value text;
+BEGIN
+    -- Get current setting value, if not set return default value
+    setting_value = coalesce(nullif(current_setting(setting_name, true), ''), default_value);
+
+    RETURN setting_value;
+END;
+$$;
+
+
+-- FUNCTION get_current_setting(setting_name text, default_value text)
+COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_value text) IS 'Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid.
+The function is used to have a single point of maintenance for getting settings.';
+
+
+
+-- merge_edges(integer, integer)
+CREATE OR REPLACE FUNCTION road_graph.merge_edges(id_edge_a integer, id_edge_b integer) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    edge_a record;
+    edge_b record;
+    edge_to_delete record;
+    node_to_be_deleted integer;
+    node_geom_to_be_deleted geometry(Point, 2154);
+    _set_config text;
+BEGIN
+
+    -- Get both edges
+    -- edge A
+    SELECT INTO edge_a
+    *
+    FROM road_graph.edges
+    WHERE id = id_edge_a;
+    IF edge_a.id IS NULL THEN
+        RAISE EXCEPTION 'No edge found with id = % ', id_edge_a;
+    END IF;
+
+    -- edge B
+    SELECT INTO edge_b
+    *
+    FROM road_graph.edges
+    WHERE id = id_edge_b;
+    IF edge_b.id IS NULL THEN
+        RAISE EXCEPTION 'No edge found with id = % ', id_edge_b;
+    END IF;
+
+    -- edge A and B touches
+    IF NOT ST_Touches(edge_a.geom, edge_b.geom) THEN
+        RAISE NOTICE 'Edges does not touch';
+        RETURN FALSE;
+    END IF;
+
+    -- RETURN FALSE;
+    -- Merge edges: keep the oldest one,
+    -- and add geometry from the other one
+    edge_to_delete = edge_a;
+    IF edge_a.id < edge_b.id OR edge_a.id < edge_b.id THEN
+        edge_to_delete = edge_b;
+    END IF;
+    RAISE NOTICE 'merge_edges - % and %. Delete %', id_edge_a, id_edge_b, edge_to_delete.id
+    ;
+
+    -- Get node to be deleted
+    node_to_be_deleted = -1;
+    IF edge_a.start_node = edge_b.end_node THEN
+        node_to_be_deleted = edge_a.start_node;
+    END IF;
+    IF edge_b.start_node = edge_a.end_node THEN
+        node_to_be_deleted = edge_b.start_node;
+    END IF;
+    node_geom_to_be_deleted = (SELECT geom FROM road_graph.nodes WHERE id = node_to_be_deleted);
+    SELECT set_config('road.graph.merge.edges.useless.node', node_to_be_deleted::text, true)
+    INTO _set_config
+    ;
+    RAISE NOTICE 'merge_edges -  % and %. node to be deleted = %', id_edge_a, id_edge_b, node_to_be_deleted
+    ;
+
+    -- Delete and UPDATE in the same request
+    WITH del AS (
+        DELETE FROM road_graph.edges
+        WHERE id = edge_to_delete.id
+        RETURNING *
+    ),
+    up AS (
+        UPDATE road_graph.edges
+        SET geom = ST_LineMerge(ST_Union(geom, edge_to_delete.geom))
+        WHERE True
+        AND id IN (id_edge_a, id_edge_b)
+        AND id != edge_to_delete.id
+        RETURNING id, geom
+    )
+    -- Move the marker 0 of the edge road if it was located on the node to be deleted
+    UPDATE road_graph.markers AS m
+    SET geom = ST_StartPoint(u.geom)
+    FROM up AS u
+    WHERE m.road_code = edge_a.road_code
+    AND m.code = 0
+    AND ST_DWithin(m.geom, node_geom_to_be_deleted, 0.50)
+    ;
+    SELECT set_config('road.graph.merge.edges.useless.node', '-1', true)
+    INTO _set_config
+    ;
+
+
+
+    RETURN TRUE;
+
+END;
+$$;
+
+
+-- FUNCTION merge_edges(id_edge_a integer, id_edge_b integer)
+COMMENT ON FUNCTION road_graph.merge_edges(id_edge_a integer, id_edge_b integer) IS 'Merge two edges by their geometry.
+The merged edge is the one with the lowest id. The other edge is deleted.
+The node between the two edges is not deleted but its id is stored
+in the session variable ''road.graph.merge.edges.useless.node'' for further use if needed.
+';
+
+
+CREATE OR REPLACE FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    _start_multilinestring record;
+    _end_multilinestring record;
+    _start_closest_marker_abscissa real;
+    _end_closest_marker_abscissa real;
+    _start_downstream_road geometry(MULTILINESTRING, 2154);
+    _start_downstream_road_m geometry(MULTILINESTRINGM, 2154);
+    _end_downstream_road geometry(MULTILINESTRING, 2154);
+    _end_downstream_road_m geometry(MULTILINESTRINGM, 2154);
+    _start_substring geometry(MULTILINESTRING, 2154);
+    _end_substring geometry(MULTILINESTRING, 2154);
+    result_multilinestring geometry(MULTILINESTRING, 2154);
+    raise_notice text;
+BEGIN
+
+    -- Notice
+    raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
+
+    -- Tests
+    IF _start_marker_code > _end_marker_code THEN
+        RAISE EXCEPTION 'The start marker code cannot be greater than the end marker code';
+    END IF;
+    IF _start_marker_code = _end_marker_code
+        AND _start_marker_abscissa >= _end_marker_abscissa
+    THEN
+        RAISE EXCEPTION 'The start abscissa cannot be equal or greater than the end abscissa when the start and end marker have the same code';
+    END IF;
+
+    -- Get downstream start MULTILINESTRING from start marker to end of the road
+    SELECT
+        closest_marker_abscissa,
+        downstream_road
+    FROM
+        jsonb_to_record(
+            road_graph.get_downstream_multilinestring_from_reference(
+                _road_code,
+                _start_marker_code, _start_marker_abscissa,
+                _offset, _side
+            )
+        ) AS (
+            road_code text, marker_code integer, abscissa real,
+            "offset" real, side text,
+            closest_marker_abscissa real,
+            downstream_road geometry(MULTILINESTRING, 2154)
+        )
+    INTO _start_multilinestring
+    ;
+    IF raise_notice = 'yes'  THEN
+        RAISE NOTICE '_start_multilinestring  closest_marker_abscissa %', _start_multilinestring.closest_marker_abscissa;
+        RAISE NOTICE '_start_multilinestring  downstream_road %', ST_AsText(_start_multilinestring.downstream_road);
+    END IF;
+
+    _start_closest_marker_abscissa = _start_multilinestring.closest_marker_abscissa;
+    _start_downstream_road = _start_multilinestring.downstream_road;
+    -- Add measure to the downstream road part from 0 to length
+    _start_downstream_road_m = ST_AddMeasure(_start_downstream_road, 0, ST_Length(_start_downstream_road));
+
+    IF raise_notice = 'yes'  THEN
+        RAISE NOTICE '_start_downstream_road_m %', ST_AsText(_start_downstream_road_m);
+    END IF;
+    -- Get downstream end MULTILINESTRING from end marker to end of the road
+    SELECT
+        closest_marker_abscissa,
+        downstream_road
+    FROM
+        jsonb_to_record(
+            road_graph.get_downstream_multilinestring_from_reference(
+                _road_code,
+                _end_marker_code, _end_marker_abscissa,
+                _offset, _side
+            )
+        ) AS (
+            road_code text, marker_code integer, abscissa real,
+            "offset" real, side text,
+            closest_marker_abscissa real,
+            downstream_road geometry(MULTILINESTRING, 2154)
+        )
+    INTO _end_multilinestring
+    ;
+    IF raise_notice = 'yes'  THEN
+        RAISE NOTICE '_end_multilinestring closest_marker_abscissa %', _end_multilinestring.closest_marker_abscissa;
+        RAISE NOTICE '_end_multilinestring downstream_road %', ST_AsText(_end_multilinestring.downstream_road);
+    END IF;
+
+    _end_closest_marker_abscissa = _end_multilinestring.closest_marker_abscissa;
+    _end_downstream_road = _end_multilinestring.downstream_road;
+    -- Add measure to the downstream road part from 0 to length
+    _end_downstream_road_m = ST_AddMeasure(_end_downstream_road, 0, ST_Length(_end_downstream_road));
+
+    IF raise_notice = 'yes'  THEN
+        RAISE NOTICE '_end_downstream_road_m %', ST_AsText(_end_downstream_road_m);
+    END IF;
+    -- Create substring lines
+    -- start
+    _start_substring =
+        ST_Force2D(ST_LocateBetween(
+            _start_downstream_road_m,
+            CASE
+                WHEN _start_marker_abscissa - _start_closest_marker_abscissa >= ST_Length(_start_downstream_road)
+                    THEN ST_Length(_start_downstream_road)
+                ELSE _start_marker_abscissa - _start_closest_marker_abscissa
+            END,
+            ST_Length(_start_downstream_road)
+        ))
+    ;
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE '_start_substring  %', ST_AsText(_start_substring);
+    END IF;
+
+    -- end
+    _end_substring =
+        ST_Force2D(ST_LocateBetween(
+            _end_downstream_road_m,
+            CASE
+                WHEN _end_marker_abscissa - _end_closest_marker_abscissa >= ST_Length(_end_downstream_road)
+                    THEN ST_Length(_end_downstream_road)
+                ELSE _end_marker_abscissa - _end_closest_marker_abscissa
+            END,
+            ST_Length(_end_downstream_road)
+        ))
+    ;
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE '_end_substring  %', ST_AsText(_end_substring);
+    END IF;
+
+    -- Return multilinestring between given references
+    -- First we do the difference between start and end substrings to remove the common part between them
+    result_multilinestring :=
+        ST_Difference(
+            -- start
+            _start_substring,
+            --end
+            _end_substring,
+            -- we must use a tolerance to be sure the 2 lines are considered as equal
+            -- when they are very close but not exactly equal due to digitizing or calculation precision issues
+            0.01
+        )
+    ;
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE 'result_multilinestring ST_Difference  %', ST_AsText(result_multilinestring);
+    END IF;
+
+    -- Then we must merge the touching lines to avoid the offset curve function to produce gaps or crossing lines
+    result_multilinestring = ST_LineMerge(result_multilinestring);
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE 'result_multilinestring ST_LineMerge  %', ST_AsText(result_multilinestring);
+    END IF;
+
+    -- Then we apply the offset curve on the result
+    result_multilinestring :=
+    ST_Multi(
+        ST_OffsetCurve(
+            ST_Multi(
+                result_multilinestring
+            )::geometry(MULTILINESTRING, 2154),
+            -- The offset value is multiplied by +1 or -1 depending on the side (right or left)
+            ((json_build_object('left', +1, 'right', -1))->>("_side"))::integer * "_offset"
+        )
+    )
+    ;
+
+    -- Raise notice with the final result
+    IF raise_notice = 'yes'  THEN
+        RAISE NOTICE 'result_multilinestring  %', ST_AsText(result_multilinestring);
+    END IF;
+
+    -- Return full JSONb with parameters and computed geometry
+    RETURN jsonb_build_object(
+        'road_code', _road_code,
+        'start_marker_code', _start_marker_code,
+        'start_marker_abscissa', _start_marker_abscissa,
+        'end_marker_code', _end_marker_code,
+        'end_marker_abscissa', _end_marker_abscissa,
+        'offset', _offset,
+        'side', _side,
+        'start_geom', _start_substring,
+        'end_geom', _end_substring,
+        'geom', result_multilinestring
+    );
+
+END;
+$$;
+
+
+-- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text)
+COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text)
+IS 'Returns a JSON object with the given references and the geometry of the built linestring';
+
+
+CREATE OR REPLACE FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    marker record;
+    closest_edge record;
+    merged_downstream_edges geometry(MULTILINESTRING, 2154);
+    downstream_road geometry(MULTILINESTRING, 2154);
+    raise_notice text;
+BEGIN
+    raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
+
+    -- Get marker
+    -- We must control the marker abscissa
+    -- and compare it with the desired abscissa
+    -- to be able to manage the virtual markers
+    SELECT INTO marker
+        m.id, m.abscissa, m.geom
+    FROM
+        road_graph.markers AS m
+    WHERE True
+    -- same road
+    AND m.road_code = _road_code
+    -- marker code
+    AND m.code = _marker_code
+    -- marker abscissa must be below given abscissa
+    -- so that it is before the given reference
+    AND m.abscissa <= _abscissa
+    -- get the marker with bigger abscissa
+    -- to keep the closest marker before the given reference
+    ORDER BY m.abscissa DESC
+    LIMIT 1
+    ;
+
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE 'Marker found with code % for road % = id %', _marker_code, _road_code, marker.id;
+    END IF;
+
+    IF marker IS NULL THEN
+        IF raise_notice = 'yes' THEN
+            RAISE NOTICE 'Marker cannot be found with code % for road %', _marker_code, _road_code;
+        END IF;
+        RETURN NULL;
+    END IF;
+
+    -- find closest edge from marker and keep only the downstream part
+    -- from the projected point
+    WITH get_closest_edge AS (
+        SELECT
+            e.*,
+            e.geom <-> marker.geom AS distance,
+            -- BEWARE: it can be a point e.g if the marker is at the end of the edge
+            -- it why we do not cast with
+            ST_LineSubstring(
+                e.geom,
+                ST_LineLocatePoint(e.geom, marker.geom),
+                1
+            )
+            AS sub_geom
+        FROM
+            road_graph.edges AS e
+        WHERE True
+        -- same road
+        AND e.road_code = _road_code
+        ORDER BY distance, start_cumulative
+        LIMIT 1
+    )
+    SELECT INTO closest_edge
+        e.id, e.road_code, e.start_node, e.end_node,
+        e.start_marker, e.start_abscissa, e.start_cumulative,
+        e.end_marker, e.end_abscissa, e.end_cumulative,
+        e.geom, e.previous_edge_id, e.next_edge_id,
+        distance,
+        (CASE
+            WHEN GeometryType(sub_geom) = 'POINT'
+                THEN ST_MakeLine(sub_geom, sub_geom)::geometry(LINESTRING, 2154)
+            ELSE sub_geom
+        END)::geometry(LINESTRING, 2154) AS sub_geom
+    FROM get_closest_edge AS e
+    ;
+
+    IF closest_edge IS NULL THEN
+        IF raise_notice = 'yes' THEN
+            RAISE NOTICE 'Closest edge from given marker % cannot be found for road %', _marker_code, _road_code;
+        END IF;
+        RETURN NULL;
+    END IF;
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE 'Closest edge found: id = %', closest_edge.id;
+    END IF;
+
+    -- Merge all linestrings for the given road
+    -- after the closest edge
+    -- ordered by edge order (we use the next_edge_id to calculate the edges order)
+    WITH ordered_ids AS (
+        SELECT *
+        FROM road_graph.get_ordered_edges(_road_code, closest_edge.id, 'downstream')
+    )
+    SELECT INTO merged_downstream_edges
+        -- ids
+        -- array_agg(e.id ORDER BY o.edge_order) AS ids,
+        -- geometries of downstream edges
+        ST_Collect(e.geom ORDER BY o.edge_order) AS geom
+    FROM
+        road_graph.edges AS e
+    INNER JOIN ordered_ids AS o ON e.id = o.id
+    WHERE True
+    -- same road code
+    AND e.road_code = _road_code
+    -- not the closest edge
+    AND e.id != closest_edge.id
+    -- downstream compared to closest edge
+    AND e.start_marker >= closest_edge.end_marker
+    AND e.start_cumulative >= closest_edge.end_cumulative
+    GROUP BY e.road_code
+    ;
+
+    -- Build the linestring
+    IF merged_downstream_edges IS NULL THEN
+        -- There is no edges after the closest edge
+        -- We just need to use the splitted closest edge geometry
+        -- RAISE NOTICE 'Downstream edges cannot be found for given marker %', _marker_code;
+        downstream_road = ST_Multi(closest_edge.sub_geom);
+    ELSE
+        -- There are some edges after the closest edge
+        -- We must merge the splitted closest edge and the downstream edges
+        SELECT INTO downstream_road
+            --ST_LineMerge(
+            -- ST_LineMerge cannot be used as it creates a valid multilinestring
+            -- but will not preserve order of the parts.
+            -- So the final geometry could be reversed when adding measure in the next step
+            -- even with the new "directed" parameter which concerns segments and not parts
+            ST_CollectionExtract(
+                -- even if ST_Collect collects 2 multiilnestrings
+                -- we must extract only 2 to be able to get a multilinestring as result
+                ST_Collect(geom ORDER BY merge_order),
+                --extract lines
+                2
+            )
+            AS geom
+        FROM
+        (
+            SELECT
+                1::int AS merge_order,
+                -- We need to transform sub geom into multilinestring
+                -- to have only multilinestrings in the collected result
+                ST_Multi(closest_edge.sub_geom) AS geom
+            UNION ALL
+            SELECT
+                2::int AS merge_order,
+                merged_downstream_edges AS geom
+        ) AS foo
+        ;
+    END IF;
+    IF raise_notice = 'yes' THEN
+        RAISE NOTICE 'Merge downstream edges  %', ST_AsText(downstream_road);
+        RAISE NOTICE 'downstream_road length = %, _abscissa = %', ST_Length(downstream_road), _abscissa;
+    END IF;
+
+    -- Return full JSONb with parameters and computed geometry
+    RETURN jsonb_build_object(
+        'road_code', _road_code,
+        'marker_code', _marker_code,
+        'abscissa', _abscissa,
+        'offset', _offset,
+        'side', _side,
+        'closest_marker_abscissa', marker.abscissa,
+        'downstream_road', downstream_road
+    );
+
+END;
+$$;
+
+
+-- FUNCTION get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text)
+COMMENT ON FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.';

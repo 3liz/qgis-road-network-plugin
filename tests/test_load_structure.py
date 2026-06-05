@@ -1,5 +1,6 @@
 """Tests for Processing algorithms."""
 
+import json
 import unittest
 
 from pathlib import Path
@@ -1421,6 +1422,84 @@ def test_get_updated_roads_from_editing_session():
     assert result[0] == "D138,D152,R001,T001,TC002"
 
 
+def test_editing_session_logged_objects():
+    """Test the function get_editing_session_logged_objects
+    which returns a table of the edited objects for a given editing session."""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Check the value of the geometry returned by the function get_road_substring_from_references
+    # for a big road with many edges and roundabouts on the way
+    sql = """
+        SELECT
+            status,
+            logged_ids->'nodes' AS nodes,
+            logged_ids->'roads' AS roads,
+            logged_ids->'edges' AS edges,
+            logged_ids->'markers' AS markers
+        FROM road_graph.editing_sessions
+        WHERE id = 1
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    results = []
+    for a in data:
+        results.append(a if a else None)
+
+    assert len(results) == 1
+    assert results[0] is not None
+    assert results[0][0] == "edited"
+    assert json.loads(results[0][1]) == {
+        "1539": "D",
+        "5758": "I",
+        "5759": "I",
+        "5760": "I",
+        "5761": "I",
+        "5762": "I",
+        "5763": "I",
+        "5764": "I",
+        "5766": "I",
+    }
+    assert json.loads(results[0][2]) == {"2238": "I", "2239": "I", "2240": "I"}
+    assert json.loads(results[0][3]) == {
+        "2260": "U",
+        "2264": "D",
+        "2265": "D",
+        "2266": "U",
+        "2267": "U",
+        "2476": "U",
+        "2497": "U",
+        "2498": "D",
+        "2499": "U",
+        "2506": "U",
+        "4506": "U",
+        "7830": "I",
+        "7831": "I",
+        "7833": "I",
+        "7834": "I",
+        "7835": "I",
+        "7836": "I",
+        "7837": "I",
+        "7838": "I",
+        "7841": "I",
+    }
+    assert json.loads(results[0][4]) == {
+        "2827": "D",
+        "2829": "D",
+        "4308": "D",
+        "8338": "I",
+        "8339": "I",
+        "8340": "I",
+        "8341": "I",
+    }
+
+
 def create_managed_objects(connection):
     """Create demo data for managed objects tests"""
 
@@ -1437,6 +1516,7 @@ def create_managed_objects(connection):
         abscissa real,
         side text,
         "offset" real,
+        cumulative real,
         geom geometry(POINT, 2154)
     );
     INSERT INTO managed.demo_trees (
@@ -1447,7 +1527,9 @@ def create_managed_objects(connection):
     (ST_GeomFromText('POINT (474991.98703928786562756 6897074.61729546636343002)', 2154), 'Pine', 'D152'),
     (ST_GeomFromText('POINT (473446.07317439571488649 6895338.24274811241775751)', 2154), 'Oak', 'D138B'),
     (ST_GeomFromText('POINT (473829.80845442262943834 6895345.88880515471100807)', 2154), 'Palm', 'D138'),
-    (ST_GeomFromText('POINT (473803.34569239366101101 6895735.09917744528502226)', 2154), 'Palm', 'D613')
+    (ST_GeomFromText('POINT (473803.34569239366101101 6895735.09917744528502226)', 2154), 'Palm', 'D613'),
+    (ST_GeomFromText('POINT (473537.64260058221407235 6895619.81025402713567019)', 2154), 'Oak', 'D138'),
+    (ST_GeomFromText('POINT (474017.87587088462896645 6895007.75976957567036152)', 2154), 'Pine', 'D138')
     ;
 
     DROP TABLE IF EXISTS managed.demo_safety_barriers;
@@ -1530,7 +1612,7 @@ def test_update_managed_objects():
         );
         -- Get the updated data
         SELECT
-            id, species, road_code, marker_code, abscissa, side, "offset"
+            id, species, road_code, marker_code, abscissa, side, "offset", cumulative
         FROM managed.demo_trees
         ORDER BY id;
     """
@@ -1543,7 +1625,7 @@ def test_update_managed_objects():
         trees.append(a if a else None)
 
     # Check the number of trees
-    assert len(trees) == 5
+    assert len(trees) == 7
     assert trees is not None
 
     # Check the values of the references for each tree
@@ -1552,11 +1634,15 @@ def test_update_managed_objects():
     assert trees[2] is not None
     assert trees[3] is not None
     assert trees[4] is not None
-    assert trees[0] == [1, "oak", "D152", 9, 483.22, "left", 8.19]
-    assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36]
-    assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4]
-    assert trees[3] == [4, "Palm", "D138", 8, 587.07, "right", 16.32]
-    assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83]
+    assert trees[5] is not None
+    assert trees[6] is not None
+    assert trees[0] == [1, "oak", "D152", 9, 483.22, "left", 8.19, 9608.4]
+    assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11382.6]
+    assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
+    assert trees[3] == [4, "Palm", "D138", 8, 587.07, "right", 16.32, 8602.12]
+    assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
+    assert trees[5] == [6, "Oak", "D138", 8, 69.0, "left", 4.63, 8084.06]
+    assert trees[6] == [7, "Pine", "D138", 8, 971.21, "left", 0.9, 8986.27]
 
     # Change the reference of a tree and check if the geometry is correctly updated
     sql = """
@@ -1617,4 +1703,225 @@ def test_update_managed_objects():
 
 
 def test_merge_editing_session_data():
-    pass
+    """Test the function merge_editing_session_data
+    which merges the data of an editing session
+    into the main tables of the road graph schema
+    """
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Get the hash of all the edges of the editing_session schema
+    # We control only the edges
+    sql = """
+        WITH
+        s AS (
+            SELECT
+                s.logged_ids->'edges' AS edge_ids
+            FROM road_graph.editing_sessions AS s
+            WHERE s.id = 1
+        ),
+        ids AS (
+            SELECT j.key::integer AS id
+            FROM s, jsonb_each_text(edge_ids) AS j
+            WHERE j.value IN ('I', 'U')
+        )
+        SELECT
+            md5(
+            jsonb_agg(
+                to_jsonb(e.*) - 'created_at' - 'updated_at' - 'uid'
+                ORDER BY e.id
+            )::json::text
+            )
+            AS hash,
+            json_agg(i.id ORDER BY i.id) AS ids
+        FROM editing_session.edges AS e
+        JOIN ids AS i
+        ON i.id = e.id
+        ;
+    """
+    try:
+        connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    hash = None
+    ids = None
+    for a in data:
+        hash = a[0] if a else None
+        ids = json.loads(a[1]) if a else None
+
+    # Checks
+    assert ids is not None
+    assert ids == [
+        2260,
+        2266,
+        2267,
+        2476,
+        2497,
+        2499,
+        2506,
+        4506,
+        7830,
+        7831,
+        7833,
+        7834,
+        7835,
+        7836,
+        7837,
+        7838,
+        7841,
+    ]
+    assert hash is not None
+    assert hash == "45ce2202b7a3347b72613b2f5f88ab5e"
+
+    # Get managed objects data before merging the editing session data
+    sql = """
+        SELECT
+            id, species, road_code, marker_code, abscissa, side, "offset", cumulative
+        FROM managed.demo_trees
+        ORDER BY id
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    trees = []
+    for a in data:
+        trees.append(a if a else None)
+
+    # Check the number of trees
+    assert len(trees) == 7
+    assert trees is not None
+    assert trees[0] is not None
+    assert trees[1] is not None
+    assert trees[2] is not None
+    assert trees[3] is not None
+    assert trees[4] is not None
+    assert trees[5] is not None
+    assert trees[6] is not None
+    assert trees[0] == [1, "oak", "D152", 9, 493.22, "left", 8.19, 9608.4]
+    assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11382.6]
+    assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
+    assert trees[3] == [4, "Palm", "D138", 8, 587.07, "right", 16.32, 8602.12]
+    assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
+    assert trees[5] == [6, "Oak", "D138", 8, 69.0, "left", 4.63, 8084.06]
+    assert trees[6] == [7, "Pine", "D138", 8, 971.21, "left", 0.9, 8986.27]
+
+    # Merge editing session data into the main tables of the road graph schema
+    sql = """
+        SELECT road_graph.merge_editing_session_data(1);
+    """
+    try:
+        connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    # Get the hash of all the edges of road_graph schema after merging the editing session data
+    sql = f"""
+        SELECT
+            md5(
+            jsonb_agg(
+                to_jsonb(e.*) - 'created_at' - 'updated_at' - 'uid'
+                ORDER BY e.id
+            )::json::text
+            )
+            AS hash,
+            json_agg(e.id ORDER BY e.id) AS ids
+        FROM road_graph.edges AS e
+        WHERE e.id IN ( {", ".join([str(i) for i in ids])} )
+        ;
+    """
+    try:
+        connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    hash = None
+    ids = None
+    for a in data:
+        hash = a[0] if a else None
+        ids = json.loads(a[1]) if a else None
+
+    # Checks
+    assert ids is not None
+    assert ids == [
+        2260,
+        2266,
+        2267,
+        2476,
+        2497,
+        2499,
+        2506,
+        4506,
+        7830,
+        7831,
+        7833,
+        7834,
+        7835,
+        7836,
+        7837,
+        7838,
+        7841,
+    ]
+    assert hash is not None
+    assert hash == "45ce2202b7a3347b72613b2f5f88ab5e"
+
+    # Check the managed objects have been modified by the merge of the editing session data
+    sql = """
+        SELECT
+            id, species, road_code, marker_code, abscissa, side, "offset", cumulative
+        FROM managed.demo_trees
+        ORDER BY id
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    trees = []
+    for a in data:
+        trees.append(a if a else None)
+
+    # Check the number of trees
+    assert len(trees) == 7
+    assert trees is not None
+    assert trees[0] is not None
+    assert trees[1] is not None
+    assert trees[2] is not None
+    assert trees[3] is not None
+    assert trees[4] is not None
+    assert trees[5] is not None
+    assert trees[6] is not None
+    assert trees[0] == [1, "oak", "D152", 9, 493.31, "left", 8.19, 9600.46]
+    assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11364.6]
+    assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
+    assert trees[3] == [4, "Palm", "D138", 8, 587.07, "right", 16.32, 8602.12]
+    assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
+    assert trees[5] == [6, "Oak", "D138", 8, 29.18, "left", 4.63, 8084.06]
+    assert trees[6] == [7, "Pine", "R001", 0, 4.41, "right", 0.39, 4.41]
+
+    # Check the view road_graph.v_managed_objects has been updated
+    sql = """
+        SELECT
+            id,
+            array_to_string(last_updated_objects_ids, ',') AS last_updated_objects_ids
+        FROM road_graph.v_managed_objects
+        WHERE schema_name = 'managed' AND table_name = 'demo_trees'
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    result = None
+    for a in data:
+        result = a if a else None
+    assert result is not None
+    assert result[0] == 1
+    assert result[1] == "1,2,6,7"

@@ -4749,11 +4749,7 @@ BEGIN
                     SELECT
                         o.id,
                         road_graph.get_reference_from_point(
-                            o.geom,
-                            -- DO NOT PASS THE ROAD CODE
-                            -- road edge could have been deleted, or a new roundabout created near the geometry
-                            -- o.road_code
-                            NULL::text
+                            o.geom, o.road_code
                         ) AS ref
                     FROM objects AS o
                 ),
@@ -4779,7 +4775,7 @@ BEGIN
                 )
                 SELECT
                     count(r.*) AS nb,
-                    array_agg(r.%1$I ORDER BY r.%1$I) AS last_updated_objects_ids
+                    array_agg(r.%1$I) AS last_updated_objects_ids
                 FROM run_update AS r
             $SQL$,
             primary_key_field,
@@ -4800,7 +4796,7 @@ BEGIN
                 OR (r.ref->>'abscissa')::real != Coalesce(mo.abscissa, -1)::real
                 $STR$,
                 CASE WHEN 'cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.ref->>'cumulative')::real != Coalesce(mo.cumulative, -1)::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.ref->>'cumulative')::integer != Coalesce(mo.cumulative, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'offset' = ANY(table_cols)
                     THEN $STR$ OR (r.ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$ ELSE ''
@@ -4831,18 +4827,10 @@ BEGIN
                     SELECT
                         o.id,
                         road_graph.get_reference_from_point(
-                            ST_StartPoint(o.geom),
-                            -- DO NOT PASS THE ROAD CODE
-                            -- road edge could have been deleted, or a new roundabout created near the geometry
-                            -- o.road_code
-                            NULL::text
+                            ST_StartPoint(o.geom), o.road_code
                         ) AS start_ref,
                         road_graph.get_reference_from_point(
-                            ST_EndPoint(o.geom),
-                            -- DO NOT PASS THE ROAD CODE
-                            -- road edge could have been deleted, or a new roundabout created near the geometry
-                            -- o.road_code
-                            NULL::text
+                            ST_EndPoint(o.geom), o.road_code
                         ) AS end_ref
                     FROM objects AS o
                 ),
@@ -4876,7 +4864,7 @@ BEGIN
                 )
                 SELECT
                     count(r.*) AS nb,
-                    array_agg(r.%1$I ORDER BY r.%1$I) AS last_updated_objects_ids
+                    array_agg(r.%1$I) AS last_updated_objects_ids
                 FROM run_update AS r
             $SQL$,
             primary_key_field,
@@ -4905,7 +4893,7 @@ BEGIN
                 OR (r.end_ref->>'abscissa')::real != Coalesce(mo.end_abscissa, -1)::real
                 $STR$,
                 CASE WHEN 'start_cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'cumulative')::real != Coalesce(mo.start_cumulative, -1)::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.start_ref->>'cumulative')::integer != Coalesce(mo.start_cumulative, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'start_offset' = ANY(table_cols)
                     THEN $STR$ OR (r.start_ref->>'offset')::real != Coalesce(mo.start_offset, -1)::real $STR$ ELSE ''
@@ -4914,7 +4902,7 @@ BEGIN
                     THEN $STR$ OR (r.start_ref->>'side')::text != Coalesce(mo.start_side, '')::text $STR$ ELSE ''
                 END,
                 CASE WHEN 'end_cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.end_ref->>'cumulative')::real != Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE ''
+                    THEN $STR$ OR (r.end_ref->>'cumulative')::integer != Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE ''
                 END,
                 CASE WHEN 'end_offset' = ANY(table_cols)
                     THEN $STR$ OR (r.end_ref->>'offset')::real != Coalesce(mo.end_offset, -1)::real $STR$ ELSE ''
