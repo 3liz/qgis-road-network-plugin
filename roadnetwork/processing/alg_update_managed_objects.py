@@ -3,6 +3,7 @@ import typing
 
 from qgis.core import (
     QgsAbstractDatabaseProviderConnection,
+    QgsFeature,
     QgsFeatureSink,
     QgsGeometry,
     QgsProcessing,
@@ -52,9 +53,25 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
             "This algorithm will allow to update the geometries "
             " or the references of the layer features."
             "\n"
-            "You can choose whether the algorithm will update the geometries"
-            " or the references of the features. "
+            "You can choose whether the algorithm will update the geometries "
+            "or the references of the features. "
             "\n"
+            "\n"
+            "The algorithm will request the database for each feature "
+            "to get the updated geometry or references. "
+            "\n"
+            "The algorithm requires a connection to the PostgreSQL database "
+            "and the input layer to have specific fields depending on "
+            "its geometry type and the chosen update policy."
+            "\n"
+            "* For point layers, the required fields are : "
+            "road_code, marker_code, abscissa, "
+            "offset & side (offset and side are optional)."
+            "\n"
+            "* For linestring layers, the required fields are : "
+            "road_code, start_marker_code, start_abscissa, "
+            "end_marker_code, end_abscissa, offset and side "
+            "(offset and side are optional)."
         )
         return short_help
 
@@ -121,34 +138,20 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         self, fields: list, geometry_type: str, update_policy: str
     ) -> typing.Tuple[bool, str]:
         """Check if the layer has the required fields to run the algorithm."""
-        print(f"Layer geometry type : {geometry_type}")
-        print(f"Layer fields : {fields}")
-
         # Needed attributes are different for points and lines.
         needed_fields = []
         # Point layer
         if geometry_type == "point":
-            needed_fields += ["road_code", "marker_code", "abscissa"]
+            needed_fields = ["road_code", "marker_code", "abscissa"]
         # Linestring layer
         else:
             needed_fields = [
+                "road_code",
                 "start_marker_code",
                 "start_abscissa",
                 "end_marker_code",
                 "end_abscissa",
             ]
-            # needed attributes are different if we want
-            # to update the geometry or the references of the features
-            # if update_policy == "update_geom":
-            #     needed_fields += [
-            #         "road_code",
-            #     ]
-            # else:
-            #     needed_fields += [
-            #         "start_road_code",
-            #         "end_road_code",
-            #     ]
-            needed_fields += ["road_code"]
 
         # Check if all needed fields are present in the layer
         missing_fields = []
@@ -156,7 +159,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
             if field not in fields:
                 missing_fields.append(field)
         if missing_fields:
-            print(f"Missing fields : {missing_fields}")
+            # print(f"Missing fields : {missing_fields}")
             message = tr("The input layer is missing the following required fields: ")
             message += ", ".join(missing_fields)
             return False, message
@@ -184,21 +187,26 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         return super(UpdateManagedObjects, self).checkParameterValues(parameters, context)
 
     def getReferencesFromLonLat(
-        self, connection: QgsAbstractDatabaseProviderConnection, longitude: float, latitude: float
+        self, connection: QgsAbstractDatabaseProviderConnection,
+        longitude: float, latitude: float, road_code: str = ''
     ) -> dict:
         """
         Get the reference of a QGIS feature from the database
         """
-        print(tr(f"Requesting database for reference of point with coordinates : {longitude}, {latitude}"))
+        # print(tr(f"Requesting database for reference of point with coordinates : {longitude}, {latitude}"))
+        sql_road_code = 'NULL'
+        if road_code:
+            sql_road_code = f"'{road_code}'"
         sql = f"""
         SELECT
             road_graph.get_reference_from_point(
                 ST_PointFromText('POINT({longitude} {latitude})', 2154),
-                NULL,
+                {sql_road_code},
                 False
             )::json AS ref
         ;
         """
+        # print(sql)
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
@@ -217,7 +225,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         """
         Get the geometry of a feature from the database from its reference
         """
-        print(tr(f"Requesting database for WKT of feature with reference : {references}"))
+        # print(tr(f"Requesting database for WKT of feature with reference : {references}"))
         if geometry_type == "point":
             sql = f"""
             WITH get_geom AS (
@@ -328,8 +336,18 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
             if feedback.isCanceled():
                 raise QgsProcessingException(cancel_message)
 
-            # Clone the source feature to update it and add it to the output layer sink
-            output_feature = feature
+            # Create a new feature for the output layer
+            output_feature = QgsFeature()
+
+            # Keep attributes
+            attributes = feature.attributes()
+            output_feature.setFields(feature.fields())
+            output_feature.setAttributes(attributes)
+
+            # Set geometry from the source feature
+            output_feature.setGeometry(feature.geometry())
+
+            feedback.pushInfo(tr(f"Feature {idx}"))
 
             # Request the database for the updated references
             # Set the attributes or the geometry based on the update policy
@@ -378,17 +396,30 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
                     # Get the updated geometry from the database for the point
                     point = feature.geometry().asPoint()
                     references = self.getReferencesFromLonLat(connection, point.x(), point.y())
+                    has_changed = False
                     if references:
+                        # print(f"references for {feature.id()} : {references}")
                         for ref in references_keys:
-                            if ref in feature.fields().names():
+                            if ref not in feature.fields().names():
+                                continue
+                            output_feature[ref] = feature[ref]
+                            if feature[ref] != references.get(ref):
                                 output_feature[ref] = references.get(ref)
+                                has_changed = True
+                    if not has_changed:
+                        unchanged_count += 1
 
                 # Linestring layer
                 else:
                     # Get start and end point geometries
-                    for part in feature.geometry().get():
-                        first_vertex = part[0]
-                        last_vertex = part[-1]
+                    # depending on whether the geometry is simple or multipart
+                    is_simple = QgsWkbTypes.isSingleType(source.wkbType())
+                    if is_simple:
+                        first_vertex = feature.geometry().asPolyline()[0]
+                        last_vertex = feature.geometry().asPolyline()[-1]
+                    else:
+                        first_vertex = feature.geometry().asMultiPolyline()[0][0]
+                        last_vertex = feature.geometry().asMultiPolyline()[-1][-1]
 
                     # Result dictionary containing the updated references for the line start and end points
                     result = {}
@@ -397,28 +428,50 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
                     result["start"] = self.getReferencesFromLonLat(
                         connection, first_vertex.x(), first_vertex.y()
                     )
+                    # print(f"start references for {feature.id()} : {result["start"]}")
 
                     # Get the references from the database for the line end point
-                    result["end"] = self.getReferencesFromLonLat(connection, last_vertex.x(), last_vertex.y())
+                    result["end"] = self.getReferencesFromLonLat(
+                        connection, last_vertex.x(), last_vertex.y()
+                    )
+                    # print(f"end references for {feature.id()} : {result["end"]}")
 
                     # Update feature attributes
-                    references_keys = ["road_code", "marker_code", "abscissa", "cumulative", "side", "offset"]
+                    has_changed = False
+                    # road_code, offset & side of the start point
+                    for attribute in ("road_code", "offset", "side"):
+                        if attribute not in feature.fields().names():
+                            continue
+                        output_feature[attribute] = feature[attribute]
+                        if not result["start"]:
+                            continue
+                        # print(f'{feature.id()} - {attribute} = {result["start"][attribute]}')
+                        if feature[attribute] != result["start"][attribute]:
+                            output_feature[attribute] = result["start"][attribute]
+                            has_changed = True
+
+                    # start_ and end_ attributes
+                    references_keys = ["marker_code", "abscissa", "cumulative"]
                     for place in ("start", "end"):
-                        if not result.get(place):
-                            unchanged_count += 1
-                            continue
-                        if not result[place]:
-                            unchanged_count += 1
-                            continue
                         for ref in references_keys:
-                            if f"{place}_{ref}" in feature.fields().names():
-                                output_feature[f"{place}_{ref}"] = result[place].get(ref)
+                            if f"{place}_{ref}" not in feature.fields().names():
+                                continue
+                            output_feature[f"{place}_{ref}"] = feature[f"{place}_{ref}"]
+                            if not result[place]:
+                                continue
+                            # print(f'{feature.id()} - {place}_{ref} = {result[place][ref]}')
+                            if feature[f"{place}_{ref}"] != result[place][ref]:
+                                output_feature[f"{place}_{ref}"] = result[place][ref]
+                                has_changed = True
+                    if not has_changed:
+                        unchanged_count += 1
 
             # Add the feature to the output layer sink
             sink.addFeature(output_feature, QgsFeatureSink.FastInsert)
 
             # Set progress
             feedback.setProgress(int(100 * idx / feature_count))
+
         feedback.pushInfo(tr(f"* {feature_count} features processed."))
         feedback.pushInfo(tr(f"* {unchanged_count} features left unchanged."))
 
