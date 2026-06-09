@@ -4884,17 +4884,17 @@ BEGIN
             _table_name,
             Coalesce(array_to_string(_road_codes::text[], ','), ''),
             -- 5 / add update for cumulative if the columns exists in the target table
-            CASE WHEN 'start_cumulative' = ANY(table_cols) THEN $STR$"start_cumulative" = (r.start_ref->>'cumulative')::real, $STR$ ELSE '' END,
+            CASE WHEN 'start_cumulative' = ANY(table_cols) THEN $STR$cumulative = (r.ref->>'cumulative')::real, $STR$ ELSE '' END,
             -- 6 / add update for offset if the columns exists in the target table
-            CASE WHEN 'start_offset' = ANY(table_cols) THEN $STR$"start_offset" = (r.start_ref->>'offset')::real, $STR$ ELSE '' END,
+            CASE WHEN 'start_offset' = ANY(table_cols) THEN $STR$"offset" = (r.ref->>'offset')::real, $STR$ ELSE '' END,
             -- 7 / add update for side if the columns exists in the target table
-            CASE WHEN 'start_side' = ANY(table_cols) THEN $STR$"start_side" = (r.start_ref->>'side')::text, $STR$ ELSE '' END,
+            CASE WHEN 'start_side' = ANY(table_cols) THEN $STR$side = (r.ref->>'side')::text, $STR$ ELSE '' END,
             -- 8 / add update for cumulative if the columns exists in the target table
-            CASE WHEN 'end_cumulative' = ANY(table_cols) THEN $STR$"end_cumulative" = (r.end_ref->>'cumulative')::real, $STR$ ELSE '' END,
+            CASE WHEN 'end_cumulative' = ANY(table_cols) THEN $STR$cumulative = (r.ref->>'cumulative')::real, $STR$ ELSE '' END,
             -- 9 / add update for offset if the columns exists in the target table
-            CASE WHEN 'end_offset' = ANY(table_cols) THEN $STR$"end_offset" = (r.end_ref->>'offset')::real, $STR$ ELSE '' END,
+            CASE WHEN 'end_offset' = ANY(table_cols) THEN $STR$"offset" = (r.ref->>'offset')::real, $STR$ ELSE '' END,
             -- 10 / add update for side if the columns exists in the target table
-            CASE WHEN 'end_side' = ANY(table_cols) THEN $STR$"end_side" = (r.end_ref->>'side')::text, $STR$ ELSE '' END,
+            CASE WHEN 'end_side' = ANY(table_cols) THEN $STR$side = (r.ref->>'side')::text, $STR$ ELSE '' END,
             -- 11 / Detect if we need to update or not
             concat(
                 $STR$
