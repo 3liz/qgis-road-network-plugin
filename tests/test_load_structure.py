@@ -1539,39 +1539,35 @@ def create_managed_objects(connection):
         road_code text,
         start_marker_code integer,
         start_abscissa real,
-        start_offset real,
-        start_side text,
         end_marker_code integer,
         end_abscissa real,
-        end_offset real,
-        end_side text,
         "offset" real,
         side text,
         geom geometry(MULTILINESTRING, 2154)
     );
     INSERT INTO managed.demo_safety_barriers (
         material, road_code,
-        start_marker_code, start_abscissa, start_offset, start_side,
-        end_marker_code, end_abscissa, end_offset, end_side,
+        start_marker_code, start_abscissa,
+        end_marker_code, end_abscissa,
         "offset", side
     )
     VALUES
     (
         'Metal', 'D613',
-        43, 120.0, 2.0, 'right',
-        45, 18.0 , 2.0, 'right',
+        43, 120.0,
+        45, 18.0 ,
         2.0, 'right'
     ),
     (
         'Metal', 'D152',
-        9, 5.0 , 1.0, 'left',
-        9, 58.0, 1.0, 'left',
+        9, 5.0 ,
+        9, 58.0,
         1.0, 'left'
     ),
     (
         'Metal', 'D72',
-        2, 100.0, 0, 'right',
-        3, 10.0 , 0, 'right',
+        2, 100.0,
+        3, 10.0 ,
         0, 'right'
     )
     ;
@@ -1612,7 +1608,9 @@ def test_update_managed_objects():
         );
         -- Get the updated data
         SELECT
-            id, species, road_code, marker_code, abscissa, side, "offset", cumulative
+            id, species,
+            road_code, marker_code, abscissa,
+            side, "offset", cumulative
         FROM managed.demo_trees
         ORDER BY id;
     """

@@ -187,14 +187,17 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         return super(UpdateManagedObjects, self).checkParameterValues(parameters, context)
 
     def getReferencesFromLonLat(
-        self, connection: QgsAbstractDatabaseProviderConnection,
-        longitude: float, latitude: float, road_code: str = ''
+        self,
+        connection: QgsAbstractDatabaseProviderConnection,
+        longitude: float,
+        latitude: float,
+        road_code: str = "",
     ) -> dict:
         """
         Get the reference of a QGIS feature from the database
         """
         # print(tr(f"Requesting database for reference of point with coordinates : {longitude}, {latitude}"))
-        sql_road_code = 'NULL'
+        sql_road_code = "NULL"
         if road_code:
             sql_road_code = f"'{road_code}'"
         sql = f"""
@@ -431,9 +434,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
                     # print(f"start references for {feature.id()} : {result["start"]}")
 
                     # Get the references from the database for the line end point
-                    result["end"] = self.getReferencesFromLonLat(
-                        connection, last_vertex.x(), last_vertex.y()
-                    )
+                    result["end"] = self.getReferencesFromLonLat(connection, last_vertex.x(), last_vertex.y())
                     # print(f"end references for {feature.id()} : {result["end"]}")
 
                     # Update feature attributes

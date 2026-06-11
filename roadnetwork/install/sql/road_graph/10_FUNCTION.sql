@@ -4852,16 +4852,12 @@ BEGIN
                         road_code = r.start_ref->>'road_code',
                         -- start_cumulative if present
                         %5$s
-                        -- start_offset if present
+                        -- offset if present
                         %6$s
-                        -- start_side if present
+                        -- side if present
                         %7$s
                         -- end_cumulative if present
                         %8$s
-                        -- end_offset if present
-                        %9$s
-                        -- end_side if present
-                        %10$s
                         -- marker code and abscissa put here to avoid errors with commas
                         start_marker_code = (r.start_ref->>'marker_code')::integer,
                         start_abscissa = (r.start_ref->>'abscissa')::real,
@@ -4871,7 +4867,7 @@ BEGIN
                     WHERE TRUE
                     AND mo.id = r.id
                     -- Do not UPDATE if no changes must be made (values already are the same)
-                    AND (%11$s)
+                    AND (%9$s)
                     RETURNING mo.*
                 )
                 SELECT
@@ -4886,16 +4882,12 @@ BEGIN
             -- 5 / add update for cumulative if the columns exists in the target table
             CASE WHEN 'start_cumulative' = ANY(table_cols) THEN $STR$"start_cumulative" = (r.start_ref->>'cumulative')::real, $STR$ ELSE '' END,
             -- 6 / add update for offset if the columns exists in the target table
-            CASE WHEN 'start_offset' = ANY(table_cols) THEN $STR$"start_offset" = (r.start_ref->>'offset')::real, $STR$ ELSE '' END,
+            CASE WHEN 'offset' = ANY(table_cols) THEN $STR$"offset" = (r.start_ref->>'offset')::real, $STR$ ELSE '' END,
             -- 7 / add update for side if the columns exists in the target table
-            CASE WHEN 'start_side' = ANY(table_cols) THEN $STR$"start_side" = (r.start_ref->>'side')::text, $STR$ ELSE '' END,
+            CASE WHEN 'side' = ANY(table_cols) THEN $STR$"side" = (r.start_ref->>'side')::text, $STR$ ELSE '' END,
             -- 8 / add update for cumulative if the columns exists in the target table
             CASE WHEN 'end_cumulative' = ANY(table_cols) THEN $STR$"end_cumulative" = (r.end_ref->>'cumulative')::real, $STR$ ELSE '' END,
-            -- 9 / add update for offset if the columns exists in the target table
-            CASE WHEN 'end_offset' = ANY(table_cols) THEN $STR$"end_offset" = (r.end_ref->>'offset')::real, $STR$ ELSE '' END,
-            -- 10 / add update for side if the columns exists in the target table
-            CASE WHEN 'end_side' = ANY(table_cols) THEN $STR$"end_side" = (r.end_ref->>'side')::text, $STR$ ELSE '' END,
-            -- 11 / Detect if we need to update or not
+            -- 9 / Detect if we need to update or not
             concat(
                 $STR$
                 (r.start_ref->>'road_code') != Coalesce(mo.road_code, '')
@@ -4907,20 +4899,14 @@ BEGIN
                 CASE WHEN 'start_cumulative' = ANY(table_cols)
                     THEN $STR$ OR (r.start_ref->>'cumulative')::real != Coalesce(mo.start_cumulative, -1)::real $STR$ ELSE ''
                 END,
-                CASE WHEN 'start_offset' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'offset')::real != Coalesce(mo.start_offset, -1)::real $STR$ ELSE ''
+                CASE WHEN 'offset' = ANY(table_cols)
+                    THEN $STR$ OR (r.start_ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$ ELSE ''
                 END,
-                CASE WHEN 'start_side' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'side')::text != Coalesce(mo.start_side, '')::text $STR$ ELSE ''
+                CASE WHEN 'side' = ANY(table_cols)
+                    THEN $STR$ OR (r.start_ref->>'side')::text != Coalesce(mo.side, '')::text $STR$ ELSE ''
                 END,
                 CASE WHEN 'end_cumulative' = ANY(table_cols)
                     THEN $STR$ OR (r.end_ref->>'cumulative')::real != Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE ''
-                END,
-                CASE WHEN 'end_offset' = ANY(table_cols)
-                    THEN $STR$ OR (r.end_ref->>'offset')::real != Coalesce(mo.end_offset, -1)::real $STR$ ELSE ''
-                END,
-                CASE WHEN 'end_side' = ANY(table_cols)
-                    THEN $STR$ OR (r.end_ref->>'side')::text != Coalesce(mo.end_side, '')::text $STR$ ELSE ''
                 END
             )
         );
