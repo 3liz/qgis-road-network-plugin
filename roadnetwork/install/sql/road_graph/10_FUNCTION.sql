@@ -3643,26 +3643,6 @@ BEGIN
     DROP TABLE IF EXISTS temp_nodes;
     DROP TABLE IF EXISTS temp_edges;
 
-    -- Insert markers automatic markers at the start of the first edge
-    RAISE NOTICE 'insert markrs zero';
-    INSERT INTO road_graph.markers (
-        road_code, code, abscissa, is_virtual, geom,
-        created_at, updated_at
-    )
-    SELECT
-        e.road_code,
-        0,
-        0,
-        True,
-        ST_StartPoint(e.geom),
-        now()::timestamp(0) without time zone,
-        now()::timestamp(0) without time zone
-    FROM road_graph.edges AS e
-    WHERE TRUE
-    AND e.previous_edge_id IS NULL
-    ON CONFLICT DO NOTHING
-    ;
-    GET DIAGNOSTICS markers_zero_count = ROW_COUNT;
 
     -- Insert markers from source data
     RAISE NOTICE 'insert markers from source';
@@ -3677,7 +3657,7 @@ BEGIN
             code,
             abscissa,
             is_virtual,
-            geom,
+            ST_ReducePrecision(geom, 0.10) AS geom,
             now()::timestamp(0) without time zone,
             now()::timestamp(0) without time zone
         FROM %I.%I
@@ -3689,6 +3669,38 @@ BEGIN
     );
     EXECUTE sql_text;
     GET DIAGNOSTICS markers_count = ROW_COUNT;
+
+    -- Insert markers automatic markers at the start of the first edge
+    -- Only if there is no other marker nearby (for example with a given abscissa)
+    RAISE NOTICE 'insert markers zero';
+    WITH zero AS (
+        SELECT
+            e.road_code,
+            0,
+            0,
+            True,
+            ST_StartPoint(e.geom),
+            now()::timestamp(0) without time zone,
+            now()::timestamp(0) without time zone
+        FROM road_graph.edges AS e
+        LEFT JOIN road_graph.markers AS m
+            ON e.road_code = m.road_code
+            AND ST_DWithin(ST_StartPoint(e.geom), m.geom, 1)
+        WHERE TRUE
+        -- No previous edge : this means it is the start of the road
+        AND e.previous_edge_id IS NULL
+        -- No corresponding marker within the given distance
+        AND m.id IS NULL
+    )
+    INSERT INTO road_graph.markers (
+        road_code, code, abscissa, is_virtual, geom,
+        created_at, updated_at
+    )
+    SELECT *
+    FROM zero
+    ON CONFLICT DO NOTHING
+    ;
+    GET DIAGNOSTICS markers_zero_count = ROW_COUNT;
 
     -- Set the serial values
     RAISE NOTICE 'set serials';

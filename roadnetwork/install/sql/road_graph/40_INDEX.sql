@@ -57,6 +57,10 @@ CREATE INDEX managed_objects_geometry_type_idx ON road_graph.managed_objects USI
 CREATE INDEX markers_geom_idx ON road_graph.markers USING gist (geom);
 
 
+-- markers_road_code_idx
+CREATE INDEX markers_road_code_idx ON road_graph.markers USING btree (road_code);
+
+
 -- nodes_geom_idx
 CREATE INDEX nodes_geom_idx ON road_graph.nodes USING gist (geom);
 
