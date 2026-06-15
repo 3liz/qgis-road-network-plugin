@@ -826,16 +826,27 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#041-2026-06-05" class="md-nav__link">
+  <a href="#042-2026-06-15" class="md-nav__link">
     <span class="md-ellipsis">
       
-        0.4.1 - 2026-06-05
+        0.4.2 - 2026-06-15
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="0.4.1 - 2026-06-05">
+    <nav class="md-nav" aria-label="0.4.2 - 2026-06-15">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
@@ -848,8 +859,36 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#041-2026-06-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.1 - 2026-06-05
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.4.1 - 2026-06-05">
+      <ul class="md-nav__list">
+        
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -916,7 +955,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -927,7 +966,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -955,7 +994,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -994,7 +1033,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1033,7 +1072,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_3" class="md-nav__link">
+  <a href="#changed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1044,7 +1083,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_3" class="md-nav__link">
+  <a href="#fixed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1103,13 +1142,27 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
-<h2 id="041-2026-06-05">0.4.1 - 2026-06-05<a class="headerlink" href="#041-2026-06-05" title="Permanent link">#</a></h2>
+<h2 id="042-2026-06-15">0.4.2 - 2026-06-15<a class="headerlink" href="#042-2026-06-15" title="Permanent link">#</a></h2>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
+<ul>
+<li>SQL &amp; algorithm - Calculate references from geometries : do not use
+  columns <code>start_offset,</code>start_side<code>,</code>end_offset<code>,</code>end_side<code>but only</code>offset<code>&amp;</code>side` for linestrings (calculated from the start linestring node)</li>
+</ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
+<ul>
+<li>Algorithm "Import data" (and related SQL function) - Do not add a marker 0
+  if a marker for this road is already within 1m of an existing marker</li>
+<li>Algorithm "Update managed objects" - Fix issues when updating references for a linestring
+  (fix function <code>road_graph.update_table_references_from_geometries</code>)</li>
+<li>SQL - Fix <code>NULL</code> or <code>0</code> calculated references while creating an edge with only 2 nodes</li>
+</ul>
+<h2 id="041-2026-06-05">0.4.1 - 2026-06-05<a class="headerlink" href="#041-2026-06-05" title="Permanent link">#</a></h2>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">#</a></h3>
 <ul>
 <li>Fix the error occurring when updating managed objects references
   when the objects had a <code>cumulative</code> attribute</li>
 </ul>
-<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">#</a></h3>
 <ul>
 <li>Minor changes on the QGIS project</li>
 </ul>
@@ -1127,18 +1180,18 @@
   of the last updated objects of each managed table.</li>
 </ul>
 <h2 id="033-2026-04-17">0.3.3 - 2026-04-17<a class="headerlink" href="#033-2026-04-17" title="Permanent link">#</a></h2>
-<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">#</a></h3>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">#</a></h3>
 <ul>
 <li>Editing session - Update the managed objects when merging the editing session data</li>
 <li>Tests - Add more tests</li>
 </ul>
-<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">#</a></h3>
+<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">#</a></h3>
 <ul>
 <li>SQL - Avoid to cut edges at intersections outside the editing session polygon</li>
 <li>SQL - Separate methods to update geometries/references from the road graph</li>
 </ul>
 <h2 id="032-2026-04-12">0.3.2 - 2026-04-12<a class="headerlink" href="#032-2026-04-12" title="Permanent link">#</a></h2>
-<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">#</a></h3>
+<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">#</a></h3>
 <ul>
 <li>SQL</li>
 <li>Fix the creation of roundabout by avoiding to insert edges which geometry
@@ -1156,7 +1209,7 @@
 </ul>
 </li>
 </ul>
-<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">#</a></h3>
+<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">#</a></h3>
 <ul>
 <li>Improve CI and packaging</li>
 </ul>
@@ -1167,13 +1220,13 @@
 <li>Add algorithm allowing to update a layer references or geometries from the road graph</li>
 <li>Tests - Add test data &amp; test some of the main features</li>
 </ul>
-<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">#</a></h3>
+<h3 id="changed_4">Changed<a class="headerlink" href="#changed_4" title="Permanent link">#</a></h3>
 <ul>
 <li>Documentation</li>
 <li>SchemaSpy: add functions</li>
 <li>Fix schemaspy generation errors by using option <code>-t pgsql11</code></li>
 </ul>
-<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">#</a></h3>
+<h3 id="fixed_4">Fixed<a class="headerlink" href="#fixed_4" title="Permanent link">#</a></h3>
 <ul>
 <li>Fix deletion of an edge ending on a roundabout marker 0</li>
 <li>Fix wrong geometry generation for road substring (roads &amp; roundabouts)</li>
