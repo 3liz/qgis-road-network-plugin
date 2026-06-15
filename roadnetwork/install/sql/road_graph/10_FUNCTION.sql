@@ -2963,7 +2963,7 @@ BEGIN
         WITH
         -- get road ordered edges (use previous and next edge ids)
         ordered_edges AS (
-            SELECT o.id, o.road_code, o.edge_order, o.geom
+            SELECT DISTINCT o.id, o.road_code, o.edge_order, o.geom
             FROM road_graph.get_ordered_edges(_road_code, -1, 'downstream') AS o
         ),
         touching_edges AS (
