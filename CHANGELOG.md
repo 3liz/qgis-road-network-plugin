@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.4.2 - 2026-06-15
+
+### Changed
+
+* SQL & algorithm - Calculate references from geometries : do not use
+  columns `start_offset, `start_side`, `end_offset`, `end_side` but only
+  `offset` & `side` for linestrings (calculated from the start linestring node)
+
+### Fixed
+
+* Algorithm "Import data" (and related SQL function) - Do not add a marker 0
+  if a marker for this road is already within 1m of an existing marker
+* Algorithm "Update managed objects" - Fix issues when updating references for a linestring
+  (fix function `road_graph.update_table_references_from_geometries`)
+* SQL - Fix `NULL` or `0` calculated references while creating an edge with only 2 nodes
+
 ## 0.4.1 - 2026-06-05
 
 ### Fixed
