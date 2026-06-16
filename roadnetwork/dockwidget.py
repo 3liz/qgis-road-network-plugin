@@ -18,7 +18,6 @@ from .plugin_tools.resources import (
     load_ui,
     schema_name,
     schema_version,
-    version,
 )
 from .processing.tools import (
     fetch_data_from_sql_query,
@@ -129,8 +128,9 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
             connection_stylesheet += "color: red;"
 
         # Check database version against plugin version
-        plugin_version = version()
-        self.plugin_version.setText(plugin_version)
+        # plugin_version = version() # version is the plugin version, not the schema version
+        plugin_schema_version = str(schema_version())
+        self.plugin_version.setText(plugin_schema_version)
         version_comment, version_stylesheet = self.check_database_status(connection_exists)
 
         self.version_comment.setText(version_comment)
