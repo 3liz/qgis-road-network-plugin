@@ -301,6 +301,7 @@ DROP INDEX IF EXISTS road_graph.markers_road_code_idx;
 CREATE INDEX markers_road_code_idx ON road_graph.markers (road_code);
 
 -- import_data_from_template_tables(text, text, text)
+DROP FUNCTION IF EXISTS road_graph.import_data_from_template_tables(text, text, text);
 CREATE OR REPLACE FUNCTION road_graph.import_data_from_template_tables(
     _source_schema text,
     _source_edges_table text,
