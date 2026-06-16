@@ -2,12 +2,26 @@
 
 ## Unreleased
 
+## 0.4.3 - 2026-06-16
+
+### Fixed
+
+* **Administration dock** - Display the plugin schema version instead of the plugin version
+* Algorithm **"Update managed objects"** - Fix the error when the feature geometry is empty
+* SQL - Fix functions `update_table_references_from_geometries` & `get_merged_geom_from_table_and_ids`
+  * `get_merged_geom_from_table_and_ids`: return `NULL` if the given table of Ids is empty
+  * `update_table_references_from_geometries`:
+    - get the geometry column name instead of using hard-coded `geom`
+    - fix the wrong use of `mo.id`: replaced by the name of the primary key field
+    - fix the calculation of `MULTILINESTRING` end points (hack by getting the last part)
+* **QGIS admin project** - Fix wrong data source for the layer `managed_objects`
+
 ## 0.4.2 - 2026-06-15
 
 ### Changed
 
 * SQL & algorithm - Calculate references from geometries : do not use
-  columns `start_offset, `start_side`, `end_offset`, `end_side` but only
+  columns `start_offset`, `start_side`, `end_offset`, `end_side` but only
   `offset` & `side` for linestrings (calculated from the start linestring node)
 
 ### Fixed
