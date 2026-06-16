@@ -231,14 +231,6 @@ and an initial node given
 ';
 
 
--- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[])
-COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[]) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
-The given columns must exists:
-* for points: road_code, marker_code, abscissa. Optional columns: offset & side,
-* road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset & side
-';
-
-
 -- edges
 COMMENT ON TABLE road_graph.edges IS 'Road graph edges';
 

@@ -2412,7 +2412,7 @@ DECLARE
     merged_geom geometry(MultiPolygon, 2154);
 BEGIN
     -- Return NULL if no ids are passed
-    IF _ids IS NULL OR _ids = ARRAY[]::integer[] THEN
+    IF _ids IS NULL THEN
         RETURN NULL;
     END IF;
 
@@ -4644,7 +4644,6 @@ DECLARE
     sql_text text;
     table_exists boolean;
     primary_key_field text;
-    geometry_column text;
     needed_fields text[];
     managed_object record;
     table_cols text[];
@@ -4707,24 +4706,6 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    -- Get geometry colmun name
-    sql_text = format(
-        $SQL$
-        SELECT f_geometry_column
-        FROM geometry_columns
-        WHERE f_table_schema = '%1$s' AND f_table_name = '%2$s';
-        $SQL$,
-        _schema_name,
-        _table_name
-    );
-    EXECUTE sql_text
-    INTO geometry_column
-    ;
-    IF geometry_column IS NULL THEN
-        RAISE NOTICE 'The table "%"."%" does not have a geometry column !', _schema_name, _table_name;
-        RETURN NULL;
-    END IF;
-
     -- Check the table contains the needed fields based on the geometry type of the managed object
     sql_text = format(
         $SQL$
@@ -4768,7 +4749,7 @@ BEGIN
                     SELECT
                         mo.%1$I AS id,
                         mo.road_code,
-                        mo.%9$I AS geom
+                        mo.geom
                     FROM
                         %2$I.%3$I AS mo
                     WHERE (
@@ -4784,12 +4765,7 @@ BEGIN
                             -- DO NOT PASS THE ROAD CODE
                             -- road edge could have been deleted, or a new roundabout created near the geometry
                             -- o.road_code
-                            NULL::text,
-                            -- Do not use cache. only usable if there is only one road
-                            -- see road_graph.build_road_cached_objects(_road_code)
-                            -- we could check before if the given table of road codes contains only one road
-                            -- or loop for each road_code...
-                            FALSE
+                            NULL::text
                         ) AS ref
                     FROM objects AS o
                 ),
@@ -4808,7 +4784,7 @@ BEGIN
                         abscissa = (r.ref->>'abscissa')::real
                     FROM refs AS r
                     WHERE TRUE
-                    AND mo.%1$I = r.id
+                    AND mo.id = r.id
                     --AND r.ref->'road_code' != 'null'::jsonb
                     AND (%8$s)
                     RETURNING mo.*
@@ -4844,9 +4820,7 @@ BEGIN
                 CASE WHEN 'side' = ANY(table_cols)
                     THEN $STR$ OR (r.ref->>'side')::text != Coalesce(mo.side, '')::text $STR$ ELSE ''
                 END
-            ),
-            -- 9 / geometry_column
-            geometry_column
+            )
         );
 
     ELSIF lower(managed_object.geometry_type) IN ('linestring', 'multilinestring') THEN
@@ -4857,7 +4831,7 @@ BEGIN
                     SELECT
                         mo.%1$I AS id,
                         mo.road_code,
-                        mo.%10$I AS geom
+                        mo.geom
                     FROM
                         %2$I.%3$I AS mo
                     WHERE (
@@ -4869,40 +4843,18 @@ BEGIN
                     SELECT
                         o.id,
                         road_graph.get_reference_from_point(
-                            -- ST_StartPoint could return NULL for a MULTILINESTRING
-                            CASE
-                                WHEN lower(GeometryType(o.geom)) = 'linestring'
-                                    THEN ST_StartPoint(o.geom)
-                                -- hopefully the last part is really the end part of the multilinestring
-                                ELSE ST_StartPoint(ST_GeometryN(o.geom, 1))
-                            END,
+                            ST_StartPoint(o.geom),
                             -- DO NOT PASS THE ROAD CODE
                             -- road edge could have been deleted, or a new roundabout created near the geometry
                             -- o.road_code
-                            NULL::text,
-                            -- Do not use cache. only usable if there is only one road
-                            -- see road_graph.build_road_cached_objects(_road_code)
-                            -- we could check before if the given table of road codes contains only one road
-                            -- or loop for each road_code...
-                            FALSE
+                            NULL::text
                         ) AS start_ref,
                         road_graph.get_reference_from_point(
-                            -- ST_EndPoint could return NULL for a MULTILINESTRING
-                            CASE
-                                WHEN lower(GeometryType(o.geom)) = 'linestring'
-                                    THEN ST_EndPoint(o.geom)
-                                -- hopefully the last part is really the end part of the multilinestring
-                                ELSE ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom)))
-                            END,
+                            ST_EndPoint(o.geom),
                             -- DO NOT PASS THE ROAD CODE
                             -- road edge could have been deleted, or a new roundabout created near the geometry
                             -- o.road_code
-                            NULL::text,
-                            -- Do not use cache. only usable if there is only one road
-                            -- see road_graph.build_road_cached_objects(_road_code)
-                            -- we could check before if the given table of road codes contains only one road
-                            -- or loop for each road_code...
-                            FALSE
+                            NULL::text
                         ) AS end_ref
                     FROM objects AS o
                 ),
@@ -4925,7 +4877,7 @@ BEGIN
                         end_abscissa = (r.end_ref->>'abscissa')::real
                     FROM refs AS r
                     WHERE TRUE
-                    AND mo.%1$I = r.id
+                    AND mo.id = r.id
                     -- Do not UPDATE if no changes must be made (values already are the same)
                     AND (%9$s)
                     RETURNING mo.*
@@ -4968,9 +4920,7 @@ BEGIN
                 CASE WHEN 'end_cumulative' = ANY(table_cols)
                     THEN $STR$ OR (r.end_ref->>'cumulative')::real != Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE ''
                 END
-            ),
-            -- 10 / geometry_column
-            geometry_column
+            )
         );
     END IF;
 
@@ -4982,14 +4932,6 @@ BEGIN
 
 END;
 $_$;
-
-
--- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[])
-COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[]) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
-The given columns must exists:
-* for points: road_code, marker_code, abscissa. Optional columns: offset & side,
-* road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset & side
-';
 
 
 --
