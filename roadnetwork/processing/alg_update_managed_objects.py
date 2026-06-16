@@ -350,7 +350,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
             # Set geometry from the source feature
             output_feature.setGeometry(feature.geometry())
 
-            feedback.pushInfo(tr(f"Feature {idx}"))
+            # feedback.pushInfo(tr(f"Feature {idx}"))
 
             # Request the database for the updated references
             # Set the attributes or the geometry based on the update policy
@@ -396,6 +396,12 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
                 # We need to update the feature references from the feature geometry
                 if QgsWkbTypes.geometryType(source.wkbType()) == QgsWkbTypes.PointGeometry:
                     references_keys = ["road_code", "marker_code", "abscissa", "side", "offset", "cumulative"]
+
+                    # Do not process empty geometry
+                    if not feature.geometry():
+                        unchanged_count += 1
+                        continue
+
                     # Get the updated geometry from the database for the point
                     point = feature.geometry().asPoint()
                     references = self.getReferencesFromLonLat(connection, point.x(), point.y())
@@ -414,6 +420,11 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
 
                 # Linestring layer
                 else:
+                    # Do not process empty geometry
+                    if not feature.geometry():
+                        unchanged_count += 1
+                        continue
+
                     # Get start and end point geometries
                     # depending on whether the geometry is simple or multipart
                     is_simple = QgsWkbTypes.isSingleType(source.wkbType())
