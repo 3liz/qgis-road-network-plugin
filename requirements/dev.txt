@@ -23,6 +23,7 @@ ruff==0.15.10
 semver==3.0.4
 stevedore==5.7.0
 tomli==2.4.1 ; python_full_version <= '3.11'
+types-psycopg2==2.9.21.20260518
 typing-extensions==4.15.0
 tzdata==2026.1 ; sys_platform == 'win32'
 vulture==2.16
