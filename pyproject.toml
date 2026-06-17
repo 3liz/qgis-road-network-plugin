@@ -49,6 +49,7 @@ lint = [
     "mypy",
     "bandit",
     "vulture",
+    "types-psycopg2",
 ]
 transifex = [
     "qt-transifex; python_full_version >= '3.12'",
