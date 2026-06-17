@@ -3,9 +3,12 @@ import time
 
 from typing import Tuple
 
+from psycopg2 import connect
+from psycopg2 import sql as pg_sql
 from qgis import processing
 from qgis.core import (
     QgsCoordinateReferenceSystem,
+    QgsDataSourceUri,
     QgsProcessing,
     QgsProcessingException,
     QgsProcessingFeedback,
@@ -164,11 +167,15 @@ class ImportData(BaseProcessingAlgorithm):
         self, connection_name: str, temp_schema: str, temp_tables: list[str], feedback: QgsProcessingFeedback
     ) -> None:
         """Clean up the temporary tables after the algorithm has been run."""
+        connection = (
+            QgsProviderRegistry.instance().providerMetadata("postgres").findConnection(connection_name)
+        )
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
         for temp_table in temp_tables:
-            sql = f'DROP TABLE IF EXISTS "{temp_schema}"."{temp_table}"'
-            connection = (
-                QgsProviderRegistry.instance().providerMetadata("postgres").findConnection(connection_name)
-            )
+            sql = pg_sql.SQL("DROP TABLE IF EXISTS {schema}.{table}").format(
+                schema=pg_sql.Identifier(temp_schema),
+                table=pg_sql.Identifier(temp_table),
+            ).as_string(pg_conn)
             try:
                 connection.executeSql(sql)
                 # feedback.pushInfo(tr(f"* Temporary table {temp_table} has been dropped"))
@@ -176,6 +183,7 @@ class ImportData(BaseProcessingAlgorithm):
                 msg = tr("* Failed to drop temporary table")
                 msg += f" {temp_table} ({e!s})"
                 feedback.pushInfo(msg)
+        pg_conn.close()
 
     def processAlgorithm(self, parameters, context, feedback):
         """Run the algorithm to import data into the database."""
@@ -281,16 +289,22 @@ class ImportData(BaseProcessingAlgorithm):
         feedback.pushInfo(
             tr("CONVERT THE EDGES AND MARKERS DATA FROM TEMPORARY TABLES TO THE PRODUCTION SCHEMA")
         )
-        sql = f"""
-            SELECT road_graph.import_data_from_template_tables(
-                '{temp_schema}',
-                '{edges_temp_table}',
-                '{markers_temp_table}'
-            ) AS result
-        """
         connection = (
             QgsProviderRegistry.instance().providerMetadata("postgres").findConnection(connection_name)
         )
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
+        sql = pg_sql.SQL("""
+            SELECT road_graph.import_data_from_template_tables(
+                {temp_schema},
+                {edges_table},
+                {markers_table}
+            ) AS result
+        """).format(
+            temp_schema=pg_sql.Literal(temp_schema),
+            edges_table=pg_sql.Literal(edges_temp_table),
+            markers_table=pg_sql.Literal(markers_temp_table),
+        ).as_string(pg_conn)
+        pg_conn.close()
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:

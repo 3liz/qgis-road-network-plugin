@@ -1,4 +1,7 @@
+from psycopg2 import connect
+from psycopg2 import sql as pg_sql
 from qgis.core import (
+    QgsDataSourceUri,
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingOutputNumber,
@@ -151,24 +154,29 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
     ) -> bool:
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
 
         # Get database version
-        sql = f"""
+        sql = pg_sql.SQL("""
             SELECT me_version
             FROM {schema}.metadata
             WHERE me_status = 1
             ORDER BY me_version_date DESC
             LIMIT 1;
-        """
+        """).format(
+            schema=pg_sql.Identifier(schema),
+        ).as_string(pg_conn)
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
+            pg_conn.close()
             raise QgsProcessingException(str(e))
 
         db_version = None
         for a in data:
             db_version = int(a[0]) if a else None
         if not db_version:
+            pg_conn.close()
             error_message = tr("No installed version found in the database !")
             raise QgsProcessingException(error_message)
 
@@ -180,6 +188,7 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
 
         # Check if nothing to do
         if db_version == current_version:
+            pg_conn.close()
             feedback.pushInfo(
                 tr("The database version already matches the plugin version. No upgrade needed.")
             )
@@ -203,32 +212,42 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
 
                 # Add SQL database version in adresse.metadata
                 feedback.pushInfo(tr("* NEW DB VERSION ") + str(new_db_version))
-                sql += f"""
+                sql += pg_sql.SQL("""
                     UPDATE {schema}.metadata
                     SET (me_version, me_version_date)
-                    = ( '{new_db_version}', now()::timestamp(0) );
-                """
+                    = ( {new_version}, now()::timestamp(0) );
+                """).format(
+                    schema=pg_sql.Identifier(schema),
+                    new_version=pg_sql.Literal(new_db_version),
+                ).as_string(pg_conn)
 
                 try:
                     connection.executeSql(sql)
                 except QgsProviderConnectionException as e:
                     feedback.reportError("Error when executing file {}".format(sql_file.name))
                     connection.executeSql("ROLLBACK;")
+                    pg_conn.close()
                     raise QgsProcessingException(str(e))
 
                 feedback.pushInfo(f"* {sql_file} -- OK !")
 
         # Everything is fine, we now update to the plugin version
-        sql = f"""
+        sql = pg_sql.SQL("""
             UPDATE {schema}.metadata
             SET (me_version, me_version_date)
-            = ( '{current_version}', now()::timestamp(0) );
-        """
+            = ( {current_version}, now()::timestamp(0) );
+        """).format(
+            schema=pg_sql.Identifier(schema),
+            current_version=pg_sql.Literal(current_version),
+        ).as_string(pg_conn)
 
         try:
             connection.executeSql(sql)
         except QgsProviderConnectionException as e:
+            pg_conn.close()
             raise QgsProcessingException(str(e))
+
+        pg_conn.close()
 
         return True
 

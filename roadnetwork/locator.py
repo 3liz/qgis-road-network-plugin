@@ -1,7 +1,10 @@
 import re
 
+from psycopg2 import connect
+from psycopg2 import sql as pg_sql
 from qgis.core import (
     Qgis,
+    QgsDataSourceUri,
     QgsGeometry,
     QgsLocatorFilter,
     QgsLocatorResult,
@@ -50,6 +53,8 @@ class LocatorFilter(QgsLocatorFilter):
             self.logMessage("No connection found for the current project", Qgis.MessageLevel.Critical)
             return
 
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
+
         # locale = QgsSettings().value("locale/userLocale", QLocale().name())
         # locale = locale.split('_')[0].lower()
 
@@ -69,17 +74,17 @@ class LocatorFilter(QgsLocatorFilter):
         if not re.match(r"(^[A-Za-z0-9À-ÿ_\-]+$)", road_code, re.UNICODE):
             return
         if len(words) == 1:
-            sql = f"""
+            sql = pg_sql.SQL("""
                 WITH get_road AS (
                     SELECT
                         road_code,
                         CASE
-                            WHEN (road_code = '{road_code}') THEN 0
-                            WHEN (road_code ILIKE '{road_code}%') THEN 1
+                            WHEN (road_code = {road_code}) THEN 0
+                            WHEN (road_code ILIKE {road_code_prefix}) THEN 1
                             ELSE 2
                         END AS priority
                     FROM road_graph.roads
-                    WHERE road_code ILIKE '%{road_code}%'
+                    WHERE road_code ILIKE {road_code_any}
                     ORDER BY priority, length(road_code)
                     LIMIT 5
                 )
@@ -87,7 +92,11 @@ class LocatorFilter(QgsLocatorFilter):
                     road_code,
                     ST_AsText(road_graph.get_spatial_road(road_code)) AS wkt
                 FROM get_road
-            """
+            """).format(
+                road_code=pg_sql.Literal(road_code),
+                road_code_prefix=pg_sql.Literal(f"{road_code}%"),
+                road_code_any=pg_sql.Literal(f"%{road_code}%"),
+            ).as_string(pg_conn)
         else:
             marker_code = words[1]
             abscissa = words[2] if len(words) > 2 else "0"
@@ -105,15 +114,15 @@ class LocatorFilter(QgsLocatorFilter):
                 side = "left"
             else:
                 side = "right"
-            sql = f"""
+            sql = pg_sql.SQL("""
                 WITH get_geom AS (
                     SELECT
                     road_graph.get_road_point_from_reference(
-                        '{road_code}',
+                        {road_code},
                         {marker_code},
                         {abscissa},
                         {offset},
-                        '{side}'
+                        {side}
                     ) AS point
                 )
                 SELECT
@@ -132,13 +141,20 @@ class LocatorFilter(QgsLocatorFilter):
                         )
                     END AS wkt
                 FROM get_geom
-
-            """
+            """).format(
+                road_code=pg_sql.Literal(road_code),
+                marker_code=pg_sql.Literal(int(marker_code)),
+                abscissa=pg_sql.Literal(float(abscissa)),
+                offset=pg_sql.Literal(float(offset)),
+                side=pg_sql.Literal(side),
+            ).as_string(pg_conn)
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
             self.logMessage(str(e), Qgis.MessageLevel.Critical)
             return
+        finally:
+            pg_conn.close()
 
         if not data:
             return

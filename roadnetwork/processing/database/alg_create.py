@@ -1,6 +1,9 @@
 from pathlib import Path
 
+from psycopg2 import connect
+from psycopg2 import sql as pg_sql
 from qgis.core import (
+    QgsDataSourceUri,
     QgsProcessingException,
     QgsProcessingFeedback,
     QgsProcessingOutputNumber,
@@ -131,13 +134,18 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
         if not connection:
             raise QgsProcessingException(f"La connexion {connection_name} n'existe pas.")
 
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
+
         # Drop schema if needed
         if override:
             feedback.pushInfo(tr(f"Trying to drop schema {schema}…"))
-            sql = f"DROP SCHEMA IF EXISTS {schema} CASCADE;"
+            sql = pg_sql.SQL("DROP SCHEMA IF EXISTS {schema} CASCADE;").format(
+                schema=pg_sql.Identifier(schema),
+            ).as_string(pg_conn)
             try:
                 connection.executeSql(sql)
             except QgsProviderConnectionException as e:
+                pg_conn.close()
                 raise QgsProcessingException(str(e))
             feedback.pushInfo("  Success !")
 
@@ -177,22 +185,29 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
                 try:
                     connection.executeSql(sql)
                 except QgsProviderConnectionException as e:
+                    pg_conn.close()
                     raise QgsProcessingException(str(e))
 
                 feedback.pushInfo("  Success !")
 
         metadata_version = version
-        sql = f"""
+        sql = pg_sql.SQL("""
             INSERT INTO {schema}.metadata
             (id, me_version, me_version_date, me_status)
             VALUES (
-                1, '{metadata_version}', now()::timestamp(0), 1
-            )"""
+                1, {version}, now()::timestamp(0), 1
+            )""").format(
+            schema=pg_sql.Identifier(schema),
+            version=pg_sql.Literal(metadata_version),
+        ).as_string(pg_conn)
 
         try:
             connection.executeSql(sql)
         except QgsProviderConnectionException as e:
+            pg_conn.close()
             raise QgsProcessingException(str(e))
+
+        pg_conn.close()
 
     def processAlgorithm(self, parameters, context, feedback):
         connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
