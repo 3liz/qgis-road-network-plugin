@@ -58,7 +58,7 @@ update-dependencies: uv.lock
 LINT_TARGETS=$(MODULE_NAME) tests $(EXTRA_LINT_TARGETS)
 
 lint::
-	@ $(UV_RUN) ruff check --output-format=concise $(LINT_TARGETS)
+	@ $(UV) ruff check --output-format=concise $(LINT_TARGETS)
 
 lint:: typecheck
 
