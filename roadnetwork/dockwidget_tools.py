@@ -1,5 +1,7 @@
 from functools import partial
 
+from psycopg2 import connect
+from psycopg2 import sql as pg_sql
 from qgis.core import (
     Qgis,
     QgsExpressionContextUtils,
@@ -25,6 +27,7 @@ from .processing.tools import (
     fetch_data_from_sql_query,
     get_connection_name,
     get_postgis_connection_list,
+    get_postgis_connection_uri_from_name,
 )
 
 FORM_CLASS = load_ui("dockwidget_tools.ui")
@@ -121,14 +124,22 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
             item.setValue(str(side))
 
         # Query the database
-        sql = f"""
+
+        project = QgsProject.instance()
+        connection_name = get_connection_name(project)
+
+        uri = get_postgis_connection_uri_from_name(connection_name)
+        if uri is None:
+            return None
+        pg_conn = connect(uri.connectionInfo())
+        sql = pg_sql.SQL("""
             WITH get AS (
                 SELECT {schema}.get_road_point_from_reference(
-                    '{road_code}',
+                    {road_code},
                     {marker},
                     {abscissa},
                     {offset},
-                    '{side}'
+                    {side}
                 )::json AS references
             )
             SELECT
@@ -140,11 +151,17 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
                     ELSE 'notfound'::text
                 END AS point
             FROM get AS g
-        """
+        """).format(
+            schema=pg_sql.Identifier(schema),
+            road_code=pg_sql.Literal(str(road_code)),
+            marker=pg_sql.Literal(int(marker) if marker else 0),
+            abscissa=pg_sql.Literal(float(abscissa) if abscissa else 0.0),
+            offset=pg_sql.Literal(float(offset) if offset else 0.0),
+            side=pg_sql.Literal(str(side)),
+        ).as_string(pg_conn)
+        pg_conn.close()
         # print(sql)
 
-        project = QgsProject.instance()
-        connection_name = get_connection_name(project)
 
         get_data = QgsExpressionContextUtils.globalScope().variable("roadnetwork_get_database_data")
         point = None
