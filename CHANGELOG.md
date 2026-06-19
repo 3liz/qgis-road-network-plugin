@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.4.4 - 2026-06-19
+
+### Fixed
+
+* Update references from geometries
+  * Force to use the object `road_code`
+  * Set the objects references to `NULL` if no references have been found around 50m
+
 ## 0.4.3 - 2026-06-16
 
 ### Fixed
