@@ -4781,9 +4781,10 @@ BEGIN
                         o.id,
                         road_graph.get_reference_from_point(
                             o.geom,
-                            -- We need to pass the road code to force the calculation to keep references for this road
-                            o.road_code,
-                            -- NULL::text,
+                            -- DO NOT PASS THE ROAD CODE
+                            -- road edge could have been deleted, or a new roundabout created near the geometry
+                            -- o.road_code
+                            NULL::text,
                             -- Do not use cache. only usable if there is only one road
                             -- see road_graph.build_road_cached_objects(_road_code)
                             -- we could check before if the given table of road codes contains only one road
@@ -4830,11 +4831,7 @@ BEGIN
             -- 8 / Detect if we need to update or not
             concat(
                 $STR$
-                (
-                    ( Coalesce(mo.road_code, '') != '' AND coalesce((r.ref->>'road_code'), '') = '' )
-                    OR
-                    ( Coalesce(mo.road_code, '') = '' AND coalesce((r.ref->>'road_code'), '') != '' )
-                )
+                (r.ref->>'road_code') != Coalesce(mo.road_code, '')
                 OR (r.ref->>'marker_code')::integer != Coalesce(mo.marker_code, -1)::integer
                 OR (r.ref->>'abscissa')::real != Coalesce(mo.abscissa, -1)::real
                 $STR$,
@@ -4879,9 +4876,10 @@ BEGIN
                                 -- hopefully the last part is really the end part of the multilinestring
                                 ELSE ST_StartPoint(ST_GeometryN(o.geom, 1))
                             END,
-                            -- We need to pass the road code to force the calculation to keep references for this road
-                            o.road_code,
-                            -- NULL::text,
+                            -- DO NOT PASS THE ROAD CODE
+                            -- road edge could have been deleted, or a new roundabout created near the geometry
+                            -- o.road_code
+                            NULL::text,
                             -- Do not use cache. only usable if there is only one road
                             -- see road_graph.build_road_cached_objects(_road_code)
                             -- we could check before if the given table of road codes contains only one road
@@ -4896,9 +4894,10 @@ BEGIN
                                 -- hopefully the last part is really the end part of the multilinestring
                                 ELSE ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom)))
                             END,
-                            -- We need to pass the road code to force the calculation to keep references for this road
-                            o.road_code,
-                            -- NULL::text,
+                            -- DO NOT PASS THE ROAD CODE
+                            -- road edge could have been deleted, or a new roundabout created near the geometry
+                            -- o.road_code
+                            NULL::text,
                             -- Do not use cache. only usable if there is only one road
                             -- see road_graph.build_road_cached_objects(_road_code)
                             -- we could check before if the given table of road codes contains only one road
@@ -4951,11 +4950,7 @@ BEGIN
             -- 9 / Detect if we need to update or not
             concat(
                 $STR$
-                (
-                    ( Coalesce(mo.road_code, '') != '' AND coalesce((r.start_ref->>'road_code'), '') = '' )
-                    OR
-                    ( Coalesce(mo.road_code, '') = '' AND coalesce((r.start_ref->>'road_code'), '') != '' )
-                )
+                (r.start_ref->>'road_code') != Coalesce(mo.road_code, '')
                 OR (r.start_ref->>'marker_code')::integer != Coalesce(mo.start_marker_code, -1)::integer
                 OR (r.start_ref->>'abscissa')::real != Coalesce(mo.start_abscissa, -1)::real
                 OR (r.end_ref->>'marker_code')::integer != Coalesce(mo.end_marker_code, -1)::integer
