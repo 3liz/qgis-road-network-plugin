@@ -1,6 +1,9 @@
 from typing import Any
 
+from psycopg2 import connect
+from psycopg2 import sql as pg_sql
 from qgis.core import (
+    QgsDataSourceUri,
     QgsProcessingContext,
     QgsProcessingException,
     QgsProcessingOutputNumber,
@@ -70,16 +73,20 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
-        sql = f"""
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
+        sql = pg_sql.SQL("""
             SELECT
                 id, label,
                 to_char(created_at, 'YYYY-MM-DD HH24:MI:SS'),
                 to_char(updated_at, 'YYYY-MM-DD HH24:MI:SS')
             FROM road_graph.editing_sessions
-            WHERE status = '{status}'
+            WHERE status = {status}
             ORDER BY created_at DESC
             LIMIT 1;
-        """
+        """).format(
+            status=pg_sql.Literal(status),
+        ).as_string(pg_conn)
+        pg_conn.close()
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
@@ -154,10 +161,12 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
         feedback.pushInfo(tr(f"Using connection : {connection_name}"))
 
         # Check for cancellation
         if feedback.isCanceled():
+            pg_conn.close()
             return {}
 
         # Get the last editing session ID with status 'edited'
@@ -166,34 +175,39 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         if not editing_session:
             msg = tr(f"There is no editing session with status '{status}' in the database.\n")
             feedback.pushInfo(msg)
+            pg_conn.close()
             return {}
 
         # Check for cancellation
         if feedback.isCanceled():
+            pg_conn.close()
             return {}
 
         # Merge editing_session data to road_graph schema
         feedback.pushInfo(
             tr("Merge the 'editing_session' data to the production schema 'road_graph'").upper()
         )
-        sql = f"""
-            SELECT road_graph.merge_editing_session_data(
-                {editing_session[0]}
-            ) AS result
-        """
+        sql = pg_sql.SQL("""
+            SELECT road_graph.merge_editing_session_data({session_id}) AS result
+        """).format(
+            session_id=pg_sql.Literal(int(editing_session[0])),
+        ).as_string(pg_conn)
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
+            pg_conn.close()
             raise QgsProcessingException(str(e))
         result = None
         for a in data:
             result = bool(a[0]) if a else None
         if not result:
+            pg_conn.close()
             error_message = tr(
                 "A problem occurred while merging the editing session data  into the 'road_graph' schema."
             )
             raise QgsProcessingException(error_message)
 
+        pg_conn.close()
         feedback.pushInfo(
             tr(f"* The data of the editing session '{editing_session[1]}' has been successfully merged")
         )

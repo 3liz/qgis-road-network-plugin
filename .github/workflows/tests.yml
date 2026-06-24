@@ -30,7 +30,7 @@ jobs:
         run: mypy ${{ env.PLUGIN_SOURCE }}
 
       - name: Run security check
-        run: bandit -r ${{ env.PLUGIN_SOURCE }} --severity-level=high
+        run: bandit -r ${{ env.PLUGIN_SOURCE }} --severity-level=medium
 
   tests:
     needs: [linter]
