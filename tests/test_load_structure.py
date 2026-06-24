@@ -1358,7 +1358,7 @@ def test_get_road_substring_from_references():
         result = a if a else None
 
     assert result is not None
-    assert result[0] == "39adeaf34ed4b7f0b6d391eed5755f93"
+    assert result[0] == "0e749286d4f9c8daf2d214ffe54b719b"
 
     # Same test for a roundabout
     # TODO : il we pass a max value bigger than the roundabout length,

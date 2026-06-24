@@ -169,7 +169,7 @@ The function also returns
 
 
 -- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text)
-COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part';
+COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the built linestring';
 
 
 -- FUNCTION get_spatial_road(_road_code text)
@@ -201,12 +201,6 @@ in the session variable ''road.graph.merge.edges.useless.node'' for further use 
 
 -- FUNCTION merge_editing_session_data(_editing_session_id integer)
 COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
-
-
--- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
-COMMENT ON FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) IS 'Reorder the parts of the given road MULTILINESTRING based on the graph.
-For each part, the references of the end point is calculated, which helps to reorder the parts
-';
 
 
 -- FUNCTION split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real)

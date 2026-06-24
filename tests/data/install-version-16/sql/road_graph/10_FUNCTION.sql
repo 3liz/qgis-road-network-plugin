@@ -3108,10 +3108,6 @@ BEGIN
     -- Notice
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
 
-    IF _road_code IS NULL OR trim(_road_code) = '' THEN
-        RAISE EXCEPTION 'The road code must be given';
-    END IF;
-
     -- Tests
     IF _start_marker_code > _end_marker_code THEN
         RAISE EXCEPTION 'The start marker code cannot be greater than the end marker code';
@@ -3255,12 +3251,6 @@ BEGIN
     )
     ;
 
-    -- Reorder the multilinestring parts if needed
-    result_multilinestring = road_graph.reorder_multilinestring_parts(
-        result_multilinestring,
-        _road_code
-    );
-
     -- Raise notice with the final result
     IF raise_notice = 'yes'  THEN
         RAISE NOTICE 'result_multilinestring  %', ST_AsText(result_multilinestring);
@@ -3285,7 +3275,7 @@ $$;
 
 
 -- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text)
-COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part';
+COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the built linestring';
 
 
 -- get_spatial_road(text)
@@ -3985,83 +3975,6 @@ $$;
 
 -- FUNCTION merge_editing_session_data(_editing_session_id integer)
 COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
-
-
--- reorder_multilinestring_parts(geometry, text)
-CREATE FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) RETURNS geometry
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    _result_multilinestring geometry(MULTILINESTRING, 2154);
-BEGIN
-
-    -- Return untouched geometry if road code is not given
-    IF _road_code IS NULL OR trim(_road_code) = '' THEN
-        RETURN _multilinestring;
-    END IF;
-
-    -- Return untouched geometry if NULL or not a MultiLineString
-    IF Coalesce(ST_GeometryType(_multilinestring), '') != 'ST_MultiLineString' THEN
-        RETURN _multilinestring;
-    END IF;
-
-    -- Return untouched geometry if there is only one part
-    IF ST_NumGeometries(_multilinestring) <= 1 THEN
-        RETURN _multilinestring;
-    END IF;
-
-    BEGIN
-        -- Reorder the geometry parts
-        WITH
-        -- Split the multilinestring into parts
-        d AS (
-            SELECT ST_Dump(_multilinestring) AS dump
-        ),
-        -- Get the part geometries
-        parties AS (
-            SELECT (dump).geom
-            FROM d
-        ),
-        -- Calculate the references of the parts end points
-        get_refs AS (
-            SELECT
-                geom, ST_EndPoint(geom) AS end_point,
-                road_graph.get_reference_from_point(
-                    ST_EndPoint(geom),
-                    _road_code
-                ) AS refs
-            FROM parties
-        ),
-        -- Extract the references and calculate a cost which will be used to order the parts
-        extract_values AS (
-            SELECT
-                geom,
-                (refs->>'marker_code')::int AS marker_code,
-                (refs->>'abscissa')::real AS abscissa,
-                (refs->>'marker_code')::int * 10000 + (refs->>'abscissa')::real AS part_order
-            FROM get_refs
-        )
-        -- Reassemble the parts order by the calculated cost
-        SELECT INTO _result_multilinestring
-            ST_Multi(
-                ST_Collect(geom ORDER BY part_order)
-            )
-        FROM extract_values
-        ;
-    EXCEPTION WHEN OTHERS THEN
-        _result_multilinestring = _multilinestring;
-    END;
-
-    RETURN _result_multilinestring;
-
-END;
-$$;
-
-
--- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
-COMMENT ON FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) IS 'Reorder the parts of the given road MULTILINESTRING based on the graph.
-For each part, the references of the end point is calculated, which helps to reorder the parts
-';
 
 
 -- split_edge_by_node(record, record, real, real)
