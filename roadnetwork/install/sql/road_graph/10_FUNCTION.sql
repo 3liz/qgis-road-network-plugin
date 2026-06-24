@@ -3188,7 +3188,7 @@ BEGIN
     END IF;
     -- Create substring lines
     -- start
-    _start_substring =
+    _start_substring = ST_CollectionExtract(
         ST_Force2D(ST_LocateBetween(
             _start_downstream_road_m,
             CASE
@@ -3198,13 +3198,15 @@ BEGIN
             END,
             ST_Length(_start_downstream_road)
         ))
+        , 2
+    )
     ;
     IF raise_notice = 'yes' THEN
         RAISE NOTICE '_start_substring  %', ST_AsText(_start_substring);
     END IF;
 
     -- end
-    _end_substring =
+    _end_substring = ST_CollectionExtract(
         ST_Force2D(ST_LocateBetween(
             _end_downstream_road_m,
             CASE
@@ -3214,6 +3216,8 @@ BEGIN
             END,
             ST_Length(_end_downstream_road)
         ))
+        , 2
+    )
     ;
     IF raise_notice = 'yes' THEN
         RAISE NOTICE '_end_substring  %', ST_AsText(_end_substring);
