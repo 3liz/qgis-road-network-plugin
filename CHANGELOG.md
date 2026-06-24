@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.4.5 - 2026-06-24
+
+### Fixed
+
+* SQL - Build MULTILINESTRING from start & end road references
+  (function `road_graph.get_road_substring_from_references`):
+  * fix bug during generation with unwanted intermediate `GEOMETRYCOLLECTION`
+  * ensure the produced `MULTILINESTRING` parts are correctly ordered
+    New function `road_graph.reorder_multilinestring_parts` which can be used
+    in `UPDATE` SQL scripts
+
 ## 0.4.4 - 2026-06-19
 
 ### Fixed
