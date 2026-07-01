@@ -2529,8 +2529,17 @@ BEGIN
             _initial_id = initial_edge.id;
         END IF;
         IF _initial_id IS NULL THEN
-            RAISE EXCEPTION 'No edge found for the road %s initial edge',
+            RAISE NOTICE 'No edge found for the road %s initial edge',
                 _road_code
+            ;
+            -- Do not raise any exception
+            -- To allow wrong road_code in managed data
+            -- to be silently used
+            RETURN QUERY
+            SELECT
+                e.id, 1 AS edge_order, e.road_code, e.geom
+            FROM road_graph.edges AS e
+            LIMIT 0
             ;
         END IF;
     ELSE
@@ -4927,17 +4936,10 @@ BEGIN
                 objects AS (
                     SELECT
                         mo.%1$I AS id,
-                        (CASE
-                            -- no road exists in the database with this code
-                            WHEN r.road_code IS NULL THEN NULL
-                            -- return the trimmed version of he road_code if it exists in the database
-                            ELSE trim(mo.road_code)
-                        END)::text AS road_code,
+                        trim(mo.road_code)::text AS road_code,
                         mo.%9$I AS geom
                     FROM
                         %2$I.%3$I AS mo
-                    LEFT JOIN road_graph.roads AS r
-                        ON r.road_code = trim(mo.road_code)
                     WHERE (
                         mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
                         OR '%4$s' = ''
@@ -5026,17 +5028,10 @@ BEGIN
                 objects AS (
                     SELECT
                         mo.%1$I AS id,
-                        (CASE
-                            -- no road exists in the database with this code
-                            WHEN r.road_code IS NULL THEN NULL
-                            -- return the trimmed version of he road_code if it exists in the database
-                            ELSE trim(mo.road_code)
-                        END)::text AS road_code,
+                        trim(mo.road_code)::text AS road_code,
                         mo.%10$I AS geom
                     FROM
                         %2$I.%3$I AS mo
-                    LEFT JOIN road_graph.roads AS r
-                        ON r.road_code = trim(mo.road_code)
                     WHERE (
                         mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
                         OR '%4$s' = ''

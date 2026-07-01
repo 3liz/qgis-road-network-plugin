@@ -1,4 +1,172 @@
 
+-- get_ordered_edges(text, integer, text)
+CREATE OR REPLACE FUNCTION road_graph.get_ordered_edges(_road_code text, _initial_id integer DEFAULT '-1'::integer, _direction text DEFAULT 'downstream'::text)
+RETURNS TABLE(id integer, edge_order integer, road_code text, geom geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    raise_notice text;
+    initial_edge record;
+BEGIN
+    raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
+
+    -- If there is only on edge for this road, return it directly
+    IF (
+        SELECT count(*)
+        FROM road_graph.edges AS e
+        WHERE e.road_code = _road_code
+    ) = 1
+    THEN
+        RETURN QUERY
+        SELECT
+            e.id, 1 AS edge_order, e.road_code, e.geom
+        FROM road_graph.edges AS e
+        WHERE e.road_code = _road_code
+        ;
+    END IF;
+
+    -- Get initial edge. If not given, get the first road edge
+    IF _initial_id = -1 THEN
+        IF _direction = 'downstream' THEN
+            SELECT into initial_edge
+                e.id, e.start_node, e.end_node
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code
+            AND previous_edge_id IS NULL
+            ORDER BY start_cumulative, e.id
+            LIMIT 1
+            ;
+            _initial_id = initial_edge.id;
+        ELSE
+            SELECT INTO initial_edge
+                e.id, e.start_node, e.end_node
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code
+            AND next_edge_id IS NULL
+            ORDER BY start_cumulative DESC, e.id DESC
+            LIMIT 1
+            ;
+            _initial_id = initial_edge.id;
+        END IF;
+        IF _initial_id IS NULL THEN
+            RAISE NOTICE 'No edge found for the road %s initial edge',
+                _road_code
+            ;
+            -- Do not raise any exception
+            -- To allow wrong road_code in managed data
+            -- to be silently used
+            RETURN QUERY
+            SELECT
+                e.id, 1 AS edge_order, e.road_code, e.geom
+            FROM road_graph.edges AS e
+            LIMIT 0
+            ;
+        END IF;
+    ELSE
+        SELECT INTO initial_edge
+            e.id, e.start_node, e.end_node
+        FROM road_graph.edges AS e
+        WHERE e.id = _initial_id
+        ;
+    END IF;
+    IF raise_notice in ('info', 'debug') THEN
+        RAISE NOTICE 'get_ordered_edges - _initial_id = %',
+            _initial_id
+        ;
+    END IF;
+
+    IF _direction = 'downstream' THEN
+        -- Get downstream edges
+        RETURN QUERY
+        WITH RECURSIVE ordered_edges
+        AS(
+            -- anchor member
+            SELECT
+                e.id, next_edge_id,
+                -- add id to the list of processed ids
+                ARRAY[e.id] AS ids,
+                1 AS edge_order,
+                e.start_node, e.end_node,
+                e.geom --, 0.0::numeric AS distance
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code AND e.id = _initial_id
+            UNION ALL
+            -- recursive term
+            SELECT
+                e.id, e.next_edge_id,
+                -- add id to the list of processed ids
+                array_append(o.ids, e.id) AS ids,
+                o.edge_order + 1 AS edge_order,
+                e.start_node, e.end_node,
+                e.geom --, ST_Distance(ST_StartPoint(e.geom), ST_EndPoint(o.geom))::numeric AS distance
+            FROM road_graph.edges AS e
+            JOIN ordered_edges AS o
+                ON e.id = o.next_edge_id
+                -- We try to get the next edge which can be far
+                -- limit search radius to 200m
+                -- NOT EFFICIENT FOR BIG ROADS
+                -- OR ST_DWithin(ST_StartPoint(e.geom), ST_EndPoint(o.geom), 200)
+                -- for roundabout, when previous and next edge ids are not set
+                OR ST_DWithin(ST_StartPoint(e.geom), ST_EndPoint(o.geom), 0.20)
+            WHERE e.road_code = _road_code
+        	-- avoir infinite loop
+            AND NOT (ARRAY[e.id] && o.ids)
+        )
+        SELECT --DISTINCT ON (o.edge_order)
+            o.id, o.edge_order, _road_code AS road_code, o.geom
+        FROM ordered_edges AS o
+        ORDER BY o.edge_order --, distance
+        ;
+    ELSE
+        RETURN QUERY
+        WITH RECURSIVE ordered_edges
+        AS(
+            -- anchor member
+            SELECT
+                e.id, previous_edge_id,
+                -- add id to the list of processed ids
+                ARRAY[e.id] AS ids,
+                1 AS edge_order,
+                e.start_node, e.end_node,
+                e.geom --, 0.0::numeric AS distance
+            FROM road_graph.edges AS e
+            WHERE e.road_code = _road_code AND e.id = _initial_id
+            UNION ALL
+            -- recursive term
+            SELECT
+                e.id, e.previous_edge_id,
+                -- add id to the list of processed ids
+                array_append(o.ids, e.id) AS ids,
+                o.edge_order + 1 AS edge_order,
+                e.start_node, e.end_node,
+                e.geom --, ST_Distance(ST_EndPoint(e.geom), ST_StartPoint(o.geom))::numeric AS distance
+            FROM road_graph.edges AS e
+            JOIN ordered_edges AS o
+                ON e.id = o.previous_edge_id
+                -- We try to get the next edge which can be far
+                -- limit search radius to 200m
+                -- OR ST_DWithin(ST_EndPoint(e.geom), ST_StartPoint(o.geom), 200)
+                -- for roundabout, when previous and next edge ids are not set
+                OR ST_DWithin(ST_EndPoint(e.geom), ST_StartPoint(o.geom), 0.20)
+            WHERE e.road_code = _road_code
+        	-- avoir infinite loop
+            AND NOT (ARRAY[e.id] && o.ids)
+        )
+        SELECT --DISTINCT ON (o.edge_order)
+            o.id, o.edge_order, _road_code AS road_code, o.geom
+        FROM ordered_edges AS o
+        ORDER BY o.edge_order--, distance
+        ;
+    END IF;
+END;
+$$;
+
+
+-- FUNCTION get_ordered_edges(_road_code text, _initial_id integer, _direction text)
+COMMENT ON FUNCTION road_graph.get_ordered_edges(_road_code text, _initial_id integer, _direction text) IS 'Get the list of edge id with order for a given road, edge and the direction (downtream or upstream). It always includes the given edge';
+
+
+
 -- update_table_geometries_from_references(text, text, text[])
 CREATE OR REPLACE FUNCTION road_graph.update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[]) RETURNS jsonb
     LANGUAGE plpgsql
@@ -329,17 +497,10 @@ BEGIN
                 objects AS (
                     SELECT
                         mo.%1$I AS id,
-                        (CASE
-                            -- no road exists in the database with this code
-                            WHEN r.road_code IS NULL THEN NULL
-                            -- return the trimmed version of he road_code if it exists in the database
-                            ELSE trim(mo.road_code)
-                        END)::text AS road_code,
+                        trim(mo.road_code)::text AS road_code,
                         mo.%9$I AS geom
                     FROM
                         %2$I.%3$I AS mo
-                    LEFT JOIN road_graph.roads AS r
-                        ON r.road_code = trim(mo.road_code)
                     WHERE (
                         mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
                         OR '%4$s' = ''
@@ -428,17 +589,10 @@ BEGIN
                 objects AS (
                     SELECT
                         mo.%1$I AS id,
-                        (CASE
-                            -- no road exists in the database with this code
-                            WHEN r.road_code IS NULL THEN NULL
-                            -- return the trimmed version of he road_code if it exists in the database
-                            ELSE trim(mo.road_code)
-                        END)::text AS road_code,
+                        trim(mo.road_code)::text AS road_code,
                         mo.%10$I AS geom
                     FROM
                         %2$I.%3$I AS mo
-                    LEFT JOIN road_graph.roads AS r
-                        ON r.road_code = trim(mo.road_code)
                     WHERE (
                         mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
                         OR '%4$s' = ''
