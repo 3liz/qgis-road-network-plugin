@@ -3961,7 +3961,7 @@ BEGIN
             RAISE NOTICE 'Number of updated managed objects for "%"."%": %',
                 managed_object.schema_name,
                 managed_object.table_name,
-                Coalesce(updated_objects_number, 0)
+                updated_objects_number
             ;
         END LOOP;
 
@@ -4381,9 +4381,6 @@ DECLARE
     sql_text text;
     table_exists boolean;
     managed_object record;
-    updated_stats_geometry jsonb;
-    updated_stats_references jsonb;
-    merged_last_updated_objects_ids integer[];
     updated_stats jsonb;
     update_count integer;
 BEGIN
@@ -4424,82 +4421,26 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    -- CHOIX IMPORTANT
-    -- Lorsqu'on demande la modification de la géométrie,
-    -- il faut toujours au préalable recalculer d'abord les références
-    -- de début et de fin à partir du nouveau graphe,
-    -- pour ensuite adapter la géométrie (si jamais les edges support ont été modifiés)
-    -- Cela assure que le début et la fin des lignes des données métiers restent
-    -- les "mêmes" sur le terrain (ex: début à cette maison, et fin à ce carrefour)
-
-    -- Update objects references in both cases
-    SELECT road_graph.update_table_references_from_geometries(
-        _schema_name,
-        _table_name,
-        _road_codes
-    )
-    INTO updated_stats_references
-    ;
-    IF updated_stats_references IS NULL THEN
-        updated_stats_references = jsonb_build_object(
-            'nb', 0,
-            'last_updated_objects_ids', ARRAY[]::integer[]
-        );
-    END IF;
-    updated_stats = updated_stats_references;
-
-    IF managed_object.update_policy_on_graph_change = 'geometry' THEN
+    -- Update objects
+    IF managed_object.update_policy_on_graph_change = 'geometry'
+    THEN
         -- Update geometries based on references
         SELECT road_graph.update_table_geometries_from_references(
             _schema_name,
             _table_name,
             _road_codes
         )
-        INTO updated_stats_geometry
+        INTO updated_stats
         ;
-        IF updated_stats_geometry IS NULL THEN
-            updated_stats_geometry = jsonb_build_object(
-                'nb', 0,
-                'last_updated_objects_ids', ARRAY[]::integer[]
-            );
-        END IF;
-        -- Get combined stats
-        -- RAISE NOTICE '--------------';
-        -- RAISE NOTICE 'refs, %', updated_stats_references::json;
-        -- RAISE NOTICE 'geoms, %', updated_stats_geometry::json;
-        merged_last_updated_objects_ids = (
-            WITH a AS (
-                SELECT t FROM jsonb_array_elements(
-                        CASE
-                        WHEN jsonb_typeof(updated_stats_references->'last_updated_objects_ids') = 'array'
-                        THEN updated_stats_references->'last_updated_objects_ids'
-                        ELSE '[]'
-                        END
-                ) AS t
-                UNION
-                SELECT t FROM jsonb_array_elements(
-                        CASE
-                        WHEN jsonb_typeof(updated_stats_geometry->'last_updated_objects_ids') = 'array'
-                        THEN updated_stats_geometry->'last_updated_objects_ids'
-                        ELSE '[]'
-                        END
-                ) AS t
-            )
-            SELECT array_agg(t ORDER BY t)
-            FROM a
-        );
-        -- RAISE NOTICE 'merged_last_updated_objects_ids, %', merged_last_updated_objects_ids;
-        -- RAISE NOTICE '--------------';
 
-
-        updated_stats = jsonb_build_object(
-            'nb',
-            array_length(merged_last_updated_objects_ids, 1),
-            'last_updated_objects_ids',
-            merged_last_updated_objects_ids
+    ELSIF managed_object.update_policy_on_graph_change = 'references' THEN
+        SELECT road_graph.update_table_references_from_geometries(
+            _schema_name,
+            _table_name,
+            _road_codes
         )
+        INTO updated_stats
         ;
-
     END IF;
 
     -- Check results
@@ -4711,7 +4652,7 @@ BEGIN
                 SELECT
                     mo.%1$I AS id,
                     road_graph.%8$s(
-                        mo.road_code::text,
+                        mo.road_code,
                         %9$s,
                         %6$s,
                         %7$s
@@ -4753,35 +4694,25 @@ BEGIN
                 array_agg(r.%1$I) AS last_updated_objects_ids
             FROM run_update AS r
         $SQL$,
-        -- 1
         primary_key_field,
-        -- 2
         _schema_name,
-        -- 3
         _table_name,
-        -- 4 : list of road codes
         Coalesce(array_to_string(_road_codes::text[], ','), ''),
-        -- 5 : geometry type
         managed_object.geometry_type,
         -- Use default values for side and offset if columns does not exists
-        -- else we need to cast to the expected function parameter formats
-        -- 6
-        CASE WHEN 'offset' = ANY(table_cols) THEN 'mo."offset"::real' ELSE '0.0::real' END,
-        -- 7
-        CASE WHEN 'side' = ANY(table_cols) THEN 'mo.side::text' ELSE 'right::text' END,
+        CASE WHEN 'offset' = ANY(table_cols) THEN 'mo."offset"' ELSE '0.0' END,
+        CASE WHEN 'side' = ANY(table_cols) THEN 'mo.side' ELSE 'right' END,
         -- used function
-        -- 8
         CASE
             WHEN lower(managed_object.geometry_type) = 'point'
             THEN 'get_road_point_from_reference'
             ELSE 'get_road_substring_from_references'
         END,
-        -- used fields: we need to cast the values taken from the managed table
-        -- 9
+        -- used fields
         CASE
             WHEN lower(managed_object.geometry_type) = 'point'
-            THEN 'mo.marker_code::integer, mo.abscissa::real'
-            ELSE 'mo.start_marker_code::integer, mo.start_abscissa::real, mo.end_marker_code::integer, mo.end_abscissa::real'
+            THEN 'mo.marker_code, mo.abscissa'
+            ELSE 'mo.start_marker_code, mo.start_abscissa, mo.end_marker_code, mo.end_abscissa'
         END
     );
     RAISE NOTICE 'sql = %', sql_text;
@@ -4867,7 +4798,7 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    -- Get geometry column name
+    -- Get geometry colmun name
     sql_text = format(
         $SQL$
         SELECT f_geometry_column
@@ -4927,19 +4858,12 @@ BEGIN
                 objects AS (
                     SELECT
                         mo.%1$I AS id,
-                        (CASE
-                            -- no road exists in the database with this code
-                            WHEN r.road_code IS NULL THEN NULL
-                            -- return the trimmed version of he road_code if it exists in the database
-                            ELSE trim(mo.road_code)
-                        END)::text AS road_code,
+                        mo.road_code,
                         mo.%9$I AS geom
                     FROM
                         %2$I.%3$I AS mo
-                    LEFT JOIN road_graph.roads AS r
-                        ON r.road_code = trim(mo.road_code)
                     WHERE (
-                        mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
+                        mo.road_code = ANY(string_to_array('%4$s', ',')::text[])
                         OR '%4$s' = ''
                     )
                 ),
@@ -4949,7 +4873,7 @@ BEGIN
                         road_graph.get_reference_from_point(
                             o.geom,
                             -- We need to pass the road code to force the calculation to keep references for this road
-                            o.road_code::text,
+                            o.road_code,
                             -- NULL::text,
                             -- Do not use cache. only usable if there is only one road
                             -- see road_graph.build_road_cached_objects(_road_code)
@@ -5026,19 +4950,12 @@ BEGIN
                 objects AS (
                     SELECT
                         mo.%1$I AS id,
-                        (CASE
-                            -- no road exists in the database with this code
-                            WHEN r.road_code IS NULL THEN NULL
-                            -- return the trimmed version of he road_code if it exists in the database
-                            ELSE trim(mo.road_code)
-                        END)::text AS road_code,
+                        mo.road_code,
                         mo.%10$I AS geom
                     FROM
                         %2$I.%3$I AS mo
-                    LEFT JOIN road_graph.roads AS r
-                        ON r.road_code = trim(mo.road_code)
                     WHERE (
-                        mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
+                        mo.road_code = ANY(string_to_array('%4$s', ',')::text[])
                         OR '%4$s' = ''
                     )
                 ),

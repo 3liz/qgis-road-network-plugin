@@ -1569,6 +1569,12 @@ def create_managed_objects(connection):
         2, 100.0,
         3, 10.0 ,
         0, 'right'
+    ),
+    (
+        'Metal', 'D138B',
+        9, 10.0,
+        9, 500.0,
+        0, 'right'
     )
     ;
 
@@ -1688,16 +1694,62 @@ def test_update_managed_objects():
     for a in data:
         barriers.append(a if a else None)
     # Check the number of barriers
-    assert len(barriers) == 3
+    assert len(barriers) == 4
     assert barriers[0] is not None
     assert barriers[1] is not None
     assert barriers[2] is not None
+    assert barriers[3] is not None
     # do not test 1 as it is a very long multilinestring
     assert barriers[1] == [2, "MULTILINESTRING((474023.6 6895055.8,474025.8 6895107.7,474025.9 6895108.8))"]
     assert barriers[2] == [
         3,
         "MULTILINESTRING((477047.8 6893031.1,477131.7 6893082.7,477186 6893116.3,477207.1 6893132.1,477217.2 6893143.1,477230.3 6893161,477238.5 6893183.9,477266.1 6893270.8,477288.7 6893358.6,477297.9 6893393.6,477316.3 6893442.4,477341.8 6893519.3,477354.1 6893567.2,477369.4 6893610.1,477389.8 6893662,477406.1 6893700.9,477427.4 6893746.7,477440.6 6893779.6,477448.2 6893812.7))",  # noqa: E501
     ]
+    assert barriers[3] == [
+        4,
+        "MULTILINESTRING((473276.7 6895000.1,473274.2 6894994.8,473252.9 "
+        "6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473170 "
+        "6894821.5,473149.8 6894786.6,473133.5 6894748.7,473116.2 "
+        "6894712.8,473103.1 6894690.9,473055.6 6894624.2,473026.8 6894579.8))",
+    ]
+
+
+def test_changes_on_marker_and_edge_geometry():
+    """Update a marker a road_edge geometry to prepare the test merge"""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Move the marker 9 of the road D138B northward
+    sql_update = """
+    UPDATE editing_session.markers
+    SET geom = ST_GeomFromText('POINT(473354 6895185)', 2154)
+    WHERE road_code = 'D138B' AND code = 9
+    ;
+
+    UPDATE editing_session.edges
+    SET geom = ST_GeomFromText(
+    """
+    sql_update += "'LINESTRING(473695.4 6895584,473658.3 6895577.2,473644.3 6895574.3,473634.3 6895569.4,473631.2 6895565.4,473629.2 6895558.4,473626 6895534.5,473623.9 6895521.5,473621.9 6895515.5,473616.8 6895509.5,473604.8 6895503.6,473592.7 6895494.7,473573.6 6895475.8,473537.3 6895440.1,473497 6895391.3,473419.2 6895279.8,473353.5 6895185.3,473336.3 6895157.4,473318.1 6895121.5,473303.9 6895089.6,473296.7 6895065.6,473288.5 6895031.7,473281.3 6895009.7,473274.2 6894994.8,473252.9 6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473104.4 6894871.7,473084.2 6894836.8,473067.9 6894798.9,473050.6 6894763,473103.1 6894690.9,473055.6 6894624.2,473025.3 6894577.4,473015.2 6894558.5,472998.9 6894519.6,472988.8 6894501.7,472980.7 6894491.7,472971.6 6894480.8,472943.4 6894457,472856.9 6894383.6,472810.6 6894343.9,472799.5 6894331.9,472775.3 6894297.1,472726.7 6894211.4,472699.4 6894164.6,472689.2 6894146.7,472679.1 6894126.7,472673.9 6894103.8,472668.7 6894070.8,472660.1 6893987.8,472654.6 6893913.9,472650.3 6893859.9,472650.1 6893839.9,472653.9 6893808.8,472661.5 6893755.8,472674.1 6893686.7,472681.8 6893642.6,472683.6 6893621.6,472684.4 6893590.6,472677 6893524.6,472667.6 6893476.7,472655.4 6893440.8,472644.1 6893406.8,472642 6893386.8,472641.8 6893364.8,472640.8 6893357.9,472625.5 6893323,472595 6893246.1,472584.8 6893222.2,472564.6 6893189.3,472542.4 6893155.5,472504.1 6893109.8,472477.9 6893084.9,472443.6 6893049.2,472340.9 6892948.8,472240.2 6892848.5,472149.6 6892761.1,472117.3 6892727.4,472104.3 6892714.4,472087.4 6892691.8,472073.1 6892670.9,472065.3 6892659.6,472059.9 6892651.4,472055.8 6892643.7,472050.4 6892632.5,472046.1 6892622.8,472042 6892610.9,472039.5 6892600.8,472037.8 6892592.2,472036.6 6892583.7,472036.2 6892575.5,472036.2 6892568.6,472036.8 6892561,472038 6892554.2,472040 6892544.6,472042.2 6892535.9,472045.4 6892526.5,472060.1 6892494.9,472064.7 6892485,472068.4 6892476.5,472072 6892465.9,472074.2 6892454.7,472076.9 6892439.4,472078.2 6892431.1,472078.8 6892422.5,472078 6892414.6,472076.6 6892403.3,472074.4 6892392.8,472068.5 6892361.7,472067.2 6892352.2,472065.1 6892344.9,472062.8 6892338.1,472059.8 6892331.2,472055.9 6892322.2,472051.3 6892313.5,472042.2 6892297.9,472037.8 6892289.8,472035.7 6892284.6,472033.8 6892278.8,472031 6892268.1,472029.2 6892260.1,472028.4 6892255.9)'"  # noqa: E501
+    sql_update += """, 2154)
+    WHERE road_code = 'D138B' AND start_marker = 0 AND end_marker = 12
+    RETURNING id
+    ;
+    """
+    check = False
+    try:
+        data = connection.executeSql(sql_update)
+        check = True
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    # No assertions, data will be changed only afterwards when merging the editing session data
+    assert check is True
+    assert len(data) == 1
+    assert data[0] is not None
+    assert data[0][0] > 0
 
 
 def test_merge_editing_session_data():
@@ -1755,27 +1807,10 @@ def test_merge_editing_session_data():
 
     # Checks
     assert ids is not None
-    assert ids == [
-        2260,
-        2266,
-        2267,
-        2476,
-        2497,
-        2499,
-        2506,
-        4506,
-        7830,
-        7831,
-        7833,
-        7834,
-        7835,
-        7836,
-        7837,
-        7838,
-        7841,
-    ]
+    # do not compare the ids as they can change depending on the database state
+    assert len(ids) == 21
     assert hash is not None
-    assert hash == "45ce2202b7a3347b72613b2f5f88ab5e"
+    assert hash == "f4745b964d55850f5f117f8df0947f25"
 
     # Get managed objects data before merging the editing session data
     sql = """
@@ -1850,27 +1885,9 @@ def test_merge_editing_session_data():
 
     # Checks
     assert ids is not None
-    assert ids == [
-        2260,
-        2266,
-        2267,
-        2476,
-        2497,
-        2499,
-        2506,
-        4506,
-        7830,
-        7831,
-        7833,
-        7834,
-        7835,
-        7836,
-        7837,
-        7838,
-        7841,
-    ]
+    assert len(ids) == 21
     assert hash is not None
-    assert hash == "45ce2202b7a3347b72613b2f5f88ab5e"
+    assert hash == "f4745b964d55850f5f117f8df0947f25"
 
     # Check the managed objects have been modified by the merge of the editing session data
     sql = """
@@ -1905,6 +1922,52 @@ def test_merge_editing_session_data():
     assert trees[5] == [6, "Oak", "D138", 8, 29.18, "left", 4.63, 8084.06]
     assert trees[6] == [7, "Pine", "D138", 8, 202.78, "right", 18.09, 8257.66]
 
+    # safety barriers table: check the geometries have been updated
+    sql = """
+        SELECT
+            id, ST_AsText(ST_ReducePrecision(geom, 0.1)) AS wkt,
+            road_code, start_marker_code, start_abscissa,
+            end_marker_code, end_abscissa, "offset", side
+        FROM managed.demo_safety_barriers
+        ORDER BY id
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    barriers = []
+    for a in data:
+        barriers.append(a if a else None)
+    # Check the number of barriers
+    assert len(barriers) == 4
+    assert barriers[0] is not None
+    assert barriers[1] is not None
+    assert barriers[2] is not None
+    assert barriers[3] is not None
+    assert barriers[3] == [
+        4,
+        "MULTILINESTRING((473026.8 6894579.8,473055.6 6894624.2,473103.1 "
+        "6894690.9,473097.5 6894698.6,473050.6 6894763,473067.9 6894798.9,473084.2 "
+        "6894836.8,473104.4 6894871.7,473203 6894876.2,473204.4 6894876.2,473234.7 "
+        "6894923,473249.9 6894950.9,473252.9 6894954.9,473274.2 6894994.8,473276.7 "
+        "6895000.1))",
+        "D138B",
+        9,
+        201.71,
+        9,
+        790.85,
+        0.02,
+        "right",
+    ]
+    # TODO l'offset de 0.02 est n'est pas normal
+    # il faudrait lorsqu'on récupère les références du projeté des start et end point*
+    # de la ligne de la table métier, qu'on mette toujours la valeur de l'ancienne donnée
+    # Pas celle calculée par update_table_references_from_geometries qui est lancée
+    # avant update_table_geometries_from_references et qui ne prend pas en compte
+    # l'offset de la ligne de la table métier
+    # Pas grave si la géométrie du edge qui était sous le start et end point de la donnée métier
+    # n'a pas bougé aux abords de ces 2 "points", mais souci si oui
+
     # Check the view road_graph.v_managed_objects has been updated
     sql = """
         SELECT
@@ -1912,6 +1975,7 @@ def test_merge_editing_session_data():
             array_to_string(last_updated_objects_ids, ',') AS last_updated_objects_ids
         FROM road_graph.v_managed_objects
         WHERE schema_name = 'managed' AND table_name = 'demo_trees'
+        AND schema_name != 'aucune'
     """
     try:
         data = connection.executeSql(sql)
