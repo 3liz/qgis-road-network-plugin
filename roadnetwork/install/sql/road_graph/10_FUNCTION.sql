@@ -2836,6 +2836,10 @@ BEGIN
     -- Notice
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
 
+    -- Add default values for offset and side if they are NULL
+    _offset = Coalesce(_offset, 0.0);
+    _side = Coalesce(_side, 'right');
+
     -- Get downstream MULTILINESTRING
     SELECT
         closest_marker_abscissa,
@@ -3130,6 +3134,10 @@ BEGIN
     THEN
         RAISE EXCEPTION 'The start abscissa cannot be equal or greater than the end abscissa when the start and end marker have the same code';
     END IF;
+
+    -- Add default values for offset and side if they are NULL
+    _offset = Coalesce(_offset, 0.0);
+    _side = Coalesce(_side, 'right');
 
     -- Get downstream start MULTILINESTRING from start marker to end of the road
     SELECT
@@ -4786,12 +4794,12 @@ BEGIN
         Coalesce(array_to_string(_road_codes::text[], ','), ''),
         -- 5 : geometry type
         managed_object.geometry_type,
-        -- Use default values for side and offset if columns does not exists
+        -- Use default values for side and offset if columns does not exists or value is NULL
         -- else we need to cast to the expected function parameter formats
         -- 6
-        CASE WHEN 'offset' = ANY(table_cols) THEN 'mo."offset"::real' ELSE '0.0::real' END,
+        CASE WHEN 'offset' = ANY(table_cols) THEN 'Coalesce(mo."offset"::real, 0.0::real)' ELSE '0.0::real' END,
         -- 7
-        CASE WHEN 'side' = ANY(table_cols) THEN 'mo.side::text' ELSE 'right::text' END,
+        CASE WHEN 'side' = ANY(table_cols) THEN 'Coalesce(mo.side::text, ''right''::text) ' ELSE 'right::text' END,
         -- used function
         -- 8
         CASE
@@ -5009,13 +5017,13 @@ BEGIN
             -- 6 / add update for offset if the columns exists in the target table
             CASE
                 WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
-                    THEN $STR$"offset" = (r.ref->>'offset')::real, $STR$
+                    THEN $STR$"offset" = Coalesce((r.ref->>'offset')::real, 0.0::real), $STR$
                 ELSE ''
             END,
             -- 7 / add update for side if the columns exists in the target table
             CASE
                 WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
-                    THEN $STR$side = (r.ref->>'side')::text, $STR$
+                    THEN $STR$side = Coalesce((r.ref->>'side')::text, 'right'), $STR$
                 ELSE ''
             END,
             -- 8 / Detect if we need to update or not
@@ -5034,12 +5042,12 @@ BEGIN
                 END,
                 CASE
                     WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
-                        THEN $STR$ OR (r.ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$
+                        THEN $STR$ OR Coalesce((r.ref->>'offset')::real, 0.0::real) != Coalesce(mo.offset, 0.0)::real $STR$
                     ELSE ''
                 END,
                 CASE
                     WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
-                        THEN $STR$ OR (r.ref->>'side')::text != Coalesce(mo.side, '')::text $STR$
+                        THEN $STR$ OR Coalesce((r.ref->>'side')::text, 'right') != Coalesce(mo.side, 'right')::text $STR$
                     ELSE ''
                 END
             ),
@@ -5140,13 +5148,13 @@ BEGIN
             -- 6 / add update for offset if the columns exists in the target table
             CASE
                 WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
-                    THEN $STR$"offset" = (r.start_ref->>'offset')::real, $STR$
+                    THEN $STR$"offset" = Coalesce((r.start_ref->>'offset')::real, 0.0::real), $STR$
                 ELSE ''
             END,
             -- 7 / add update for side if the columns exists in the target table
             CASE
                 WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
-                    THEN $STR$"side" = (r.start_ref->>'side')::text, $STR$
+                    THEN $STR$"side" = Coalesce((r.start_ref->>'side')::text, 'right'::text), $STR$
                 ELSE ''
             END,
             -- 8 / add update for cumulative if the columns exists in the target table
@@ -5169,12 +5177,12 @@ BEGIN
                 END,
                 CASE
                     WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
-                        THEN $STR$ OR (r.start_ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$
+                        THEN $STR$ OR Coalesce((r.start_ref->>'offset')::real, 0.0::real) != Coalesce(mo.offset, 0.0)::real $STR$
                     ELSE ''
                 END,
                 CASE
                     WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
-                        THEN $STR$ OR (r.start_ref->>'side')::text != Coalesce(mo.side, '')::text $STR$
+                        THEN $STR$ OR Coalesce((r.start_ref->>'side')::text, 'right') != Coalesce(mo.side, 'right')::text $STR$
                     ELSE ''
                 END,
                 CASE WHEN 'end_cumulative' = ANY(table_cols)

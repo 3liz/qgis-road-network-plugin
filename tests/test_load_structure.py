@@ -1892,7 +1892,9 @@ def test_merge_editing_session_data():
     # Check the managed objects have been modified by the merge of the editing session data
     sql = """
         SELECT
-            id, species, road_code, marker_code, abscissa, side, "offset", cumulative
+            id, species, road_code, marker_code, abscissa,
+            Coalesce(side, 'right'), Coalesce("offset", 0.0),
+            cumulative
         FROM managed.demo_trees
         ORDER BY id
     """
@@ -1917,7 +1919,7 @@ def test_merge_editing_session_data():
     assert trees[0] == [1, "oak", "D152", 9, 493.31, "left", 8.19, 9600.46]
     assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11364.6]
     assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
-    assert trees[3] == [4, "Palm", None, None, None, None, None, None]
+    assert trees[3] == [4, "Palm", None, None, None, "right", 0.0, None]
     assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
     assert trees[5] == [6, "Oak", "D138", 8, 29.18, "left", 4.63, 8084.06]
     assert trees[6] == [7, "Pine", "D138", 8, 202.78, "right", 18.09, 8257.66]
