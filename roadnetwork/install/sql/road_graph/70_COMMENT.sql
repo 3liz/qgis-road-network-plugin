@@ -237,11 +237,15 @@ and an initial node given
 ';
 
 
--- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[])
-COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[]) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
+-- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean)
+COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
 The given columns must exists:
 * for points: road_code, marker_code, abscissa. Optional columns: offset & side,
 * road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset & side
+
+The parameter _update_offset_and_side allows to not update the offset and side columns of the target table.
+It is useful when used before updating the table geometries from the references
+(to keep the object in the same start and end places but adapt the geometry)
 ';
 
 

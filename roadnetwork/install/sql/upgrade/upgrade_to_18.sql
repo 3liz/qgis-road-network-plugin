@@ -364,8 +364,10 @@ END;
 $_$;
 
 
--- update_table_references_from_geometries(text, text, text[])
-CREATE OR REPLACE FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[]) RETURNS jsonb
+DROP FUNCTION IF EXISTS road_graph.update_table_references_from_geometries(text, text, text[]);
+CREATE OR REPLACE FUNCTION road_graph.update_table_references_from_geometries(
+    _schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean default True
+) RETURNS jsonb
     LANGUAGE plpgsql
     AS $_$
 DECLARE
@@ -528,9 +530,9 @@ BEGIN
                         road_code = r.ref->>'road_code',
                         -- cumulative if present
                         %5$s
-                        -- offset if present
+                        -- offset if present and if _update_offset_and_side is True
                         %6$s
-                        -- side if present
+                        -- side if present and if _update_offset_and_side is True
                         %7$s
                         -- marker code and abscissa put here to avoid errors with commas
                         marker_code = (r.ref->>'marker_code')::integer,
@@ -554,9 +556,17 @@ BEGIN
             -- 5 / add update for cumulative if the columns exists in the target table
             CASE WHEN 'cumulative' = ANY(table_cols) THEN $STR$cumulative = (r.ref->>'cumulative')::real, $STR$ ELSE '' END,
             -- 6 / add update for offset if the columns exists in the target table
-            CASE WHEN 'offset' = ANY(table_cols) THEN $STR$"offset" = (r.ref->>'offset')::real, $STR$ ELSE '' END,
+            CASE
+                WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
+                    THEN $STR$"offset" = (r.ref->>'offset')::real, $STR$
+                ELSE ''
+            END,
             -- 7 / add update for side if the columns exists in the target table
-            CASE WHEN 'side' = ANY(table_cols) THEN $STR$side = (r.ref->>'side')::text, $STR$ ELSE '' END,
+            CASE
+                WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
+                    THEN $STR$side = (r.ref->>'side')::text, $STR$
+                ELSE ''
+            END,
             -- 8 / Detect if we need to update or not
             concat(
                 $STR$
@@ -571,11 +581,15 @@ BEGIN
                 CASE WHEN 'cumulative' = ANY(table_cols)
                     THEN $STR$ OR (r.ref->>'cumulative')::real != Coalesce(mo.cumulative, -1)::real $STR$ ELSE ''
                 END,
-                CASE WHEN 'offset' = ANY(table_cols)
-                    THEN $STR$ OR (r.ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$ ELSE ''
+                CASE
+                    WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
+                        THEN $STR$ OR (r.ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$
+                    ELSE ''
                 END,
-                CASE WHEN 'side' = ANY(table_cols)
-                    THEN $STR$ OR (r.ref->>'side')::text != Coalesce(mo.side, '')::text $STR$ ELSE ''
+                CASE
+                    WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
+                        THEN $STR$ OR (r.ref->>'side')::text != Coalesce(mo.side, '')::text $STR$
+                    ELSE ''
                 END
             ),
             -- 9 / geometry_column
@@ -673,9 +687,17 @@ BEGIN
             -- 5 / add update for cumulative if the columns exists in the target table
             CASE WHEN 'start_cumulative' = ANY(table_cols) THEN $STR$"start_cumulative" = (r.start_ref->>'cumulative')::real, $STR$ ELSE '' END,
             -- 6 / add update for offset if the columns exists in the target table
-            CASE WHEN 'offset' = ANY(table_cols) THEN $STR$"offset" = (r.start_ref->>'offset')::real, $STR$ ELSE '' END,
+            CASE
+                WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
+                    THEN $STR$"offset" = (r.start_ref->>'offset')::real, $STR$
+                ELSE ''
+            END,
             -- 7 / add update for side if the columns exists in the target table
-            CASE WHEN 'side' = ANY(table_cols) THEN $STR$"side" = (r.start_ref->>'side')::text, $STR$ ELSE '' END,
+            CASE
+                WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
+                    THEN $STR$"side" = (r.start_ref->>'side')::text, $STR$
+                ELSE ''
+            END,
             -- 8 / add update for cumulative if the columns exists in the target table
             CASE WHEN 'end_cumulative' = ANY(table_cols) THEN $STR$"end_cumulative" = (r.end_ref->>'cumulative')::real, $STR$ ELSE '' END,
             -- 9 / Detect if we need to update or not
@@ -694,11 +716,15 @@ BEGIN
                 CASE WHEN 'start_cumulative' = ANY(table_cols)
                     THEN $STR$ OR (r.start_ref->>'cumulative')::real != Coalesce(mo.start_cumulative, -1)::real $STR$ ELSE ''
                 END,
-                CASE WHEN 'offset' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$ ELSE ''
+                CASE
+                    WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
+                        THEN $STR$ OR (r.start_ref->>'offset')::real != Coalesce(mo.offset, -1)::real $STR$
+                    ELSE ''
                 END,
-                CASE WHEN 'side' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'side')::text != Coalesce(mo.side, '')::text $STR$ ELSE ''
+                CASE
+                    WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
+                        THEN $STR$ OR (r.start_ref->>'side')::text != Coalesce(mo.side, '')::text $STR$
+                    ELSE ''
                 END,
                 CASE WHEN 'end_cumulative' = ANY(table_cols)
                     THEN $STR$ OR (r.end_ref->>'cumulative')::real != Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE ''
@@ -719,11 +745,15 @@ END;
 $_$;
 
 
--- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[])
-COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[]) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
+COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean)
+IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
 The given columns must exists:
 * for points: road_code, marker_code, abscissa. Optional columns: offset & side,
 * road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset & side
+
+The parameter _update_offset_and_side allows to not update the offset and side columns of the target table.
+It is useful when used before updating the table geometries from the references
+(to keep the object in the same start and end places but adapt the geometry)
 ';
 
 
@@ -788,10 +818,17 @@ BEGIN
     -- les "mêmes" sur le terrain (ex: début à cette maison, et fin à ce carrefour)
 
     -- Update objects references in both cases
+    -- But when we do it before updating geometries, we should not modify the offset and side values
+
     SELECT road_graph.update_table_references_from_geometries(
         _schema_name,
         _table_name,
-        _road_codes
+        _road_codes,
+        CASE
+            WHEN managed_object.update_policy_on_graph_change = 'geometry'
+                THEN False
+            ELSE True
+        END
     )
     INTO updated_stats_references
     ;

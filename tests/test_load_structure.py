@@ -1946,27 +1946,18 @@ def test_merge_editing_session_data():
     assert barriers[3] is not None
     assert barriers[3] == [
         4,
-        "MULTILINESTRING((473026.8 6894579.8,473055.6 6894624.2,473103.1 "
-        "6894690.9,473097.5 6894698.6,473050.6 6894763,473067.9 6894798.9,473084.2 "
-        "6894836.8,473104.4 6894871.7,473203 6894876.2,473204.4 6894876.2,473234.7 "
-        "6894923,473249.9 6894950.9,473252.9 6894954.9,473274.2 6894994.8,473276.7 "
-        "6895000.1))",
+        "MULTILINESTRING((473276.7 6895000.1,473274.2 6894994.8,473252.9 "
+        "6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473104.4 "
+        "6894871.7,473084.2 6894836.8,473067.9 6894798.9,473050.6 6894763,473103.1 "
+        "6894690.9,473055.6 6894624.2,473026.8 6894579.8))",
         "D138B",
         9,
         201.71,
         9,
         790.85,
-        0.02,
+        0.0,
         "right",
     ]
-    # TODO l'offset de 0.02 est n'est pas normal
-    # il faudrait lorsqu'on récupère les références du projeté des start et end point*
-    # de la ligne de la table métier, qu'on mette toujours la valeur de l'ancienne donnée
-    # Pas celle calculée par update_table_references_from_geometries qui est lancée
-    # avant update_table_geometries_from_references et qui ne prend pas en compte
-    # l'offset de la ligne de la table métier
-    # Pas grave si la géométrie du edge qui était sous le start et end point de la donnée métier
-    # n'a pas bougé aux abords de ces 2 "points", mais souci si oui
 
     # Check the view road_graph.v_managed_objects has been updated
     sql = """
