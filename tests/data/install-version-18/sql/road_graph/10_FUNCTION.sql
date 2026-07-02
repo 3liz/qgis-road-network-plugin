@@ -4440,7 +4440,6 @@ BEGIN
     -- pour ensuite adapter la géométrie (si jamais les edges support ont été modifiés)
     -- Cela assure que le début et la fin des lignes des données métiers restent
     -- les "mêmes" sur le terrain (ex: début à cette maison, et fin à ce carrefour)
-    -- Par contre on ne calcule pas les offset et side (pour respecter cette donnée)
 
     -- Update objects references in both cases
     -- But when we do it before updating geometries, we should not modify the offset and side values
@@ -4547,13 +4546,7 @@ BEGIN
         -- convert json array to string like 1,3,10
         (
             SELECT array_to_string(array_agg(j)::text[], ',')
-            FROM jsonb_array_elements(
-                CASE
-                    WHEN jsonb_typeof(updated_stats->'last_updated_objects_ids') = 'array'
-                        THEN updated_stats->'last_updated_objects_ids'
-                    ELSE '[]'
-                END
-            ) AS j
+            FROM jsonb_array_elements(updated_stats->'last_updated_objects_ids') AS j
         )
     );
 

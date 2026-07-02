@@ -31,7 +31,7 @@ CREATE VIEW road_graph.v_managed_objects AS
     road_graph.get_merged_geom_from_table_and_ids(m.schema_name, m.table_name, m.last_updated_objects_ids) AS geom
    FROM road_graph.managed_objects m
 UNION
- SELECT '-1'::integer AS id,
+ SELECT (- 1) AS id,
     'aucune'::text AS schema_name,
     'donnee'::text AS table_name,
     NULL::text AS geometry_type,
