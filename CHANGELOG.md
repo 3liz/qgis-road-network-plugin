@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.4.6 - 2026-07-02
+
+### Fixed
+
+* Fix multiple misbehaviours of the SQL method `road_graph.update_managed_objects_on_graph_change`:
+  * `road_graph.update_table_references_from_geometries`:
+    fix error when managed object `road_code` does not exists
+  * `road_graph.update_table_references_from_geometries`:
+    Add an option to avoid setting the table object offset and side columns
+  * `road_graph.update_managed_objects_on_graph_change`:
+    always recalculate start & end points references before updating geometries
+    so that the beginning and end of the linestring geometry does not move
+
 ## 0.4.5 - 2026-06-24
 
 ### Fixed
