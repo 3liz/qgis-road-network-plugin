@@ -1,6 +1,6 @@
 
 # Overridable
-export POSTGIS_VERSION ?= 15-3
+export POSTGIS_VERSION ?= 17-3
 export SCHEMA ?= $(shell python3 -m $(MODULE_NAME) default-schema)
 export DB_CURRENT_VERSION ?= $(shell python3 -m $(MODULE_NAME) install-version)
 
