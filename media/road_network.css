@@ -1,0 +1,62 @@
+/* CSS FOR ROAD NETWORK TOOLS */
+table.road_network_table {
+    width:100%;
+    font-size: 10pt;
+}
+table.road_network_table th
+table.road_network_table td,
+{
+    vertical-align: center;
+    width: 30%;
+}
+table.road_network_table input,
+table.road_network_table select
+{
+    width: 90%;
+}
+table.road_network_table input#rd_toggle_hover {
+    width: 30px; float:left;
+}
+table.road_network_table label[for="rd_toggle_hover"] {
+    width: auto;
+}
+#rd_hover_info {
+    position: absolute;
+    display: inline-block;
+    height: auto;
+    width: auto;
+    z-index: 100;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px;
+    left: 50%;
+    transform: translateX(3%);
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 2000;
+}
+
+form.road_network_form {
+    margin-bottom: 0px;
+}
+
+table.road_network_table button.road_network_btn {
+    margin-bottom: 12px;
+}
+
+details.road_network_details > summary {
+    cursor: pointer;
+    font-weight: bold;
+}
+details.road_network_details > div {
+    border: 1px solid lightgray;
+    border-radius: 5px;
+    margin: 5px;
+    padding: 5px;
+}
+
+form.road_network_form  input:disabled+label {
+  color: #ccc;
+}
