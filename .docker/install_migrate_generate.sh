@@ -1,16 +1,30 @@
 #!/usr/bin/env bash
 
 #
+# Test migration scheme:
+#
 # 1.Install the database with a stored previous version.
 # 2.Run the migrations scripts up to the current version.
-# 3.Output the migrate schema in tests/.tests-migration-<from>-to-<current>
+# 3.Output the migrated schema in tests/.tests-migration-<from>-to-<current>
 # 4.Generate a diff `sql.patch` between the current schema and the upgraded one
 #
+# Variables:
+# ----------
+# BD_CURRENT_VERSION: the target version
+# DB_INSTALL_VERSION: the version from which to start the migration
+#
+
 
 set -eu
 
 current_version=$DB_CURRENT_VERSION
 db_version=${DB_INSTALL_VERSION:-$((current_version-1))}
+pg_dump_version="$(pg_dump --version)"
+test_dpkg="$(dpkg -l | grep postgresql)"
+echo "Current version = $current_version"
+echo "DB version = $db_version"
+echo "pg_dump version = $pg_dump_version"
+echo "dpkg = $test_dpkg"
 
 install_dir=/src/tests/data/install-version-$db_version/sql
 
@@ -18,6 +32,7 @@ if [[ ! -e $install_dir ]]; then
     echo "No installation version for database version $db_version"
     exit 1
 fi
+
 
 echo "== Installation from version $db_version"
 psql service=test -c "DROP SCHEMA IF EXISTS ${SCHEMA} CASCADE;" > /dev/null
@@ -45,7 +60,7 @@ echo ""
 
 cd /src
 
-echo '== Export update database as installation SQL files'
+echo '== Export updated database as installation SQL files'
 destination_dir=tests/.test-migration-$db_version-to-$current_version
 rm -rf $destination_dir
 mkdir -p $destination_dir/sql
@@ -57,7 +72,7 @@ popd
 # Generate a diff file between current and install version
 echo "== Creating patch file"
 set +e  # Suppress exit on erreur
-diff -urB $MODULE_NAME/install/sql/$SCHEMA  $destination_dir/sql/$SCHEMA > $destination_dir/sql.patch 
+diff -urB $MODULE_NAME/install/sql/$SCHEMA  $destination_dir/sql/$SCHEMA > $destination_dir/sql.patch
 
 [[ $? -eq 1 ]] && true
 echo "== Done"

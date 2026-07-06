@@ -1,6 +1,7 @@
 
 # Overridable
 export POSTGIS_VERSION ?= 17-3
+export POSTGIS_IMAGE_TAG ?= $(REGISTRY_PREFIX)postgis:$(POSTGIS_VERSION)
 export SCHEMA ?= $(shell python3 -m $(MODULE_NAME) default-schema)
 export DB_CURRENT_VERSION ?= $(shell python3 -m $(MODULE_NAME) install-version)
 
@@ -11,6 +12,11 @@ start-db:
 
 stop-db:
 	@cd .docker && docker compose down -v
+
+# Force to re-build the db-runner image
+# usefull when changing the env variable POSTGIS_VERSION
+rebuild-db-runner:
+	@cd .docker && docker compose --profile=dbrunner build
 
 #
 # Create a new migration scheme
@@ -41,6 +47,9 @@ run-db-command:
 			--exit-code-from db-runner; \
 		docker compose --profile=dbrunner down -v; \
 	}
+
+
+
 
 test-migration:
 	$(MAKE) run-db-command DB_COMMAND=./install_migrate_generate.sh

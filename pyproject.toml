@@ -41,6 +41,7 @@ dev = [
 tests = [
     "semver",
     "pytest",
+    "pytest_qgis",
     "psycopg[binary]",
 ]
 lint = [
@@ -60,15 +61,18 @@ doc = [
 
 [tool.uv.sources]
 qt-transifex =  { git = "https://github.com/3liz/qt-transifex" }
+pytest-qgis = { git = "https://github.com/3liz/pytest-qgis.git" }
+
+[tool.yapt]
+plugin_source = "roadnetwork"
 
 [tool.qt-transifex]
 plugin_source = "roadnetwork"
 organization = "3liz-1"
 project = "road-network"
-minimum_translation = 25.0
+resource = "road-network"
+#minimum_translation = 25.0
 
-[tool.yapt]
-plugin_source = "roadnetwork"
 
 #
 # Ruff
@@ -88,22 +92,29 @@ exclude = [
 indent-style = "space"
 
 [tool.ruff.lint]
-extend-select = ["E", "F", "I", "ANN", "W", "T", "COM", "RUF"]
+extend-select = [
+    "E", "F", "ANN", "W", "T", "COM", "RUF",
+    "C4", "SIM", "TC", "RET",
+]
+
 # COM812 conflict with formatter
 ignore = [
     "ANN002",
     "ANN003",
-    "T201",
+    "ANN401",
     "COM812",
-    "RUF067",
+    "RUF067", # module should only contain docstrings and re-exports
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"test/*" = [
+"tests/*" = [
     "T201",
 ]
 "__init__.py" = [
     "F401",
+]
+"__main__.py" = [
+    "T201",
 ]
 
 [tool.ruff.lint.isort]
@@ -128,13 +139,11 @@ suppress-dummy-args = true
 python_version = "3.10"
 
 [[tool.mypy.overrides]]
-module = "qgis.*"
+module = [
+    "qgis.*",
+    "osgeo.*",
+    "processing.*",
+]
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = "osgeo.*"
-ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = "processing.*"
-ignore_missing_imports = true

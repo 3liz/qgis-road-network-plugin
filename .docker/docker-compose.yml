@@ -7,11 +7,14 @@ services:
       # Remove HOME variable if not using database
       HOME: /home/qgis
       QGIS_VERSION: ${QGIS_VERSION}
+      # For tests to select the correct database host/port
+      CI_ENV: docker
     volumes:
     - {type: bind, source: "..", target: /src}
 #
 # Remove everything from here if your are not using database
 #
+    - {type: bind, source: "./qgis_settings.ini", target: /src/tests/qgis_settings.ini}
     - type: bind
       source: ./pg_service.conf
       target: /etc/postgresql-common/pg_service.conf
@@ -22,7 +25,7 @@ services:
       - qgis
 
   db:
-    image: 3liz/postgis:${POSTGIS_VERSION}
+    image: ${POSTGIS_IMAGE_TAG}
     hostname: db
     environment:
       POSTGRES_DB: "gis"
@@ -76,7 +79,7 @@ services:
     volumes:
     - {type: bind, source: "../docs/database", target: /output}
     command: >-
-      -t pgsql11 --include-routine-definition -host db -db gis -u docker -p docker -port 5432 -s ${SCHEMA} -nopages
+      -t pgsql -host db -db gis -u docker -p docker -port 5432 -s ${SCHEMA} -nopages
     depends_on:
       db-runner:
         condition: service_healthy

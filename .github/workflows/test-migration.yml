@@ -1,27 +1,14 @@
 name: SQL 🎳
 
 on:
-  push:
-#    paths:
-#      - '**.sql'
   pull_request:
-#    paths:
-#      - '**.sql'
 
 jobs:
   test-migration:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        qgis_version: [
-            "3.40",
-            "3.44",
-          ]
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
-        with:
-          submodules: 'true'
 
       - name: Running tests
-        run: make docker-test QGIS_VERSION=${{ matrix.qgis_version }}
+        run: make test-migration

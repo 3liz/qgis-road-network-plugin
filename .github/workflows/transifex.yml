@@ -24,7 +24,7 @@ jobs:
           cache: "pip"
           cache-dependency-path: "requirements/transifex.txt"
 
-      - name: Install transifex toolI
+      - name: Install Packaging CI
         run: |
             sudo apt-get -qq update
             sudo apt-get -qq install qttools5-dev-tools pyqt5-dev-tools

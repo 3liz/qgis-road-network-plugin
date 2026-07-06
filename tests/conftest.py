@@ -1,11 +1,13 @@
 import sys
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from qgis.core import Qgis
-from qgis.PyQt import Qt
+from qgis.gui import QgisInterface
+from qgis.PyQt.QtCore import QT_VERSION_STR
+
 
 # NOTE Remove if not using database
 from .conftest_database import (  # noqa F401
@@ -14,28 +16,34 @@ from .conftest_database import (  # noqa F401
     db_schema,
     processing_provider,
 )
-from .qgis_testing import start_app
+from .qgis_testing import QGIS_VERSION_INT, install_logger_hook, load_plugin
 
 # with warnings.catch_warnings():
 #    warnings.filterwarnings("ignore", category=DeprecationWarning)
 #    from osgeo import gdal
 
+PLUGIN_SOURCE = "roadnetwork"
+
 
 def pytest_report_header(config):
     from osgeo import gdal
 
-    message = (
-        f"QGIS : {Qgis.QGIS_VERSION_INT}\n"
+    return (
+        f"QGIS : {QGIS_VERSION_INT}\n"
         f"Python GDAL : {gdal.VersionInfo('VERSION_NUM')}\n"
         f"Python : {sys.version}\n"
-        f"QT : {Qt.QT_VERSION_STR}"
+        f"QT : {QT_VERSION_STR}"
     )
-    return message
 
 
 #
 # Fixtures
 #
+
+
+def pytest_sessionstart(session: pytest.Session):
+    """Start qgis application"""
+    install_logger_hook
 
 
 @pytest.fixture(scope="session")
@@ -48,7 +56,9 @@ def data(rootdir: Path) -> Path:
     return rootdir.joinpath("data")
 
 
-def pytest_sessionstart(session: pytest.Session):
-    """Start qgis application"""
-    sys.path.append("/usr/share/qgis/python")  # for pyplugin installer
-    start_app(session.path, False)
+@pytest.fixture(autouse=True, scope="session")
+def plugin(rootdir: Path, qgis_iface: QgisInterface, qgis_processing: Any) -> Any:
+    plugin_path = rootdir.parent.joinpath(PLUGIN_SOURCE)
+    plugin = load_plugin(plugin_path, qgis_iface, processing=True)
+
+    yield plugin

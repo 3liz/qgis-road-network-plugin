@@ -19,7 +19,7 @@ PACKAGE_NAME = "roadnetwork"
 def plugin_path(*args: str | Path) -> Path:
     """Return the path to the plugin root folder."""
     # Use the canonical way to get module resources path
-    return cast(Path, resources.files(PACKAGE_NAME)).joinpath(*args)
+    return cast("Path", resources.files(PACKAGE_NAME)).joinpath(*args)
 
 
 def resources_path(*args) -> Path:

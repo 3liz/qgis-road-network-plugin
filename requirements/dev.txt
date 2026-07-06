@@ -17,6 +17,7 @@ psycopg==3.3.3
 psycopg-binary==3.3.3 ; implementation_name != 'pypy'
 pygments==2.20.0
 pytest==9.0.3
+pytest-qgis @ git+https://github.com/3liz/pytest-qgis.git@364633963a2d7b75aabde9044b8b79c3cd40c7ab
 pyyaml==6.0.3
 rich==14.3.3
 ruff==0.15.10

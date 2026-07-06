@@ -38,8 +38,8 @@ def argument(*args, **kwargs):
         if isinstance(fun, tuple):
             # tuple(Callable, tuple[option])
             return (fun[0], (*fun[1], arg))
-        else:
-            return (fun, (arg,))
+
+        return (fun, (arg,))
 
     return decorator
 

@@ -1084,6 +1084,14 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-qgis"
+version = "4.0.1.post1"
+source = { git = "https://github.com/3liz/pytest-qgis.git#364633963a2d7b75aabde9044b8b79c3cd40c7ab" }
+dependencies = [
+    { name = "pytest" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1343,6 +1351,7 @@ dev = [
     { name = "mypy" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pytest" },
+    { name = "pytest-qgis" },
     { name = "ruff" },
     { name = "semver" },
     { name = "vulture" },
@@ -1360,6 +1369,7 @@ lint = [
 tests = [
     { name = "psycopg", extra = ["binary"] },
     { name = "pytest" },
+    { name = "pytest-qgis" },
     { name = "semver" },
 ]
 transifex = [
@@ -1375,6 +1385,7 @@ dev = [
     { name = "mypy" },
     { name = "psycopg", extras = ["binary"] },
     { name = "pytest" },
+    { name = "pytest-qgis", git = "https://github.com/3liz/pytest-qgis.git" },
     { name = "ruff" },
     { name = "semver" },
     { name = "vulture" },
@@ -1392,6 +1403,7 @@ lint = [
 tests = [
     { name = "psycopg", extras = ["binary"] },
     { name = "pytest" },
+    { name = "pytest-qgis", git = "https://github.com/3liz/pytest-qgis.git" },
     { name = "semver" },
 ]
 transifex = [{ name = "qt-transifex", marker = "python_full_version >= '3.12'", git = "https://github.com/3liz/qt-transifex" }]
