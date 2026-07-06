@@ -2863,6 +2863,7 @@ BEGIN
 
     -- Return point
     SELECT INTO result_point
+    ST_ReducePrecision(
         -- extract first point of resulting multipoint from ST_LocateAlong
         ST_GeometryN(
             -- Remove M measure from the result multipoint
@@ -2883,7 +2884,9 @@ BEGIN
                 )
             )
             , 1
-        )::geometry(POINT, 2154)
+        ),
+        0.01
+    )::geometry(POINT, 2154)
     ;
 
     -- Return full JSONb with parameters and computed geometry
@@ -3114,6 +3117,8 @@ DECLARE
     _end_downstream_road_m geometry(MULTILINESTRINGM, 2154);
     _start_substring geometry(MULTILINESTRING, 2154);
     _end_substring geometry(MULTILINESTRING, 2154);
+    result_multilinestring_a geometry(MULTILINESTRING, 2154);
+    result_multilinestring_b geometry(MULTILINESTRING, 2154);
     result_multilinestring geometry(MULTILINESTRING, 2154);
     raise_notice text;
 BEGIN
@@ -3258,31 +3263,46 @@ BEGIN
     END IF;
 
     -- Then we must merge the touching lines to avoid the offset curve function to produce gaps or crossing lines
-    result_multilinestring = ST_LineMerge(result_multilinestring);
+    result_multilinestring_a = ST_LineMerge(
+        result_multilinestring
+        -- , True
+    );
     IF raise_notice = 'yes' THEN
         RAISE NOTICE 'result_multilinestring ST_LineMerge  %', ST_AsText(result_multilinestring);
     END IF;
 
     -- Then we apply the offset curve on the result
-    result_multilinestring :=
+    -- BEWARE: The ST_OffsetCurve does not respect the initial linestring node order !
+    -- The function road_graph.reorder_multilinestring_parts will do the job
+    result_multilinestring_b :=
     ST_Multi(
-        ST_OffsetCurve(
-            ST_Multi(
-                result_multilinestring
-            )::geometry(MULTILINESTRING, 2154),
-            -- The offset value is multiplied by +1 or -1 depending on the side (right or left)
-            ((json_build_object('left', +1, 'right', -1))->>("_side"))::integer * "_offset"
+        ST_LineMerge(
+            ST_OffsetCurve(
+                ST_Multi(
+                    result_multilinestring_a
+                )::geometry(MULTILINESTRING, 2154),
+                -- The offset value is multiplied by +1 or -1 depending on the side (right or left)
+                ((json_build_object('left', +1, 'right', -1))->>("_side"))::integer * "_offset"
+            )
+            -- ,
+            -- True
         )
     )
     ;
 
     -- Reorder the multilinestring parts if needed
-    result_multilinestring = road_graph.reorder_multilinestring_parts(
-        result_multilinestring,
+    -- This method also ensure that the lines are orientations follows the references
+    result_multilinestring_b := road_graph.reorder_multilinestring_parts(
+        result_multilinestring_b,
         _road_code
     );
 
     -- Raise notice with the final result
+    -- We reduce the precision, but not too much
+    result_multilinestring = ST_ReducePrecision(
+        result_multilinestring_b,
+        0.01
+    );
     IF raise_notice = 'yes'  THEN
         RAISE NOTICE 'result_multilinestring  %', ST_AsText(result_multilinestring);
     END IF;
@@ -4043,29 +4063,45 @@ BEGIN
             SELECT (dump).geom
             FROM d
         ),
-        -- Calculate the references of the parts end points
+        -- Calculate the references of the parts start & end points
         get_refs AS (
             SELECT
-                geom, ST_EndPoint(geom) AS end_point,
+                geom,
+                road_graph.get_reference_from_point(
+                    ST_StartPoint(geom),
+                    _road_code
+                ) AS start_refs,
                 road_graph.get_reference_from_point(
                     ST_EndPoint(geom),
                     _road_code
-                ) AS refs
+                ) AS end_refs
             FROM parties
         ),
         -- Extract the references and calculate a cost which will be used to order the parts
         extract_values AS (
             SELECT
                 geom,
-                (refs->>'marker_code')::int AS marker_code,
-                (refs->>'abscissa')::real AS abscissa,
-                (refs->>'marker_code')::int * 10000 + (refs->>'abscissa')::real AS part_order
+                (start_refs->>'marker_code')::int AS start_marker_code,
+                (start_refs->>'abscissa')::real AS start_abscissa,
+                (start_refs->>'marker_code')::int * 10000 + (start_refs->>'abscissa')::real AS start_part_order,
+                (end_refs->>'marker_code')::int AS end_marker_code,
+                (end_refs->>'abscissa')::real AS end_abscissa,
+                (end_refs->>'marker_code')::int * 10000 + (end_refs->>'abscissa')::real AS end_part_order
             FROM get_refs
         )
         -- Reassemble the parts order by the calculated cost
         SELECT INTO _result_multilinestring
             ST_Multi(
-                ST_Collect(geom ORDER BY part_order)
+                ST_Collect(
+                    -- Revert the geometry if needed
+                    CASE
+                        WHEN start_part_order > end_part_order
+                            THEN ST_Reverse(geom)
+                        ELSE geom
+                    END
+                    -- Order the parts based on the parts order
+                    ORDER BY end_part_order
+                )
             )
         FROM extract_values
         ;
@@ -4081,7 +4117,8 @@ $$;
 
 -- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
 COMMENT ON FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) IS 'Reorder the parts of the given road MULTILINESTRING based on the graph.
-For each part, the references of the end point is calculated, which helps to reorder the parts
+For each part, the references of the start & end points is calculated, which helps to reorder the parts.
+We also reverse the geometry if needed (since the ST_OffsetCurve sometimes does not respect the node order)
 ';
 
 
@@ -4766,15 +4803,15 @@ BEGIN
             run_update AS (
                 UPDATE %2$I.%3$I AS mo
                 SET
-                    geom = ST_ReducePrecision(u.geom, 0.10)
+                    geom = ST_ReducePrecision(u.geom, 0.01)
                 FROM updated_objects AS u
                 WHERE mo.%1$I = u.id
                 AND u.geom IS NOT NULL
                 AND (
                     mo.geom IS NULL
                     OR NOT ST_Equals(
-                        ST_ReducePrecision(mo.geom, 0.10),
-                        ST_ReducePrecision(u.geom, 0.10)
+                        ST_ReducePrecision(mo.geom, 0.01),
+                        ST_ReducePrecision(u.geom, 0.01)
                     )
                 )
                 RETURNING mo.*

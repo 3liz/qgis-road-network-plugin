@@ -205,7 +205,8 @@ COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id in
 
 -- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
 COMMENT ON FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) IS 'Reorder the parts of the given road MULTILINESTRING based on the graph.
-For each part, the references of the end point is calculated, which helps to reorder the parts
+For each part, the references of the start & end points is calculated, which helps to reorder the parts.
+We also reverse the geometry if needed (since the ST_OffsetCurve sometimes does not respect the node order)
 ';
 
 

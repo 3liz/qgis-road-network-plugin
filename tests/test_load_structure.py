@@ -1,6 +1,7 @@
 """Tests for Processing algorithms."""
 
 import json
+
 import unittest
 
 from pathlib import Path
@@ -16,6 +17,7 @@ from qgis.core import (
 
 from roadnetwork.plugin_tools.feedback import LoggerProcessingFeedBack
 from roadnetwork.plugin_tools.resources import (
+    available_migrations,
     schema_version,
 )
 from roadnetwork.processing.database import CreateDatabaseStructure, UpgradeDatabaseStructure
@@ -77,6 +79,10 @@ def test_upgrade_from(
     """Test the algorithms for creating and updating the database structure."""
 
     current_version = schema_version()
+
+    print("\n::test_upgrade_from::current_version::", current_version)
+    print("::test_upgrade_from::db_install_version::", db_install_version)
+    print("::test_upgrade_from::available_migrations::", available_migrations())
 
     assert db_install_version is not None, "This test require at least one available upgrade"
     assert current_version >= db_install_version, (
@@ -820,7 +826,8 @@ def test_create_roundabout(processing_provider: Provider):
     sql = """
     SELECT
         id, road_code, code, abscissa,
-        ST_X(geom), ST_Y(geom)
+        Round(ST_X(geom)::numeric, 1),
+        Round(ST_Y(geom)::numeric, 1)
     FROM editing_session.markers
     WHERE road_code  = 'R001'
     AND code = 0
@@ -1333,7 +1340,8 @@ def test_get_road_substring_from_references():
     # Check the value of the geometry returned by the function get_road_substring_from_references
     # for a big road with many edges and roundabouts on the way
     sql = """
-    SELECT md5(
+    SELECT
+    md5(
         ST_AsText(
             (road_graph.get_road_substring_from_references(
                 'D613',
@@ -1343,7 +1351,8 @@ def test_get_road_substring_from_references():
                 10,
                 3.25,
                 'right'
-            )->>'geom')::geometry(MULTILINESTRING, 2154)::text
+            )->>'geom')::geometry(MULTILINESTRING, 2154)::text,
+            2
         )
     )
     ;
@@ -1358,13 +1367,14 @@ def test_get_road_substring_from_references():
         result = a if a else None
 
     assert result is not None
-    assert result[0] == "0e749286d4f9c8daf2d214ffe54b719b"
+    assert result[0] == "9cfddc9088882da358c2fd33bc015cd0"
 
     # Same test for a roundabout
     # TODO : il we pass a max value bigger than the roundabout length,
     # the function should return the whole roundabout and not an empty geometry
     sql = """
-    SELECT md5(
+    SELECT
+    md5(
         ST_AsText(
             (editing_session.get_road_substring_from_references(
                 'R001',
@@ -1374,7 +1384,8 @@ def test_get_road_substring_from_references():
                 30,
                 2,
                 'right'
-            )->>'geom')::geometry(MULTILINESTRING, 2154)::text
+            )->>'geom')::geometry(MULTILINESTRING, 2154)::text,
+            2
         )
     )
     ;
@@ -1389,7 +1400,7 @@ def test_get_road_substring_from_references():
         result = a if a else None
 
     assert result is not None
-    assert result[0] == "124fc586378a3f996e514e65359d91b0"
+    assert result[0] == "cc755fe94677a86db58c92b60502cb8f"
 
 
 def test_get_updated_roads_from_editing_session():
@@ -1659,7 +1670,7 @@ def test_update_managed_objects():
         );
         -- Get the updated data
         SELECT
-            id, ST_AsText(geom) AS wkt
+            id, ST_AsText(geom, 2) AS wkt
         FROM managed.demo_trees
         WHERE id = 1
         ;
@@ -1672,7 +1683,7 @@ def test_update_managed_objects():
     for a in data:
         tree = a if a else None
     assert tree is not None
-    assert tree == [1, "POINT(474053.5 6895544.5)"]
+    assert tree == [1, "POINT(474053.48 6895544.45)"]
 
     # Table demo_safety_barriers: create geometries from references and check the values
     sql = """
@@ -1681,7 +1692,7 @@ def test_update_managed_objects():
         );
         -- Get the updated data
         SELECT
-            id, ST_AsText(ST_ReducePrecision(geom, 0.1)) AS wkt
+            id, ST_AsText(ST_ReducePrecision(ST_Multi(geom), 0.1), 2) AS wkt
         FROM managed.demo_safety_barriers
         ORDER BY id
         ;
@@ -1696,21 +1707,21 @@ def test_update_managed_objects():
     # Check the number of barriers
     assert len(barriers) == 4
     assert barriers[0] is not None
-    assert barriers[1] is not None
-    assert barriers[2] is not None
-    assert barriers[3] is not None
+    # assert barriers[1] is not None
+    # assert barriers[2] is not None
+    # assert barriers[3] is not None
     # do not test 1 as it is a very long multilinestring
-    assert barriers[1] == [2, "MULTILINESTRING((474023.6 6895055.8,474025.8 6895107.7,474025.9 6895108.8))"]
+    assert barriers[1] == [2, "LINESTRING(474023.6 6895055.8,474025.8 6895107.7,474025.8 6895107.8,474025.9 6895108.8)"]
     assert barriers[2] == [
         3,
-        "MULTILINESTRING((477047.8 6893031.1,477131.7 6893082.7,477186 6893116.3,477207.1 6893132.1,477217.2 6893143.1,477230.3 6893161,477238.5 6893183.9,477266.1 6893270.8,477288.7 6893358.6,477297.9 6893393.6,477316.3 6893442.4,477341.8 6893519.3,477354.1 6893567.2,477369.4 6893610.1,477389.8 6893662,477406.1 6893700.9,477427.4 6893746.7,477440.6 6893779.6,477448.2 6893812.7))",  # noqa: E501
+        "LINESTRING(477047.8 6893031.1,477131.7 6893082.7,477186 6893116.3,477207.1 6893132.1,477217.2 6893143.1,477230.3 6893161,477238.5 6893183.9,477266.1 6893270.8,477288.7 6893358.6,477297.9 6893393.6,477316.3 6893442.4,477341.8 6893519.3,477354.1 6893567.2,477369.4 6893610.1,477389.8 6893662,477406.1 6893700.9,477427.4 6893746.7,477440.6 6893779.6,477448.2 6893812.7)",  # noqa: E501
     ]
     assert barriers[3] == [
         4,
-        "MULTILINESTRING((473276.7 6895000.1,473274.2 6894994.8,473252.9 "
+        "LINESTRING(473276.7 6895000.1,473274.2 6894994.8,473252.9 "
         "6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473170 "
         "6894821.5,473149.8 6894786.6,473133.5 6894748.7,473116.2 "
-        "6894712.8,473103.1 6894690.9,473055.6 6894624.2,473026.8 6894579.8))",
+        "6894712.8,473103.1 6894690.9,473055.6 6894624.2,473026.8 6894579.8)",
     ]
 
 
@@ -1810,7 +1821,9 @@ def test_merge_editing_session_data():
     # do not compare the ids as they can change depending on the database state
     assert len(ids) == 21
     assert hash is not None
-    assert hash == "f4745b964d55850f5f117f8df0947f25"
+    assert hash == "8bb3d6b4cc0e52e09fffba3ffefc6434"
+    # This hash will be compared with the hash of the edges
+    # of the road_graph schema after merging the editing session data
 
     # Get managed objects data before merging the editing session data
     sql = """
@@ -1887,7 +1900,7 @@ def test_merge_editing_session_data():
     assert ids is not None
     assert len(ids) == 21
     assert hash is not None
-    assert hash == "f4745b964d55850f5f117f8df0947f25"
+    assert hash == "8bb3d6b4cc0e52e09fffba3ffefc6434"
 
     # Check the managed objects have been modified by the merge of the editing session data
     sql = """
@@ -1916,7 +1929,7 @@ def test_merge_editing_session_data():
     assert trees[4] is not None
     assert trees[5] is not None
     assert trees[6] is not None
-    assert trees[0] == [1, "oak", "D152", 9, 493.31, "left", 8.19, 9600.46]
+    assert trees[0] == [1, "oak", "D152", 9, 493.25, "left", 8.18, 9600.41]
     assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11364.6]
     assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
     assert trees[3] == [4, "Palm", None, None, None, "right", 0.0, None]
@@ -1927,7 +1940,7 @@ def test_merge_editing_session_data():
     # safety barriers table: check the geometries have been updated
     sql = """
         SELECT
-            id, ST_AsText(ST_ReducePrecision(geom, 0.1)) AS wkt,
+            id, ST_AsText(ST_ReducePrecision(geom, 0.1), 2) AS wkt,
             road_code, start_marker_code, start_abscissa,
             end_marker_code, end_abscissa, "offset", side
         FROM managed.demo_safety_barriers
@@ -1948,15 +1961,15 @@ def test_merge_editing_session_data():
     assert barriers[3] is not None
     assert barriers[3] == [
         4,
-        "MULTILINESTRING((473276.7 6895000.1,473274.2 6894994.8,473252.9 "
+        "LINESTRING(473276.7 6895000.1,473274.2 6894994.8,473252.9 "
         "6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473104.4 "
         "6894871.7,473084.2 6894836.8,473067.9 6894798.9,473050.6 6894763,473103.1 "
-        "6894690.9,473055.6 6894624.2,473026.8 6894579.8))",
+        "6894690.9,473055.6 6894624.2,473026.8 6894579.8)",
         "D138B",
         9,
-        201.71,
+        201.72,
         9,
-        790.85,
+        790.87,
         0.0,
         "right",
     ]
