@@ -49,7 +49,6 @@ def processing_provider() -> Provider:
     return provider
 
 
-
 @pytest.fixture(scope="session")
 def db_test_sql(data: Path) -> Sequence[Path]:
     """Return the list of sql scripts to run

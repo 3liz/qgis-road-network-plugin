@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## 0.4.7 - 2026-07-06
+
+### Added
+
+* Lizmap Web Client : add Javascript & CSS files to use with a RoadNetwork published project
+
+### Fixed
+
+* SQL fixes and improvements
+  - `road_graph.get_road_substring_from_references`:
+    * Check if the resulted geometry has the correct orientation and reverse it if needed
+      (the function `ST_OffsetCurve` does not preserver orientation for MULTILINESTRINGS)
+    * Change the precision rounding of generated geometries from `0.01` to `0.1`
+    * Use default `0.0` & `right` values for features with empty columns `offset` and `side`
+  - `road_graph.update_managed_objects_on_graph_change`: fix error when no object has been updated
+
+### Changed
+
+* Tests & CI - Improvements & update PostgreSQL version from 15 to 17
+* Doc - Add draft concepts to translate
+
 ## 0.4.6 - 2026-07-02
 
 ### Fixed

@@ -32,7 +32,7 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
         return tr("Upgrade database structure")
 
     def shortHelpString(self):
-        short_help = tr(
+        return tr(
             "Upgrade the plugin tables and functions in the chosen database."
             "\n"
             "\n"
@@ -43,7 +43,6 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
             "* PostgreSQL connection to the database: name of the database "
             "connection you would like to use for the upgrade."
         )
-        return short_help
 
     def initAlgorithm(self, config):
         project = QgsProject.instance()

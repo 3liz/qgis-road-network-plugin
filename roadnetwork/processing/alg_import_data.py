@@ -66,7 +66,7 @@ class ImportData(BaseProcessingAlgorithm):
         return f"{plugin_name_normalized()}_editing"
 
     def shortHelpString(self):
-        short_help = tr(
+        return tr(
             "This algorithm will allow to import data into the database "
             "\n"
             "\n"
@@ -74,7 +74,6 @@ class ImportData(BaseProcessingAlgorithm):
             "in the correct format. "
             "You can use the template provided with the plugin as an example."
         )
-        return short_help
 
     def initAlgorithm(self, config):
         project = QgsProject.instance()
@@ -153,7 +152,6 @@ class ImportData(BaseProcessingAlgorithm):
             if field not in fields:
                 missing_fields.append(field)
         if missing_fields:
-            print(f"Missing fields : {missing_fields}")
             message = tr("The input layer is missing the following required fields: ")
             message += ", ".join(missing_fields)
             return False, message

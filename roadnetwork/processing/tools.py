@@ -34,8 +34,7 @@ def get_postgis_connection_list():
     """Get a list of the PostGIS connection names"""
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
     postgres_connections = metadata.connections()
-    connections = postgres_connections.keys()
-    return connections
+    return postgres_connections.keys()
 
 
 def get_postgis_connection_uri_from_name(connection_name: str) -> Optional[QgsDataSourceUri]:

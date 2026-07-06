@@ -21,6 +21,7 @@ from qgis.server import QgsServerInterface
 
 QGIS_VERSION_INT = Qgis.versionInt()
 
+
 def install_logger_hook() -> None:
     """Install message log hook"""
     logging.debug("Installing logger hook")
@@ -41,6 +42,7 @@ def install_logger_hook() -> None:
         messageLog.messageReceived.connect(writelogmessage)
     else:
         messageLog.messageReceivedWithFormat.connect(writelogmessage)
+
 
 #
 # Plugin loader

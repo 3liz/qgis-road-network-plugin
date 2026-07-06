@@ -37,12 +37,11 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         return f"{plugin_name_normalized()}_editing"
 
     def shortHelpString(self):
-        short_help = tr(
+        return tr(
             "This algorithm will allow to clone the data "
             " related to the editing session area into the sandbox"
             "\n"
         )
-        return short_help
 
     def initAlgorithm(self, config):
         project = QgsProject.instance()

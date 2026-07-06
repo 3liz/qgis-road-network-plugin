@@ -49,7 +49,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         return f"{plugin_name_normalized()}_editing"
 
     def shortHelpString(self):
-        short_help = tr(
+        return tr(
             "This algorithm will allow to update the geometries "
             " or the references of the layer features."
             "\n"
@@ -73,7 +73,6 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
             "end_marker_code, end_abscissa, offset and side "
             "(offset and side are optional)."
         )
-        return short_help
 
     def flags(self):
         """
@@ -129,10 +128,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
     def supportInPlaceEdit(self, layer: QgsVectorLayer) -> bool:
         """Determine if the algorithm can be run in place on the given layer."""
         # must be spatial
-        if not layer.isSpatial():
-            return False
-
-        return True
+        return layer.isSpatial()
 
     def hasRequiredFields(
         self, fields: list, geometry_type: str, update_policy: str

@@ -36,7 +36,6 @@ class LocatorFilter(QgsLocatorFilter):
     #     return True
 
     def fetchResults(self, search, context, feedback):
-        print(f"Search: {search}")
         if len(search) < 2:
             # Let's limit the number of request sent to the server
             return
@@ -60,7 +59,6 @@ class LocatorFilter(QgsLocatorFilter):
         # Fourth word is the offset, e.g. 10.5 (optional)
         # Fifth word is the side, e.g. "left" or "l" or "right" or "r" (optional)
         words = search.split()
-        print(words)
 
         # If only the road_code is provided, we aggregate all the road edges
         # If at least the road_code and the marker_code are provided,
@@ -101,10 +99,7 @@ class LocatorFilter(QgsLocatorFilter):
             if not re.match(r"(^[0-9\.]+$)", offset, re.UNICODE):
                 offset = 0
             # Check side
-            if side.lower() in ["left", "l"]:
-                side = "left"
-            else:
-                side = "right"
+            side = "left" if side.lower() in ["left", "l"] else "right"
             sql = f"""
                 WITH get_geom AS (
                     SELECT

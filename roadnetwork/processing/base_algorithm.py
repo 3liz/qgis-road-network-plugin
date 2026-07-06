@@ -23,8 +23,7 @@ class BaseProcessingAlgorithm(QgsProcessingAlgorithm):
         icon = resources_path("icons", "icon.png")
         if icon.exists():
             return QIcon(str(icon))
-        else:
-            return super().icon()
+        return super().icon()
 
     def parameters_help_string(self) -> str:
         """Return a formatted help string for all parameters."""

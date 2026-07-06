@@ -40,7 +40,7 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
         return tr("Create database structure")
 
     def shortHelpString(self):
-        short_help = tr(
+        return tr(
             "Install the plugin database structure with tables and function on "
             "the chosen database."
             "\n"
@@ -55,7 +55,6 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
             'Beware ! If you check the "override" checkboxes, you will loose '
             "all existing data in the existing schema !"
         )
-        return short_help
 
     def initAlgorithm(self, config):
         project = QgsProject.instance()

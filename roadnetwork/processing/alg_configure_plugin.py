@@ -30,7 +30,7 @@ class ConfigurePlugin(BaseProcessingAlgorithm):
         return f"{plugin_name_normalized()}_configuration"
 
     def shortHelpString(self):
-        short_help = tr(
+        return tr(
             "This algorithm will allow to configure the extension for the current "
             "QGIS project"
             "\n"
@@ -42,7 +42,6 @@ class ConfigurePlugin(BaseProcessingAlgorithm):
             "connection you would like to use for the current QGIS project. "
             "This connection will be used for the other algorithms."
         )
-        return short_help
 
     def initAlgorithm(self, config):
         project = QgsProject.instance()
