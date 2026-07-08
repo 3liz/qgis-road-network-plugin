@@ -40,8 +40,7 @@ CREATE TABLE road_graph.edges (
     geom geometry(LineString,2154) NOT NULL,
     previous_edge_id integer,
     next_edge_id integer,
-    uid text DEFAULT (public.uuid_generate_v4())::text,
-    z_level smallint
+    uid text DEFAULT (public.uuid_generate_v4())::text
 );
 
 

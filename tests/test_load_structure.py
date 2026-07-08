@@ -1294,6 +1294,76 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 56.46, 56.46]
 
 
+def test_no_cutting_of_edges_if_z_level_are_different():
+    """Test that edges are not cut if their z-levels are different."""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Check the number of nodes
+    sql_count_nodes = """
+    SELECT
+        count(*) AS nb
+    FROM editing_session.nodes
+    ;
+    """
+    try:
+        data = connection.executeSql(sql_count_nodes)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    stats = []
+    for a in data:
+        stats.append(a if a else None)
+
+    assert len(stats) == 1
+    assert stats[0] is not None
+    assert stats[0][0] == 220
+
+    # Insert a new road and edge which crosses the existing edge
+    # but with a different z-level
+    sql_insert = """
+    INSERT INTO editing_session.roads (road_code, road_type, road_class) VALUES (
+        'T003', 'road', 'Départementale'
+    ) ON CONFLICT DO NOTHING
+    ;
+    INSERT INTO editing_session.edges (geom, road_code, z_level) VALUES (
+        ST_SetSRID(
+            ST_GeomFromText(
+                'LineString(
+                    473735.18 6896157.09,
+                    473492.37 6896195.67,
+                    473187.54 6896333.33
+                )'
+            ),
+            2154
+        ),
+        'T003',
+        1
+    )
+    ;
+    """
+    try:
+        connection.executeSql(sql_insert)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    # Test that the number of nodes is only increased by 2
+    # which means no node has been created at the intersection with the existing edge
+    try:
+        data = connection.executeSql(sql_count_nodes)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    stats = []
+    for a in data:
+        stats.append(a if a else None)
+
+    assert len(stats) == 1
+    assert stats[0] is not None
+    assert stats[0][0] == 222
+
+
 def test_get_road_point_from_reference():
     """Test the function get_road_point_from_reference which returns a point geometry"""
 
@@ -1430,7 +1500,7 @@ def test_get_updated_roads_from_editing_session():
         result = a if a else None
 
     assert result is not None
-    assert result[0] == "D138,D152,R001,T001,TC002"
+    assert result[0] == "D138,D152,R001,T001,T003,TC002"
 
 
 def test_editing_session_logged_objects():
@@ -1476,8 +1546,15 @@ def test_editing_session_logged_objects():
         "5763": "I",
         "5764": "I",
         "5766": "I",
+        "5770": 'I',
+        "5771": 'I',
     }
-    assert json.loads(results[0][2]) == {"2238": "I", "2239": "I", "2240": "I"}
+    assert json.loads(results[0][2]) == {
+        "2238": "I",
+        "2239": "I",
+        "2240": "I",
+        "2241": 'I',
+    }
     assert json.loads(results[0][3]) == {
         "2260": "U",
         "2264": "D",
@@ -1499,6 +1576,7 @@ def test_editing_session_logged_objects():
         "7837": "I",
         "7838": "I",
         "7841": "I",
+        "7843": "I",
     }
     assert json.loads(results[0][4]) == {
         "2827": "D",
@@ -1508,6 +1586,7 @@ def test_editing_session_logged_objects():
         "8339": "I",
         "8340": "I",
         "8341": "I",
+        "8342": "I",
     }
 
 
@@ -1822,9 +1901,9 @@ def test_merge_editing_session_data():
     # Checks
     assert ids is not None
     # do not compare the ids as they can change depending on the database state
-    assert len(ids) == 21
+    assert len(ids) == 22
     assert hash is not None
-    assert hash == "8bb3d6b4cc0e52e09fffba3ffefc6434"
+    assert hash == "d5140f11d8673213ee62dd7600b7c71e"
     # This hash will be compared with the hash of the edges
     # of the road_graph schema after merging the editing session data
 
@@ -1901,9 +1980,9 @@ def test_merge_editing_session_data():
 
     # Checks
     assert ids is not None
-    assert len(ids) == 21
+    assert len(ids) == 22
     assert hash is not None
-    assert hash == "8bb3d6b4cc0e52e09fffba3ffefc6434"
+    assert hash == "d5140f11d8673213ee62dd7600b7c71e"
 
     # Check the managed objects have been modified by the merge of the editing session data
     sql = """

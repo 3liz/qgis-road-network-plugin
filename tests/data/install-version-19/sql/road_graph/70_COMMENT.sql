@@ -42,9 +42,7 @@ On fusionne aussi les tronçons collés plus liés par les possibles noeuds supp
 COMMENT ON FUNCTION road_graph.after_edge_insert_or_update() IS 'Multiples opérations lancées suite à la modification d''un troncon.
 Déplacement du noeud initial et terminal liés si besoin.
 Suppression des noeuds orphelins si besoin.
-Création des noeuds non existants à l''intersection avec les autres edges
-seulement pour les edges de même niveau
-';
+Création des noeuds non existants à l''intersection avec les autres edges';
 
 
 -- FUNCTION after_marker_insert_or_update_or_delete()
@@ -270,10 +268,6 @@ COMMENT ON COLUMN road_graph.edges.start_node IS 'The start node (also called so
 
 -- edges.end_node
 COMMENT ON COLUMN road_graph.edges.end_node IS 'The end node (also called target node or downstream node)';
-
-
--- edges.z_level
-COMMENT ON COLUMN road_graph.edges.z_level IS 'Level of the edge. Used to NOT create cutting nodes at the intersection between edges if they do not share the same level';
 
 
 -- editing_sessions.id

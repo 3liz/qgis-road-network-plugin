@@ -472,7 +472,6 @@ BEGIN
     -- This will then run the trigger after_node_insert_or_update
     -- which will eventually split the edges intersecting this NEW edge
     -- DO IT ONLY FOR GEOMETRIES INSIDE THE EDITION AREA
-    -- DO IT ONLY FOR EDGES WITH THE SAME LEVEL
     created_nodes_at_intersection = ARRAY[]::integer[];
     IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NOT ST_Equals(OLD.geom, NEW.geom))
         -- avoid infinite loop and self-crossing
@@ -480,9 +479,8 @@ BEGIN
 
     THEN
         IF raise_notice IN ('info', 'debug') THEN
-            RAISE NOTICE '% AFTER edge % n° %, z_level %, crossing node test',
-                repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id,
-                NEW.z_level
+            RAISE NOTICE '% AFTER edge % n° %, crossing node test',
+                repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
             ;
         END IF;
         FOR crossing_node IN
@@ -492,8 +490,6 @@ BEGIN
                 FROM road_graph.edges AS e
                 WHERE e.id != NEW.id
                 AND ST_Intersects(e.geom, NEW.geom)
-                -- Do not get the intersection if the edges have a different level
-                AND Coalesce(e.z_level, 99) = Coalesce(NEW.z_level, 99)
             ),
             -- intersection can produce multipoints
             -- if the edge crosses more than once
@@ -710,9 +706,7 @@ $$;
 COMMENT ON FUNCTION road_graph.after_edge_insert_or_update() IS 'Multiples opérations lancées suite à la modification d''un troncon.
 Déplacement du noeud initial et terminal liés si besoin.
 Suppression des noeuds orphelins si besoin.
-Création des noeuds non existants à l''intersection avec les autres edges
-seulement pour les edges de même niveau
-';
+Création des noeuds non existants à l''intersection avec les autres edges';
 
 
 -- after_marker_insert_or_update_or_delete()
