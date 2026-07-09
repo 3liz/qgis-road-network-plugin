@@ -1,8 +1,13 @@
 import json
 import typing
 
+from psycopg2 import connect
+from psycopg2 import sql as pg_sql
+from psycopg2.extensions import connection as PsycopgConnection
+
 from qgis.core import (
     QgsAbstractDatabaseProviderConnection,
+    QgsDataSourceUri,
     QgsFeature,
     QgsFeatureSink,
     QgsGeometry,
@@ -205,26 +210,30 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         connection: QgsAbstractDatabaseProviderConnection,
         longitude: float,
         latitude: float,
+        pg_conn: PsycopgConnection,
         road_code: str = "",
     ) -> dict:
         """
         Get the reference of a QGIS feature from the database
         """
-        sql_road_code = "NULL"
-        if road_code:
-            sql_road_code = f"'{road_code}'"
-        sql = f"""
+        sql = pg_sql.SQL("""
         SELECT
             road_graph.get_reference_from_point(
                 ST_PointFromText('POINT({longitude} {latitude})', 2154),
-                {sql_road_code},
+                {road_code},
                 False
             )::json AS ref
         ;
-        """
+        """).format(
+            longitude=pg_sql.Literal(longitude),
+            latitude=pg_sql.Literal(latitude),
+            road_code=pg_sql.Literal(road_code) if road_code else pg_sql.SQL("NULL"),
+        ).as_string(pg_conn)
+
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
+            pg_conn.close()
             raise QgsProcessingException(str(e))
         references = ""
         for a in data:
@@ -235,35 +244,42 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         return {}
 
     def getWktFromReferences(
-        self, connection: QgsAbstractDatabaseProviderConnection, geometry_type: str, references: dict
+        self,
+        connection: QgsAbstractDatabaseProviderConnection,
+        geometry_type: str,
+        references: dict,
+        pg_conn: PsycopgConnection,
     ) -> QgsGeometry:
         """
         Get the geometry of a feature from the database from its reference
         """
         if geometry_type == "point":
-            sql = f"""
+            sql = pg_sql.SQL("""
             WITH get_geom AS (
                 SELECT
                 road_graph.get_road_point_from_reference(
-                    '{references["road_code"]}',
-                    {references["marker_code"]},
-                    {references["abscissa"]},
-                    {references["offset"]},
-                    '{references["side"]}'
+                    {road_code},
+                    {marker_code},
+                    {abscissa},
+                    {offset},
+                    {side}
                 )->'geom' AS geom
             )
             SELECT
             CASE
                 WHEN geom = 'null'::jsonb THEN NULL
-                ELSE ST_AsText(
-                    ST_GeomFromGeoJSON(
-                        geom
-                    )
-                )
+                ELSE ST_AsText(ST_GeomFromGeoJSON(geom))
             END
             FROM get_geom
-            """
+            """).format(
+                road_code=pg_sql.Literal(references["road_code"]),
+                marker_code=pg_sql.Literal(references["marker_code"]),
+                abscissa=pg_sql.Literal(references["abscissa"]),
+                offset=pg_sql.Literal(references["offset"]),
+                side=pg_sql.Literal(references["side"]),
+            ).as_string(pg_conn)
         else:
+            # Linestrings
             # We need to invert start and end references if end is lower than start
             updated_references = {}
             for ref, value in references.items():
@@ -279,33 +295,38 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
                     updated_references["end_marker_code"] = references["start_marker_code"]
                     updated_references["end_abscissa"] = references["start_abscissa"]
 
-            sql = f"""
+            sql = pg_sql.SQL("""
             WITH get_geom AS (
                 SELECT
                 road_graph.get_road_substring_from_references(
-                    '{updated_references["road_code"]}',
-                    {updated_references["start_marker_code"]},
-                    {updated_references["start_abscissa"]},
-                    {updated_references["end_marker_code"]},
-                    {updated_references["end_abscissa"]},
-                    {updated_references["offset"]},
-                    '{updated_references["side"]}'
+                    {road_code},
+                    {start_marker_code},
+                    {start_abscissa},
+                    {end_marker_code},
+                    {end_abscissa},
+                    {offset},
+                    {side}
                 )->'geom' AS geom
             )
             SELECT
             CASE
                 WHEN geom = 'null'::jsonb THEN NULL
-                ELSE ST_AsText(
-                    ST_GeomFromGeoJSON(
-                        geom
-                    )
-                )
+                ELSE ST_AsText(ST_GeomFromGeoJSON(geom))
             END
             FROM get_geom
-            """
+            """).format(
+                road_code=pg_sql.Literal(updated_references["road_code"]),
+                start_marker_code=pg_sql.Literal(updated_references["start_marker_code"]),
+                start_abscissa=pg_sql.Literal(updated_references["start_abscissa"]),
+                end_marker_code=pg_sql.Literal(updated_references["end_marker_code"]),
+                end_abscissa=pg_sql.Literal(updated_references["end_abscissa"]),
+                offset=pg_sql.Literal(updated_references["offset"]),
+                side=pg_sql.Literal(updated_references["side"]),
+            ).as_string(pg_conn)
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
+            pg_conn.close()
             raise QgsProcessingException(str(e))
         wkt = ""
         for a in data:
@@ -358,9 +379,11 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
             raise QgsProcessingException(error_message)
         feedback.pushInfo(tr(f"* Using connection : {connection_name}"))
         feedback.pushInfo("")
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
 
         # Check for cancellation
         if feedback.isCanceled():
+            pg_conn.close()
             raise QgsProcessingException(cancel_message)
 
         # For each feature, request the database and get the updated geometry or references
@@ -370,6 +393,7 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
         for idx, feature in enumerate(source.getFeatures()):
             # Check for cancellation
             if feedback.isCanceled():
+                pg_conn.close()
                 raise QgsProcessingException(cancel_message)
 
             # Create a new feature for the output layer
@@ -403,7 +427,12 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
 
                     # Get the references from the database for the point
                     point = feature.geometry().asPoint()
-                    point_references = self.getReferencesFromLonLat(connection, point.x(), point.y())
+                    point_references = self.getReferencesFromLonLat(
+                        connection,
+                        point.x(),
+                        point.y(),
+                        pg_conn
+                    )
                     has_changed = False
                     if point_references:
                         # print(f"references for {feature.id()} : {point_references}")
@@ -439,13 +468,19 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
 
                     # Get the references from the database for the line start point
                     line_references["start"] = self.getReferencesFromLonLat(
-                        connection, first_vertex.x(), first_vertex.y()
+                        connection,
+                        first_vertex.x(),
+                        first_vertex.y(),
+                        pg_conn
                     )
                     # print(f"start references for {feature.id()} : {line_references["start"]}")
 
                     # Get the references from the database for the line end point
                     line_references["end"] = self.getReferencesFromLonLat(
-                        connection, last_vertex.x(), last_vertex.y()
+                        connection,
+                        last_vertex.x(),
+                        last_vertex.y(),
+                        pg_conn
                     )
                     # print(f"end references for {feature.id()} : {line_references["end"]}")
 
@@ -535,7 +570,12 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
                     geometry_type = "linestring"
 
                 # Request the database for the updated geometry
-                wkt_geometry = self.getWktFromReferences(connection, geometry_type, references)
+                wkt_geometry = self.getWktFromReferences(
+                    connection,
+                    geometry_type,
+                    references,
+                    pg_conn
+                )
 
                 # Set the updated geometry to the feature
                 if wkt_geometry:
@@ -550,6 +590,10 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
             # Set progress
             feedback.setProgress(int(100 * idx / feature_count))
 
+        # Close connection to the database
+        pg_conn.close()
+
+        # End messages
         feedback.pushInfo(tr(f"* {feature_count} features processed."))
         feedback.pushInfo(tr(f"* {unchanged_count} features left unchanged."))
 
