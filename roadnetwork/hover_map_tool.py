@@ -1,5 +1,7 @@
 import time
 
+from psycopg2 import connect
+from psycopg2 import sql as pg_sql
 from qgis.core import (
     Qgis,
     QgsPointXY,
@@ -23,6 +25,7 @@ from .processing.tools import (
     fetch_data_from_sql_query,
     get_connection_name,
     get_postgis_connection_list,
+    get_postgis_connection_uri_from_name,
 )
 
 
@@ -95,11 +98,12 @@ class HoverMapTool(QgsMapTool):
         """
         Query the database to get the references under the given coordinates
         """
-        sql = f"""
+        pg_conn = connect(get_postgis_connection_uri_from_name(connection_name).connectionInfo())
+        sql = pg_sql.SQL("""
             SELECT x.*
             FROM
                 jsonb_to_record(
-                    "{schema}".get_reference_from_point(
+                    {schema}.get_reference_from_point(
                         ST_SetSrid(
                             ST_MakePoint({lon}, {lat}),
                             2154
@@ -111,7 +115,12 @@ class HoverMapTool(QgsMapTool):
                 "offset" real, side text,
                 cumulative real
             )
-        """
+        """).format(
+            schema=pg_sql.Identifier(schema),
+            lon=pg_sql.Literal(lon),
+            lat=pg_sql.Literal(lat),
+        ).as_string(pg_conn)
+        pg_conn.close()
         # print(sql)
         result, error = fetch_data_from_sql_query(connection_name, sql)
 
