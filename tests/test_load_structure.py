@@ -1546,14 +1546,14 @@ def test_editing_session_logged_objects():
         "5763": "I",
         "5764": "I",
         "5766": "I",
-        "5770": 'I',
-        "5771": 'I',
+        "5770": "I",
+        "5771": "I",
     }
     assert json.loads(results[0][2]) == {
         "2238": "I",
         "2239": "I",
         "2240": "I",
-        "2241": 'I',
+        "2241": "I",
     }
     assert json.loads(results[0][3]) == {
         "2260": "U",
