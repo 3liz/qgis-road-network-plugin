@@ -793,6 +793,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#048-2026-07-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.8 - 2026-07-10
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.4.8 - 2026-07-10">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#047-2026-07-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -827,7 +855,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -967,7 +995,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1017,7 +1045,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1084,7 +1112,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_3" class="md-nav__link">
+  <a href="#changed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1162,7 +1190,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_4" class="md-nav__link">
+  <a href="#changed_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1201,7 +1229,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_5" class="md-nav__link">
+  <a href="#changed_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1351,6 +1379,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#048-2026-07-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.8 - 2026-07-10
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.4.8 - 2026-07-10">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#047-2026-07-06" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1385,7 +1441,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1525,7 +1581,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1575,7 +1631,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1642,7 +1698,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_3" class="md-nav__link">
+  <a href="#changed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1720,7 +1776,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_4" class="md-nav__link">
+  <a href="#changed_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1759,7 +1815,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_5" class="md-nav__link">
+  <a href="#changed_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1836,6 +1892,19 @@ On your local, make a symlink with ln -s
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<h2 id="048-2026-07-10">0.4.8 - 2026-07-10<a class="headerlink" href="#048-2026-07-10" title="Permanent link">#</a></h2>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
+<ul>
+<li>Processing algorithm - <code>Update managed objects</code> : .
+  add an option to preserve the linestrings start &amp; end positions.
+  When using this option combined with the update policy <code>Update geometries</code>,
+  the references of the existing geometries will be calculated for the start &amp; end
+  line nodes, and then the geometry will be updated from these new references.</li>
+<li>SQL - Trigger function <code>road_graph.after_edge_insert_or_update()</code>: do not create node at intersections for different z_level</li>
+<li>QGIS admin project - Add the field <code>z_level</code> for edges layers which</li>
+<li>Plugin code: Use <code>psycopg2</code> rather than f-string to build SQL queries.
+  (This will allow the plugin to be pushed to QGIS official repository)</li>
+</ul>
 <h2 id="047-2026-07-06">0.4.7 - 2026-07-06<a class="headerlink" href="#047-2026-07-06" title="Permanent link">#</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">#</a></h3>
 <ul>
@@ -1853,7 +1922,7 @@ On your local, make a symlink with ln -s
 </li>
 <li><code>road_graph.update_managed_objects_on_graph_change</code>: fix error when no object has been updated</li>
 </ul>
-<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">#</a></h3>
 <ul>
 <li>Tests &amp; CI - Improvements &amp; update PostgreSQL version from 15 to 17</li>
 <li>Doc - Add draft concepts to translate</li>
@@ -1903,7 +1972,7 @@ On your local, make a symlink with ln -s
 <li><strong>QGIS admin project</strong> - Fix wrong data source for the layer <code>managed_objects</code></li>
 </ul>
 <h2 id="042-2026-06-15">0.4.2 - 2026-06-15<a class="headerlink" href="#042-2026-06-15" title="Permanent link">#</a></h2>
-<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">#</a></h3>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">#</a></h3>
 <ul>
 <li>SQL &amp; algorithm - Calculate references from geometries : do not use
   columns <code>start_offset</code>, <code>start_side</code>, <code>end_offset</code>, <code>end_side</code> but only
@@ -1923,7 +1992,7 @@ On your local, make a symlink with ln -s
 <li>Fix the error occurring when updating managed objects references
   when the objects had a <code>cumulative</code> attribute</li>
 </ul>
-<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">#</a></h3>
+<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">#</a></h3>
 <ul>
 <li>Minor changes on the QGIS project</li>
 </ul>
@@ -1941,7 +2010,7 @@ On your local, make a symlink with ln -s
   of the last updated objects of each managed table.</li>
 </ul>
 <h2 id="033-2026-04-17">0.3.3 - 2026-04-17<a class="headerlink" href="#033-2026-04-17" title="Permanent link">#</a></h2>
-<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">#</a></h3>
+<h3 id="changed_4">Changed<a class="headerlink" href="#changed_4" title="Permanent link">#</a></h3>
 <ul>
 <li>Editing session - Update the managed objects when merging the editing session data</li>
 <li>Tests - Add more tests</li>
@@ -1970,7 +2039,7 @@ On your local, make a symlink with ln -s
 </ul>
 </li>
 </ul>
-<h3 id="changed_4">Changed<a class="headerlink" href="#changed_4" title="Permanent link">#</a></h3>
+<h3 id="changed_5">Changed<a class="headerlink" href="#changed_5" title="Permanent link">#</a></h3>
 <ul>
 <li>Improve CI and packaging</li>
 </ul>
@@ -1981,7 +2050,7 @@ On your local, make a symlink with ln -s
 <li>Add algorithm allowing to update a layer references or geometries from the road graph</li>
 <li>Tests - Add test data &amp; test some of the main features</li>
 </ul>
-<h3 id="changed_5">Changed<a class="headerlink" href="#changed_5" title="Permanent link">#</a></h3>
+<h3 id="changed_6">Changed<a class="headerlink" href="#changed_6" title="Permanent link">#</a></h3>
 <ul>
 <li>Documentation</li>
 <li>SchemaSpy: add functions</li>
