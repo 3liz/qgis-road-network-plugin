@@ -132,7 +132,8 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
         if uri is None:
             return None
         pg_conn = connect(uri.connectionInfo())
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             WITH get AS (
                 SELECT {schema}.get_road_point_from_reference(
                     {road_code},
@@ -151,17 +152,19 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
                     ELSE 'notfound'::text
                 END AS point
             FROM get AS g
-        """).format(
-            schema=pg_sql.Identifier(schema),
-            road_code=pg_sql.Literal(str(road_code)),
-            marker=pg_sql.Literal(int(marker) if marker else 0),
-            abscissa=pg_sql.Literal(float(abscissa) if abscissa else 0.0),
-            offset=pg_sql.Literal(float(offset) if offset else 0.0),
-            side=pg_sql.Literal(str(side)),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                schema=pg_sql.Identifier(schema),
+                road_code=pg_sql.Literal(str(road_code)),
+                marker=pg_sql.Literal(int(marker) if marker else 0),
+                abscissa=pg_sql.Literal(float(abscissa) if abscissa else 0.0),
+                offset=pg_sql.Literal(float(offset) if offset else 0.0),
+                side=pg_sql.Literal(str(side)),
+            )
+            .as_string(pg_conn)
+        )
         pg_conn.close()
         # print(sql)
-
 
         get_data = QgsExpressionContextUtils.globalScope().variable("roadnetwork_get_database_data")
         point = None

@@ -35,10 +35,14 @@ class BaseDatabaseAlgorithm(BaseProcessingAlgorithm):
                 # We can't vacuum a view
                 continue
 
-            sql = pg_sql.SQL("VACUUM ANALYSE {schema}.{table};").format(
-                schema=pg_sql.Identifier(schema),
-                table=pg_sql.Identifier(table.tableName()),
-            ).as_string(pg_conn)
+            sql = (
+                pg_sql.SQL("VACUUM ANALYSE {schema}.{table};")
+                .format(
+                    schema=pg_sql.Identifier(schema),
+                    table=pg_sql.Identifier(table.tableName()),
+                )
+                .as_string(pg_conn)
+            )
             feedback.pushDebugInfo(sql)
             try:
                 connection.executeSql(sql)

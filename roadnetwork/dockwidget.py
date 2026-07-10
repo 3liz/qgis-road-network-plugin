@@ -96,15 +96,19 @@ class PluginDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # typ
             if uri is None:
                 return None
             pg_conn = connect(uri.connectionInfo())
-            sql = pg_sql.SQL("""
+            sql = (
+                pg_sql.SQL("""
                 SELECT me_version
                 FROM {schema}.metadata
                 WHERE me_status = 1
                 ORDER BY me_version_date DESC
                 LIMIT 1;
-            """).format(
-                schema=pg_sql.Identifier(schema_name()),
-            ).as_string(pg_conn)
+            """)
+                .format(
+                    schema=pg_sql.Identifier(schema_name()),
+                )
+                .as_string(pg_conn)
+            )
             pg_conn.close()
             result, _ = fetch_data_from_sql_query(connection_name, sql)
             if result:

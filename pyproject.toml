@@ -3,7 +3,7 @@
 # should be the same as the plugin's metatada.txt
 [project]
 name = "roadnetwork"
-version = "0.4.7"
+version = "0.4.8"
 description = "Road network plugin"
 authors = [
     { name = "3Liz", email = "info@3liz.com" }
@@ -146,5 +146,3 @@ module = [
     "processing.*",
 ]
 ignore_missing_imports = true
-
-

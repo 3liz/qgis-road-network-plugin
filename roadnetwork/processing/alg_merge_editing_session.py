@@ -73,7 +73,8 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
         pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             SELECT
                 id, label,
                 to_char(created_at, 'YYYY-MM-DD HH24:MI:SS'),
@@ -82,9 +83,12 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             WHERE status = {status}
             ORDER BY created_at DESC
             LIMIT 1;
-        """).format(
-            status=pg_sql.Literal(status),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                status=pg_sql.Literal(status),
+            )
+            .as_string(pg_conn)
+        )
         pg_conn.close()
         try:
             data = connection.executeSql(sql)
@@ -186,11 +190,15 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         feedback.pushInfo(
             tr("Merge the 'editing_session' data to the production schema 'road_graph'").upper()
         )
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             SELECT road_graph.merge_editing_session_data({session_id}) AS result
-        """).format(
-            session_id=pg_sql.Literal(int(editing_session[0])),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                session_id=pg_sql.Literal(int(editing_session[0])),
+            )
+            .as_string(pg_conn)
+        )
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:

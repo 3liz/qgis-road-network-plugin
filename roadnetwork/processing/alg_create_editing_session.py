@@ -72,7 +72,8 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
         connection = metadata.findConnection(connection_name)
         pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             SELECT
                 id, label,
                 to_char(created_at, 'YYYY-MM-DD HH24:MI:SS'),
@@ -81,9 +82,12 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             WHERE status = {status}
             ORDER BY created_at DESC
             LIMIT 1;
-        """).format(
-            status=pg_sql.Literal(status),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                status=pg_sql.Literal(status),
+            )
+            .as_string(pg_conn)
+        )
         pg_conn.close()
         try:
             data = connection.executeSql(sql)
@@ -154,11 +158,15 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         status = "created"
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
         feedback.pushInfo(tr(f"Copy the production data for editing session '{editing_session[1]}'").upper())
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             SELECT road_graph.copy_data_to_editing_session({session_id}) AS result
-        """).format(
-            session_id=pg_sql.Literal(int(editing_session[0])),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                session_id=pg_sql.Literal(int(editing_session[0])),
+            )
+            .as_string(pg_conn)
+        )
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
@@ -189,7 +197,8 @@ class CreateEditingSession(BaseProcessingAlgorithm):
 
         # Get statistics on copied data
         feedback.pushInfo(tr("Get statistics about the copied objects").upper())
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             SELECT
                 jsonb_array_length(cloned_ids['edges']),
                 jsonb_array_length(cloned_ids['nodes']),
@@ -197,9 +206,12 @@ class CreateEditingSession(BaseProcessingAlgorithm):
                 jsonb_array_length(cloned_ids['roads'])
             FROM road_graph.editing_sessions
             WHERE id = {session_id}
-        """).format(
-            session_id=pg_sql.Literal(int(editing_session[0])),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                session_id=pg_sql.Literal(int(editing_session[0])),
+            )
+            .as_string(pg_conn)
+        )
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:

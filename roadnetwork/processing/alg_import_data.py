@@ -170,10 +170,14 @@ class ImportData(BaseProcessingAlgorithm):
         )
         pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
         for temp_table in temp_tables:
-            sql = pg_sql.SQL("DROP TABLE IF EXISTS {schema}.{table}").format(
-                schema=pg_sql.Identifier(temp_schema),
-                table=pg_sql.Identifier(temp_table),
-            ).as_string(pg_conn)
+            sql = (
+                pg_sql.SQL("DROP TABLE IF EXISTS {schema}.{table}")
+                .format(
+                    schema=pg_sql.Identifier(temp_schema),
+                    table=pg_sql.Identifier(temp_table),
+                )
+                .as_string(pg_conn)
+            )
             try:
                 connection.executeSql(sql)
                 # feedback.pushInfo(tr(f"* Temporary table {temp_table} has been dropped"))
@@ -291,17 +295,21 @@ class ImportData(BaseProcessingAlgorithm):
             QgsProviderRegistry.instance().providerMetadata("postgres").findConnection(connection_name)
         )
         pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             SELECT road_graph.import_data_from_template_tables(
                 {temp_schema},
                 {edges_table},
                 {markers_table}
             ) AS result
-        """).format(
-            temp_schema=pg_sql.Literal(temp_schema),
-            edges_table=pg_sql.Literal(edges_temp_table),
-            markers_table=pg_sql.Literal(markers_temp_table),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                temp_schema=pg_sql.Literal(temp_schema),
+                edges_table=pg_sql.Literal(edges_temp_table),
+                markers_table=pg_sql.Literal(markers_temp_table),
+            )
+            .as_string(pg_conn)
+        )
         pg_conn.close()
         try:
             data = connection.executeSql(sql)

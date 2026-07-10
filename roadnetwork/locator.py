@@ -72,7 +72,8 @@ class LocatorFilter(QgsLocatorFilter):
         if not re.match(r"(^[A-Za-z0-9À-ÿ_\-]+$)", road_code, re.UNICODE):
             return
         if len(words) == 1:
-            sql = pg_sql.SQL("""
+            sql = (
+                pg_sql.SQL("""
                 WITH get_road AS (
                     SELECT
                         road_code,
@@ -90,11 +91,14 @@ class LocatorFilter(QgsLocatorFilter):
                     road_code,
                     ST_AsText(road_graph.get_spatial_road(road_code)) AS wkt
                 FROM get_road
-            """).format(
-                road_code=pg_sql.Literal(road_code),
-                road_code_prefix=pg_sql.Literal(f"{road_code}%"),
-                road_code_any=pg_sql.Literal(f"%{road_code}%"),
-            ).as_string(pg_conn)
+            """)
+                .format(
+                    road_code=pg_sql.Literal(road_code),
+                    road_code_prefix=pg_sql.Literal(f"{road_code}%"),
+                    road_code_any=pg_sql.Literal(f"%{road_code}%"),
+                )
+                .as_string(pg_conn)
+            )
         else:
             marker_code = words[1]
             abscissa = words[2] if len(words) > 2 else "0"
@@ -109,7 +113,8 @@ class LocatorFilter(QgsLocatorFilter):
                 offset = 0
             # Check side
             side = "left" if side.lower() in ["left", "l"] else "right"
-            sql = pg_sql.SQL("""
+            sql = (
+                pg_sql.SQL("""
                 WITH get_geom AS (
                     SELECT
                     road_graph.get_road_point_from_reference(
@@ -136,13 +141,16 @@ class LocatorFilter(QgsLocatorFilter):
                         )
                     END AS wkt
                 FROM get_geom
-            """).format(
-                road_code=pg_sql.Literal(road_code),
-                marker_code=pg_sql.Literal(int(marker_code)),
-                abscissa=pg_sql.Literal(float(abscissa)),
-                offset=pg_sql.Literal(float(offset)),
-                side=pg_sql.Literal(side),
-            ).as_string(pg_conn)
+            """)
+                .format(
+                    road_code=pg_sql.Literal(road_code),
+                    marker_code=pg_sql.Literal(int(marker_code)),
+                    abscissa=pg_sql.Literal(float(abscissa)),
+                    offset=pg_sql.Literal(float(offset)),
+                    side=pg_sql.Literal(side),
+                )
+                .as_string(pg_conn)
+            )
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:

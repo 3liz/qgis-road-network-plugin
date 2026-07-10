@@ -156,15 +156,19 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
         pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
 
         # Get database version
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             SELECT me_version
             FROM {schema}.metadata
             WHERE me_status = 1
             ORDER BY me_version_date DESC
             LIMIT 1;
-        """).format(
-            schema=pg_sql.Identifier(schema),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                schema=pg_sql.Identifier(schema),
+            )
+            .as_string(pg_conn)
+        )
         try:
             data = connection.executeSql(sql)
         except QgsProviderConnectionException as e:
@@ -211,14 +215,18 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
 
                 # Add SQL database version in adresse.metadata
                 feedback.pushInfo(tr("* NEW DB VERSION ") + str(new_db_version))
-                sql += pg_sql.SQL("""
+                sql += (
+                    pg_sql.SQL("""
                     UPDATE {schema}.metadata
                     SET (me_version, me_version_date)
                     = ( {new_version}, now()::timestamp(0) );
-                """).format(
-                    schema=pg_sql.Identifier(schema),
-                    new_version=pg_sql.Literal(new_db_version),
-                ).as_string(pg_conn)
+                """)
+                    .format(
+                        schema=pg_sql.Identifier(schema),
+                        new_version=pg_sql.Literal(new_db_version),
+                    )
+                    .as_string(pg_conn)
+                )
 
                 try:
                     connection.executeSql(sql)
@@ -231,14 +239,18 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
                 feedback.pushInfo(f"* {sql_file} -- OK !")
 
         # Everything is fine, we now update to the plugin version
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             UPDATE {schema}.metadata
             SET (me_version, me_version_date)
             = ( {current_version}, now()::timestamp(0) );
-        """).format(
-            schema=pg_sql.Identifier(schema),
-            current_version=pg_sql.Literal(current_version),
-        ).as_string(pg_conn)
+        """)
+            .format(
+                schema=pg_sql.Identifier(schema),
+                current_version=pg_sql.Literal(current_version),
+            )
+            .as_string(pg_conn)
+        )
 
         try:
             connection.executeSql(sql)

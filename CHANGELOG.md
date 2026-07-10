@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.4.8 - 2026-07-10
+
+### Changed
+
+* Processing algorithm - `Update managed objects` : .
+  add an option to preserve the linestrings start & end positions.
+  When using this option combined with the update policy `Update geometries`,
+  the references of the existing geometries will be calculated for the start & end
+  line nodes, and then the geometry will be updated from these new references.
+* SQL - Trigger function `road_graph.after_edge_insert_or_update()`: do not create node at intersections for different z_level
+* QGIS admin project - Add the field `z_level` for edges layers which
+* Plugin code: Use `psycopg2` rather than f-string to build SQL queries.
+  (This will allow the plugin to be pushed to QGIS official repository)
+
 ## 0.4.7 - 2026-07-06
 
 ### Added

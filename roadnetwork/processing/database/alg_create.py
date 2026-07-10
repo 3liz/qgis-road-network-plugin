@@ -138,9 +138,13 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
         # Drop schema if needed
         if override:
             feedback.pushInfo(tr(f"Trying to drop schema {schema}…"))
-            sql = pg_sql.SQL("DROP SCHEMA IF EXISTS {schema} CASCADE;").format(
-                schema=pg_sql.Identifier(schema),
-            ).as_string(pg_conn)
+            sql = (
+                pg_sql.SQL("DROP SCHEMA IF EXISTS {schema} CASCADE;")
+                .format(
+                    schema=pg_sql.Identifier(schema),
+                )
+                .as_string(pg_conn)
+            )
             try:
                 connection.executeSql(sql)
             except QgsProviderConnectionException as e:
@@ -190,15 +194,19 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
                 feedback.pushInfo("  Success !")
 
         metadata_version = version
-        sql = pg_sql.SQL("""
+        sql = (
+            pg_sql.SQL("""
             INSERT INTO {schema}.metadata
             (id, me_version, me_version_date, me_status)
             VALUES (
                 1, {version}, now()::timestamp(0), 1
-            )""").format(
-            schema=pg_sql.Identifier(schema),
-            version=pg_sql.Literal(metadata_version),
-        ).as_string(pg_conn)
+            )""")
+            .format(
+                schema=pg_sql.Identifier(schema),
+                version=pg_sql.Literal(metadata_version),
+            )
+            .as_string(pg_conn)
+        )
 
         try:
             connection.executeSql(sql)
