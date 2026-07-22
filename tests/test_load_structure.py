@@ -1294,7 +1294,7 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 56.46, 56.46]
 
 
-def test_no_cutting_of_edges_if_z_level_are_different():
+def test_no_cutting_of_edges_with_field_no_intersection_cutting():
     """Test that edges are not cut if their z-levels are different."""
 
     # Get PostgreSQL connection
@@ -1322,13 +1322,13 @@ def test_no_cutting_of_edges_if_z_level_are_different():
     assert stats[0][0] == 220
 
     # Insert a new road and edge which crosses the existing edge
-    # but with a different z-level
+    # but with no_intersection_cutting set to True
     sql_insert = """
     INSERT INTO editing_session.roads (road_code, road_type, road_class) VALUES (
         'T003', 'road', 'Départementale'
     ) ON CONFLICT DO NOTHING
     ;
-    INSERT INTO editing_session.edges (geom, road_code, z_level) VALUES (
+    INSERT INTO editing_session.edges (geom, road_code, no_intersection_cutting) VALUES (
         ST_SetSRID(
             ST_GeomFromText(
                 'LineString(
@@ -1340,7 +1340,7 @@ def test_no_cutting_of_edges_if_z_level_are_different():
             2154
         ),
         'T003',
-        1
+        True
     )
     ;
     """
@@ -1903,7 +1903,7 @@ def test_merge_editing_session_data():
     # do not compare the ids as they can change depending on the database state
     assert len(ids) == 22
     assert hash is not None
-    assert hash == "d5140f11d8673213ee62dd7600b7c71e"
+    assert hash == "0ba1d7082ce430d909979e5a720b8fb5"
     # This hash will be compared with the hash of the edges
     # of the road_graph schema after merging the editing session data
 
@@ -1982,7 +1982,7 @@ def test_merge_editing_session_data():
     assert ids is not None
     assert len(ids) == 22
     assert hash is not None
-    assert hash == "d5140f11d8673213ee62dd7600b7c71e"
+    assert hash == "0ba1d7082ce430d909979e5a720b8fb5"
 
     # Check the managed objects have been modified by the merge of the editing session data
     sql = """
