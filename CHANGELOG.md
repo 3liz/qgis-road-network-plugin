@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.4.9 - 2026-07-22
+
+### Changed
+
+* **Edges editing** - Replace field `z_level` by `no_intersection_cutting` (boolean).
+  This new field has been added as a way to prevent the trigger functions
+  from automatically cutting the edges having this value set to True.
+  It is useful when digitizing motorway access roads, edges located under a bridge, etc.
+  **You need to recreate your administration project to reflect this change**
+* SQL - Improve the function `road_graph.toggle_foreign_key_constraints`
+  so that the import and merge editing session algorithms can be used by non-superuser roles
+
 ## 0.4.8 - 2026-07-10
 
 ### Changed
