@@ -480,9 +480,9 @@ BEGIN
 
     THEN
         IF raise_notice IN ('info', 'debug') THEN
-            RAISE NOTICE '% AFTER edge % n° %, z_level %, crossing node test',
+            RAISE NOTICE '% AFTER edge % n° %, no_intersection_cutting %, crossing node test',
                 repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id,
-                NEW.z_level
+                NEW.no_intersection_cutting
             ;
         END IF;
         FOR crossing_node IN
@@ -492,8 +492,9 @@ BEGIN
                 FROM road_graph.edges AS e
                 WHERE e.id != NEW.id
                 AND ST_Intersects(e.geom, NEW.geom)
-                -- Do not get the intersection if the edges have a different level
-                AND Coalesce(e.z_level, 99) = Coalesce(NEW.z_level, 99)
+                -- Do not get the intersection if one the edges has the value True in no_intersection_cutting
+                AND NOT Coalesce(e.no_intersection_cutting, False)
+                AND NOT Coalesce(NEW.no_intersection_cutting, False)
             ),
             -- intersection can produce multipoints
             -- if the edge crosses more than once

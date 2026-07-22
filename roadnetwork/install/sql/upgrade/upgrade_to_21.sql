@@ -53,10 +53,12 @@ depending on the value of the _toggle parameter
 ';
 
 
-/*
-ALTER TABLE road_graph.edges ADD COLUMN IF NOT EXISTS z_level smallint;
-COMMENT ON COLUMN road_graph.edges.z_level
-IS 'Level of the edge. Used to NOT create cutting nodes at the intersection between edges if they do not share the same level'
+
+ALTER TABLE road_graph.edges DROP COLUMN IF EXISTS z_level;
+ALTER TABLE road_graph.edges ADD COLUMN IF NOT EXISTS no_intersection_cutting boolean DEFAULT False;
+COMMENT ON COLUMN road_graph.edges.no_intersection_cutting
+IS 'Prevents the trigger functions from automatically cutting the edges having this value set to True.
+Useful for access roads, edges located under a bridge, etc.'
 ;
 
 -- after_edge_insert_or_update()
@@ -270,9 +272,9 @@ BEGIN
 
     THEN
         IF raise_notice IN ('info', 'debug') THEN
-            RAISE NOTICE '% AFTER edge % n° %, z_level %, crossing node test',
+            RAISE NOTICE '% AFTER edge % n° %, no_intersection_cutting %, crossing node test',
                 repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id,
-                NEW.z_level
+                NEW.no_intersection_cutting
             ;
         END IF;
         FOR crossing_node IN
@@ -282,8 +284,9 @@ BEGIN
                 FROM road_graph.edges AS e
                 WHERE e.id != NEW.id
                 AND ST_Intersects(e.geom, NEW.geom)
-                -- Do not get the intersection if the edges have a different level
-                AND Coalesce(e.z_level, 99) = Coalesce(NEW.z_level, 99)
+                -- Do not get the intersection if one the edges has the value True in no_intersection_cutting
+                AND NOT Coalesce(e.no_intersection_cutting, False)
+                AND NOT Coalesce(NEW.no_intersection_cutting, False)
             ),
             -- intersection can produce multipoints
             -- if the edge crosses more than once
@@ -503,5 +506,3 @@ Suppression des noeuds orphelins si besoin.
 Création des noeuds non existants à l''intersection avec les autres edges
 seulement pour les edges de même niveau
 ';
-
-*/

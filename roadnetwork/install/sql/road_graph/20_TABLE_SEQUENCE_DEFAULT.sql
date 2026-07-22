@@ -41,7 +41,7 @@ CREATE TABLE road_graph.edges (
     previous_edge_id integer,
     next_edge_id integer,
     uid text DEFAULT (public.uuid_generate_v4())::text,
-    z_level smallint
+    no_intersection_cutting boolean DEFAULT false
 );
 
 

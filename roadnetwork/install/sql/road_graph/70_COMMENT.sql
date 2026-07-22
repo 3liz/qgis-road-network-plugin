@@ -278,8 +278,9 @@ COMMENT ON COLUMN road_graph.edges.start_node IS 'The start node (also called so
 COMMENT ON COLUMN road_graph.edges.end_node IS 'The end node (also called target node or downstream node)';
 
 
--- edges.z_level
-COMMENT ON COLUMN road_graph.edges.z_level IS 'Level of the edge. Used to NOT create cutting nodes at the intersection between edges if they do not share the same level';
+-- edges.no_intersection_cutting
+COMMENT ON COLUMN road_graph.edges.no_intersection_cutting IS 'Prevents the trigger functions from automatically cutting the edges having this value set to True.
+Useful for access roads, edges located under a bridge, etc.';
 
 
 -- editing_sessions.id
