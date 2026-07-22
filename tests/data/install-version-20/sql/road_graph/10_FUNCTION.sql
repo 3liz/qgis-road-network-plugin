@@ -4322,55 +4322,26 @@ The function returns the id of the new created edge or null if the edge has not 
 
 
 -- toggle_foreign_key_constraints(boolean)
-CREATE FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean DEFAULT true) RETURNS boolean
+CREATE FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-DECLARE
-sql_text text;
-fkey_item record;
 BEGIN
 
-    -- We cannot use SET session_replication_role to (dis-)allow the triggers
-    -- since only granted roles can set it.
-    -- Drop the foreign key constraints if they exist
-    ALTER TABLE road_graph.edges DROP CONSTRAINT IF EXISTS "edges_end_node_fkey";
-    ALTER TABLE road_graph.edges DROP CONSTRAINT IF EXISTS "edges_road_code_fkey";
-    ALTER TABLE road_graph.edges DROP CONSTRAINT IF EXISTS "edges_start_node_fkey";
-    ALTER TABLE road_graph.markers DROP CONSTRAINT IF EXISTS "markers_road_code_fkey";
-    ALTER TABLE road_graph.roads DROP CONSTRAINT IF EXISTS "roads_road_scale_fkey";
-
-    -- add the foreign key constraint if needed
     IF _toggle THEN
-        ALTER TABLE road_graph.edges ADD CONSTRAINT "edges_end_node_fkey"
-            FOREIGN KEY (end_node) REFERENCES road_graph.nodes(id)
-            ON UPDATE CASCADE ON DELETE RESTRICT;
-        ALTER TABLE road_graph.edges ADD CONSTRAINT "edges_road_code_fkey"
-            FOREIGN KEY (road_code) REFERENCES road_graph.roads(road_code)
-            ON UPDATE CASCADE ON DELETE RESTRICT;
-        ALTER TABLE road_graph.edges ADD CONSTRAINT "edges_start_node_fkey"
-            FOREIGN KEY (start_node) REFERENCES road_graph.nodes(id)
-            ON UPDATE CASCADE ON DELETE RESTRICT;
-        ALTER TABLE road_graph.markers ADD CONSTRAINT "markers_road_code_fkey"
-            FOREIGN KEY (road_code) REFERENCES road_graph.roads(road_code)
-            ON UPDATE CASCADE ON DELETE RESTRICT;
-        ALTER TABLE road_graph.roads ADD CONSTRAINT "roads_road_scale_fkey" FOREIGN KEY (road_class)
-            REFERENCES road_graph.glossary_road_class(code)
-            ON UPDATE CASCADE ON DELETE RESTRICT;
+        -- re-activate all triggers and foreign key constraint
+        SET session_replication_role = 'origin';
+    ELSE
+        -- deactivate all triggers and foreign key constraint
+        SET session_replication_role = 'replica';
     END IF;
 
-    RETURN True;
+    RETURN _toggle;
 END;
 $$;
 
 
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
-COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate or reactivate the foreign key constraints to ease
-the merging editing_session data into road_graph schema.
-It is also used when importing data from templates.
-
-Under the hood, it drops or drops & creates the constraint
-depending on the value of the _toggle parameter
-';
+COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate foreign key constraints to ease the merging editing_session data into road_graph schema';
 
 
 -- update_edge_references(text, integer[])

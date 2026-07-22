@@ -218,13 +218,7 @@ The function returns the id of the new created edge or null if the edge has not 
 
 
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
-COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate or reactivate the foreign key constraints to ease
-the merging editing_session data into road_graph schema.
-It is also used when importing data from templates.
-
-Under the hood, it drops or drops & creates the constraint
-depending on the value of the _toggle parameter
-';
+COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate foreign key constraints to ease the merging editing_session data into road_graph schema';
 
 
 -- FUNCTION update_edge_references(_road_code text, _edge_ids integer[])
