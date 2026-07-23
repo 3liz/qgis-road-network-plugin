@@ -27,8 +27,14 @@ First you must [install `uv`](https://docs.astral.sh/uv/getting-started/installa
 ```
 
 Run the tests:
-```
-> make test
+
+```bash
+# First you need to run the database docker container
+make start-db
+# Run tests
+make test
+# You can stop the database container
+make stop-db
 ```
 
 It always possible to activate the environment with `. ./.venv/bin/activate` for
@@ -48,9 +54,16 @@ using tool command directly (`pytest`, ...) or just run your command with
 ```
 
 Run the tests:
+
+```bash
+# First you need to run the database docker container
+make start-db
+# Run tests
+make test
+# You can stop the database container
+make stop-db
 ```
-> make test
-```
+
 
 Note that each time you want to do tasks in your environment you will have to
 activate the environment.
