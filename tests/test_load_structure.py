@@ -43,10 +43,12 @@ TABLES_FOR_CURRENT_VERSION = [
     "edges",
     "editing_sessions",
     "glossary_road_class",
+    "managed_objects",
     "markers",
     "metadata",
     "nodes",
     "roads",
+    "v_managed_objects",
     "v_road_without_zero_marker",
 ]
 
@@ -100,7 +102,7 @@ def test_upgrade_from(
     CreateDatabaseStructure.create_database(
         "test",
         db_schema,
-        version=db_install_version,
+        version=test_version,
         override=True,
         install_dir=install_dir,
         feedback=feedback,
@@ -139,7 +141,7 @@ def test_upgrade_from(
     cursor.execute(sql)
     record = cursor.fetchone()
     assert record is not None
-    assert int(record[0]) == db_install_version
+    assert int(record[0]) == test_version
 
     # Run the update database structure alg
     # Since the structure has been created with db_install_version above
