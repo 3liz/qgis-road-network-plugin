@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.4.10 - 2026-07-24
+
+### Changed
+
+* `get_road_substring_from_references`: adapt the start & end input values
+  from the road markers:
+  * always go to the end of the road when end marker code and/or end abscissa
+    are bigger than possible
+  * if the start marker code is below the minimum code for the road,
+    use the latter instead with a start abscissa of 0
+* `update_table_references_from_geometries`: Do not change the value of the column
+  `road_code` if no references have been found.
+
+* Tests:
+  * Fix wrong database connection used for local tests && Improve documentation
+  * Fix the test `test_upgrade_from`: start from version 1.
+
 ## 0.4.9 - 2026-07-22
 
 ### Changed
