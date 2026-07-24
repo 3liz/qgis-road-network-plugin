@@ -73,6 +73,16 @@ popd
 echo "== Creating patch file"
 set +e  # Suppress exit on erreur
 diff -urB $MODULE_NAME/install/sql/$SCHEMA  $destination_dir/sql/$SCHEMA > $destination_dir/sql.patch
+RESULT=$?
+if [[ $RESULT -eq 0 ]]; then
+  echo "👍 NO DIFFERENCES FOUND. Everything is OK."
+  exit 0
+elif [[ $RESULT -eq 1 ]]; then
+  echo "⚠️ DIFFERENCES WERE DETECTED. Use 'make patch-install-files' to apply them to the installation files."
+  exit 1
+elif [[ $RESULT -eq 2 ]]; then
+  echo "🚫 AN ERROR OCCURRED WHILE CREATING THE DIFF FILE. Please investigate."
+  exit 2
+fi
 
-[[ $? -eq 1 ]] && true
 echo "== Done"
