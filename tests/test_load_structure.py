@@ -91,14 +91,14 @@ def test_upgrade_from(
         "Current schema version cannot be lower than install version"
     )
 
-    # Get the installation dir of the previous version
+    # Get the installation dir of the first version
     test_version = 1
     install_dir = data.joinpath(f"install-version-{test_version}", "sql")
     assert install_dir.exists()
 
     feedback = LoggerProcessingFeedBack()
 
-    # Create the database from the latest update
+    # Create the database from the first version
     CreateDatabaseStructure.create_database(
         "test",
         db_schema,
@@ -2016,7 +2016,10 @@ def test_merge_editing_session_data():
     assert trees[0] == [1, "oak", "D152", 9, 493.25, "left", 8.18, 9600.41]
     assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11364.6]
     assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
-    assert trees[3] == [4, "Palm", None, None, None, "right", 0.0, None]
+    # The tree 4 was near an edge, but it has been deleted
+    # The calculated references must be None now
+    # But the road_code is always kept
+    assert trees[3] == [4, "Palm", "D138", None, None, "right", 0.0, None]
     assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
     assert trees[5] == [6, "Oak", "D138", 8, 29.18, "left", 4.63, 8084.06]
     assert trees[6] == [7, "Pine", "D138", 8, 202.78, "right", 18.09, 8257.66]
