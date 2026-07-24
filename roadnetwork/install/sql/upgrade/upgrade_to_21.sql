@@ -913,3 +913,5 @@ The parameter _update_offset_and_side allows to not update the offset and side c
 It is useful when used before updating the table geometries from the references
 (to keep the object in the same start and end places but adapt the geometry)
 ';
+
+CREATE TABLE IF NOT EXISTS road_graph.truc (id integer);
