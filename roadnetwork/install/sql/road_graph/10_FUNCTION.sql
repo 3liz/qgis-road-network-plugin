@@ -3114,6 +3114,7 @@ CREATE FUNCTION road_graph.get_road_substring_from_references(_road_code text, _
     LANGUAGE plpgsql
     AS $$
 DECLARE
+    _road_marker_code_min_max record;
     _start_multilinestring record;
     _end_multilinestring record;
     _start_closest_marker_abscissa real;
@@ -3145,6 +3146,24 @@ BEGIN
         AND _start_marker_abscissa >= _end_marker_abscissa
     THEN
         RAISE EXCEPTION 'The start abscissa cannot be equal or greater than the end abscissa when the start and end marker have the same code';
+    END IF;
+
+    -- Automatically change start marker code and end marker from the road
+    -- depending on the given values
+    SELECT INTO _road_marker_code_min_max
+        min(code) AS min_code, max(code) AS max_code
+    FROM road_graph.markers
+    WHERE road_code = _road_code
+    ;
+    IF _start_marker_code < _road_marker_code_min_max.min_code THEN
+        _start_marker_code = _road_marker_code_min_max.min_code;
+        -- Use 0 to be at the beginning of the road
+        _start_marker_abscissa = 0;
+    END IF;
+    IF _end_marker_code > _road_marker_code_min_max.max_code THEN
+        _end_marker_code = _road_marker_code_min_max.max_code;
+        -- Add 2000m to the end abscissa to go to the end of the line
+        _end_marker_abscissa = _end_marker_abscissa + 2000;
     END IF;
 
     -- Add default values for offset and side if they are NULL
