@@ -5059,7 +5059,14 @@ BEGIN
                 run_update AS (
                     UPDATE %2$I.%3$I AS mo
                     SET
-                        road_code = r.ref->>'road_code',
+                        -- Do no change the road code if no references have been found
+                        -- for the given road (meaning the object is too far)
+                        road_code =
+                        CASE
+                            -- keep object road_code intact if it is not empty
+                            WHEN Coalesce(mo.road_code, '') != '' THEN mo.road_code
+                            ELSE r.ref->>'road_code'
+                        END,
                         -- cumulative if present
                         %5$s
                         -- offset if present and if _update_offset_and_side is True
@@ -5186,7 +5193,15 @@ BEGIN
                 run_update AS (
                     UPDATE %2$I.%3$I AS mo
                     SET
-                        road_code = r.start_ref->>'road_code',
+                        -- Do no change the road code if no references have been found
+                        -- for the given road (meaning the object is too far)
+                        road_code =
+                        CASE
+                            -- keep object road_code intact if it is not empty
+                            WHEN Coalesce(mo.road_code, '') != '' THEN mo.road_code
+                            ELSE r.start_ref->>'road_code'
+                        END,
+
                         -- start_cumulative if present
                         %5$s
                         -- offset if present

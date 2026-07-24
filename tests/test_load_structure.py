@@ -2016,7 +2016,16 @@ def test_merge_editing_session_data():
     assert trees[0] == [1, "oak", "D152", 9, 493.25, "left", 8.18, 9600.41]
     assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11364.6]
     assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
-    assert trees[3] == [4, "Palm", None, None, None, "right", 0.0, None]
+
+    # TODO: modifier la fonction SQL update_table_references_from_geometry
+    # pour les point et les lignes
+    # remplacer road_code = r.start_ref->>'road_code',
+    # par un CASE WHEN END
+    # il ne faut jamais supprimer le road_code d'un objet même si la référence n'est pas trouvée, il faut garder l'ancienne valeur
+    # mais on peut vider les autres valeurs
+    # TODO BIS : modifier aussi l'algo processing
+    assert trees[3] == [4, "Palm", "D138", None, None, "right", 0.0, None]
+
     assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
     assert trees[5] == [6, "Oak", "D138", 8, 29.18, "left", 4.63, 8084.06]
     assert trees[6] == [7, "Pine", "D138", 8, 202.78, "right", 18.09, 8257.66]
