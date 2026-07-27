@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.4.11 - 2026-07-27
+
+### Changed
+
+* SQL `road_graph.get_road_substring_from_references`: Add specific calculations for roundabout.
+  Control the values of start abscissa and end abscissa and set them to the beginning or end
+  of the road to avoid errors.
+
+
 ## 0.4.10 - 2026-07-24
 
 ### Changed
