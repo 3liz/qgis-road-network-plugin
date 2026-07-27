@@ -1474,6 +1474,35 @@ def test_get_road_substring_from_references():
     assert result is not None
     assert result[0] == "cc755fe94677a86db58c92b60502cb8f"
 
+    # For roundabout, we must check that the corrections are applied for abscissa close to the marker 0
+    sql = """
+    SELECT
+    -- check start point
+    editing_session.get_road_substring_from_references('R001', 0,  0.0, 0,  30.00, 0, 'right')->>'geom',
+    editing_session.get_road_substring_from_references('R001', 0,  0.9, 0,  30.00, 0, 'right')->>'geom',
+    editing_session.get_road_substring_from_references('R001', 0,  0.0, 0,  30.00, 0, 'right')->>'geom',
+    editing_session.get_road_substring_from_references('R001', 0, 56.0, 0,  30.00, 0, 'right')->>'geom',
+    -- check end point
+    editing_session.get_road_substring_from_references('R001', 0,  5.0, 0,    0.5, 0, 'right')->>'geom',
+    editing_session.get_road_substring_from_references('R001', 0,  5.0, 0,  56.46, 0, 'right')->>'geom',
+    editing_session.get_road_substring_from_references('R001', 0,  0.0, 0,  56.00, 0, 'right')->>'geom',
+    editing_session.get_road_substring_from_references('R001', 0,  0.9, 0,  56.46, 0, 'right')->>'geom'
+    ;
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    result = None
+    for a in data:
+        result = a if a else None
+
+    assert result is not None
+    assert result[0] == result[1]
+    assert result[2] == result[3]
+    assert result[4] == result[5]
+    assert result[6] == result[7]
+
 
 def test_get_updated_roads_from_editing_session():
     """Test the function get_updated_roads_from_editing_session

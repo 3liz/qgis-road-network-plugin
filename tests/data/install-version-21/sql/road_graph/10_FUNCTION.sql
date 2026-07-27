@@ -3115,7 +3115,6 @@ CREATE FUNCTION road_graph.get_road_substring_from_references(_road_code text, _
     AS $$
 DECLARE
     _road_marker_code_min_max record;
-    _roundabout_data record;
     _start_multilinestring record;
     _end_multilinestring record;
     _start_closest_marker_abscissa real;
@@ -3139,9 +3138,18 @@ BEGIN
         RAISE EXCEPTION 'The road code must be given';
     END IF;
 
+    -- Tests
+    IF _start_marker_code > _end_marker_code THEN
+        RAISE EXCEPTION 'The start marker code cannot be greater than the end marker code';
+    END IF;
+    IF _start_marker_code = _end_marker_code
+        AND _start_marker_abscissa >= _end_marker_abscissa
+    THEN
+        RAISE EXCEPTION 'The start abscissa cannot be equal or greater than the end abscissa when the start and end marker have the same code';
+    END IF;
+
     -- Automatically change start marker code and end marker from the road
     -- depending on the given values
-    -- Get min and max marker codes for the road
     SELECT INTO _road_marker_code_min_max
         min(code) AS min_code, max(code) AS max_code
     FROM road_graph.markers
@@ -3156,51 +3164,6 @@ BEGIN
         _end_marker_code = _road_marker_code_min_max.max_code;
         -- Add 2000m to the end abscissa to go to the end of the line
         _end_marker_abscissa = _end_marker_abscissa + 2000;
-    END IF;
-
-    -- For roundabouts, fix issues preventing from calculating the geometry
-    -- Useful when processing external data before integrating them into the managed objects
-    IF (
-        SELECT (r.road_type = 'roundabout') AS test
-        FROM road_graph.roads AS r
-        WHERE r.road_code = _road_code
-    ) IS TRUE THEN
-        -- We set the start and end marker code to 0 (the only marker code for roundabouts)
-        _start_marker_code = 0;
-        _end_marker_code = 0;
-        -- Get needed information
-        SELECT INTO _roundabout_data
-            max(end_cumulative) AS max_cumulative
-        FROM road_graph.edges AS e
-        WHERE e.road_code = _road_code
-        GROUP BY e.road_code
-        ;
-        -- If the start point has an abscissa of 0+1M or less than 1 meter, we set it to 0
-        IF _start_marker_abscissa <= 1.0 THEN
-            _start_marker_abscissa = 0.0;
-        END IF;
-        -- If the start point has an abscissa less than 1 meter from the max cumulative, we set it to 0
-        IF abs(_roundabout_data.max_cumulative - _start_marker_abscissa) <= 1.0 THEN
-            _start_marker_abscissa = 0.0;
-        END IF;
-        -- If the end point has an abscissa lower than 1 meter, we set it to the max cumulative
-        IF _end_marker_abscissa <= 1.0 THEN
-            _end_marker_abscissa = _roundabout_data.max_cumulative;
-        END IF;
-        -- If the end point has an abscissa close to the max cumulative, we set it to the max cumulative
-        IF abs(_roundabout_data.max_cumulative - _end_marker_abscissa) <= 1 THEN
-            _end_marker_abscissa = _roundabout_data.max_cumulative;
-        END IF;
-    END IF;
-
-    -- Tests
-    IF _start_marker_code > _end_marker_code THEN
-        RAISE EXCEPTION 'The start marker code cannot be greater than the end marker code';
-    END IF;
-    IF _start_marker_code = _end_marker_code
-        AND _start_marker_abscissa >= _end_marker_abscissa
-    THEN
-        RAISE EXCEPTION 'The start abscissa cannot be equal or greater than the end abscissa when the start and end marker have the same code';
     END IF;
 
     -- Add default values for offset and side if they are NULL
