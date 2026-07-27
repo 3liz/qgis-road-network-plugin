@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.5.0 - 2026-07-27
+
+### Added
+
+* Add the support for other Coordinate References System (CRS) than `EPSG:2154`
+  * Default CRS is still `EPSG:2154`
+  * Add a new CRS input in the algorithms **Create database structure**
+  * Adapt the algorithms **Upgrade database structure** & **Import data** to use
+    the database SRID (taken from the `geometry_columns` PostGIS view)
+
 ## 0.4.11 - 2026-07-27
 
 ### Changed
