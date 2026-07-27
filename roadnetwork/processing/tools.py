@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
 from qgis.core import (
+    QgsCoordinateReferenceSystem,
     QgsDataSourceUri,
     QgsExpressionContextUtils,
     QgsProject,
@@ -11,7 +12,11 @@ from qgis.core import (
     QgsProviderRegistry,
 )
 
-from ..plugin_tools.resources import plugin_name_normalized, plugin_path
+from ..plugin_tools.resources import (
+    plugin_name_normalized,
+    plugin_path,
+    srid_value,
+)
 
 CONNECTION_NAME_CONTEXT_VAR = f"{plugin_name_normalized()}_connection_name"
 
@@ -75,6 +80,7 @@ def getVersionInteger(f):
 
 def createAdministrationProjectFromTemplate(
     connection_name: str,
+    crs: QgsCoordinateReferenceSystem,
     project_file_path: str,
 ) -> bool:
     """
@@ -101,8 +107,54 @@ def createAdministrationProjectFromTemplate(
     # Replace the database connection information
     filedata = filedata.replace("service='pg_road_network_service'", connection_info)
 
+    # Replace the CRS
+    plugin_srid = srid_value()
+    if crs.postgisSrid() != plugin_srid:
+        default_crs = QgsCoordinateReferenceSystem(f"EPSG:{plugin_srid}")
+        filedata = filedata.replace(
+            f"<wkt>{default_crs.toWkt()}</wkt>",
+            f"<wkt>{default_crs.toWkt()}</wkt>",
+        )
+        filedata = filedata.replace(
+            f"<proj4>{default_crs.toProj4()}</proj4>",
+            f"<proj4>{crs.toProj4()}</proj4>",
+        )
+        filedata = filedata.replace(
+            f"<srsid>{default_crs.srsid()}</srsid>",
+            f"<srsid>{crs.srsid()}</srsid>",
+        )
+        filedata = filedata.replace(
+            f"<srid>{default_crs.postgisSrid()}</srid>",
+            f"<srid>{crs.postgisSrid()}</srid>",
+        )
+        filedata = filedata.replace(
+            f"<authid>{default_crs.authid()}</authid>",
+            f"<authid>{crs.authid()}</authid>",
+        )
+        filedata = filedata.replace(
+            f"<description>{default_crs.description()}</description>",
+            f"<description>{crs.description()}</description>",
+        )
+        filedata = filedata.replace(
+            f"<projectionacronym>{default_crs.projectionAcronym()}</projectionacronym>",
+            f"<projectionacronym>{crs.projectionAcronym()}</projectionacronym>",
+        )
+        filedata = filedata.replace(
+            f"<ellipsoidAcronym>{default_crs.ellipsoidAcronym()}</ellipsoidAcronym>",
+            f"<ellipsoidAcronym>{crs.ellipsoidAcronym()}</ellipsoidAcronym>",
+        )
+        if crs.isGeographic() != default_crs.isGeographic() and not default_crs.isGeographic():
+            # ESPG:2154 is not geographic
+            # but the project contains an EPSG:4326 definition for CoordinateCustomCrs
+            filedata = filedata.replace(
+                "<geographicflag>false</geographicflag>",
+                "<geographicflag>true</geographicflag>",
+            )
+        filedata = filedata.replace(f' crs="{default_crs.authid()}"', f' crs="{crs.authid()}"')
+
     # Replace also the QGIS project variable
-    filedata = filedata.replace("roadnetwork_connection_name_value", connection_name)
+    filedata = filedata.replace("PLUGIN road_network", connection_name)
+
     with open(project_file_path, "w") as fout:
         fout.write(filedata)
 

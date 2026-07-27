@@ -107,7 +107,13 @@ class HoverMapTool(QgsMapTool):
                     {schema}.get_reference_from_point(
                         ST_SetSrid(
                             ST_MakePoint({lon}, {lat}),
-                            2154
+                            (
+                                SELECT srid
+                                FROM geometry_columns
+                                WHERE f_table_schema = {schema_text}
+                                AND f_table_name = 'edges'
+                                LIMIT 1
+                            )
                         ),
                         NULL
                     )
@@ -121,6 +127,7 @@ class HoverMapTool(QgsMapTool):
                 schema=pg_sql.Identifier(schema),
                 lon=pg_sql.Literal(lon),
                 lat=pg_sql.Literal(lat),
+                schema_text=pg_sql.Literal(schema),
             )
             .as_string(pg_conn)
         )

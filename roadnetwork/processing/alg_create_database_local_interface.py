@@ -2,11 +2,13 @@ from qgis.core import (
     QgsProcessingException,
     QgsProcessingOutputNumber,
     QgsProcessingOutputString,
+    QgsProcessingParameterCrs,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterProviderConnection,
     QgsProject,
 )
 
+from ..plugin_tools.resources import srid_value
 from ..plugin_tools.i18n import tr
 from .base_algorithm import BaseProcessingAlgorithm
 from .tools import (
@@ -20,6 +22,7 @@ from .tools import (
 class CreateDatabaseLocalInterface(BaseProcessingAlgorithm):
     CONNECTION_NAME = "CONNECTION_NAME"
     PROJECT_FILE = "PROJECT_FILE"
+    CRS = "CRS"
 
     OUTPUT_STATUS = "OUTPUT_STATUS"
     OUTPUT_STRING = "OUTPUT_STRING"
@@ -68,6 +71,16 @@ class CreateDatabaseLocalInterface(BaseProcessingAlgorithm):
         param.setHelp(tr("The database where the plugin schema has been installed."))
         self.addParameter(param)
 
+        # CRS
+        self.addParameter(
+            QgsProcessingParameterCrs(
+                self.CRS,
+                tr("Geometry CRS"),
+                defaultValue=f"EPSG:{srid_value()}",
+                optional=False,
+            )
+        )
+
         # target project file
         self.addParameter(
             QgsProcessingParameterFileDestination(
@@ -106,9 +119,12 @@ class CreateDatabaseLocalInterface(BaseProcessingAlgorithm):
         # Database connection parameters
         connection_name = parameters[self.CONNECTION_NAME]
 
+        # CRS
+        crs = self.parameterAsCrs(parameters, self.CRS, context)
+
         # Write the file out again
         project_file = self.parameterAsString(parameters, self.PROJECT_FILE, context)
-        if not createAdministrationProjectFromTemplate(connection_name, project_file):
+        if not createAdministrationProjectFromTemplate(connection_name, crs, project_file):
             raise QgsProcessingException(f"Connection {connection_name} not found")
 
         msg = tr("QGIS Administration project has been successfully created from database connection")

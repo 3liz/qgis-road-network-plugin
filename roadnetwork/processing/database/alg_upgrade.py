@@ -197,7 +197,39 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
             )
             return True
 
+        # Get database SRID
+        sql = (
+            pg_sql.SQL("""
+            SELECT srid
+            FROM geometry_columns
+            WHERE f_table_schema = {schema}
+            AND f_table_name = 'edges'
+            LIMIT 1;
+        """)
+            .format(
+                schema=pg_sql.Literal(schema),
+            )
+            .as_string(pg_conn)
+        )
+        try:
+            data = connection.executeSql(sql)
+        except QgsProviderConnectionException as e:
+            pg_conn.close()
+            raise QgsProcessingException(str(e))
+        srid = None
+        for a in data:
+            srid = int(a[0]) if a else None
+        if not srid:
+            pg_conn.close()
+            error_message = tr("No SRID value found in the database !")
+            raise QgsProcessingException(error_message)
+        feedback.pushInfo(tr("Database SRID") + " = {}".format(srid))
+
         migrations = resources.available_migrations(db_version)
+
+        # Plugin default SRID
+        plugin_srid = resources.srid_value()
+
         # Loop sql files and run SQL code
         for new_db_version, sql_file in migrations:
             with sql_file.open() as f:
@@ -212,6 +244,9 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
                 if schema != resources.schema_name():
                     sql = sql.replace(f"{resources.schema_name()}.", f"{schema}.")
                     sql = sql.replace(f" {resources.schema_name()};", f" {schema};")
+
+                if srid != plugin_srid:
+                    sql = sql.replace(f", {plugin_srid})", f", {srid})")
 
                 # Add SQL database version in adresse.metadata
                 feedback.pushInfo(tr("* NEW DB VERSION ") + str(new_db_version))

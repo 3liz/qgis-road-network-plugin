@@ -7,7 +7,6 @@ from psycopg2 import connect
 from psycopg2 import sql as pg_sql
 from qgis import processing
 from qgis.core import (
-    QgsCoordinateReferenceSystem,
     QgsDataSourceUri,
     QgsProcessing,
     QgsProcessingException,
@@ -22,7 +21,7 @@ from qgis.core import (
 )
 
 from ..plugin_tools.i18n import tr
-from ..plugin_tools.resources import plugin_name_normalized
+from ..plugin_tools.resources import plugin_name_normalized, srid_value
 from .base_algorithm import BaseProcessingAlgorithm
 from .tools import get_connection_name
 
@@ -52,9 +51,6 @@ class ImportData(BaseProcessingAlgorithm):
         "abscissa",
         "is_virtual",
     )
-
-    # CRS
-    TARGET_CRS = QgsCoordinateReferenceSystem("EPSG:2154")
 
     def name(self):
         return "import_data"
@@ -196,6 +192,26 @@ class ImportData(BaseProcessingAlgorithm):
         connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
         random_time = str(time.time()).replace(".", "")
 
+        # Get database SRID
+        connection = (
+            QgsProviderRegistry.instance().providerMetadata("postgres").findConnection(connection_name)
+        )
+        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
+        sql = pg_sql.SQL("""
+            SELECT srid
+            FROM geometry_columns
+            WHERE f_table_schema = 'road_graph'
+            AND f_table_name = 'edges'
+        """).as_string(pg_conn)
+        pg_conn.close()
+        try:
+            data = connection.executeSql(sql)
+        except QgsProviderConnectionException as e:
+            raise QgsProcessingException(str(e))
+        srid = srid_value()
+        for a in data:
+            srid = a[0] if a else srid_value()
+
         # Import edges
         feedback.pushInfo("")
         feedback.pushInfo(tr("IMPORT EDGES SOURCE LAYER INTO TEMPORARY TABLE"))
@@ -209,7 +225,7 @@ class ImportData(BaseProcessingAlgorithm):
                 "SHAPE_ENCODING": "",
                 "GTYPE": 4,
                 "A_SRS": None,
-                "T_SRS": self.TARGET_CRS,
+                "T_SRS": srid,
                 "S_SRS": None,
                 "SCHEMA": temp_schema,
                 "TABLE": edges_temp_table,
@@ -254,7 +270,7 @@ class ImportData(BaseProcessingAlgorithm):
                 "SHAPE_ENCODING": "",
                 "GTYPE": 3,
                 "A_SRS": None,
-                "T_SRS": self.TARGET_CRS,
+                "T_SRS": srid,
                 "S_SRS": None,
                 "SCHEMA": temp_schema,
                 "TABLE": markers_temp_table,

@@ -53,11 +53,12 @@ TABLES_FOR_CURRENT_VERSION = [
 ]
 
 
-def test_processing_create(processing_provider: Provider):
+def test_processing_create(db_schema: str, db_connection: psycopg.Connection, processing_provider: Provider):
     """Test the processing algorithm for creating the database structure."""
 
     params = {
         "CONNECTION_NAME": "test",
+        "CRS": "EPSG:2154",
         "OVERRIDE": True,
     }
 
@@ -69,6 +70,21 @@ def test_processing_create(processing_provider: Provider):
 
     assert processing_output["OUTPUT_STATUS"] == 1
     assert processing_output["OUTPUT_VERSION"] == schema_version()
+
+    # Check the SRID of the edges geometry columns is the same as the one specified in the parameters
+    cursor = db_connection.cursor()
+    cursor.execute(
+        f"""
+        SELECT srid
+        FROM geometry_columns
+        WHERE f_table_schema = '{db_schema}'
+        AND f_table_name = 'edges'
+        LIMIT 1
+        """
+    )
+    records = cursor.fetchall()
+    srid = [r[0] for r in records]
+    assert srid == [2154], f"Expected SRID 2154, got {srid}"
 
 
 def test_upgrade_from(
@@ -102,6 +118,7 @@ def test_upgrade_from(
     CreateDatabaseStructure.create_database(
         "test",
         db_schema,
+        srid=2154,
         version=test_version,
         override=True,
         install_dir=install_dir,
@@ -189,6 +206,7 @@ def test_reset_test_data(processing_provider: Provider, data: Path):
 
     params = {
         "CONNECTION_NAME": "test",
+        "CRS": "EPSG:2154",
         "OVERRIDE": True,
     }
 

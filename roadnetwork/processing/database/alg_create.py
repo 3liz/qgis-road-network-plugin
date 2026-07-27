@@ -9,6 +9,7 @@ from qgis.core import (
     QgsProcessingOutputNumber,
     QgsProcessingOutputString,
     QgsProcessingParameterBoolean,
+    QgsProcessingParameterCrs,
     QgsProcessingParameterProviderConnection,
     QgsProcessingParameterString,
     QgsProject,
@@ -31,6 +32,7 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
     CONNECTION_NAME = "CONNECTION_NAME"
     OVERRIDE = "OVERRIDE"
     SCHEMA = "SCHEMA"
+    CRS = "CRS"
 
     OUTPUT_STATUS = "OUTPUT_STATUS"
     OUTPUT_STRING = "OUTPUT_STRING"
@@ -90,6 +92,14 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
                 defaultValue=resources.schema_name(),
             ),
         )
+        self.addParameter(
+            QgsProcessingParameterCrs(
+                self.CRS,
+                tr("Geometry CRS"),
+                defaultValue=f"EPSG:{resources.srid_value()}",
+                optional=False,
+            )
+        )
 
         # OUTPUTS
         # Add output for status (integer) and message (string)
@@ -116,12 +126,18 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
             )
             return False, msg
 
+        try:
+            int(self.parameterAsCrs(parameters, self.CRS, context).authid().replace("EPSG:", ""))
+        except ValueError:
+            return False, tr("Invalid CRS parameter. It should be a valid EPSG code like 'EPSG:2154'.")
+
         return super(CreateDatabaseStructure, self).checkParameterValues(parameters, context)
 
     @staticmethod
     def create_database(
         connection_name: str,
         schema: str,
+        srid: int,
         *,
         version: int,
         override: bool,
@@ -168,6 +184,9 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
             "99_finalize_database.sql",
         ]
 
+        # Plugin default SRID
+        plugin_srid = resources.srid_value()
+
         # Loop sql files and run SQL code
         for sf in sql_files:
             feedback.pushInfo(sf)
@@ -184,6 +203,12 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
                 if schema != plugin_schema_name:
                     sql = sql.replace(f"{plugin_schema_name}.", f"{schema}.")
                     sql = sql.replace(f" {plugin_schema_name};", f" {schema};")
+
+                if srid != plugin_srid:
+                    # First add a space after the comma if needed
+                    sql = sql.replace(f",{plugin_srid})", f", {plugin_srid})")
+                    # then replace the plugin SRID by the user defined one
+                    sql = sql.replace(f", {plugin_srid})", f", {srid})")
 
                 try:
                     connection.executeSql(sql)
@@ -222,10 +247,17 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
         override = self.parameterAsBool(parameters, self.OVERRIDE, context)
         install_dir = resources.plugin_path().joinpath("install", "sql")
         version = resources.schema_version()
+        try:
+            srid = int(self.parameterAsCrs(parameters, self.CRS, context).authid().replace("EPSG:", ""))
+        except ValueError:
+            raise QgsProcessingException(
+                tr("Invalid CRS parameter. It should be a valid EPSG code like 'EPSG:2154'.")
+            )
 
         self.create_database(
             connection_name,
             schema,
+            srid,
             version=version,
             override=override,
             install_dir=install_dir,
@@ -241,6 +273,7 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
         self.create_database(
             connection_name,
             "editing_session",
+            srid,
             version=version,
             override=override,
             install_dir=install_dir,

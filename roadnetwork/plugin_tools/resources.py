@@ -84,6 +84,11 @@ def plugin_name_normalized() -> str:
     return plugin_name().lower().translate(normalized_chars)
 
 
+def srid_value() -> int:
+    """Default SRID value for the plugin"""
+    return 2154
+
+
 #
 # UI
 #
