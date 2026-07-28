@@ -3577,13 +3577,6 @@ BEGIN
     markers_zero_count = 0;
     markers_count = 0;
 
-    -- Reset edges sequence
-    SELECT INTO _set_val_result
-    setval(
-        pg_get_serial_sequence('road_graph.edges', 'id'),
-        (SELECT max(id) FROM road_graph.edges)
-    );
-
     -- Build temporary tables from source tables
     -- Temporary edges
     sql_text = format(
@@ -3592,8 +3585,7 @@ BEGIN
             WITH source AS (
                 SELECT
                     -- Stores the original data
-                    -- We must use the sequences to keep a link between previous and next edges
-                    nextval(pg_get_serial_sequence('road_graph.edges', 'id')) AS id,
+                    (row_number() OVER())::integer AS id,
                     e."edge_order",
                     trim(e."road_code") AS road_code,
                     trim(e."road_class") AS road_class,
