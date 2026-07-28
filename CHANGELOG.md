@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.5.2 - 2026-07-28
+
+### Fixed
+
+* **Import** - SQL function `road_graph.import_data_from_template_tables`:
+  Fix error when importing more than one dataset. The function
+  used the original data `id` instead of getting the sequence next value.
+
 ## 0.5.1 - 2026-07-28
 
 ### Fixed
