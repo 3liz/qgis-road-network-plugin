@@ -2183,7 +2183,6 @@ BEGIN
             e.geom <-> marker.geom AS distance,
             -- BEWARE: it can be a point e.g if the marker is at the end of the edge
             -- it why we do not cast with
-            -- It could also be an empty geometry
             ST_LineSubstring(
                 e.geom,
                 ST_LineLocatePoint(e.geom, marker.geom),
@@ -2207,13 +2206,7 @@ BEGIN
         (CASE
             WHEN GeometryType(sub_geom) = 'POINT'
                 THEN ST_MakeLine(sub_geom, sub_geom)::geometry(LINESTRING, 2154)
-            ELSE
-                CASE
-                    -- If the geometry is empty, we take the closest edge end point
-                    WHEN ST_IsEmpty(sub_geom)
-                        THEN ST_MakeLine(ST_EndPoint(e.geom), ST_EndPoint(e.geom))::geometry(LINESTRING, 2154)
-                    ELSE sub_geom
-                END
+            ELSE sub_geom
         END)::geometry(LINESTRING, 2154) AS sub_geom
     FROM get_closest_edge AS e
     ;
@@ -2225,7 +2218,6 @@ BEGIN
     END IF;
     IF raise_notice = 'yes' THEN
         RAISE NOTICE 'Closest edge found: id = %', closest_edge.id;
-        RAISE NOTICE 'Closest edge found: sub_geom = %', ST_AsText(closest_edge.sub_geom);
     END IF;
 
     -- Merge all linestrings for the given road
