@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.5.1 - 2026-07-28
+
+### Fixed
+
+* **SQl** - function `road_graph.get_downstream_multilinestring_from_reference`
+  Fix wrong result when the closest edge substring from the given marker projected point
+  to the end of the road. When the result is `EMPTY` (for example because the marker
+  is exactly at the end of the edge), the function now returns a valid non-empty
+  linestring (formed by the edge end point doubled)
+
 ## 0.5.0 - 2026-07-27
 
 ### Added
