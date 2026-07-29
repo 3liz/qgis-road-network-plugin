@@ -3144,7 +3144,7 @@ BEGIN
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
 
     IF _road_code IS NULL OR trim(_road_code) = '' THEN
-        RAISE EXCEPTION 'The road code must be given';
+        RAISE EXCEPTION 'The road code must be given. It is NULL or empty';
     END IF;
 
     -- Automatically change start marker code and end marker from the road
@@ -3203,12 +3203,16 @@ BEGIN
 
     -- Tests
     IF _start_marker_code > _end_marker_code THEN
-        RAISE EXCEPTION 'The start marker code cannot be greater than the end marker code';
+        RAISE EXCEPTION 'The start marker code (%) cannot be greater than the end marker code (%)',
+            _start_marker_code, _end_marker_code
+        ;
     END IF;
     IF _start_marker_code = _end_marker_code
         AND _start_marker_abscissa >= _end_marker_abscissa
     THEN
-        RAISE EXCEPTION 'The start abscissa cannot be equal or greater than the end abscissa when the start and end marker have the same code';
+        RAISE EXCEPTION 'The start abscissa (%) cannot be equal or greater than the end abscissa (%) when the start and end marker have the same code (%)',
+            _start_marker_abscissa, _end_marker_abscissa, _start_marker_code
+        ;
     END IF;
 
     -- Add default values for offset and side if they are NULL
