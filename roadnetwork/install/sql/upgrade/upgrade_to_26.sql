@@ -569,3 +569,191 @@ $$;
 
 -- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text)
 COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part';
+
+
+-- get_reference_from_point(geometry, text, boolean)
+CREATE OR REPLACE FUNCTION road_graph.get_reference_from_point(_point geometry, _road_code text DEFAULT NULL::text, _use_cache boolean DEFAULT false) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    closest_edge record;
+    closest_edge_marker record;
+    previous_marker record;
+    merged_upstream_edges record;
+    upstream_road_from_marker record;
+    upstream_road_from_start record;
+    found_road_code text;
+    found_marker_code integer;
+    found_abscissa real;
+    found_offset real;
+    found_side text;
+    found_cumulative real;
+    raise_notice text;
+BEGIN
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
+    IF raise_notice IN ('info', 'debug') THEN
+        RAISE NOTICE '% get_reference_from_point - _point = % & _road_code = %',
+            REPEAT('    ', pg_trigger_depth()::INTEGER),
+            ST_AsText(_point),
+            _road_code
+        ;
+    END IF;
+
+    -- Get the splitted closest road depending on given road_code
+    -- we keep only the edge part between start point and given _point
+    IF _road_code IS NOT NULL THEN
+        WITH ordered_ids AS (
+            SELECT *
+            FROM road_graph.get_ordered_edges(_road_code, -1, 'downstream')
+        )
+        SELECT INTO closest_edge
+            e.*,
+            -- Calculate the distance between the edge and the point
+            -- Do not use e.geom <-> _point AS distance
+            -- since it can lead to some PostGIS errors if used in the ORDER BY
+            -- such as "ERROR:  index returned tuples in wrong order"
+            ST_Distance(e.geom, _point) AS distance,
+            -- create the line portion from edge start point to the given point
+            -- BEWARE: it can be a point e.g if the _point is edge start point
+            -- it why we do not cast with ::geometry(LINESTRING, 2154)
+            ST_LineSubstring(
+                e.geom,
+                0,
+                ST_LineLocatePoint(e.geom, _point)
+            ) AS sub_geom,
+            -- calculate the measure for the point on this edge
+            ST_LineLocatePoint(e.geom, _point) AS point_measure
+        FROM
+            road_graph.edges AS e
+        INNER JOIN ordered_ids AS o ON e.id = o.id
+        -- Limit search for the given road code
+        WHERE e.road_code = _road_code
+        -- Limit search to 50m
+        AND ST_DWithin(e.geom, _point, 50)
+        -- we must also order by edge_order, start_cumulative
+        -- in case the point catches multiple edges (start and end points)
+        ORDER BY distance, o.edge_order, e.start_cumulative --, ST_X(ST_Centroid(e.geom)), ST_Y(ST_Centroid(e.geom))
+        -- Get only the closest edge, with the least edge_order -- start cumulative
+        LIMIT 1
+        ;
+    ELSE
+        SELECT INTO closest_edge
+            e.*,
+            -- Calculate the distance between the edge and the point
+            -- Do not use e.geom <-> _point AS distance
+            -- since it can lead to some PostGIS errors if used in the ORDER BY
+            -- such as "ERROR:  index returned tuples in wrong order"
+            ST_Distance(e.geom, _point) AS distance,
+            -- create the line portion from edge start point to the given point
+            -- BEWARE: it can be a point e.g if the _point is edge start point
+            -- it why we do not cast with ::geometry(LINESTRING, 2154)
+            ST_LineSubstring(
+                e.geom,
+                0,
+                ST_LineLocatePoint(e.geom, _point)
+            ) AS sub_geom,
+            -- calculate the measure for the point on this edge
+            ST_LineLocatePoint(e.geom, _point) AS point_measure
+        FROM
+            road_graph.edges AS e
+            -- LIMIT search without road_code TO 50m
+        WHERE ST_DWithin(e.geom, _point, 50)
+        -- we must also order by edge_order, start_cumulative
+        -- in case the point catches multiple edges (start and end points)
+        ORDER BY distance --, ST_X(ST_Centroid(e.geom)), ST_Y(ST_Centroid(e.geom))
+        -- Get only the closest edge, with the least edge_order, start cumulative
+        LIMIT 1
+        ;
+    END IF;
+    IF closest_edge IS NULL THEN
+        IF raise_notice = 'debug' THEN
+            RAISE NOTICE 'CLOSEST_EDGE is NULL';
+        END IF;
+        RETURN NULL;
+    END IF;
+    IF raise_notice = 'debug' THEN
+        RAISE NOTICE 'CLOSEST_EDGE %', to_json(closest_edge);
+        RAISE NOTICE 'CLOSEST_EDGE subgeom %', ST_AsText(closest_edge.sub_geom);
+    END IF;
+
+    -- Get road_code
+    found_road_code = closest_edge.road_code;
+
+    WITH
+    get_previous_marker AS (
+        SELECT *
+        FROM road_graph.get_road_previous_marker_from_point(
+            found_road_code,
+            _point,
+            _use_cache
+        )
+    ),
+    marker_data AS (
+        SELECT
+            -- marker data
+            m.*,
+            -- Multilinestring from the marker to the point
+            ST_Difference(
+                -- linestring between the marker and _point
+                m.road_linestring_from_marker_to_point,
+                -- multilinestring made with connectors between edges end points and start points
+                m.closing_multilinestring,
+                -- grid size to avoid rounding issues
+                0.01
+            ) AS upstream_road_from_marker,
+            -- Multilinestring from the road start to the point
+            ST_Difference(
+                -- linestring between the road start and the point
+                m.road_linestring_from_start_to_point,
+                -- multilinestring made with connectors between edges end points and start points
+                m.closing_multilinestring,
+                -- grid size to avoid rounding issues
+                0.01
+            ) AS upstream_road_from_start
+        FROM
+            get_previous_marker AS m
+    )
+    SELECT INTO closest_edge_marker
+        m.*
+    FROM marker_data AS m
+    ;
+
+    IF raise_notice = 'debug' THEN
+        RAISE NOTICE 'CLOSEST_EDGE_MARKER %', to_json(closest_edge_marker);
+        RAISE NOTICE '-';
+    END IF;
+
+    -- Calculate values to return based on the generated geometries
+    found_marker_code = closest_edge_marker.code;
+    found_abscissa = ST_Length(closest_edge_marker.upstream_road_from_marker) + closest_edge_marker.abscissa;
+    found_cumulative = Coalesce(ST_Length(closest_edge_marker.upstream_road_from_start), 0);
+    found_offset = closest_edge.distance;
+    found_side = (
+        CASE
+            WHEN ST_Contains(
+                ST_Buffer(
+                    closest_edge.geom,
+                    closest_edge.distance +1,
+                    'side=left'
+                ), _point
+            ) THEN 'left' ELSE 'right'
+        END
+    );
+
+    -- Build the JSON to return
+    RETURN json_build_object(
+        'road_code', found_road_code,
+        'marker_code', found_marker_code,
+        'abscissa', round(found_abscissa::numeric, 2),
+        'cumulative', round(found_cumulative::numeric, 2),
+        'offset', round(found_offset::numeric, 2),
+        'side', found_side
+    );
+
+END;
+$$;
+
+COMMENT ON FUNCTION road_graph.get_reference_from_point(_point geometry, _road_code text, _use_cache boolean)
+IS 'Calculate the references for the given point. The second parameter _road_code allows to narrow the search to the specified road.
+Since this method is heavily used and the calculation is costly, we can pass a third parameter _use_cache which allows to use a pre-generated cache (to be build before using this function).'
+;

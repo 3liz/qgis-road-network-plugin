@@ -2698,7 +2698,11 @@ BEGIN
         )
         SELECT INTO closest_edge
             e.*,
-            e.geom <-> _point AS distance,
+            -- Calculate the distance between the edge and the point
+            -- Do not use e.geom <-> _point AS distance
+            -- since it can lead to some PostGIS errors if used in the ORDER BY
+            -- such as "ERROR:  index returned tuples in wrong order"
+            ST_Distance(e.geom, _point) AS distance,
             -- create the line portion from edge start point to the given point
             -- BEWARE: it can be a point e.g if the _point is edge start point
             -- it why we do not cast with ::geometry(LINESTRING, 2154)
@@ -2725,7 +2729,11 @@ BEGIN
     ELSE
         SELECT INTO closest_edge
             e.*,
-            e.geom <-> _point AS distance,
+            -- Calculate the distance between the edge and the point
+            -- Do not use e.geom <-> _point AS distance
+            -- since it can lead to some PostGIS errors if used in the ORDER BY
+            -- such as "ERROR:  index returned tuples in wrong order"
+            ST_Distance(e.geom, _point) AS distance,
             -- create the line portion from edge start point to the given point
             -- BEWARE: it can be a point e.g if the _point is edge start point
             -- it why we do not cast with ::geometry(LINESTRING, 2154)
@@ -2834,6 +2842,11 @@ BEGIN
 
 END;
 $$;
+
+
+-- FUNCTION get_reference_from_point(_point geometry, _road_code text, _use_cache boolean)
+COMMENT ON FUNCTION road_graph.get_reference_from_point(_point geometry, _road_code text, _use_cache boolean) IS 'Calculate the references for the given point. The second parameter _road_code allows to narrow the search to the specified road.
+Since this method is heavily used and the calculation is costly, we can pass a third parameter _use_cache which allows to use a pre-generated cache (to be build before using this function).';
 
 
 -- get_road_point_from_reference(text, integer, real, real, text)
