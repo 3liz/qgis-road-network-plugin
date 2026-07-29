@@ -2935,7 +2935,7 @@ BEGIN
     -- since it will not be useful and will raise an exception ( by function get_ordered_edges)
     SELECT INTO _use_cache
         CASE
-            WHEN (SELECT COUNT(*) FROM road_graph.edges  AS e WHERE e.road_code = _road_code) < 2 THEN False
+            WHEN (SELECT COUNT(*) FROM editing_session.edges  AS e WHERE e.road_code = _road_code) < 2 THEN False
             ELSE _use_cache
         END
     ;
@@ -4458,7 +4458,7 @@ DECLARE
     raise_notice text;
 BEGIN
     -- Check if we must log
-    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
+    raise_notice = editing_session.get_current_setting('road.graph.raise.notice', 'no');
 
     -- Deactivate triggers
     SELECT set_config('road.graph.disable.trigger', '1'::text, true)
