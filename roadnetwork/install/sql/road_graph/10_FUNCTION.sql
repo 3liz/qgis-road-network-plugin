@@ -3135,7 +3135,7 @@ CREATE FUNCTION road_graph.get_road_substring_from_references(_road_code text, _
     LANGUAGE plpgsql
     AS $$
 DECLARE
-    _road_marker_code_min_max record;
+    _road_edges_min_max_values record;
     _roundabout_data record;
     _start_multilinestring record;
     _end_multilinestring record;
@@ -3163,20 +3163,28 @@ BEGIN
     -- Automatically change start marker code and end marker from the road
     -- depending on the given values
     -- Get min and max marker codes for the road
-    SELECT INTO _road_marker_code_min_max
-        min(code) AS min_code, max(code) AS max_code
-    FROM road_graph.markers
+    SELECT INTO _road_edges_min_max_values
+        min(start_marker) AS min_code, max(end_marker) AS max_code,
+        min(start_cumulative) AS min_cumulative,
+        max(end_cumulative) AS max_cumulative,
+        min(start_abscissa) AS min_abscissa,
+        max(end_abscissa) AS max_abscissa
+    FROM road_graph.edges
     WHERE road_code = _road_code
     ;
-    IF _start_marker_code < _road_marker_code_min_max.min_code THEN
-        _start_marker_code = _road_marker_code_min_max.min_code;
+    IF _start_marker_code < _road_edges_min_max_values.min_code THEN
+        _start_marker_code = _road_edges_min_max_values.min_code;
         -- Use 0 to be at the beginning of the road
-        _start_marker_abscissa = 0;
+        _start_marker_abscissa = _road_edges_min_max_values.min_abscissa;
     END IF;
-    IF _end_marker_code > _road_marker_code_min_max.max_code THEN
-        _end_marker_code = _road_marker_code_min_max.max_code;
+    IF _end_marker_code > _road_edges_min_max_values.max_code THEN
+        _end_marker_code = _road_edges_min_max_values.max_code;
         -- Add 2000m to the end abscissa to go to the end of the line
-        _end_marker_abscissa = _end_marker_abscissa + 2000;
+        _end_marker_abscissa = _road_edges_min_max_values.max_abscissa;
+    END IF;
+    IF _end_marker_code = _road_edges_min_max_values.max_code
+        AND _end_marker_abscissa > _road_edges_min_max_values.max_abscissa THEN
+        _end_marker_abscissa = _road_edges_min_max_values.max_abscissa;
     END IF;
 
     -- For roundabouts, fix issues preventing from calculating the geometry
@@ -3189,28 +3197,21 @@ BEGIN
         -- We set the start and end marker code to 0 (the only marker code for roundabouts)
         _start_marker_code = 0;
         _end_marker_code = 0;
-        -- Get needed information
-        SELECT INTO _roundabout_data
-            max(end_cumulative) AS max_cumulative
-        FROM road_graph.edges AS e
-        WHERE e.road_code = _road_code
-        GROUP BY e.road_code
-        ;
         -- If the start point has an abscissa of 0+1M or less than 1 meter, we set it to 0
         IF _start_marker_abscissa <= 1.0 THEN
             _start_marker_abscissa = 0.0;
         END IF;
         -- If the start point has an abscissa less than 1 meter from the max cumulative, we set it to 0
-        IF abs(_roundabout_data.max_cumulative - _start_marker_abscissa) <= 1.0 THEN
+        IF abs(_road_edges_min_max_values.max_abscissa - _start_marker_abscissa) <= 1.0 THEN
             _start_marker_abscissa = 0.0;
         END IF;
         -- If the end point has an abscissa lower than 1 meter, we set it to the max cumulative
         IF _end_marker_abscissa <= 1.0 THEN
-            _end_marker_abscissa = _roundabout_data.max_cumulative;
+            _end_marker_abscissa = _road_edges_min_max_values.max_abscissa;
         END IF;
         -- If the end point has an abscissa close to the max cumulative, we set it to the max cumulative
-        IF abs(_roundabout_data.max_cumulative - _end_marker_abscissa) <= 1 THEN
-            _end_marker_abscissa = _roundabout_data.max_cumulative;
+        IF abs(_road_edges_min_max_values.max_abscissa - _end_marker_abscissa) <= 1 THEN
+            _end_marker_abscissa = _road_edges_min_max_values.max_abscissa;
         END IF;
     END IF;
 
@@ -5110,6 +5111,9 @@ BEGIN
             RETURN NULL;
     END IF;
 
+    -- Get road information
+
+
     -- Update references based on geometries
     -- and geometry type of the managed object
     -- We filter the objects to update based on the given road codes
@@ -5240,9 +5244,26 @@ BEGIN
                         OR '%4$s' = ''
                     )
                 ),
+                road_info AS (
+                    SELECT r.road_code, r.road_type,
+                        min(e.start_marker) AS min_code,
+                        max(e.end_marker) AS max_code,
+                        min(e.start_cumulative) AS min_cumulative,
+                        max(e.end_cumulative) AS max_cumulative,
+                        min(e.start_abscissa) AS min_abscissa,
+                        max(e.end_abscissa) AS max_abscissa
+                    FROM road_graph.edges AS e
+                    JOIN road_graph.roads AS r
+                        USING (road_code)
+                    WHERE e.road_code IN (
+                        SELECT DISTINCT o.road_code
+                        FROM objects AS o
+                    )
+                    GROUP BY r.road_code, r.road_type
+                ),
                 refs AS (
                     SELECT
-                        o.id,
+                        o.id, o.road_code,
                         road_graph.get_reference_from_point(
                             -- ST_StartPoint could return NULL for a MULTILINESTRING
                             CASE
@@ -5279,6 +5300,58 @@ BEGIN
                         ) AS end_ref
                     FROM objects AS o
                 ),
+                processed_refs AS (
+                    SELECT
+                        r.id,
+                        r.road_code,
+                        -- start_ref
+                        CASE
+                            -- For roundabout, if the start and end values are equal
+                            -- use 0+0 for start & 0+max_cumulative for end
+                            WHEN i.road_type = 'roundabout'
+                            AND Coalesce((r.start_ref->>'abscissa')::real, 0) = Coalesce((r.end_ref->>'abscissa')::real, 0)
+                                THEN jsonb_build_object(
+                                    'road_code', r.start_ref->>'road_code',
+                                    'marker_code', 0,
+                                    'abscissa', 0.0,
+                                    'cumulative', 0.0,
+                                    'offset', r.start_ref->>'offset',
+                                    'side', r.start_ref->'side'
+                                )
+                            -- for other roads, invert start and end if start < end
+                            WHEN
+                            Coalesce((r.start_ref->>'marker_code')::int * 10000 + (r.start_ref->>'abscissa')::real, 0)
+                            >
+                            Coalesce((r.end_ref->>'marker_code')::int * 10000 + (r.end_ref->>'abscissa')::real, 0)
+                                THEN end_ref
+                            ELSE r.start_ref
+                        END AS start_ref,
+                        -- end_ref
+                        CASE
+                            -- For roundabout, if the start and end values are equal
+                            -- use 0+0 for start & 0+max_cumulative for end
+                            WHEN i.road_type = 'roundabout'
+                            AND Coalesce((r.start_ref->>'abscissa')::real, 0) = Coalesce((r.end_ref->>'abscissa')::real, 0)
+                                THEN jsonb_build_object(
+                                    'road_code', r.end_ref->>'road_code',
+                                    'marker_code', 0,
+                                    'abscissa', i.max_abscissa,
+                                    'cumulative', i.max_cumulative,
+                                    'offset', r.end_ref->>'offset',
+                                    'side', r.end_ref->'side'
+                                )
+                            -- for other roads, invert start and end if start < end
+                            WHEN
+                            Coalesce((r.start_ref->>'marker_code')::int * 10000 + (r.start_ref->>'abscissa')::real, 0)
+                            >
+                            Coalesce((r.end_ref->>'marker_code')::int * 10000 + (r.end_ref->>'abscissa')::real, 0)
+                                THEN start_ref
+                            ELSE r.end_ref
+                        END AS end_ref
+                    FROM refs AS r
+                    JOIN road_info AS i
+                        USING (road_code)
+                ),
                 run_update AS (
                     UPDATE %2$I.%3$I AS mo
                     SET
@@ -5304,7 +5377,7 @@ BEGIN
                         start_abscissa = (r.start_ref->>'abscissa')::real,
                         end_marker_code = (r.end_ref->>'marker_code')::integer,
                         end_abscissa = (r.end_ref->>'abscissa')::real
-                    FROM refs AS r
+                    FROM processed_refs AS r
                     WHERE TRUE
                     AND mo.%1$I = r.id
                     -- Do not UPDATE if no changes must be made (values already are the same)
