@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.5.3 - 2026-07-30
+
+### Changed
+
+References & geometry calculation: be more tolerant for limit cases
+
+* Function `road_graph.update_table_references_from_geometries`:
+  be more tolerant for **roundabout** & invert start & end result if needed
+* Function `road_graph.get_road_substring_from_references`:
+  Add information when raising exception to help find the problematic objects
+* Minor fixes: replace wrong usage of `editing_session` schema in 2 functions
+
+### Fixed
+
+* SQL Function `road_graph.get_reference_from_point`:
+  fix exception occurring with distance calculation (PostGIS Bug)
+
 ## 0.5.2 - 2026-07-28
 
 ### Fixed
