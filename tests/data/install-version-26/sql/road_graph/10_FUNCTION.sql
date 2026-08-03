@@ -1413,8 +1413,7 @@ BEGIN
                         ST_StartPoint(o.geom)
                     ),
                     o.geom
-                )) AS geom,
-                o.geom AS edge_geom
+                )) AS geom
             FROM ordered_edges AS o
             ORDER BY o.edge_order
         ),
@@ -1428,20 +1427,13 @@ BEGIN
                         ST_Multi(ST_Collect(t.closing_line ORDER BY t.edge_order))
                     ),
                     2
-                ) AS closing_multilinestring,
-                ST_CollectionExtract(
-                    ST_MakeValid(
-                        ST_Multi(ST_Collect(t.edge_geom ORDER BY t.edge_order))
-                    ),
-                    2
-                )  AS edges_multilinestring
+                ) AS closing_multilinestring
             FROM touching_edges AS t
         )
         SELECT
             _road_code AS road_code,
             l.geom AS simple_linestring,
             l.closing_multilinestring,
-            l.edges_multilinestring,
             jsonb_object_agg(
                 m.id,
                 ST_LineLocatePoint(l.geom, m.geom)
@@ -1452,7 +1444,7 @@ BEGIN
         WHERE TRUE
         AND m.road_code = _road_code
         AND l.road_code = _road_code
-        GROUP BY l.geom, l.closing_multilinestring, l.edges_multilinestring
+        GROUP BY l.geom, l.closing_multilinestring
     );
 
     RETURN TRUE;
@@ -2822,31 +2814,10 @@ BEGIN
     END IF;
 
     -- Calculate values to return based on the generated geometries
-    -- If the marker is the next edge start marker, because the point
-    -- was not on an edge but between two unconnected edges,
-    -- we should take information from this edge.
     found_marker_code = closest_edge_marker.code;
-    found_abscissa =
-        CASE
-            WHEN closest_edge_marker.is_next_edge_start_marker IS NOT TRUE
-                THEN ST_Length(closest_edge_marker.upstream_road_from_marker) + closest_edge_marker.abscissa
-            ELSE closest_edge_marker.abscissa
-        END
-    ;
-    found_cumulative =
-        CASE
-            WHEN closest_edge_marker.is_next_edge_start_marker IS NOT TRUE
-                THEN Coalesce(ST_Length(closest_edge_marker.upstream_road_from_start), 0)
-            ELSE closest_edge_marker.cumulative
-        END
-    ;
-    found_offset =
-        CASE
-            WHEN closest_edge_marker.is_next_edge_start_marker IS NOT TRUE
-                THEN closest_edge.distance
-            ELSE 0.0
-        END
-    ;
+    found_abscissa = ST_Length(closest_edge_marker.upstream_road_from_marker) + closest_edge_marker.abscissa;
+    found_cumulative = Coalesce(ST_Length(closest_edge_marker.upstream_road_from_start), 0);
+    found_offset = closest_edge.distance;
     found_side = (
         CASE
             WHEN ST_Contains(
@@ -2855,8 +2826,7 @@ BEGIN
                     closest_edge.distance +1,
                     'side=left'
                 ), _point
-            ) THEN 'left'
-            ELSE 'right'
+            ) THEN 'left' ELSE 'right'
         END
     );
 
@@ -2967,31 +2937,13 @@ COMMENT ON FUNCTION road_graph.get_road_point_from_reference(_road_code text, _m
 
 
 -- get_road_previous_marker_from_point(text, geometry, boolean)
-CREATE FUNCTION road_graph.get_road_previous_marker_from_point(_road_code text, _point geometry, _use_cache boolean DEFAULT false) RETURNS TABLE(id integer, road_code text, code integer, abscissa real, geom geometry, road_linestring_from_marker_to_point geometry, road_linestring_from_start_to_point geometry, closing_multilinestring geometry, is_next_edge_start_marker boolean, cumulative real)
+CREATE FUNCTION road_graph.get_road_previous_marker_from_point(_road_code text, _point geometry, _use_cache boolean DEFAULT false) RETURNS TABLE(id integer, road_code text, code integer, abscissa real, geom geometry, road_linestring_from_marker_to_point geometry, road_linestring_from_start_to_point geometry, closing_multilinestring geometry)
     LANGUAGE plpgsql
     AS $$
 DECLARE
     _road_info record;
     _run_build_cache boolean;
-    _previous_marker record;
-    _point_is_between_edges boolean;
-    _previous_edge_record record;
-    _next_edge_record record;
-    -- timing variables
-   _timing1  timestamptz;
-   _start_ts timestamptz;
-   _end_ts   timestamptz;
-   _overhead numeric;     -- in ms
 BEGIN
-
-    -- timing
-    _timing1  := clock_timestamp();
-    _start_ts := clock_timestamp();
-    _end_ts   := clock_timestamp();
-    -- take minimum duration as conservative estimate
-    _overhead := 1000 * extract(epoch FROM LEAST(_start_ts - _timing1, _end_ts   - _start_ts));
-    _start_ts := clock_timestamp();
-
     -- If there is less than 2 edges, we do not use cache
     -- since it will not be useful and will raise an exception ( by function get_ordered_edges)
     SELECT INTO _use_cache
@@ -3011,21 +2963,18 @@ BEGIN
         SELECT INTO _road_info
             r.simple_linestring,
             r.closing_multilinestring,
-            r.edges_multilinestring,
             r.marker_locations,
             ST_LineLocatePoint(r.simple_linestring, _point) AS point_location
         FROM road_cache AS r
         WHERE r.road_code = _road_code
         ;
 
-    -- RAISE NOTICE '% = %' , 'get road info from cache', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
-
         -- Get the previous marker
         -- which is the one with the location just before the _point location
         -- We also compute the linestring from the marker to the end of the road
         -- since we can use it to simplify the calcution of the reference from the point
+        RETURN QUERY
         SELECT
-        INTO _previous_marker
             m.id, m.road_code, m.code, m.abscissa, m.geom,
             -- Linestring (with no gaps) between the marker and the point
             ST_LineSubstring(
@@ -3041,13 +2990,10 @@ BEGIN
             ) AS road_linestring_from_start_to_point,
             -- MultiLinestring of the linestrings generated to close the gaps between edges
             -- used in other functions to remove them from the road linestring parts
-            _road_info.closing_multilinestring,
-            -- MultiLinestring of the edges (with gaps between edges)
-            _road_info.edges_multilinestring,
-            -- road simple linestring : the single linestring (with no gaps) made by merging all edges linestrings and closing linestrings
-            _road_info.simple_linestring AS road_simple_linestring,
-            False AS is_next_edge_start_marker,
-            NULL::real as cumulative
+            _road_info.closing_multilinestring
+            --,
+            -- road simple linestring
+            --_road_info.simple_linestring AS road_simple_linestring
         FROM
             road_graph.markers AS m
         WHERE True
@@ -3055,9 +3001,9 @@ BEGIN
         ORDER BY (_road_info.marker_locations->>(m.id::text))::float8 DESC
         LIMIT 1
         ;
-    -- RAISE NOTICE '% = %' , 'get previous marker from cache', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
     ELSE
         -- Use plain query to avoid creating temporary tables
+        RETURN QUERY
         WITH
         -- get road ordered edges (use previous and next edge ids)
         ordered_edges AS (
@@ -3088,8 +3034,7 @@ BEGIN
                         ST_StartPoint(o.geom)
                     ),
                     o.geom
-                )) AS geom,
-                o.geom AS edge_geom
+                )) AS geom
             FROM ordered_edges AS o
             ORDER BY o.edge_order
         ),
@@ -3108,13 +3053,7 @@ BEGIN
                             ST_Multi(ST_Collect(t.closing_line ORDER BY t.edge_order))
                         ),
                         2
-                    ) AS closing_multilinestring,
-                    ST_CollectionExtract(
-                        ST_MakeValid(
-                            ST_Multi(ST_Collect(t.edge_geom ORDER BY t.edge_order))
-                        ),
-                        2
-                    )  AS edges_multilinestring
+                    ) AS closing_multilinestring
                 FROM touching_edges AS t
             ) AS a
         ),
@@ -3140,7 +3079,6 @@ BEGIN
         -- We also compute the linestring from the marker to the end of the road
         -- since we can use it to simplify the calcution of the reference from the point
         SELECT
-        INTO _previous_marker
             m.id, m.road_code, m.code, m.abscissa, m.geom,
             -- Linestring (with no gaps) between the marker and the point
             ST_LineSubstring(
@@ -3156,13 +3094,10 @@ BEGIN
             ) AS road_linestring_from_start_to_point,
             -- MultiLinestring of the linestrings generated to close the gaps between edges
             -- used in other functions to remove them from the road linestring parts
-            l.closing_multilinestring,
-            -- MultiLinestring of the edges (with gaps between edges)
-            l.edges_multilinestring,
-            -- road simple linestring : the single linestring (with no gaps) made by merging all edges linestrings and closing linestrings
-            l.geom AS road_simple_linestring,
-            False AS is_next_edge_start_marker,
-            NULL::real as cumulative
+            l.closing_multilinestring
+            --,
+            -- road simple linestring
+            --l.geom AS road_simple_linestring
         FROM
             marker_position AS m,
             road_line AS l
@@ -3171,84 +3106,8 @@ BEGIN
         ORDER BY m.marker_location DESC
         LIMIT 1
         ;
-    -- RAISE NOTICE '% = %' , 'get road info without cache', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
+
     END IF;
-
-    -- Check if the _point is between 2 real edges or close to the edges
-    _point_is_between_edges =
-    CASE
-        WHEN ST_Distance(
-                _point,
-                _previous_marker.road_simple_linestring
-            ) != ST_Distance(
-                _point,
-                _previous_marker.edges_multilinestring
-            )
-            THEN True
-        ELSE False
-    END
-    ;
-    -- RAISE NOTICE '% = %' , 'check point between edges', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
-    -- RAISE NOTICE '_point_is_between_edges: %', _point_is_between_edges;
-
-    -- If true, we should check if the next edge start_marker_code is the same as the found previous marker code
-    -- If so, do nothing,
-    -- If not we should preferably use the marker code of the edge start point
-    IF _point_is_between_edges IS TRUE THEN
-        -- first we need to find the previous edge
-        SELECT INTO _previous_edge_record
-            e.id, e.next_edge_id
-        FROM road_graph.edges AS e
-        WHERE e.road_code = _road_code
-        AND e.end_marker <= _previous_marker.code
-        ORDER BY e.end_cumulative DESC
-        LIMIT 1
-        ;
-    RAISE NOTICE '% = %' , 'get previous edge record', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
-        IF _previous_edge_record.next_edge_id IS NOT NULL THEN
-            -- Get the next edge start marker code
-            SELECT INTO _next_edge_record
-                e.id, e.start_marker, e.start_abscissa,
-                m.id AS marker_id, m.geom AS marker_geom,
-                e.start_cumulative
-            FROM road_graph.edges AS e
-            JOIN road_graph.markers AS m
-                ON m.code = e.start_marker AND m.road_code = e.road_code
-            WHERE e.id = _previous_edge_record.next_edge_id
-            ;
-    RAISE NOTICE '% = %' , 'get next edge record', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
-            IF _next_edge_record.start_marker IS NOT NULL
-                AND _next_edge_record.start_marker > _previous_marker.code THEN
-                -- RAISE NOTICE 'We should use the next edge start_marker instead of the previous marker code';
-                _previous_marker.id := _next_edge_record.marker_id;
-                _previous_marker.code := Coalesce(_next_edge_record.start_marker, 0);
-                _previous_marker.abscissa := Coalesce(_next_edge_record.start_abscissa, 0.0);
-                _previous_marker.geom := _next_edge_record.marker_geom;
-                -- Linestring (with no gaps) between the marker and the point
-                -- In this case, we adapt and return the same geometry as the one between the start and the point
-                _previous_marker.road_linestring_from_marker_to_point := road_linestring_from_start_to_point;
-                -- Declare we have not taken the previous marker, but the start marker of the first next edge
-                _previous_marker.is_next_edge_start_marker = True;
-                -- we also need the start_cumulative
-                _previous_marker.cumulative = _next_edge_record.start_cumulative;
-            END IF;
-        END IF;
-    END IF;
-
-
-    -- Return the previous marker data
-    RETURN QUERY
-    SELECT
-        _previous_marker.id, _previous_marker.road_code,
-        _previous_marker.code, _previous_marker.abscissa,
-        _previous_marker.geom,
-        _previous_marker.road_linestring_from_marker_to_point,
-        _previous_marker.road_linestring_from_start_to_point,
-        _previous_marker.closing_multilinestring,
-        _previous_marker.is_next_edge_start_marker,
-        _previous_marker.cumulative
-    ;
-
 END;
 $$;
 
@@ -3259,18 +3118,15 @@ This function can use roads cached objects generated beforehand via function bui
 Or use a full SQL query with no use of temporary tables, depending of the paramter _use_cache
 
 Illustration
-|m0----m1----|  |-m2-m2b----m3----|    p3   m4  |--------m5---|
-                 p0     p1                         p2
+|m0----m1----|  |-m2-m2b----m3----|   |--------m4---|
+                 p0    p1               p2
 p0 -> marker is m1
 p1 -> marker is m2b (virtual marker with a non-null abscissa)
 p2 -> marker is m3
-p3 -> marker is m4, since it is the start marker of the first next edge and p3 is not on a real previous edge.
-
-The function also returns:
+The function also returns
 * the simple linestring (no gaps) made by merging all edges linestrings from the marker to the point
 * the simple linestring (no gaps) made by merging all edges linestrings from the start to the point
 * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
-* if the found marker is the start marker of the next edge (for p3-like cases when the point is between two edges)
 ';
 
 

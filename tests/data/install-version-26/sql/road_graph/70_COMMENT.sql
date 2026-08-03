@@ -163,18 +163,15 @@ This function can use roads cached objects generated beforehand via function bui
 Or use a full SQL query with no use of temporary tables, depending of the paramter _use_cache
 
 Illustration
-|m0----m1----|  |-m2-m2b----m3----|    p3   m4  |--------m5---|
-                 p0     p1                         p2
+|m0----m1----|  |-m2-m2b----m3----|   |--------m4---|
+                 p0    p1               p2
 p0 -> marker is m1
 p1 -> marker is m2b (virtual marker with a non-null abscissa)
 p2 -> marker is m3
-p3 -> marker is m4, since it is the start marker of the first next edge and p3 is not on a real previous edge.
-
-The function also returns:
+The function also returns
 * the simple linestring (no gaps) made by merging all edges linestrings from the marker to the point
 * the simple linestring (no gaps) made by merging all edges linestrings from the start to the point
 * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
-* if the found marker is the start marker of the next edge (for p3-like cases when the point is between two edges)
 ';
 
 
