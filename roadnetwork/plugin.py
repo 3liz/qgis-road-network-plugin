@@ -3,7 +3,10 @@ import webbrowser
 
 import processing
 
-from qgis.core import QgsApplication, QgsSettings
+from qgis.core import (
+    QgsApplication,
+    QgsSettings,
+)
 from qgis.gui import QgsFilterLineEdit
 from qgis.PyQt.QtCore import QCoreApplication, Qt, QTranslator
 from qgis.PyQt.QtGui import QIcon, QKeySequence
@@ -144,12 +147,6 @@ class Plugin:
         # Toggle hover of the map tool
         self.tools_dock.cb_listen_move_event.stateChanged.connect(self.on_listen_move_event_changed)
 
-        # Get references when the cursor is moving
-        # Only if conditions are met
-        # See the hover_map_tool properties listen_move_event & active_tool
-        mc = self.iface.mapCanvas()
-        mc.xyCoordinates.connect(self.hover_map_tool.emitMapCursorReferences)
-
         # Register locator filter
         if not self.locator_filter:
             self.locator_filter = LocatorFilter(self.iface)
@@ -220,6 +217,7 @@ class Plugin:
     def on_hover_references_received(self, references: dict):
         """Receive the references from the hover tool and display them in the dock"""
         # Print the references in the tools dock
+        # print("Received references from hover tool:", references)
         for schema in ("editing_session", "road_graph"):
             refs = references[schema]
             for key in ("road_code", "marker", "abscissa", "offset", "side", "cumulative"):
@@ -234,7 +232,15 @@ class Plugin:
     def on_listen_move_event_changed(self):
         """Listen to the state change of the cb_listen_move_event checkbox"""
         toggle = self.tools_dock.cb_listen_move_event.isChecked()
+        # See the hover_map_tool properties listen_move_event & active_tool
         self.hover_map_tool.toggleMoveEvent(toggle)
+
+        # Connect the map canvas xyCoordinates signal to the hover_map_tool onMapCanvasXYCoordinates slot
+        mc = self.iface.mapCanvas()
+        if toggle:
+            mc.xyCoordinates.connect(self.hover_map_tool.onMapCanvasXYCoordinates)
+        else:
+            mc.xyCoordinates.disconnect(self.hover_map_tool.onMapCanvasXYCoordinates)
 
     def unload(self):
         """Unload plugin"""

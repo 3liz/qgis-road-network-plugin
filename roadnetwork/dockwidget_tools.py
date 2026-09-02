@@ -83,6 +83,20 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
                 if input:
                     input.returnPressed.connect(button.click)
 
+        # Connect on project load or new
+        self.project = QgsProject.instance()
+        self.iface.projectRead.connect(self.on_project_read)
+        self.iface.newProjectCreated.connect(self.on_project_read)
+
+    def on_project_read(self):
+        """
+        Synchronize the project variable road_network_listen_move_event with the checkbox
+        """
+        listen_move_event = QgsExpressionContextUtils.projectScope(self.project).variable(
+            "road_network_listen_move_event"
+        )
+        self.cb_listen_move_event.setChecked(listen_move_event == "yes")
+
     def find_point_from_references(self, schema: str = "road_graph") -> str | None:
         """Get WKT geometry returned by the given references."""
         suffix = "" if schema == "road_graph" else "_sandbox"
