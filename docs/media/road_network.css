@@ -58,5 +58,26 @@ details.road_network_details > div {
 }
 
 form.road_network_form  input:disabled+label {
-  color: #ccc;
+    color: #ccc;
+}
+
+/* Make checkboxes look like push button */
+form.road_network_form span.road_network_toggle_button {
+    /* override bootstrap style (get flatter look) */
+    box-shadow: none;
+    text-shadow: none;
+    background-image: none;
+    border: 1px solid transparent;
+    /* LWC style */
+    background-color: var(--color-contrasted-elements-light);
+    color: var(--color-text-primary);
+    margin-left: 5px;
+    font-style: italic;
+}
+form.road_network_form span.road_network_toggle_button.active,
+form.road_network_form span.road_network_toggle_button:hover
+{
+    background-color: var(--color-contrasted-elements);
+    color: var(--color-contrasted-text);
+    font-style: normal;
 }

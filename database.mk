@@ -39,6 +39,7 @@ patch-install-files:
 
 run-db-command:
 	{ \
+		set -e; \
 		cd .docker; \
 		export DB_COMMAND="${DB_COMMAND}"; \
 		docker compose --profile=dbrunner up \

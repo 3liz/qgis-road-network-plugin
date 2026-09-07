@@ -128,8 +128,8 @@ COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_va
 The function is used to have a single point of maintenance for getting settings.';
 
 
--- FUNCTION get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real)
-COMMENT ON FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real) IS 'Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.';
+-- FUNCTION get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text)
+COMMENT ON FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.';
 
 
 -- FUNCTION get_edge_references(_edge_id integer, _use_cache boolean)
@@ -178,9 +178,8 @@ The function also returns:
 ';
 
 
--- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean, _to_last_edge_end boolean)
-COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean, _to_last_edge_end boolean) IS 'Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part.
-The parameters _from_first_edge_start & _to_last_edge_end allows to respectively add the edge under the result linestring start point & the edge under the result linestring end point.';
+-- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text)
+COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part';
 
 
 -- FUNCTION get_spatial_road(_road_code text)

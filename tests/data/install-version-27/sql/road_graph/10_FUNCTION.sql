@@ -2137,8 +2137,8 @@ COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_va
 The function is used to have a single point of maintenance for getting settings.';
 
 
--- get_downstream_multilinestring_from_reference(text, integer, real)
-CREATE FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real) RETURNS jsonb
+-- get_downstream_multilinestring_from_reference(text, integer, real, real, text)
+CREATE FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) RETURNS jsonb
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -2309,6 +2309,8 @@ BEGIN
         'road_code', _road_code,
         'marker_code', _marker_code,
         'abscissa', _abscissa,
+        'offset', _offset,
+        'side', _side,
         'closest_marker_abscissa', marker.abscissa,
         'downstream_road', downstream_road
     );
@@ -2317,8 +2319,8 @@ END;
 $$;
 
 
--- FUNCTION get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real)
-COMMENT ON FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real) IS 'Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.';
+-- FUNCTION get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text)
+COMMENT ON FUNCTION road_graph.get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.';
 
 
 -- get_edge_references(integer, boolean)
@@ -2903,10 +2905,11 @@ BEGIN
     FROM
         jsonb_to_record(
             road_graph.get_downstream_multilinestring_from_reference(
-                _road_code, _marker_code, _abscissa
+                _road_code, _marker_code, _abscissa, _offset, _side
             )
         ) AS (
             road_code text, marker_code integer, abscissa real,
+            "offset" real, side text,
             closest_marker_abscissa real,
             downstream_road geometry(MULTILINESTRING, 2154)
         )
@@ -3271,8 +3274,8 @@ The function also returns:
 ';
 
 
--- get_road_substring_from_references(text, integer, real, integer, real, real, text, boolean, boolean)
-CREATE FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean DEFAULT false, _to_last_edge_end boolean DEFAULT false) RETURNS jsonb
+-- get_road_substring_from_references(text, integer, real, integer, real, real, text)
+CREATE FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) RETURNS jsonb
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -3374,34 +3377,6 @@ BEGIN
     _offset = Coalesce(_offset, 0.0);
     _side = Coalesce(_side, 'right');
 
-
-    -- Then we may add the first edge (touching the start point)
-    IF _from_first_edge_start IS TRUE THEN
-        -- We get the edges closest to the given start marker
-        -- (its start point is before the marker)
-        SELECT e.start_marker, e.start_abscissa
-        INTO _start_marker_code, _start_marker_abscissa
-        FROM road_graph.edges AS e
-        WHERE e.road_code = _road_code
-        AND e.start_marker <= _start_marker_code
-        ORDER BY e.start_cumulative DESC
-        LIMIT 1
-        ;
-    END IF;
-    -- Then we may add the last edge (touching the end point)
-    IF _to_last_edge_end IS TRUE THEN
-        -- We get the edges closest to the given end marker
-        -- (its end is after the marker)
-        SELECT e.end_marker, e.end_abscissa
-        INTO _end_marker_code, _end_marker_abscissa
-        FROM road_graph.edges AS e
-        WHERE e.road_code = _road_code
-        AND e.end_marker >= _end_marker_code
-        ORDER BY e.end_cumulative ASC
-        LIMIT 1
-        ;
-    END IF;
-
     -- Get downstream start MULTILINESTRING from start marker to end of the road
     SELECT
         closest_marker_abscissa,
@@ -3409,10 +3384,13 @@ BEGIN
     FROM
         jsonb_to_record(
             road_graph.get_downstream_multilinestring_from_reference(
-                _road_code, _start_marker_code, _start_marker_abscissa
+                _road_code,
+                _start_marker_code, _start_marker_abscissa,
+                _offset, _side
             )
         ) AS (
             road_code text, marker_code integer, abscissa real,
+            "offset" real, side text,
             closest_marker_abscissa real,
             downstream_road geometry(MULTILINESTRING, 2154)
         )
@@ -3438,10 +3416,13 @@ BEGIN
     FROM
         jsonb_to_record(
             road_graph.get_downstream_multilinestring_from_reference(
-                _road_code, _end_marker_code, _end_marker_abscissa
+                _road_code,
+                _end_marker_code, _end_marker_abscissa,
+                _offset, _side
             )
         ) AS (
             road_code text, marker_code integer, abscissa real,
+            "offset" real, side text,
             closest_marker_abscissa real,
             downstream_road geometry(MULTILINESTRING, 2154)
         )
@@ -3514,7 +3495,6 @@ BEGIN
         RAISE NOTICE 'result_multilinestring ST_Difference  %', ST_AsText(result_multilinestring);
     END IF;
 
-
     -- Then we must merge the touching lines to avoid the offset curve function to produce gaps or crossing lines
     result_multilinestring_a = ST_LineMerge(
         result_multilinestring
@@ -3578,9 +3558,8 @@ END;
 $$;
 
 
--- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean, _to_last_edge_end boolean)
-COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean, _to_last_edge_end boolean) IS 'Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part.
-The parameters _from_first_edge_start & _to_last_edge_end allows to respectively add the edge under the result linestring start point & the edge under the result linestring end point.';
+-- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text)
+COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text) IS 'Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part';
 
 
 -- get_spatial_road(text)
