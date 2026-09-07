@@ -657,6 +657,10 @@ var lizRoadNetwork = function () {
             return null;
         }
         const keys = ['road_code', 'marker_code', 'abscissa', 'offset', 'side'];
+        if ('go_to_tip' in refs) {
+            keys.push('go_to_tip');
+        }
+        const expectedLength = keys.length;
         let fakePoints = [];
         keys.forEach(key => {
             let wktValue = '';
@@ -670,7 +674,7 @@ var lizRoadNetwork = function () {
             const type = keys.indexOf(key) + 1;
             fakePoints.push(`${type} ${wktValue}`);
         });
-        if (fakePoints.length != 5) {
+        if (fakePoints.length != expectedLength) {
             return null;
         }
 
@@ -768,9 +772,17 @@ var lizRoadNetwork = function () {
             return;
         }
 
+        const goToStartSpan = document.getElementById('rd_editing_go_to_edge_start');
+        const goToStart = (goToStartSpan && goToStartSpan.classList.contains('active')) ? '1' : '0';
+        startReferences.go_to_tip = goToStart;
+        const goToEndSpan = document.getElementById('rd_editing_go_to_edge_end');
+        const goToEnd = (goToEndSpan && goToEndSpan.classList.contains('active')) ? '1' : '0';
+        endReferences.go_to_tip = goToEnd;
+
         // Get the fake WKT for start and end references. If they are the same, do not continue
         const fakeWktA = createFakeWktFromReferences(startReferences);
         const fakeWktB = createFakeWktFromReferences(endReferences);
+        console.log('Equals ?', fakeWktA, fakeWktB, fakeWktA == fakeWktB);
         if (!fakeWktA || !fakeWktB || (fakeWktA == fakeWktB)) {
             displayMessage(
                 `Veuillez enregistrer des références valides pour obtenir la ligne correspondante
@@ -938,7 +950,7 @@ var lizRoadNetwork = function () {
             <tbody>
                 <tr>
                     <th>Route</th>
-                    <td>
+                    <td colspan="2">
                         <!-- We use the same datalist as the main form to avoid duplicating the list of roads -->
                         <input list="rd_road_code_list" id="rd_editing_road_code" name="rd_road_code" value="D1" placeholder="Ex: D1"/>
                     </td>
@@ -947,10 +959,19 @@ var lizRoadNetwork = function () {
                     <!-- For point, only PR and abscissa are needed. For line, we need PR and abscissa for start and end points. -->
                     <th>PR ${(geometryType == 'line') ? 'début' : ''}</td>
                     <th>Abscisse ${(geometryType == 'line') ? 'début' : ''}</td>
+                    ${(geometryType == 'line') ? `<th title="Aller automatiquement au début du tronçon de la position">Aller au début</th>` : '<th></th>'}
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_editing_abscissa" name="abscissa" value="0" placeholder="Ex: 10.5"/></td>
+                    <td style="vertical-align:center;">
+                    ${(geometryType == 'line') ? `
+                        <span class="road_network_toggle_button btn btn-sm"
+                            id="rd_editing_go_to_edge_start"
+                            title="Aller automatiquement au début du tronçon de la position"
+                        >Non</span>
+                        ` : ''}
+                    </td>
                 </tr>
         `;
 
@@ -960,10 +981,17 @@ var lizRoadNetwork = function () {
                 <tr>
                     <th>PR fin</td>
                     <th>Abscisse fin</td>
+                    <th title="Aller automatiquement à la fin du tronçon de la position">Aller à la fin</th>
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code_end" name="marker_code_end" value="0" placeholder="Ex: 5"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_editing_abscissa_end" name="abscissa_end" value="0" placeholder="Ex: 60"/></td>
+                    <td style="vertical-align:center;">
+                        <span class="road_network_toggle_button btn btn-sm"
+                            id="rd_editing_go_to_edge_end"
+                            title="Aller automatiquement à la fin du tronçon de la position"
+                        >Non</span>
+                    </td>
                 </tr>
             `;
         }
@@ -973,6 +1001,7 @@ var lizRoadNetwork = function () {
                 <tr>
                     <th>Décalage</th>
                     <th>Côté</th>
+                    <th></th>
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="0.1" id="rd_editing_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
@@ -999,9 +1028,20 @@ var lizRoadNetwork = function () {
         const editingForm = document.querySelector('form#jforms_view_edition');
         editingForm.insertAdjacentHTML('beforebegin', html);
 
-        // We catch the references form submit event instead of the click event of the button
+        // Catch the click event of the button-like span
         const form = document.getElementById('road_network_editing_form');
+        const el = form.querySelector('span.road_network_toggle_button');
+        if (el) {
+            const handleToggle = () => {
+                el.classList.toggle('active');
+                el.innerText = (el.classList.contains('active')) ? 'Oui' : 'Non';
+            }
+            el.onclick = () => handleToggle();
+        }
+
+        // We catch the references form submit event instead of the click event of the button
         form.addEventListener('submit', evt => {
+            console.log('FORM SUBMITTED', evt);
             evt.stopPropagation();
             evt.preventDefault();
 
@@ -1023,6 +1063,9 @@ var lizRoadNetwork = function () {
                     3000
                 );
             }
+
+            // Prevent the form to
+            return false;
         });
 
     }
