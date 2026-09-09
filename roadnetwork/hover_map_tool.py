@@ -1,4 +1,3 @@
-
 from psycopg2 import connect
 from psycopg2 import sql as pg_sql
 from qgis.core import (
