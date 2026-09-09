@@ -3383,7 +3383,7 @@ BEGIN
         INTO _start_marker_code, _start_marker_abscissa
         FROM road_graph.edges AS e
         WHERE e.road_code = _road_code
-        AND e.start_marker <= _start_marker_code
+        AND e.start_marker::int * 10000 + e.start_abscissa <= _start_marker_code * 10000 + _start_marker_abscissa
         ORDER BY e.start_cumulative DESC
         LIMIT 1
         ;
@@ -3396,7 +3396,7 @@ BEGIN
         INTO _end_marker_code, _end_marker_abscissa
         FROM road_graph.edges AS e
         WHERE e.road_code = _road_code
-        AND e.end_marker >= _end_marker_code
+        AND e.end_marker * 10000 + e.end_abscissa >= _end_marker_code * 10000 + _end_marker_abscissa
         ORDER BY e.end_cumulative ASC
         LIMIT 1
         ;

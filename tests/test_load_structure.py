@@ -1558,6 +1558,88 @@ def test_get_road_substring_from_references():
     assert result[6] == result[7]
 
 
+    # Check the value of the geometry returned by the function get_road_substring_from_references
+    # when using the optionnal parameters _from_first_edge_start & _to_last_edge_end
+    sql = """
+    SELECT
+        ST_AsText(
+            (road_graph.get_road_substring_from_references(
+                'D138',
+                8,
+                210,
+                8,
+                230,
+                0.0,
+                'left',
+                True,
+                False
+            )->>'geom')::geometry(MULTILINESTRING, 2154)::text,
+            1
+        ),
+        ST_AsText(
+            (road_graph.get_road_substring_from_references(
+                'D138',
+                8,
+                210,
+                8,
+                230,
+                0.0,
+                'left',
+                False,
+                True
+            )->>'geom')::geometry(MULTILINESTRING, 2154)::text,
+            1
+        ),
+        ST_AsText(
+            (road_graph.get_road_substring_from_references(
+                'D138',
+                8,
+                210,
+                8,
+                230,
+                0.0,
+                'left',
+                True,
+                True
+            )->>'geom')::geometry(MULTILINESTRING, 2154)::text,
+            1
+        )
+    ;
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    result = None
+    for a in data:
+        result = a if a else None
+
+    assert result is not None
+    assert result == [
+        "MULTILINESTRING((473558.8 6895759.5,473558.1 6895755.1,473556.8 "
+        "6895751.2,473554.9 6895747.1,473552.5 6895741.7,473550.5 "
+        "6895736.5,473547.2 6895728.8,473540.3 6895713.2,473534.5 "
+        "6895699.6,473528.8 6895685.5,473527.3 6895681.7,473521.9 "
+        "6895668.2,473519.8 6895656.2,473520.8 6895645.2,473523.7 "
+        "6895635.2,473529.6 6895623.1,473534.6 6895616.1,473542.5 "
+        "6895606.1,473549.4 6895598,473556.4 6895595,473572.4 6895591.8,473585.4 "
+        "6895589.8,473607.4 6895591.6,473643.4 6895592.4,473668.4 "
+        "6895593.2,473680.4 6895591.1,473684 6895589.4))",
+        "MULTILINESTRING((473664.6 6895593.1,473668.4 6895593.2,473680.4 "
+        "6895591.1,473695.4 6895584))",
+        "MULTILINESTRING((473558.8 6895759.5,473558.1 6895755.1,473556.8 "
+        "6895751.2,473554.9 6895747.1,473552.5 6895741.7,473550.5 "
+        "6895736.5,473547.2 6895728.8,473540.3 6895713.2,473534.5 "
+        "6895699.6,473528.8 6895685.5,473527.3 6895681.7,473521.9 "
+        "6895668.2,473519.8 6895656.2,473520.8 6895645.2,473523.7 "
+        "6895635.2,473529.6 6895623.1,473534.6 6895616.1,473542.5 "
+        "6895606.1,473549.4 6895598,473556.4 6895595,473572.4 6895591.8,473585.4 "
+        "6895589.8,473607.4 6895591.6,473643.4 6895592.4,473668.4 "
+        "6895593.2,473680.4 6895591.1,473695.4 6895584))"
+    ]
+
+
 def test_get_updated_roads_from_editing_session():
     """Test the function get_updated_roads_from_editing_session
     which returns an array of a distinct road codes for the edited objects."""
