@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.5.4 - 2026-09-09
+
+### Changed
+
+* **Hover map tool** - use QTimer to limit requests & fix bug with `editing_sessions` layer QGIS action
+* **Get point reference** - Use the next edge start marker & abscissa for calculating metrics for points
+  located between two unconnected edges of the same road
+* **Tests** - Add a make pull command to pull docker images
+
+### Added
+
+* **SQL** - `road_graph.get_road_substring_from_references`: add new parameters
+  to prepend and/or expand the closest edge geometry at the start and/or the end
+  of the calculated road substring geometry.
+
+
 ## 0.5.3 - 2026-07-30
 
 ### Changed
