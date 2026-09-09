@@ -69,3 +69,10 @@ schemaspy:
 			--exit-code-from schemaspy; \
 		docker compose --profile=schemaspy down -v; \
 	}
+
+pull:
+	{ \
+		set -e; \
+		cd .docker; \
+		docker compose pull; \
+	}
