@@ -41,8 +41,7 @@ CREATE TABLE road_graph.edges (
     previous_edge_id integer,
     next_edge_id integer,
     uid text DEFAULT (public.uuid_generate_v4())::text,
-    no_intersection_cutting boolean DEFAULT false,
-    id_source text
+    no_intersection_cutting boolean DEFAULT false
 );
 
 
@@ -151,7 +150,6 @@ CREATE TABLE road_graph.markers (
     abscissa real DEFAULT 0 NOT NULL,
     is_virtual boolean DEFAULT false,
     uid text DEFAULT (public.uuid_generate_v4())::text,
-    id_source text,
     CONSTRAINT markers_abscissa_check_positive CHECK ((abscissa >= (0)::double precision)),
     CONSTRAINT markers_code_check_positive CHECK ((code >= 0))
 );

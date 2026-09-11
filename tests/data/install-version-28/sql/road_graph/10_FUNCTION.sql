@@ -3777,7 +3777,6 @@ BEGIN
                     -- Stores the original data
                     -- We must use the sequences to keep a link between previous and next edges
                     nextval(pg_get_serial_sequence('road_graph.edges', 'id')) AS id,
-                    e.id_source AS id_source,
                     e."edge_order",
                     trim(e."road_code") AS road_code,
                     trim(e."road_class") AS road_class,
@@ -3931,14 +3930,14 @@ BEGIN
     -- Insert edges
     RAISE NOTICE 'insert edges';
     INSERT INTO road_graph.edges (
-        id, id_source,
+        id,
         road_code, start_node, end_node,
         previous_edge_id, next_edge_id,
         geom,
         created_at, updated_at
     )
     SELECT
-        e.id, e.id_source, e.road_code,
+        e.id, e.road_code,
         ns.id, ne.id,
         e.previous_edge_id, e.next_edge_id,
         e.geom,
@@ -3957,17 +3956,16 @@ BEGIN
     DROP TABLE IF EXISTS temp_nodes;
     DROP TABLE IF EXISTS temp_edges;
 
+
     -- Insert markers from source data
     RAISE NOTICE 'insert markers from source';
     sql_text = format(
         $SQL$
         INSERT INTO road_graph.markers (
-            id_source,
             road_code, code, abscissa, is_virtual, geom,
             created_at, updated_at
         )
         SELECT
-            id_source,
             road_code,
             code,
             abscissa,
@@ -3976,10 +3974,6 @@ BEGIN
             now()::timestamp(0) without time zone,
             now()::timestamp(0) without time zone
         FROM %I.%I
-        -- Only import markers if their road_code is referenced in road_graph.roads
-        -- WHERE road_code IN (
-        --     SELECT road_code FROM road_graph.roads
-        -- )
         ON CONFLICT DO NOTHING
         ;
         $SQL$,

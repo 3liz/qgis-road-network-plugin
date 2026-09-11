@@ -292,10 +292,6 @@ COMMENT ON COLUMN road_graph.edges.no_intersection_cutting IS 'Prevents the trig
 Useful for access roads, edges located under a bridge, etc.';
 
 
--- edges.id_source
-COMMENT ON COLUMN road_graph.edges.id_source IS 'Original ID of the source data (used after an import, for example to check references between original data and the imported data in road_graph';
-
-
 -- editing_sessions.id
 COMMENT ON COLUMN road_graph.editing_sessions.id IS 'Unique ID';
 
@@ -381,10 +377,6 @@ COMMENT ON COLUMN road_graph.markers.road_code IS 'Code of the parent road';
 
 -- markers.code
 COMMENT ON COLUMN road_graph.markers.code IS 'Code of the marker. Should be unique for a given road code';
-
-
--- markers.id_source
-COMMENT ON COLUMN road_graph.markers.id_source IS 'Original ID of the source data (used after an import, for example to check references between original data and the imported data in road_graph';
 
 
 -- metadata
