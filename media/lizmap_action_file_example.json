@@ -1,0 +1,112 @@
+[
+    {
+        "name": "get_references_from_point",
+        "title": "Récupérer les références sous un point",
+        "scope": "layer",
+        "layers": [
+            "edges_7df8a321_25e8_4a67_9bf8_796e4782e147"
+        ],
+        "geometry": "point",
+        "icon": "icon-star",
+        "options": {
+            "road_code": "",
+            "vertex_number": 0
+        },
+        "style": {
+            "fill-color": "rgba(255,50,50,0.4)",
+            "stroke-color": "rgb(255,50,50)",
+            "stroke-width": 1.25,
+            "circle-radius": 5,
+            "circle-fill-color": "rgba(255,50,50,0.4)",
+            "circle-stroke-width": 1.25,
+            "circle-stroke-color": "rgb(255,50,50)"
+        },
+        "callbacks": [
+        ]
+    },
+    {
+        "name": "get_road_point_from_reference",
+        "title": "Récupérer un point à partir des références",
+        "scope": "layer",
+        "layers": [
+            "edges_7df8a321_25e8_4a67_9bf8_796e4782e147"
+        ],
+        "geometry": "point",
+        "icon": "icon-star",
+        "options": {
+            "road_code": "D1",
+            "marker_code": 0,
+            "abscissa": 0.0,
+            "side": "left",
+            "offset": 0.0
+        },
+        "style": {
+            "fill-color": "rgba(255,50,50,0.4)",
+            "stroke-color": "rgb(255,50,50)",
+            "stroke-width": 1.25,
+            "circle-radius": 5,
+            "circle-fill-color": "rgba(255,50,50,0.4)",
+            "circle-stroke-width": 1.25,
+            "circle-stroke-color": "rgb(255,50,50)"
+        },
+        "callbacks": [
+        ]
+    },
+    {
+        "name": "get_road_substring_from_references",
+        "title": "Récupérer une ligne à partir des références de 2 points",
+        "scope": "layer",
+        "layers": [
+            "edges_7df8a321_25e8_4a67_9bf8_796e4782e147"
+        ],
+        "geometry": "linestring",
+        "icon": "icon-star",
+        "options": {
+            "road_code": "D1",
+            "start_marker_code": 0,
+            "start_abscissa": 0.0,
+            "end_marker_code": 0,
+            "end_abscissa": 0.0,
+            "side": "left",
+            "offset": 0.0
+        },
+        "style": {
+            "fill-color": "rgba(255,50,50,0.4)",
+            "stroke-color": "rgb(255,50,50)",
+            "stroke-width": 1.25,
+            "circle-radius": 5,
+            "circle-fill-color": "rgba(255,50,50,0.4)",
+            "circle-stroke-width": 1.25,
+            "circle-stroke-color": "rgb(255,50,50)"
+        },
+        "callbacks": [
+        ]
+    },
+    {
+        "name": "get_edge_start_or_end_tip_from_references",
+        "title": "Récupérer les références du début ou de la fin du tronçon sous la position des références données",
+        "scope": "layer",
+        "layers": [
+            "edges_7df8a321_25e8_4a67_9bf8_796e4782e147"
+        ],
+        "geometry": "point",
+        "icon": "icon-star",
+        "options": {
+            "road_code": "D1",
+            "marker_code": 0,
+            "abscissa": 0.0,
+            "start_or_end": "start"
+        },
+        "style": {
+            "fill-color": "rgba(255,50,50,0.4)",
+            "stroke-color": "rgb(255,50,50)",
+            "stroke-width": 1.25,
+            "circle-radius": 5,
+            "circle-fill-color": "rgba(255,50,50,0.4)",
+            "circle-stroke-width": 1.25,
+            "circle-stroke-color": "rgb(255,50,50)"
+        },
+        "callbacks": [
+        ]
+    }
+]

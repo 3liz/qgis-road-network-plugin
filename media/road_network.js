@@ -22,8 +22,9 @@ var lizRoadNetwork = function () {
     // Global variables
     //
     // Hover related variables
-    let hoverWait = false;
-    let hoverPixel = null;
+    let HOVER_WAIT = false;
+    let HOVER_WAIT_MILLISECONDS = 200;
+    let HOVER_PIXEL = null;
 
     // Global variable to indicate if we are waiting for the point geometry in the editing form
     ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM = false;
@@ -73,6 +74,11 @@ var lizRoadNetwork = function () {
                     evt.action.name == 'get_road_point_from_reference'
                 ) {
                     onGetRoadGeometryFromReferenceReceived(evt);
+
+                } else if (
+                    evt.action.name == 'get_edge_start_or_end_tip_from_references'
+                ) {
+                    onGetEdgeStartOrEndTipFromReferencesReceived(evt);
                 } else if (
                     evt.action.name == 'get_road_substring_from_references'
                 ) {
@@ -120,7 +126,7 @@ var lizRoadNetwork = function () {
             },
 
             'lizmapeditiongeometryupdated': function(event) {
-                console.log(event);
+                // console.log(event);
                 if (ROAD_EDITION_FORM_AUTO_GEOM == false) {
                     onEditingGeometryModified(event);
                 }
@@ -183,7 +189,6 @@ var lizRoadNetwork = function () {
             </tbody>
         </table>
         <input type="hidden" id="rd_point_wkt" name="point_wkt" />
-        <input type="hidden" id="rd_fake_wkt" name="fake_wkt" />
         </form>
         `;
         lizMap.addDock(
@@ -245,8 +250,8 @@ var lizRoadNetwork = function () {
 
         // Display the result or a message
         if (info) {
-            info.style.left = hoverPixel[0] + 'px';
-            info.style.top = hoverPixel[1] + 'px';
+            info.style.left = HOVER_PIXEL[0] + 'px';
+            info.style.top = HOVER_PIXEL[1] + 'px';
             info.style.visibility = 'visible';
         }
 
@@ -292,11 +297,7 @@ var lizRoadNetwork = function () {
             const wkt = wktFormat.writeGeometry(clonedGeometry);
             document.getElementById('rd_point_wkt').value = wkt;
 
-            // Add the fake WKT in a hidden input to be able to use it
-            const fakeWkt = createFakeWktFromForm('main');
-            document.getElementById('rd_fake_wkt').value = fakeWkt;
-
-            // If the editing form is opened, we the editing form with the references found at the clicked point
+            // If the editing form is opened, we fill the editing form with the references found at the clicked point
             if (lizMap.editionPending) {
                 // Fields to fill in the editing form. We add a suffix "_end" for the end vertex if needed
                 // We do not fill the offset & side fields to let the user decide
@@ -306,10 +307,10 @@ var lizRoadNetwork = function () {
                     const inputId = `rd_editing_${inputName}${suffix}`;
                     const input = document.getElementById(inputId);
                     if (!input) {
-                        console.log('* Input not found in editing form', inputId);
+                        // console.log('* Input not found in editing form', inputId);
                         return;
                     }
-                    console.log('* Filling input', inputId, 'with value', refs[inputName], 'in editing form');
+                    // console.log('* Filling input', inputId, 'with value', refs[inputName], 'in editing form');
                     if (inputName == 'abscissa') {
                         input.value = parseInt(refs[inputName]);
                     } else if (inputName == 'side') {
@@ -332,6 +333,49 @@ var lizRoadNetwork = function () {
             if (info) {
                 info.innerText = 'Aucune référence trouvée';
             }
+        }
+    }
+
+    /**
+     * Update the start or end references written in the editing form
+     * when receiving the references of the closest edge start or end point from the Lizmap action
+     * @param {Event} evt
+     * @returns
+     */
+    function onGetEdgeStartOrEndTipFromReferencesReceived(evt) {
+        if (
+            evt
+            && evt.features && evt.features.length == 1
+            && evt.features[0].getGeometry()
+        ) {
+            const feature = evt.features[0];
+            const clonedFeature = feature.clone();
+            const start_or_end = feature.getProperties().start_or_end;
+            const marker_code = feature.getProperties().marker_code;
+            const abscissa = feature.getProperties().abscissa;
+            // console.log('onGetEdgeStartOrEndTipFromReferencesReceived', start_or_end, marker_code, abscissa);
+
+            // Edit the editing form inputs with the received references
+            const suffix = (start_or_end == 'start') ? '' : '_end';
+            const markerInput = document.getElementById(`rd_editing_marker_code${suffix}`);
+            const abscissaInput = document.getElementById(`rd_editing_abscissa${suffix}`);
+            if (markerInput) {
+                markerInput.value = marker_code;
+            }
+            if (abscissaInput) {
+                abscissaInput.value = abscissa;
+            }
+
+            // Trigger the Lizmap action to get the road substring between the start and end references
+            ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM = true;
+            getRoadSubstringFromReferences();
+        } else {
+            // Display a message to the user
+            displayMessage(
+                `Pas d'extrémité de tronçon trouvée pour ces références. Calcul des nouvelles références annulé.`,
+                'info',
+                3000
+            );
         }
     }
 
@@ -385,11 +429,12 @@ var lizRoadNetwork = function () {
             }
 
             // If we are waiting for the point geometry in the editing form,
-            // it means that the user wants to create a point geometry from the references filled in the form.
+            // it means that the user wants to create a point geometry
+            // from the references filled in the form.
             // So we set the geometry of the feature being edited with the received point geometry.
             if (ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM) {
                 const replaceGeometry = replaceEditingFeatureGeometry(featureWkt);
-                // Reset the global variable to indicate that we are no longer waiting for the point geometry
+                // Reset the global variable to indicate that we are no longer waiting for the geometry
                 ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM = false;
             }
 
@@ -399,7 +444,7 @@ var lizRoadNetwork = function () {
                 ROAD_EDITION_FORM_AUTO_GEOM = false;
             }
         } else {
-            console.log('No geometry found for these references');
+            // console.log('No geometry found for these references');
             // Display a message to the user
             displayMessage(
                 `Aucun point trouvée pour ces références.
@@ -472,23 +517,23 @@ var lizRoadNetwork = function () {
         }
 
         // If currently throttled, ignore the request
-        if (hoverWait) return;
+        if (HOVER_WAIT) return;
 
         // Do no send a request if checkbox is not checked
         const checkbox = document.getElementById('rd_toggle_hover');
         if (!checkbox.checked) return;
 
         // Store pixel and target in global variables
-        hoverPixel = evt.pixel;
+        HOVER_PIXEL = evt.pixel;
 
         // Get coordinates of the hovered point and send a request to get road references at this point
-        getReferencesFromPixel(hoverPixel);
+        getReferencesFromPixel(HOVER_PIXEL);
 
         // Ignore any future requests
-        hoverWait = true;
+        HOVER_WAIT = true;
         setTimeout(function (event) {
-            hoverWait = false;
-        }, 100);
+            HOVER_WAIT = false;
+        }, HOVER_WAIT_MILLISECONDS);
     }
 
     /**
@@ -589,7 +634,7 @@ var lizRoadNetwork = function () {
         let newCoords = coords.slice();
         newCoords = transform(newCoords);
         // We use -1 in the Z coordinate to differentiate from the actions run from the editing form with linestrings
-        const wkt = `POINT(${newCoords[0]} ${newCoords[1]} -1)`
+        const wkt = `POINT(${newCoords[0]} ${newCoords[1]})`
         document.getElementById('rd_point_wkt').value = wkt;
 
         lizMap.mainLizmap.action.runLizmapAction(
@@ -597,7 +642,8 @@ var lizRoadNetwork = function () {
             'layer',
             ROAD_EDGES_LAYER_ID,
             null,
-            wkt
+            wkt,
+            {"vertex_number": -1, "road_code": ""}
         );
     }
 
@@ -646,51 +692,49 @@ var lizRoadNetwork = function () {
     }
 
     /**
-     * Create a fake WKT linestring from the given references
-     * This is used to store all the references in a single WKT geometry that can be easily manipulated and sent to the server.
+     * Create a object containing the needed parameters to send to the Lizmap action
+     * from the given references
      *
      * @param {Object} refs An object containing the references: road_code, marker_code, abscissa, offset, side
-     * @return {string} A WKT linestring like this: "LINESTRING (1 road_code_id, 2 marker_code, 3 abscissa, 4 offset, 5 side)"
+     * @return {Object} An object with the needed parameters
      */
-    function createFakeWktFromReferences(refs) {
+    function buildActionParametersFromReferences(refs) {
         if (!refs.road_code || !refs.marker_code || !refs.abscissa) {
             return null;
         }
         const keys = ['road_code', 'marker_code', 'abscissa', 'offset', 'side'];
-        if ('go_to_tip' in refs) {
-            keys.push('go_to_tip');
-        }
         const expectedLength = keys.length;
-        let fakePoints = [];
+        let refItems = [];
+        let params = {};
         keys.forEach(key => {
-            let wktValue = '';
+            let paramValue = '';
             let inputValue = refs[key] ?? '0';
             if (key == 'road_code') {
                 const road_code_id = document.querySelector(`#rd_road_code_list option[value=${inputValue}]`).dataset.id;
-                wktValue = road_code_id;
+                paramValue = road_code_id;
             } else {
-                wktValue = inputValue;
+                paramValue = inputValue;
             }
-            const type = keys.indexOf(key) + 1;
-            fakePoints.push(`${type} ${wktValue}`);
+            refItems.push(`${paramValue}`);
+            params[key] = paramValue;
         });
-        if (fakePoints.length != expectedLength) {
+        if (refItems.length != expectedLength) {
             return null;
         }
 
-        return `LINESTRING(${fakePoints.join()})`;
-
+        return params;
     }
 
     /**
-     * Create a fake WKT Linestring from the form values
+     * Create the objects containing the parametres to send to the Lizmap action
+     * from the given form values
      *
-     * It returns a WKT like this: "LINESTRING (0 road_code ID, 1 marker_code, 2 abscissa, 3 offset, 4 side)"
+     * It returns an object
      *
      * @param {string} sourceForm The source form: 'editing' or 'main'. Default is 'main'.
-     * @returns {string|null}
+     * @returns {Object}
      */
-    function createFakeWktFromForm(sourceForm = 'main') {
+    function buildActionParametersFromForm(sourceForm = 'main') {
         const inputs = ['road_code', 'marker_code', 'abscissa', 'offset', 'side'];
         const refs = {};
         const prefix = (sourceForm == 'editing') ? 'rd_editing_' : 'rd_';
@@ -704,9 +748,8 @@ var lizRoadNetwork = function () {
 
             refs[inputName] = inputValue;
         });
-        const wkt = createFakeWktFromReferences(refs);
 
-        return wkt;
+        return refs
     }
 
     /**
@@ -719,8 +762,8 @@ var lizRoadNetwork = function () {
      */
     function getRoadPointFromReferences(sourceForm = 'main') {
         // Create a fake WKT Linestring containing the form values as Y coordinates
-        const fakeWkt = createFakeWktFromForm(sourceForm);
-        if (!fakeWkt) {
+        const actionParams = buildActionParametersFromForm(sourceForm);
+        if (!actionParams) {
             displayMessage(
                 'Veuillez remplir tous les champs de référence pour centrer la carte',
                 'info',
@@ -728,15 +771,14 @@ var lizRoadNetwork = function () {
             );
             return;
         }
-        // Store the fake WKT in a hidden input to be able to use it
-        document.getElementById('rd_fake_wkt').value = fakeWkt;
 
         lizMap.mainLizmap.action.runLizmapAction(
             'get_road_point_from_reference',
             'layer',
             ROAD_EDGES_LAYER_ID,
             null,
-            fakeWkt
+            null,
+            actionParams
         );
     }
 
@@ -772,18 +814,11 @@ var lizRoadNetwork = function () {
             return;
         }
 
-        const goToStartSpan = document.getElementById('rd_editing_go_to_edge_start');
-        const goToStart = (goToStartSpan && goToStartSpan.classList.contains('active')) ? '1' : '0';
-        startReferences.go_to_tip = goToStart;
-        const goToEndSpan = document.getElementById('rd_editing_go_to_edge_end');
-        const goToEnd = (goToEndSpan && goToEndSpan.classList.contains('active')) ? '1' : '0';
-        endReferences.go_to_tip = goToEnd;
-
         // Get the fake WKT for start and end references. If they are the same, do not continue
-        const fakeWktA = createFakeWktFromReferences(startReferences);
-        const fakeWktB = createFakeWktFromReferences(endReferences);
-        console.log('Equals ?', fakeWktA, fakeWktB, fakeWktA == fakeWktB);
-        if (!fakeWktA || !fakeWktB || (fakeWktA == fakeWktB)) {
+        const paramsA = buildActionParametersFromReferences(startReferences);
+        const paramsB = buildActionParametersFromReferences(endReferences);
+        // console.log('Equals ?', paramsA, paramsB, paramsA == paramsB);
+        if (!paramsA || !paramsB || (paramsA == paramsB)) {
             displayMessage(
                 `Veuillez enregistrer des références valides pour obtenir la ligne correspondante
                 <br>Les PR et abscisses de départ et d'arrivée doivent être renseignés et différents
@@ -796,21 +831,42 @@ var lizRoadNetwork = function () {
             return;
         }
 
-        // Build a MULTILINESTRING WKT containing the two fake WKT as linestrings
-        // Reorder linestrings if needed
-        let fakeWkt = '';
+        // Build the action parameters
+        // Invert start and edge values if needed
+        let actionParams = {
+            road_code: startReferences.road_code,
+            start_marker_code: startReferences.marker_code,
+            start_abscissa: startReferences.abscissa,
+            end_marker_code: endReferences.marker_code,
+            end_abscissa: endReferences.abscissa,
+            offset: startReferences.offset,
+            side: startReferences.side
+        };
+        let mustRevertStartAndEnd = false;
         if (parseInt(startReferences.marker_code) < parseInt(endReferences.marker_code)) {
-            fakeWkt = `MULTILINESTRING(${fakeWktA.replace('LINESTRING', '')}, ${fakeWktB.replace('LINESTRING', '')})`;
+            // Do nothing, the order is correct
+            mustRevertStartAndEnd = false;
         } else if (parseInt(startReferences.marker_code) == parseInt(endReferences.marker_code)) {
             if (parseFloat(startReferences.abscissa) <= parseFloat(endReferences.abscissa)) {
-                fakeWkt = `MULTILINESTRING(${fakeWktA.replace('LINESTRING', '')}, ${fakeWktB.replace('LINESTRING', '')})`;
+                // Do nothing, the order is correct
+                mustRevertStartAndEnd = false;
             } else {
-                fakeWkt = `MULTILINESTRING(${fakeWktB.replace('LINESTRING', '')}, ${fakeWktA.replace('LINESTRING', '')})`;
+                mustRevertStartAndEnd = true;
             }
         }  else {
-            fakeWkt = `MULTILINESTRING(${fakeWktB.replace('LINESTRING', '')}, ${fakeWktA.replace('LINESTRING', '')})`;
+            mustRevertStartAndEnd = true;
         }
-        console.log('fakeWkt', fakeWkt);
+        if (mustRevertStartAndEnd) {
+            actionParams = {
+                road_code: startReferences.road_code,
+                start_marker_code: endReferences.marker_code,
+                start_abscissa: endReferences.abscissa,
+                end_marker_code: startReferences.marker_code,
+                end_abscissa: startReferences.abscissa,
+                offset: startReferences.offset,
+                side: startReferences.side
+            };
+        }
 
         // Run the Lizmap action to get the road substring between point A and point B
         lizMap.mainLizmap.action.runLizmapAction(
@@ -818,7 +874,8 @@ var lizRoadNetwork = function () {
             'layer',
             ROAD_EDGES_LAYER_ID,
             null,
-            fakeWkt
+            null,
+            actionParams
         );
     }
 
@@ -959,17 +1016,17 @@ var lizRoadNetwork = function () {
                     <!-- For point, only PR and abscissa are needed. For line, we need PR and abscissa for start and end points. -->
                     <th>PR ${(geometryType == 'line') ? 'début' : ''}</td>
                     <th>Abscisse ${(geometryType == 'line') ? 'début' : ''}</td>
-                    ${(geometryType == 'line') ? `<th title="Aller automatiquement au début du tronçon de la position">Aller au début</th>` : '<th></th>'}
+                    ${(geometryType == 'line') ? `<th title="Aller au début du tronçon situé sous la position correspondante aux références">Aller au début</th>` : '<th></th>'}
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_editing_abscissa" name="abscissa" value="0" placeholder="Ex: 10.5"/></td>
                     <td style="vertical-align:center;">
                     ${(geometryType == 'line') ? `
-                        <span class="road_network_toggle_button btn btn-sm"
+                        <span class="road_network_go_to_tip btn btn-sm"
                             id="rd_editing_go_to_edge_start"
-                            title="Aller automatiquement au début du tronçon de la position"
-                        >Non</span>
+                            title="Aller au début du tronçon situé sous la position correspondante aux références"
+                        >Début</span>
                         ` : ''}
                     </td>
                 </tr>
@@ -981,16 +1038,16 @@ var lizRoadNetwork = function () {
                 <tr>
                     <th>PR fin</td>
                     <th>Abscisse fin</td>
-                    <th title="Aller automatiquement à la fin du tronçon de la position">Aller à la fin</th>
+                    <th title="Aller à la fin du tronçon situé sous la position correspondante aux références">Aller à la fin</th>
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code_end" name="marker_code_end" value="0" placeholder="Ex: 5"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_editing_abscissa_end" name="abscissa_end" value="0" placeholder="Ex: 60"/></td>
                     <td style="vertical-align:center;">
-                        <span class="road_network_toggle_button btn btn-sm"
+                        <span class="road_network_go_to_tip btn btn-sm"
                             id="rd_editing_go_to_edge_end"
-                            title="Aller automatiquement à la fin du tronçon de la position"
-                        >Non</span>
+                            title="Aller à la fin du tronçon situé sous la position correspondante aux références"
+                        >Fin</span>
                     </td>
                 </tr>
             `;
@@ -1030,18 +1087,37 @@ var lizRoadNetwork = function () {
 
         // Catch the click event of the button-like span
         const form = document.getElementById('road_network_editing_form');
-        const el = form.querySelector('span.road_network_toggle_button');
-        if (el) {
-            const handleToggle = () => {
-                el.classList.toggle('active');
-                el.innerText = (el.classList.contains('active')) ? 'Oui' : 'Non';
-            }
-            el.onclick = () => handleToggle();
-        }
+        const el = form.querySelectorAll('span.road_network_go_to_tip').forEach(el => {
+            el.addEventListener('click', evt => {
+                // Get the references for the start or the end edge references of the given reference
+                evt.stopPropagation();
+                evt.preventDefault();
+                const roadCode = document.getElementById('rd_editing_road_code').value;
+                const markerCode = (el.id == 'rd_editing_go_to_edge_start') ? document.getElementById('rd_editing_marker_code').value : document.getElementById('rd_editing_marker_code_end').value;
+                const abscissa = (el.id == 'rd_editing_go_to_edge_start') ? document.getElementById('rd_editing_abscissa').value : document.getElementById('rd_editing_abscissa_end').value;
+                const start_or_end = (el.id == 'rd_editing_go_to_edge_start') ? 'start' : 'end';
+                const actionParams = {
+                    road_code: roadCode,
+                    marker_code: markerCode,
+                    abscissa: abscissa,
+                    start_or_end: start_or_end
+                };
+                // Run the Lizmap action to get the start or end edge references from the given reference
+                lizMap.mainLizmap.action.runLizmapAction(
+                    'get_edge_start_or_end_tip_from_references',
+                    'layer',
+                    ROAD_EDGES_LAYER_ID,
+                    null,
+                    null,
+                    actionParams
+                );
+
+            });
+        })
 
         // We catch the references form submit event instead of the click event of the button
         form.addEventListener('submit', evt => {
-            console.log('FORM SUBMITTED', evt);
+            // console.log('FORM SUBMITTED', evt);
             evt.stopPropagation();
             evt.preventDefault();
 
@@ -1064,7 +1140,7 @@ var lizRoadNetwork = function () {
                 );
             }
 
-            // Prevent the form to
+            // Prevent the form from being submitted to the server
             return false;
         });
 
@@ -1093,19 +1169,20 @@ var lizRoadNetwork = function () {
         clonedGeom = geom.clone();
         clonedGeom.transform("EPSG:"+event.srid, 'EPSG:4326');
 
-        console.log('Feature modified, geometry type:', geometryType, 'geometry:', clonedGeom);
+        // console.log('Feature modified, geometry type:', geometryType, 'geometry:', clonedGeom);
 
         // Depending on the geometry type, we get the coordinates of the point or the first and last vertex of the line
         if (geometryType == 'point') {
             // Get the point coordinates
-            const wkt = `POINT(${clonedGeom.x} ${clonedGeom.y} 0)`;
-            console.log('Feature modified, point geometry WKT:', wkt);
+            const wkt = `POINT(${clonedGeom.x} ${clonedGeom.y})`;
+            // console.log('Feature modified, point geometry WKT:', wkt);
             lizMap.mainLizmap.action.runLizmapAction(
                 'get_references_from_point',
                 'layer',
                 ROAD_EDGES_LAYER_ID,
                 null,
-                wkt
+                wkt,
+                {"vertex_number": 0, "road_code": ""}
             );
 
         } else if (geometryType == 'line') {
@@ -1113,43 +1190,55 @@ var lizRoadNetwork = function () {
             let firstWkt = '';
             let lastWkt = '';
             if (clonedGeom.CLASS_NAME == 'OpenLayers.Geometry.MultiLineString') {
-                console.log('Feature modified, line geometry is a MultiLineString with', clonedGeom.components.length, 'components');
+                // console.log('Feature modified, line geometry is a MultiLineString with', clonedGeom.components.length, 'components');
                 // Get the line first and last vertex coordinates
                 // We use the third coordinate to indicate the order of the vertex: 0 for first, 1 for last
                 const firstVertex = clonedGeom.components[0].components[0];
                 const lastVertex = clonedGeom.components[clonedGeom.components.length - 1].components[clonedGeom.components[clonedGeom.components.length - 1].components.length - 1];
-                firstWkt = `POINT(${firstVertex.x} ${firstVertex.y} 0)`;
-                lastWkt = `POINT(${lastVertex.x} ${lastVertex.y} 1)`;
+                firstWkt = `POINT(${firstVertex.x} ${firstVertex.y})`;
+                lastWkt = `POINT(${lastVertex.x} ${lastVertex.y})`;
             } else {
-                console.log('Feature modified, line geometry is a LineString with', clonedGeom.components.length, 'components');
+                // console.log('Feature modified, line geometry is a LineString with', clonedGeom.components.length, 'components');
                 // Get the line first and last vertex coordinates
                 // We use the third coordinate to indicate the order of the vertex: 0 for first, 1 for last
                 const firstVertex = clonedGeom.components[0];
                 const lastVertex = clonedGeom.components[clonedGeom.components.length - 1];
-                firstWkt = `POINT(${firstVertex.x} ${firstVertex.y} 0)`;
-                lastWkt = `POINT(${lastVertex.x} ${lastVertex.y} 1)`;
+                firstWkt = `POINT(${firstVertex.x} ${firstVertex.y})`;
+                lastWkt = `POINT(${lastVertex.x} ${lastVertex.y})`;
             }
 
             if (!firstWkt || !lastWkt) {
-                console.log('Feature modified, line geometry is invalid, cannot get first and last vertex WKT');
+                // console.log('Feature modified, line geometry is invalid, cannot get first and last vertex WKT');
                 return;
             }
-            console.log('Feature modified, line first vertex WKT:', firstWkt);
+            // If the geometry has been built from the get_road_substring_from_references WKT received
+            // Force the road_code to be the one written in the form
+            // to prevent the road_code to be overwritten by the road_code of the first and/or last vertex of the line
+            const searched_road_code = ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM ? document.getElementById('rd_editing_road_code').value : '';
+            // console.log('Feature modified, line first vertex WKT:', firstWkt);
             lizMap.mainLizmap.action.runLizmapAction(
                 'get_references_from_point',
                 'layer',
                 ROAD_EDGES_LAYER_ID,
                 null,
-                firstWkt
+                firstWkt,
+                {"vertex_number": 0, "road_code": searched_road_code}
             );
-            console.log('Feature modified, line last vertex WKT:', lastWkt);
+            // console.log('Feature modified, line last vertex WKT:', lastWkt);
             lizMap.mainLizmap.action.runLizmapAction(
                 'get_references_from_point',
                 'layer',
                 ROAD_EDGES_LAYER_ID,
                 null,
-                lastWkt
+                lastWkt,
+                {"vertex_number": 1, "road_code": searched_road_code}
             );
+        }
+
+        // Do no nothing if the geometry has been build from the WKT received
+        // It prevents the infinite loop when the user modifies the geometry and the references are filled in the form
+        if (ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM) {
+            return;
         }
 
         // Create the geometry once the references have been filled in the form.
@@ -1159,7 +1248,7 @@ var lizRoadNetwork = function () {
         // We do it only if the linestring
         const refForm = document.getElementById('road_network_editing_form');
         if (!refForm) {
-            console.log('References form not found, cannot get the geometry from the references');
+            // console.log('References form not found, cannot get the geometry from the references');
             return;
         }
 
@@ -1171,7 +1260,7 @@ var lizRoadNetwork = function () {
             // Abort if we reach the maximum number of attempts
             if (attempts >= maxAttempts) {
                 clearInterval(intervalId);
-                console.log('Max attempts reached, aborting');
+                // console.log('Max attempts reached, aborting');
 
                 // Display a message to the user
                 displayMessage(
@@ -1192,13 +1281,14 @@ var lizRoadNetwork = function () {
                 )
             ) {
                 clearInterval(intervalId);
-                console.log('References filled in the form, now we can get the geometry from the references');
+                // console.log('References filled in the form, now we can get the geometry from the references');
                 ROAD_EDITION_FORM_AUTO_GEOM = true;
                 setEditingGeometryFromReferences();
-            } else {
-                console.log('Waiting for references to be filled in the form before getting the geometry');
-                console.log('max Attempts left:', maxAttempts-attempts);
             }
+            // else {
+            //     console.log('Waiting for references to be filled in the form before getting the geometry');
+            //     console.log('max Attempts left:', maxAttempts-attempts);
+            // }
             attempts++;
         }, 200);
 
