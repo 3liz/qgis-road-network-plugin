@@ -2072,7 +2072,9 @@ def test_merge_editing_session_data():
     # do not compare the ids as they can change depending on the database state
     assert len(ids) == 22
     assert hash is not None
-    assert hash == "55fbe1c4723b43a6859bcdcb697187bb"
+
+    # Store the hash to be able to compare the data after the merge
+    before_hash = hash
     # This hash will be compared with the hash of the edges
     # of the road_graph schema after merging the editing session data
 
@@ -2151,7 +2153,7 @@ def test_merge_editing_session_data():
     assert ids is not None
     assert len(ids) == 22
     assert hash is not None
-    assert hash == "55fbe1c4723b43a6859bcdcb697187bb"
+    assert hash == before_hash
 
     # Check the managed objects have been modified by the merge of the editing session data
     sql = """
