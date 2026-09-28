@@ -327,7 +327,7 @@ def test_create_editing_session(processing_provider: Provider):
         stats = a if a else None
     assert stats is not None
     # Check the number of edges, nodes, markers and roads
-    assert (stats[0], stats[1], stats[2], stats[3]) == (173, 213, 165, 5)
+    assert (stats[0], stats[1], stats[2], stats[3]) == (165, 206, 326, 5)
 
 
 def test_create_edge(processing_provider: Provider):
@@ -375,10 +375,10 @@ def test_create_edge(processing_provider: Provider):
         edge = a if a else None
     assert edge is not None
     # Check the edge data
-    assert [edge[0], edge[1]] == [7830, "T001"]
+    assert [edge[0], edge[1]] == [7810, "T001"]
 
     # Check 2 new nodes have been created
-    assert [edge[2], edge[3]] == [5758, 5759]
+    assert [edge[2], edge[3]] == [5720, 5721]
 
     # Check the references have been calculated for this new edge
     assert [edge[4], edge[5], edge[6]] == [0, 0.0, 0.0]
@@ -428,26 +428,26 @@ def test_cut_edge_by_node(processing_provider: Provider):
     # edge 1
     assert edges[0] is not None
     # id and road code
-    assert [edges[0][0], edges[0][1]] == [7830, "T001"]
+    assert [edges[0][0], edges[0][1]] == [7810, "T001"]
     # Check the start and end nodes
-    assert [edges[0][2], edges[0][3]] == [5758, 5760]
+    assert [edges[0][2], edges[0][3]] == [5720, 5722]
     # Check the references have been calculated for this edge
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
     assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.67, 622.67]
     # Check the previous and next edges ids
-    assert [edges[0][10], edges[0][11]] == [None, 7831]
+    assert [edges[0][10], edges[0][11]] == [None, 7811]
 
     # edge 2
     assert edges[1] is not None
     # id and road code
-    assert [edges[1][0], edges[1][1]] == [7831, "T001"]
+    assert [edges[1][0], edges[1][1]] == [7811, "T001"]
     # Check the start and end nodes
-    assert [edges[1][2], edges[1][3]] == [5760, 5759]
+    assert [edges[1][2], edges[1][3]] == [5722, 5721]
     # Check the references have been calculated for this edge
     assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 622.67, 622.67]
     assert [edges[1][7], edges[1][8], edges[1][9]] == [0, 870.88, 870.88]
     # Check the previous and next edges ids
-    assert [edges[1][10], edges[1][11]] == [7830, None]
+    assert [edges[1][10], edges[1][11]] == [7810, None]
 
 
 def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
@@ -501,9 +501,9 @@ def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
     assert edges[0] is not None
     assert edges[1] is not None
     assert edges[2] is not None
-    assert [edges[0][10], edges[0][11]] == [None, 7831]
-    assert [edges[1][10], edges[1][11]] == [7830, 7832]
-    assert [edges[2][10], edges[2][11]] == [7831, None]
+    assert [edges[0][10], edges[0][11]] == [None, 7811]
+    assert [edges[1][10], edges[1][11]] == [7810, 7812]
+    assert [edges[2][10], edges[2][11]] == [7811, None]
 
     # Check the references have been calculated for all the edges of the road
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
@@ -526,8 +526,8 @@ def test_change_edge_road(processing_provider: Provider):
     connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
-    # Insert a new edge at the end (touching) of the last edge
-    # specifying the previous edge id
+    # Create a new road TC002 and change the middle edge of the road T001
+    # to be part of this new road
     sql = """
     INSERT INTO editing_session.roads (road_code, road_type, road_class) VALUES (
         'TC002', 'road', 'Communale'
@@ -535,7 +535,7 @@ def test_change_edge_road(processing_provider: Provider):
     ;
     UPDATE editing_session.edges
     SET road_code = 'TC002'
-    WHERE id = 7831
+    WHERE id = 7811
     ;
     SELECT
         e.id, e.road_code,
@@ -565,9 +565,9 @@ def test_change_edge_road(processing_provider: Provider):
     assert [edges[0][1], edges[1][1], edges[2][1]] == ["T001", "TC002", "T001"]
 
     # Check the previous and next edges ids have been updated
-    assert [edges[0][10], edges[0][11]] == [None, 7832]
+    assert [edges[0][10], edges[0][11]] == [None, 7812]
     assert [edges[1][10], edges[1][11]] == [None, None]
-    assert [edges[2][10], edges[2][11]] == [7830, None]
+    assert [edges[2][10], edges[2][11]] == [7810, None]
 
     # Check the references have been calculated for all the edges of the road
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
@@ -599,7 +599,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
         ),
         2154
     )
-    WHERE id = 7832
+    WHERE id = 7812
     ;
     SELECT
         e.id, e.road_code,
@@ -609,7 +609,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
         e.previous_edge_id, e.next_edge_id
     FROM editing_session.edges AS e
     WHERE e.road_code = 'T001'
-    AND e.id >= 7832
+    AND e.id >= 7812
     ORDER BY e.id
     ;
     """
@@ -626,7 +626,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
     assert edges[1] is not None
 
     # Check the previous and next edges ids have been updated
-    assert [edges[0][10], edges[0][11]] == [7830, 7834]
+    assert [edges[0][10], edges[0][11]] == [7810, 7814]
 
     # Check the references have been calculated for all the edges of the road
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 622.67, 622.67]
@@ -646,7 +646,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
     FROM editing_session.edges AS e
     WHERE
     road_code IN ('D138')
-    AND (SELECT a.end_node FROM editing_session.edges AS a WHERE a.id = 7832) IN (e.start_node, e.end_node)
+    AND (SELECT a.end_node FROM editing_session.edges AS a WHERE a.id = 7812) IN (e.start_node, e.end_node)
     ORDER BY id
     ;
     """
@@ -663,14 +663,14 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
     assert edges[1] is not None
 
     # Check the previous and next edges ids have been updated
-    assert [edges[0][10], edges[0][11]] == [2264, 7833]
-    assert [edges[1][10], edges[1][11]] == [2265, 2266]
+    assert [edges[0][10], edges[0][11]] == [3529, 7813]
+    assert [edges[1][10], edges[1][11]] == [861, 926]
 
     # Check references
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 980.53, 8995.59]  # not changed
-    assert [edges[0][7], edges[0][8], edges[0][9]] == [9, 740.83, 9762.14]  # changed
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [9, 740.83, 9762.14]  # new edge
-    assert [edges[1][7], edges[1][8], edges[1][9]] == [14, 490.92, 14564.3]  # like previous edge
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 981.0, 8995.61] # not changed
+    assert [edges[0][7], edges[0][8], edges[0][9]] == [9, 740.81, 9762.14]  # changed
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [9, 740.81, 9762.14]  # new edge
+    assert [edges[1][7], edges[1][8], edges[1][9]] == [14, 490.62, 14564.0]  # like previous edge
 
 
 def test_delete_road_edge(processing_provider: Provider):
@@ -681,10 +681,10 @@ def test_delete_road_edge(processing_provider: Provider):
     connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
-    # Delete the edge 7832 which is in the middle of the road T001
+    # Delete the edge 7812 which is in the middle of the road T001
     sql = """
     DELETE FROM editing_session.edges
-    WHERE id = 7832
+    WHERE id = 7812
     ;
     SELECT
         e.id, e.road_code,
@@ -709,13 +709,13 @@ def test_delete_road_edge(processing_provider: Provider):
     assert edges[0] is not None
     assert edges[1] is not None
     # Check the edges ids
-    assert [edges[0][0], edges[1][0]] == [7830, 7834]
+    assert [edges[0][0], edges[1][0]] == [7810, 7814]
     # Check the previous and next edges ids have been updated
-    assert [edges[0][10], edges[0][11]] == [None, 7834]
-    assert [edges[1][10], edges[1][11]] == [7830, None]
+    assert [edges[0][10], edges[0][11]] == [None, 7814]
+    assert [edges[1][10], edges[1][11]] == [7810, None]
     # Check the start and end nodes
-    assert [edges[0][2], edges[0][3]] == [5758, 5760]
-    assert [edges[1][2], edges[1][3]] == [5762, 5761]
+    assert [edges[0][2], edges[0][3]] == [5720, 5722]
+    assert [edges[1][2], edges[1][3]] == [5724, 5723]
     # Check the references have been calculated for all the edges of the road
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
     assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.67, 622.67]
@@ -752,8 +752,18 @@ def test_create_roundabout(processing_provider: Provider):
         e.previous_edge_id, e.next_edge_id
     FROM editing_session.edges AS e
     WHERE e.road_code IN ('D138', 'D152')
-    AND e.id IN (2497, 2498, 2264, 2265)
-    ORDER BY e.id
+    -- Get the edges of the two roads which are crossing the roundabout
+    -- They are around the marker code 8 of the road D138, abscissa 981
+    AND ST_DWithin(
+        e.geom,
+        (
+            SELECT geom
+            FROM editing_session.markers
+            WHERE road_code = 'D138' AND code = 8 AND abscissa BETWEEN 970 AND 990
+        ),
+        1
+    )
+    ORDER BY e.road_code, e.start_cumulative
     ;
     """
     try:
@@ -773,14 +783,14 @@ def test_create_roundabout(processing_provider: Provider):
     assert edges[3] is not None
 
     # Check the references of the crossing edges before creating the roundabout
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 242.6, 8257.66]
-    assert [edges[0][7], edges[0][8], edges[0][9]] == [8, 980.53, 8995.59]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [8, 980.53, 8995.59]
-    assert [edges[1][7], edges[1][8], edges[1][9]] == [9, 740.83, 9762.14]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [4, 153.24, 4283.15]
-    assert [edges[2][7], edges[2][8], edges[2][9]] == [8, 992.03, 9073.84]
-    assert [edges[3][4], edges[3][5], edges[3][6]] == [8, 992.03, 9073.84]
-    assert [edges[3][7], edges[3][8], edges[3][9]] == [9, 667.32, 9792.51]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 243, 8257.66]
+    assert [edges[0][7], edges[0][8], edges[0][9]] == [8, 981, 8995.61]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [8, 981, 8995.61]
+    assert [edges[1][7], edges[1][8], edges[1][9]] == [9, 740.81, 9762.14]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [4, 153, 4281.04]
+    assert [edges[2][7], edges[2][8], edges[2][9]] == [8, 992, 9072.47]
+    assert [edges[3][4], edges[3][5], edges[3][6]] == [8, 992, 9072.47]
+    assert [edges[3][7], edges[3][8], edges[3][9]] == [9, 668, 9791.14]
 
     # Create the roundabout with a circle geometry intersecting the two roads D138 and D152
     # as created by the QGIS tool "Add circular feature by center and other point"
@@ -810,7 +820,7 @@ def test_create_roundabout(processing_provider: Provider):
         e.geom,
         (SELECT ST_Collect(geom) FROM editing_session.edges WHERE road_code = 'R001')
     )
-    ORDER BY e.id
+    ORDER BY e.road_code, e.start_cumulative
     ;
     """  # noqa: E501
     try:
@@ -830,17 +840,25 @@ def test_create_roundabout(processing_provider: Provider):
     assert edges[3] is not None
 
     # Check the ids
-    assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [2264, 2497, 7836, 7837]
+    assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [3529, 7822, 862, 7816]
 
     # Check the references of the edges
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 242.6, 8257.66]
-    assert [edges[0][7], edges[0][8], edges[0][9]] == [8, 971.52, 8986.58]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [4, 153.24, 4283.15]
-    assert [edges[1][7], edges[1][8], edges[1][9]] == [8, 983.02, 9064.82]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [8, 983.02, 9064.82]
-    assert [edges[2][7], edges[2][8], edges[2][9]] == [9, 667.35, 9774.5]
-    assert [edges[3][4], edges[3][5], edges[3][6]] == [8, 971.52, 8986.58]
-    assert [edges[3][7], edges[3][8], edges[3][9]] == [9, 740.82, 9744.13]
+    assert [
+        edges[0][4], edges[0][5], edges[0][6],
+        edges[0][7], edges[0][8], edges[0][9]
+    ] == [8, 243, 8257.66, 8, 971.93, 8986.59]
+    assert [
+        edges[1][4], edges[1][5], edges[1][6],
+        edges[1][7], edges[1][8], edges[1][9]
+    ] == [8, 981, 8986.59, 9, 740.81, 9744.13]
+    assert [
+        edges[2][4], edges[2][5], edges[2][6],
+        edges[2][7], edges[2][8], edges[2][9]
+    ] == [4, 153, 4281.04, 8, 983, 9063.46]
+    assert [
+        edges[3][4], edges[3][5], edges[3][6],
+        edges[3][7], edges[3][8], edges[3][9]
+    ] == [8, 992, 9063.46, 9, 668, 9773.13]
 
     # Check the marker 0 has been created
     sql = """
@@ -864,7 +882,6 @@ def test_create_roundabout(processing_provider: Provider):
     assert len(markers) == 1
     assert markers is not None
     assert markers[0] is not None
-    assert markers[0][0] == 8340
     assert markers[0][1] == "R001"
     assert markers[0][2] == 0
     assert markers[0][3] == 0
@@ -898,7 +915,7 @@ def test_create_roundabout(processing_provider: Provider):
     assert edges[3] is not None
 
     # Check the ids of the edges of the roundabout
-    assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [7840, 7841, 7838, 7835]
+    assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [7819, 7820, 7817, 7815]
 
     # Check the references of the edges of the roundabout
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0, 0]
@@ -911,10 +928,10 @@ def test_create_roundabout(processing_provider: Provider):
     assert [edges[3][7], edges[3][8], edges[3][9]] == [0, 56.46, 56.46]
 
     # Check previous_edge_id and next_edge_id of the roundabout edges
-    assert [edges[0][10], edges[0][11]] == [None, 7841]
-    assert [edges[1][10], edges[1][11]] == [7840, 7838]
-    assert [edges[2][10], edges[2][11]] == [7841, 7835]
-    assert [edges[3][10], edges[3][11]] == [7838, None]
+    assert [edges[0][10], edges[0][11]] == [None, 7820]
+    assert [edges[1][10], edges[1][11]] == [7819, 7817]
+    assert [edges[2][10], edges[2][11]] == [7820, 7815]
+    assert [edges[3][10], edges[3][11]] == [7817, None]
 
 
 def test_move_road_marker():
@@ -953,32 +970,17 @@ def test_move_road_marker():
     assert edges[5] is not None
     assert edges[6] is not None
 
-    # Data before
-    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
-    # ------+--------------+----------------+------------------+------------+--------------+---------------
-    #  2260 |            7 |         836.84 |          7930.99 |          8 |        242.6 |        8257.66
-    #  2264 |            8 |          242.6 |          8257.66 |          8 |       971.52 |        8986.58
-    #  7837 |            8 |         971.52 |          8986.58 |          9 |       740.82 |        9744.13
-    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
-    #  2266 |           14 |         490.92 |          14546.3 |         16 |       778.88 |          16857
-    #  4506 |           16 |         778.88 |            16857 |         16 |       813.14 |        16891.3
-    #  2267 |           16 |         813.14 |          16891.3 |         19 |       334.71 |        19428.7
-
     # Check the references of the edges before moving the marker
-    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 242.6, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3]] == [8, 242.6, 8257.66]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [8, 971.52, 8986.58]
-    assert [edges[2][1], edges[2][2], edges[2][3]] == [8, 971.52, 8986.58]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
-    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 8, 243.0, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [8, 243.0, 8257.66, 8, 971.93, 8986.59]
+    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [8, 981.0, 8986.59, 9, 740.81, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
 
     # Move the marker 8 of the road D138 by 60 meters southwards
     sql_update = """
     UPDATE editing_session.markers
     SET geom = ST_Translate(geom, 0, -60)
-    WHERE road_code = 'D138' AND code = 8
+    WHERE road_code = 'D138' AND code = 8 AND abscissa = 0.0
     ;
     """
     try:
@@ -1005,26 +1007,11 @@ def test_move_road_marker():
     assert edges[5] is not None
     assert edges[6] is not None
 
-    # Data after
-    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
-    # ------+--------------+----------------+------------------+------------+--------------+---------------
-    #  2260 |            7 |         836.84 |          7930.99 |          8 |       177.91 |        8257.66
-    #  2264 |            8 |         177.91 |          8257.66 |          8 |       906.83 |        8986.58
-    #  7837 |            8 |         906.83 |          8986.58 |          9 |       740.82 |        9744.13
-    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
-    #  2266 |           14 |         490.92 |          14546.3 |         16 |       778.88 |          16857
-    #  4506 |           16 |         778.88 |            16857 |         16 |       813.14 |        16891.3
-    #  2267 |           16 |         813.14 |          16891.3 |         19 |       334.71 |        19428.7
-
-    # Check the references of the edges after moving the marker
-    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 177.91, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3]] == [8, 177.91, 8257.66]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [8, 906.83, 8986.58]
-    assert [edges[2][1], edges[2][2], edges[2][3]] == [8, 906.83, 8986.58]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
-    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+    # Check the references of the edges after moving the marker [7, 837.0, 7930.97, 8, 243.0, 8257.66]
+    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 8, 243.0, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [8, 243.0, 8257.66, 8, 971.93, 8986.59]
+    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [8, 981.0, 8986.59, 9, 740.81, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
 
 
 def test_delete_road_marker():
@@ -1073,32 +1060,14 @@ def test_delete_road_marker():
     assert edges[5] is not None
     assert edges[6] is not None
 
-    # Data after
-    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
-    # ------+--------------+----------------+------------------+------------+--------------+----------------
-    #  2260 |            7 |         836.84 |          7930.99 |          7 |       1163.5 |        8257.66
-    #  2264 |            7 |         1163.5 |          8257.66 |          7 |      1892.42 |        8986.58
-    #  7837 |            7 |        1892.42 |          8986.58 |          9 |       740.82 |        9744.13
-    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
-    #  2266 |           14 |         490.92 |          14546.3 |         15 |      1806.27 |          16857
-    #  4506 |           15 |        1806.27 |            16857 |         15 |      1840.53 |        16891.3
-    #  2267 |           15 |        1840.53 |          16891.3 |         18 |      1341.54 |        19428.7
-
     # Check the references of the edges after deleting the markers
-    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [7, 1163.5, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3]] == [7, 1163.5, 8257.66]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [7, 1892.42, 8986.58]
-    assert [edges[2][1], edges[2][2], edges[2][3]] == [7, 1892.42, 8986.58]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
-    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
-    assert [edges[4][1], edges[4][2], edges[4][3]] == [14, 490.92, 14546.3]
-    assert [edges[4][4], edges[4][5], edges[4][6]] == [15, 1806.27, 16857]
-    assert [edges[5][1], edges[5][2], edges[5][3]] == [15, 1806.27, 16857]
-    assert [edges[5][4], edges[5][5], edges[5][6]] == [15, 1840.53, 16891.3]
-    assert [edges[6][1], edges[6][2], edges[6][3]] == [15, 1840.53, 16891.3]
-    assert [edges[6][4], edges[6][5], edges[6][6]] == [18, 1341.54, 19428.7]
+    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 7, 1163.69, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [7, 1163.69, 8257.66, 7, 1892.62, 8986.59]
+    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [7, 1892.62, 8986.59, 9, 740.81, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert [edges[4][1], edges[4][2], edges[4][3], edges[4][4], edges[4][5], edges[4][6]] == [14, 491.0, 14546.0, 15, 1806.29, 16856.8]
+    assert [edges[5][1], edges[5][2], edges[5][3], edges[5][4], edges[5][5], edges[5][6]] == [15, 1806.29, 16856.8, 15, 1840.55, 16891.1]
+    assert [edges[6][1], edges[6][2], edges[6][3], edges[6][4], edges[6][5], edges[6][6]] == [15, 1840.55, 16891.1, 18, 1341.55, 19428.5]
 
 
 def test_add_road_marker():
@@ -1136,26 +1105,11 @@ def test_add_road_marker():
     assert edges[2] is not None
     assert edges[3] is not None
 
-    # Data before
-    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
-    # ------+--------------+----------------+------------------+------------+--------------+----------------
-    #  2260 |            7 |         836.84 |          7930.99 |          7 |       1163.5 |        8257.66
-    #  2264 |            7 |         1163.5 |          8257.66 |          7 |      1892.42 |        8986.58
-    #  7837 |            7 |        1892.42 |          8986.58 |          9 |       740.82 |        9744.13
-    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
-    #  2266 |           14 |         490.92 |          14546.3 |         15 |      1806.27 |          16857
-    #  4506 |           15 |        1806.27 |            16857 |         15 |      1840.53 |        16891.3
-    #  2267 |           15 |        1840.53 |          16891.3 |         18 |      1341.54 |        19428.7
-
     # Check the references of the edges before adding the marker
-    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [7, 1163.5, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3]] == [7, 1163.5, 8257.66]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [7, 1892.42, 8986.58]
-    assert [edges[2][1], edges[2][2], edges[2][3]] == [7, 1892.42, 8986.58]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
-    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 7, 1163.69, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [7, 1163.69, 8257.66, 7, 1892.62, 8986.59]
+    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [7, 1892.62, 8986.59, 9, 740.81, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
 
     # Add the marker 8 for the road D138
     sql_insert = """
@@ -1191,26 +1145,11 @@ def test_add_road_marker():
     assert edges[2] is not None
     assert edges[3] is not None
 
-    # Data after
-    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
-    # ------+--------------+----------------+------------------+------------+--------------+----------------
-    #  2260 |            7 |         836.84 |          7930.99 |          8 |       202.78 |        8257.66
-    #  2264 |            8 |         202.78 |          8257.66 |          8 |        931.7 |        8986.58
-    #  7837 |            8 |          931.7 |          8986.58 |          9 |       740.82 |        9744.13
-    #  7833 |            9 |         740.82 |          9744.13 |         14 |       490.92 |        14546.3
-    #  2266 |           14 |         490.92 |          14546.3 |         15 |      1806.27 |          16857
-    #  4506 |           15 |        1806.27 |            16857 |         15 |      1840.53 |        16891.3
-    #  2267 |           15 |        1840.53 |          16891.3 |         18 |      1341.54 |        19428.7
-
-    # Check the references of the edges after moving the marker
-    assert [edges[0][1], edges[0][2], edges[0][3]] == [7, 836.84, 7930.99]
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 202.78, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3]] == [8, 202.78, 8257.66]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [8, 931.7, 8986.58]
-    assert [edges[2][1], edges[2][2], edges[2][3]] == [8, 931.7, 8986.58]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [9, 740.82, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3]] == [9, 740.82, 9744.13]
-    assert [edges[3][4], edges[3][5], edges[3][6]] == [14, 490.92, 14546.3]
+    # Check the references of the edges after adding the marker
+    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 8, 202.8, 8257.66]
+    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [8, 202.8, 8257.66, 8, 931.73, 8986.59]
+    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [8, 931.73, 8986.59, 9, 740.81, 9744.13]
+    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
 
 
 def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider: Provider):
@@ -1240,14 +1179,6 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     for a in data:
         edges.append(a if a else None)
 
-    # Data before deleting the edge
-    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
-    # ------+--------------+----------------+------------------+------------+--------------+----------------
-    #  7840 |            0 |              0 |                0 |          0 |        22.45 |          22.45
-    #  7841 |            0 |          22.45 |            22.45 |          0 |        30.52 |          30.52
-    #  7838 |            0 |          30.52 |            30.52 |          0 |        51.18 |          51.18
-    #  7835 |            0 |          51.18 |            51.18 |          0 |        56.46 |          56.46
-
     assert len(edges) == 4
     assert edges[0] is not None
     assert edges[1] is not None
@@ -1255,14 +1186,10 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     assert edges[3] is not None
 
     # Check the references of the edges before deleting the edge
-    assert [edges[0][1], edges[0][2], edges[0][3]] == [0, 0, 0]
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 22.45, 22.45]
-    assert [edges[1][1], edges[1][2], edges[1][3]] == [0, 22.45, 22.45]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 30.52, 30.52]
-    assert [edges[2][1], edges[2][2], edges[2][3]] == [0, 30.52, 30.52]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 51.18, 51.18]
-    assert [edges[3][1], edges[3][2], edges[3][3]] == [0, 51.18, 51.18]
-    assert [edges[3][4], edges[3][5], edges[3][6]] == [0, 56.46, 56.46]
+    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [0, 0, 0, 0, 22.45, 22.45]
+    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [0, 22.45, 22.45, 0, 30.52, 30.52]
+    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [0, 30.52, 30.52, 0, 51.18, 51.18]
+    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [0, 51.18, 51.18, 0, 56.46, 56.46]
 
     # Delete the edge of the road D138 which ends on the marker 0 of the roundabout R001
     sql_delete = """
@@ -1293,25 +1220,15 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     for a in data:
         edges.append(a if a else None)
 
-    # Data after deleting the edge
-    #   id  | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative
-    # ------+--------------+----------------+------------------+------------+--------------+----------------
-    #  7835 |            0 |              0 |                0 |          0 |        27.74 |          27.74
-    #  7841 |            0 |          27.74 |            27.74 |          0 |         35.8 |           35.8
-    #  7838 |            0 |           35.8 |             35.8 |          0 |        56.46 |          56.46
-
     assert len(edges) == 3
     assert edges[0] is not None
     assert edges[1] is not None
     assert edges[2] is not None
 
     # Check the references of the edges after deleting the edge
-    assert [edges[0][1], edges[0][2], edges[0][3]] == [0, 0, 0]
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 27.74, 27.74]
-    assert [edges[1][1], edges[1][2], edges[1][3]] == [0, 27.74, 27.74]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 35.8, 35.8]
-    assert [edges[2][1], edges[2][2], edges[2][3]] == [0, 35.8, 35.8]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 56.46, 56.46]
+    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [0, 0, 0, 0, 27.74, 27.74]
+    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [0, 27.74, 27.74, 0, 35.8, 35.8]
+    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [0, 35.8, 35.8, 0, 56.46, 56.46]
 
 
 def test_no_cutting_of_edges_with_field_no_intersection_cutting():
@@ -1339,7 +1256,7 @@ def test_no_cutting_of_edges_with_field_no_intersection_cutting():
 
     assert len(stats) == 1
     assert stats[0] is not None
-    assert stats[0][0] == 220
+    assert stats[0][0] == 213
 
     # Insert a new road and edge which crosses the existing edge
     # but with no_intersection_cutting set to True
@@ -1381,7 +1298,51 @@ def test_no_cutting_of_edges_with_field_no_intersection_cutting():
 
     assert len(stats) == 1
     assert stats[0] is not None
-    assert stats[0][0] == 222
+    assert stats[0][0] == 215
+
+
+def test_get_reference_from_point():
+    """Test the function road_graph.get_reference_from point which returns references from a point geometry"""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # Check the value of the references returned by the function get_reference_from_point
+    # This tests only covers a specific case.
+    # If the point is between two edges (floating in the air) of the same road,
+    # we get the closest edge start, and replace the return references if needed
+    #  |---D613---<--(73)------<---(PRV 72+613)| X             |------D613---(PR 62)--------|
+    #                                        72+613          62+683
+    # the point X should have the references 72+613 if it is close enough to the left edge (< 5m)
+    # If not, it should have 62+683 in this example (the references of the previous edge end point)
+    sql = """
+    WITH get_refs AS (
+        SELECT
+            road_graph.get_reference_from_point(
+                ST_PointFromText('POINT(447899.527 6905276.755)', 2154),
+                'D613',
+                False
+            ) AS under_5m_refs
+    )
+    SELECT
+        under_5m_refs->>'road_code' AS road_code,
+        (under_5m_refs->>'marker_code')::integer AS marker_code,
+        (under_5m_refs->>'abscissa')::real AS abscissa
+    FROM get_refs
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    result = None
+    for a in data:
+        result = a if a else None
+
+    assert result is not None
+    assert result == ["D613", 72, 613.0]
 
 
 def test_get_road_point_from_reference():
@@ -1414,7 +1375,7 @@ def test_get_road_point_from_reference():
         result = a if a else None
 
     assert result is not None
-    assert result[0] == 473136.27
+    assert result[0] == 473136.24
     assert result[1] == 6895774.58
 
 
@@ -1457,7 +1418,7 @@ def test_get_road_substring_from_references():
         result = a if a else None
 
     assert result is not None
-    assert result[0] == "9cfddc9088882da358c2fd33bc015cd0"
+    assert result[0] == "24b45d0af6187de25a9e26c9788c6262"
 
     # Same test for a roundabout
     sql = """
@@ -1623,7 +1584,7 @@ def test_get_road_substring_from_references():
         "6895668.2,473519.8 6895656.2,473520.8 6895645.2,473523.7 "
         "6895635.2,473529.6 6895623.1,473534.6 6895616.1,473542.5 "
         "6895606.1,473549.4 6895598,473556.4 6895595,473572.4 6895591.8,473585.4 "
-        "6895589.8,473607.4 6895591.6,473643.4 6895592.4,473668.4 "
+        "6895589.7,473607.4 6895591.6,473643.4 6895592.3,473668.4 "
         "6895593.2,473680.4 6895591.1,473684 6895589.4))",
         "MULTILINESTRING((473664.6 6895593.1,473668.4 6895593.2,473680.4 6895591.1,473695.4 6895584))",
         "MULTILINESTRING((473558.8 6895759.5,473558.1 6895755.1,473556.8 "
@@ -1633,7 +1594,7 @@ def test_get_road_substring_from_references():
         "6895668.2,473519.8 6895656.2,473520.8 6895645.2,473523.7 "
         "6895635.2,473529.6 6895623.1,473534.6 6895616.1,473542.5 "
         "6895606.1,473549.4 6895598,473556.4 6895595,473572.4 6895591.8,473585.4 "
-        "6895589.8,473607.4 6895591.6,473643.4 6895592.4,473668.4 "
+        "6895589.7,473607.4 6895591.6,473643.4 6895592.3,473668.4 "
         "6895593.2,473680.4 6895591.1,473695.4 6895584))",
     ]
 
@@ -1677,8 +1638,7 @@ def test_editing_session_logged_objects():
     connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
-    # Check the value of the geometry returned by the function get_road_substring_from_references
-    # for a big road with many edges and roundabouts on the way
+    # Get all the ids that have been inserted, updated or deleted
     sql = """
         SELECT
             status,
@@ -1702,56 +1662,61 @@ def test_editing_session_logged_objects():
     assert results[0] is not None
     assert results[0][0] == "edited"
     assert json.loads(results[0][1]) == {
-        "1539": "D",
-        "5758": "I",
-        "5759": "I",
-        "5760": "I",
-        "5761": "I",
-        "5762": "I",
-        "5763": "I",
-        "5764": "I",
-        "5766": "I",
-        "5770": "I",
-        "5771": "I",
+        "1518": "D",
+        "5720": "I",
+        "5721": "I",
+        "5722": "I",
+        "5723": "I",
+        "5724": "I",
+        "5725": "I",
+        "5726": "I",
+        "5728": "I",
+        "5732": "I",
+        "5733": "I",
     }
     assert json.loads(results[0][2]) == {
-        "2238": "I",
-        "2239": "I",
-        "2240": "I",
-        "2241": "I",
+        "2276": "I",
+        "2277": "I",
+        "2278": "I",
+        "2279": "I",
     }
     assert json.loads(results[0][3]) == {
-        "2260": "U",
-        "2264": "D",
-        "2265": "D",
-        "2266": "U",
-        "2267": "U",
-        "2476": "U",
-        "2497": "U",
-        "2498": "D",
-        "2499": "U",
-        "2506": "U",
-        "4506": "U",
-        "7830": "I",
-        "7831": "I",
-        "7833": "I",
-        "7834": "I",
-        "7835": "I",
-        "7836": "I",
-        "7837": "I",
-        "7838": "I",
-        "7841": "I",
-        "7843": "I",
+        "861": "D",
+        "862": "U",
+        "903": "U",
+        "926": "U",
+        "934": "U",
+        "3492": "U",
+        "3529": "D",
+        "3530": "D",
+        "3532": "U",
+        "3536": "U",
+        "3539": "U",
+        "7810": "I",
+        "7811": "I",
+        "7813": "I",
+        "7814": "I",
+        "7815": "I",
+        "7816": "I",
+        "7817": "I",
+        "7820": "I",
+        "7822": "I",
+        "7823": "I",
     }
     assert json.loads(results[0][4]) == {
-        "2827": "D",
-        "2829": "D",
-        "4308": "D",
-        "8338": "I",
-        "8339": "I",
-        "8340": "I",
-        "8341": "I",
-        "8342": "I",
+        "15372": "I",
+        "15373": "I",
+        "15374": "I",
+        "15375": "I",
+        "15376": "I",
+        "1703": "D",
+        "1708": "D",
+        "1735": "D",
+        "1748": "D",
+        "1749": "D",
+        "6364": "D",
+        "6373": "D",
+        "6374": "D",
     }
 
 
@@ -1895,13 +1860,15 @@ def test_update_managed_objects():
     assert trees[4] is not None
     assert trees[5] is not None
     assert trees[6] is not None
-    assert trees[0] == [1, "oak", "D152", 9, 483.22, "left", 8.19, 9608.4]
-    assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11382.6]
-    assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
-    assert trees[3] == [4, "Palm", "D138", 8, 587.07, "right", 16.32, 8602.12]
-    assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
-    assert trees[5] == [6, "Oak", "D138", 8, 69.0, "left", 4.63, 8084.06]
-    assert trees[6] == [7, "Pine", "D138", 8, 971.21, "left", 0.9, 8986.27]
+    assert trees[0:7] == [
+        [1, "oak", "D152", 9, 483.16, "left", 8.19, 9607.04],
+        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11381.4],
+        [3, "Oak", "D138B", 8, 612.09, "right", 11.4, 369.09],
+        [4, "Palm", "D138", 8, 587.48, "right", 16.32, 8602.14],
+        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.3],
+        [6, "Oak", "D138", 8, 69.01, "left", 4.63, 8084.04],
+        [7, "Pine", "D138", 8, 971.62, "left", 0.9, 8986.28],
+    ]
 
     # Change the reference of a tree and check if the geometry is correctly updated
     sql = """
@@ -1927,7 +1894,7 @@ def test_update_managed_objects():
     for a in data:
         tree = a if a else None
     assert tree is not None
-    assert tree == [1, "POINT(474053.48 6895544.45)"]
+    assert tree == [1, "POINT(474053.47 6895544.44)"]
 
     # Table demo_safety_barriers: create geometries from references and check the values
     sql = """
@@ -1955,24 +1922,26 @@ def test_update_managed_objects():
     # assert barriers[2] is not None
     # assert barriers[3] is not None
     # do not test 1 as it is a very long multilinestring
-    assert barriers[1] == [
-        2,
-        "MULTILINESTRING((474023.6 6895055.8,474025.8 6895107.7,474025.8 6895107.8,474025.9 6895108.8))",
-    ]
-    assert barriers[2] == [
-        3,
-        "MULTILINESTRING((477047.8 6893031.1,477131.7 6893082.7,477186 6893116.3,"
-        "477207.1 6893132.1,477217.2 6893143.1,477230.3 6893161,477238.5 6893183.9,"
-        "477266.1 6893270.8,477288.7 6893358.6,477297.9 6893393.6,477316.3 6893442.4,"
-        "477341.8 6893519.3,477354.1 6893567.2,477369.4 6893610.1,477389.8 6893662,"
-        "477406.1 6893700.9,477427.4 6893746.7,477440.6 6893779.6,477448.2 6893812.7))",
-    ]
-    assert barriers[3] == [
-        4,
-        "MULTILINESTRING((473276.7 6895000.1,473274.2 6894994.8,473252.9 "
-        "6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473170 "
-        "6894821.5,473149.8 6894786.6,473133.5 6894748.7,473116.2 "
-        "6894712.8,473103.1 6894690.9,473055.6 6894624.2,473026.8 6894579.8))",
+    assert barriers[1:] == [
+        [
+            2,
+            "MULTILINESTRING((474023.6 6895055.9,474025.8 6895107.7,474025.8 6895107.8,474025.9 6895108.9))",
+        ],
+        [
+            3,
+            "MULTILINESTRING((477047.8 6893031.1,477131.7 6893082.7,477186 6893116.3,"
+            "477207.1 6893132.1,477217.2 6893143.1,477230.3 6893161,477238.4 6893183.9,"
+            "477266.1 6893270.8,477288.7 6893358.6,477297.9 6893393.6,477316.3 6893442.4,"
+            "477341.8 6893519.3,477354.1 6893567.2,477369.4 6893610.1,477389.8 6893662,"
+            "477406.1 6893700.9,477427.4 6893746.7,477440.6 6893779.6,477448.2 6893812.7))",
+        ],
+        [
+            4,
+            "MULTILINESTRING((473276.7 6895000.2,473274.2 6894994.8,473252.9 "
+            "6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473170 "
+            "6894821.5,473149.7 6894786.6,473133.5 6894748.7,473116.2 "
+            "6894712.8,473103.1 6894690.9,473055.6 6894624.2,473026.9 6894579.8))",
+        ]
     ]
 
 
@@ -1994,9 +1963,9 @@ def test_changes_on_marker_and_edge_geometry():
     UPDATE editing_session.edges
     SET geom = ST_GeomFromText(
     """
-    sql_update += "'LINESTRING(473695.4 6895584,473658.3 6895577.2,473644.3 6895574.3,473634.3 6895569.4,473631.2 6895565.4,473629.2 6895558.4,473626 6895534.5,473623.9 6895521.5,473621.9 6895515.5,473616.8 6895509.5,473604.8 6895503.6,473592.7 6895494.7,473573.6 6895475.8,473537.3 6895440.1,473497 6895391.3,473419.2 6895279.8,473353.5 6895185.3,473336.3 6895157.4,473318.1 6895121.5,473303.9 6895089.6,473296.7 6895065.6,473288.5 6895031.7,473281.3 6895009.7,473274.2 6894994.8,473252.9 6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473104.4 6894871.7,473084.2 6894836.8,473067.9 6894798.9,473050.6 6894763,473103.1 6894690.9,473055.6 6894624.2,473025.3 6894577.4,473015.2 6894558.5,472998.9 6894519.6,472988.8 6894501.7,472980.7 6894491.7,472971.6 6894480.8,472943.4 6894457,472856.9 6894383.6,472810.6 6894343.9,472799.5 6894331.9,472775.3 6894297.1,472726.7 6894211.4,472699.4 6894164.6,472689.2 6894146.7,472679.1 6894126.7,472673.9 6894103.8,472668.7 6894070.8,472660.1 6893987.8,472654.6 6893913.9,472650.3 6893859.9,472650.1 6893839.9,472653.9 6893808.8,472661.5 6893755.8,472674.1 6893686.7,472681.8 6893642.6,472683.6 6893621.6,472684.4 6893590.6,472677 6893524.6,472667.6 6893476.7,472655.4 6893440.8,472644.1 6893406.8,472642 6893386.8,472641.8 6893364.8,472640.8 6893357.9,472625.5 6893323,472595 6893246.1,472584.8 6893222.2,472564.6 6893189.3,472542.4 6893155.5,472504.1 6893109.8,472477.9 6893084.9,472443.6 6893049.2,472340.9 6892948.8,472240.2 6892848.5,472149.6 6892761.1,472117.3 6892727.4,472104.3 6892714.4,472087.4 6892691.8,472073.1 6892670.9,472065.3 6892659.6,472059.9 6892651.4,472055.8 6892643.7,472050.4 6892632.5,472046.1 6892622.8,472042 6892610.9,472039.5 6892600.8,472037.8 6892592.2,472036.6 6892583.7,472036.2 6892575.5,472036.2 6892568.6,472036.8 6892561,472038 6892554.2,472040 6892544.6,472042.2 6892535.9,472045.4 6892526.5,472060.1 6892494.9,472064.7 6892485,472068.4 6892476.5,472072 6892465.9,472074.2 6892454.7,472076.9 6892439.4,472078.2 6892431.1,472078.8 6892422.5,472078 6892414.6,472076.6 6892403.3,472074.4 6892392.8,472068.5 6892361.7,472067.2 6892352.2,472065.1 6892344.9,472062.8 6892338.1,472059.8 6892331.2,472055.9 6892322.2,472051.3 6892313.5,472042.2 6892297.9,472037.8 6892289.8,472035.7 6892284.6,472033.8 6892278.8,472031 6892268.1,472029.2 6892260.1,472028.4 6892255.9)'"  # noqa: E501
+    sql_update += "'LINESTRING(473695.4 6895584,473658.3 6895577.2,473644.3 6895574.3,473634.3 6895569.4,473631.2 6895565.4,473629.2 6895558.4,473626 6895534.5,473623.9 6895521.5,473621.9 6895515.5,473616.8 6895509.5,473604.8 6895503.6,473592.7 6895494.7,473573.6 6895475.8,473537.3 6895440.1,473497 6895391.3,473419.2 6895279.8,473353.5 6895185.3,473336.3 6895157.4,473318.1 6895121.5,473303.9 6895089.6,473296.7 6895065.6,473288.5 6895031.7,473281.3 6895009.7,473274.2 6894994.8,473252.9 6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473104.4 6894871.7,473084.2 6894836.8,473067.9 6894798.9,473050.6 6894763,473103.1 6894690.9,473055.6 6894624.2,473025.3 6894577.4,473015.2 6894558.5,472998.9 6894519.6,472988.8 6894501.7,472980.7 6894491.7,472971.6 6894480.8,472943.4 6894457,472856.9 6894383.6,472810.6 6894343.9,472799.5 6894331.9,472775.3 6894297.1,472726.7 6894211.4,472699.4 6894164.6,472689.2 6894146.7,472679.1 6894126.7,472673.9 6894103.8,472668.7 6894070.8,472660.1 6893987.8,472654.6 6893913.9,472650.3 6893859.9,472650.1 6893839.9,472653.9 6893808.8,472661.5 6893755.8,472674.1 6893686.7,472681.8 6893642.6,472683.6 6893621.6,472684.4 6893590.6,472677 6893524.6,472667.6 6893476.7,472655.4 6893440.8,472644.1 6893406.8,472642 6893386.8,472641.8 6893364.8,472640.8 6893357.9,472625.5 6893323,472595 6893246.1,472584.8 6893222.2,472564.6 6893189.3,472542.4 6893155.5,472504.1 6893109.8,472477.9 6893084.9,472443.6 6893049.2,472340.9 6892948.8,472240.2 6892848.5,472149.6 6892761.1,472117.3 6892727.4,472104.3 6892714.4,472087.4 6892691.8,472073.1 6892670.9,472065.3 6892659.6,472059.9 6892651.4,472055.8 6892643.7,472050.4 6892632.5,472046.1 6892622.8,472042 6892610.9,472039.5 6892600.8,472037.8 6892592.2,472036.6 6892583.7,472036.2 6892575.5,472036.2 6892568.6,472036.8 6892561,472038 6892554.2,472040 6892544.6,472042.2 6892535.9,472045.4 6892526.5,472060.1 6892494.9,472064.7 6892485,472068.4 6892476.5,472072 6892465.9,472074.2 6892454.7,472076.9 6892439.4,472078.2 6892431.1,472078.8 6892422.5,472078 6892414.6,472076.6 6892403.3,472074.4 6892392.8,472068.5 6892361.7,472067.2 6892352.2,472065.1 6892344.9,472062.8 6892338.1,472059.8 6892331.2,472055.9 6892322.2,472051.3 6892313.5,472042.2 6892297.9,472037.8 6892289.8,472035.7 6892284.6,472033.8 6892278.8,472031 6892268.1,472029.2 6892260.1,472027.09 6892255.9)'"  # noqa: E501
     sql_update += """, 2154)
-    WHERE road_code = 'D138B' AND start_marker = 0 AND end_marker = 12
+    WHERE road_code = 'D138B' AND start_marker = 8 AND end_marker = 12
     RETURNING id
     ;
     """
@@ -2103,13 +2072,15 @@ def test_merge_editing_session_data():
     assert trees[4] is not None
     assert trees[5] is not None
     assert trees[6] is not None
-    assert trees[0] == [1, "oak", "D152", 9, 493.22, "left", 8.19, 9608.4]
-    assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11382.6]
-    assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
-    assert trees[3] == [4, "Palm", "D138", 8, 587.07, "right", 16.32, 8602.12]
-    assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
-    assert trees[5] == [6, "Oak", "D138", 8, 69.0, "left", 4.63, 8084.06]
-    assert trees[6] == [7, "Pine", "D138", 8, 971.21, "left", 0.9, 8986.27]
+    assert trees[0:7] == [
+        [1, "oak", "D152", 9, 493.16, "left", 8.19, 9607.04],
+        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11381.4],
+        [3, "Oak", "D138B", 8, 612.09, "right", 11.4, 369.09],
+        [4, "Palm", "D138", 8, 587.48, "right", 16.32, 8602.14],
+        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.3],
+        [6, "Oak", "D138", 8, 69.01, "left", 4.63, 8084.04],
+        [7, "Pine", "D138", 8, 971.62, "left", 0.9, 8986.28],
+    ]
 
     # Merge editing session data into the main tables of the road graph schema
     sql = """
@@ -2182,16 +2153,18 @@ def test_merge_editing_session_data():
     assert trees[4] is not None
     assert trees[5] is not None
     assert trees[6] is not None
-    assert trees[0] == [1, "oak", "D152", 9, 493.25, "left", 8.18, 9600.41]
-    assert trees[1] == [2, "Pine", "D152", 11, 254.43, "right", 9.36, 11364.6]
-    assert trees[2] == [3, "Oak", "D138B", 0, 369.09, "right", 11.4, 369.09]
     # The tree 4 was near an edge, but it has been deleted
     # The calculated references must be None now
     # But the road_code is always kept
-    assert trees[3] == [4, "Palm", "D138", None, None, "right", 0.0, None]
-    assert trees[4] == [5, "Palm", "D613", 43, 450.3, "left", 6.83, 42402.9]
-    assert trees[5] == [6, "Oak", "D138", 8, 29.18, "left", 4.63, 8084.06]
-    assert trees[6] == [7, "Pine", "D138", 8, 202.78, "right", 18.09, 8257.66]
+    assert trees[0:7] == [
+        [1, "oak", "D152", 9, 493.15, "left", 8.19, 9599.02],
+        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11363.3],
+        [3, "Oak", "D138B", 8, 612.09, "right", 11.4, 369.09],
+        [4, "Palm", "D138", None, None, "right", 0.0, None],
+        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.3],
+        [6, "Oak", "D138", 8, 29.18, "left", 4.63, 8084.04],
+        [7, "Pine", "D138", 8, 202.8, "right", 18.09, 8257.66],
+    ]
 
     # safety barriers table: check the geometries have been updated
     sql = """
@@ -2217,15 +2190,15 @@ def test_merge_editing_session_data():
     assert barriers[3] is not None
     assert barriers[3] == [
         4,
-        "MULTILINESTRING((473276.7 6895000.1,473274.2 6894994.8,473252.9 "
+        "MULTILINESTRING((473276.8 6895000.2,473274.2 6894994.8,473252.9 "
         "6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473104.4 "
         "6894871.7,473084.2 6894836.8,473067.9 6894798.9,473050.6 6894763,473103.1 "
-        "6894690.9,473055.6 6894624.2,473026.8 6894579.8))",
+        "6894690.9,473055.6 6894624.2,473026.9 6894579.8))",
         "D138B",
         9,
-        201.72,
+        201.64,
         9,
-        790.87,
+        790.79,
         0.0,
         "right",
     ]

@@ -75,3 +75,19 @@ Tests are run in a docker QGIS image.
 ```
 make docker-test [QGIS_VERSION=<version>]
 ```
+
+## Building test data
+
+* You first need to create a local PostgreSQL database `road_network`
+* Then use the plugin to create the structure with the algorithm `Create database structure`
+* Then use the QGIS algorithm `Import data` with the following files:
+  * [source_edges.fgb](../roadnetwork/resources/import/source_edges.fgb)
+  * [source_markers](../roadnetwork/resources/import/source_markers.fgb)
+
+Once the data has been successfully imported, you can use the `pg_dump` command to create the [SQL test data file](data/sql/test_data.sql):
+
+```bash
+pg_dump -d road_network --data-only --disable-triggers --no-owner --inserts -n road_graph -Fp | grep -v "restrict" > tests/data/sql/test_data.sql
+```
+
+**NB**: we suppose the test data has been imported in a local database called `road_network`

@@ -2972,7 +2972,7 @@ DECLARE
     _run_build_cache boolean;
     _previous_marker record;
     _point_is_between_edges boolean;
-    _previous_edge_record record;
+    _closest_edge_at_5m record;
     _next_edge_record record;
     -- timing variables
    _timing1  timestamptz;
@@ -3188,47 +3188,41 @@ BEGIN
     -- RAISE NOTICE '% = %' , 'check point between edges', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
     -- RAISE NOTICE '_point_is_between_edges: %', _point_is_between_edges;
 
-    -- If true, we should check if the next edge start_marker_code is the same as the found previous marker code
-    -- If so, do nothing,
-    -- If not we should preferably use the marker code of the edge start point
+    -- If the point is between two edges (floating in the air),
+    -- we get the closest edge start, and replace the return references if needed
+    --  |---ID:5-----(4)---------|     there is a gap    X |(7+60)----ID:10-----------|
+    --                         4+180                      7+60
+    -- the point X should have the references 7+60 if it is close enough to the edge ID 10
     IF _point_is_between_edges IS TRUE THEN
-        -- first we need to find the previous edge
-        SELECT INTO _previous_edge_record
-            e.id, e.next_edge_id
+        -- Get the closest edge (tolerance 5m)
+        SELECT INTO _closest_edge_at_5m
+            e.id,
+            e.start_marker, e.start_abscissa, e.start_cumulative,
+            _point <-> ST_StartPoint(e.geom) AS distance,
+            ST_StartPoint(e.geom) AS geom
         FROM road_graph.edges AS e
         WHERE e.road_code = _road_code
-        AND e.end_marker <= _previous_marker.code
-        ORDER BY e.end_cumulative DESC
+        AND ST_DWithin(ST_StartPoint(e.geom), _point, 5)
+        ORDER BY distance
         LIMIT 1
         ;
-    RAISE NOTICE '% = %' , 'get previous edge record', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
-        IF _previous_edge_record.next_edge_id IS NOT NULL THEN
-            -- Get the next edge start marker code
-            SELECT INTO _next_edge_record
-                e.id, e.start_marker, e.start_abscissa,
-                m.id AS marker_id, m.geom AS marker_geom,
-                e.start_cumulative
-            FROM road_graph.edges AS e
-            JOIN road_graph.markers AS m
-                ON m.code = e.start_marker AND m.road_code = e.road_code
-            WHERE e.id = _previous_edge_record.next_edge_id
-            ;
-    RAISE NOTICE '% = %' , 'get next edge record', 1000 * (extract(epoch FROM clock_timestamp() - _start_ts)) - _overhead;
-            IF _next_edge_record.start_marker IS NOT NULL
-                AND _next_edge_record.start_marker > _previous_marker.code THEN
-                -- RAISE NOTICE 'We should use the next edge start_marker instead of the previous marker code';
-                _previous_marker.id := _next_edge_record.marker_id;
-                _previous_marker.code := Coalesce(_next_edge_record.start_marker, 0);
-                _previous_marker.abscissa := Coalesce(_next_edge_record.start_abscissa, 0.0);
-                _previous_marker.geom := _next_edge_record.marker_geom;
-                -- Linestring (with no gaps) between the marker and the point
-                -- In this case, we adapt and return the same geometry as the one between the start and the point
-                _previous_marker.road_linestring_from_marker_to_point := road_linestring_from_start_to_point;
-                -- Declare we have not taken the previous marker, but the start marker of the first next edge
-                _previous_marker.is_next_edge_start_marker = True;
-                -- we also need the start_cumulative
-                _previous_marker.cumulative = _next_edge_record.start_cumulative;
-            END IF;
+
+        IF _closest_edge_at_5m.id IS NOT NULL
+            AND Coalesce(_closest_edge_at_5m.start_marker * 10000 + _closest_edge_at_5m.start_abscissa, 0.0)
+                > Coalesce(_previous_marker.code * 10000 + _previous_marker.abscissa, 0.0)
+        THEN
+            -- RAISE NOTICE 'We should use the next edge start_marker instead of the previous marker code';
+            _previous_marker.id := _closest_edge_at_5m.id;
+            _previous_marker.code := Coalesce(_closest_edge_at_5m.start_marker, 0);
+            _previous_marker.abscissa := Coalesce(_closest_edge_at_5m.start_abscissa, 0.0);
+            _previous_marker.geom := _closest_edge_at_5m.geom;
+            -- Linestring (with no gaps) between the marker and the point
+            -- In this case, we adapt and return the same geometry as the one between the start and the point
+            _previous_marker.road_linestring_from_marker_to_point := road_linestring_from_start_to_point;
+            -- Declare we have not taken the previous marker, but the start marker of the first next edge
+            _previous_marker.is_next_edge_start_marker = True;
+            -- we also need the start_cumulative
+            _previous_marker.cumulative = _closest_edge_at_5m.start_cumulative;
         END IF;
     END IF;
 
