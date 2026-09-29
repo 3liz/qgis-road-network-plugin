@@ -22,7 +22,6 @@ from .plugin_tools.resources import (
     resources_path,
 )
 from .processing.provider import Provider
-from .processing.tools import plugin_name_normalized
 
 
 class Plugin:
