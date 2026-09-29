@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.5.6 - 2026-09-29
+
+### Fixed
+
+* **Translation** - Fix loading the language file
+
 ## 0.5.5 - 2026-09-29
 
 ### Fixed
