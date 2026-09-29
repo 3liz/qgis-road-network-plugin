@@ -43,7 +43,7 @@ class Plugin:
             locale = QgsSettings().value("locale/userLocale", "en")[0:2]
         except AttributeError:
             locale = "en"
-        locale_path = plugin_path("i18n", f"{plugin_name_normalized()}_{locale}.qm")
+        locale_path = plugin_path("i18n", f"road-network_{locale}.qm")
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
