@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## 0.5.5 - 2026-09-29
+
+### Fixed
+
+* **Translation** - Fix the path of the language files so that the French translation
+  is correctly named and used by the plugin
+
+### Changed
+
+* **Edges & markers**:
+  * Add a new column id_source to keep the reference of the imported data identifier
+  * Update the QGIS administration template project accordingly
+* **Tests**
+  * Import updated test data & update example files in the folder `roadnetwork/resources/import`
+  * Update all the Python tests with these new data
+  * Fix the test comparing edges data before & after we merge the editing session data
+* **Docs** - Improve the Lizmap Web Client **Javascript** and **CSS** files containing
+  the tools to use the Road Graph PostgreSQL functions.
+  An example of the Lizmap **JSON action file** has also been added in `docs/media`
+* **SQL Function** `road_graph.get_reference_from_point`: use a 5m tolerance for getting the next
+  edge references when the point is floating between two unconnected edges
+
+
 ## 0.5.4 - 2026-09-09
 
 ### Changed
