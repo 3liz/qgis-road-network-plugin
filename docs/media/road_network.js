@@ -1012,7 +1012,7 @@ var lizRoadNetwork = function () {
                     <th>Route</th>
                     <td colspan="2">
                         <!-- We use the same datalist as the main form to avoid duplicating the list of roads -->
-                        <input list="rd_road_code_list" id="rd_editing_road_code" name="rd_road_code" value="D1" placeholder="Ex: D1"/>
+                        <input list="rd_road_code_list" id="rd_editing_road_code" name="rd_road_code" value="" placeholder="Ex: D1"/>
                     </td>
                 </tr>
                 <tr>
@@ -1217,7 +1217,12 @@ var lizRoadNetwork = function () {
             // If the geometry has been built from the get_road_substring_from_references WKT received
             // Force the road_code to be the one written in the form
             // to prevent the road_code to be overwritten by the road_code of the first and/or last vertex of the line
-            const searched_road_code = ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM ? document.getElementById('rd_editing_road_code').value : '';
+            // const searched_road_code = ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM ?  : '';
+            const roadCodeElement = document.getElementById('rd_editing_road_code');
+            let searched_road_code = '';
+            if (roadCodeElement) {
+                searched_road_code = roadCodeElement.value;
+            }
             // console.log('Feature modified, line first vertex WKT:', firstWkt);
             lizMap.mainLizmap.action.runLizmapAction(
                 'get_references_from_point',
@@ -1257,7 +1262,7 @@ var lizRoadNetwork = function () {
 
         // Recreate the geometry every time it has been modified, but only if the references have been filled in the form.
         // Only loop 10 times because the loop will not end if the user modifies the geometry with a node outside the 50m
-        const maxAttempts = 10;
+        const maxAttempts = 20;
         let attempts = 0;
         const intervalId = setInterval(() => {
             // Abort if we reach the maximum number of attempts
@@ -1293,7 +1298,7 @@ var lizRoadNetwork = function () {
             //     console.log('max Attempts left:', maxAttempts-attempts);
             // }
             attempts++;
-        }, 200);
+        }, 100);
 
     }
 
