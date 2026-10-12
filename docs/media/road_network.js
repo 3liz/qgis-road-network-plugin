@@ -200,7 +200,9 @@ var lizRoadNetwork = function () {
         );
 
         // Fill the road combo box
-        let data = await getWfsData(ROAD_ROADS_LAYER_NAME, 'id,road_code', null, 'none');
+        // The field "ordre" is based on the road_code length, which will help
+        // to show the big road first (with a simple and smaller code)
+        let data = await getWfsData(ROAD_ROADS_LAYER_NAME, 'id,road_code', null, 'none', 'ordre');
         if (data && data.features && data.features.length) {
             const roadCodeList = document.getElementById('rd_road_code_list');
             data.features.forEach(feature => {
@@ -263,7 +265,7 @@ var lizRoadNetwork = function () {
         ) {
             // Create references string
             const refs = evt.features[0].getProperties();
-            const refsString = `${refs.road_code} PR ${refs.marker_code} + ${refs.abscissa}m (${refs.offset}m ${refs.side == 'left' ? 'G' : 'D'})`;
+            const refsString = `${refs.road_code} - PR ${refs.marker_code} + ${parseInt(refs.abscissa)}m (${refs.offset}m ${refs.side == 'left' ? 'G' : 'D'})`;
 
             // Display it on the map if info is active
             if (info) {
@@ -656,7 +658,7 @@ var lizRoadNetwork = function () {
      *
      * @return {Promise} Tableau d'objets de la couche.
      */
-    async function getWfsData(typename, propertyName=null, expFilter=null, geometryFormat='none') {
+    async function getWfsData(typename, propertyName=null, expFilter=null, geometryFormat='none', sortBy=null) {
         // Build URL and parameters
         const wfsUrl = ('wms' in lizUrls) ? lizUrls.wms : lizUrls.service;
 
@@ -667,6 +669,7 @@ var lizRoadNetwork = function () {
         wfsParams['TYPENAME'] = typename;
         if (expFilter !== null) wfsParams['EXP_FILTER'] = expFilter;
         if (propertyName !== null) wfsParams['PROPERTYNAME'] = propertyName;
+        if (sortBy !== null) wfsParams['SORTBY'] = sortBy;
         wfsParams['GEOMETRYNAME'] = geometryFormat;
 
         try {
