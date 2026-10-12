@@ -79,7 +79,7 @@ services:
     volumes:
     - {type: bind, source: "../docs/database", target: /output}
     command: >-
-      -t pgsql -host db -db gis -u docker -p docker -port 5432 -s ${SCHEMA} -nopages
+      -t pgsql11 -host db -db gis -u docker -p docker -port 5432 -s ${SCHEMA} -nopages --include-routine-definition
     depends_on:
       db-runner:
         condition: service_healthy
