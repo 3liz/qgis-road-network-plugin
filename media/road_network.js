@@ -10,9 +10,10 @@ var lizRoadNetwork = function () {
     // =================
     //  CONFIGURATION
     // =================
-    ROAD_MIN_SCALE = 50000;
-    ROAD_ROADS_LAYER_NAME = 'roads';
-    ROAD_EDGES_LAYER_ID = 'edges_7df8a321_25e8_4a67_9bf8_796e4782e147';
+    const ROAD_MIN_SCALE = 50000;
+    const ROAD_ROADS_LAYER_NAME = 'roads';
+    const ROAD_EDGES_LAYER_ID = 'edges_7df8a321_25e8_4a67_9bf8_796e4782e147';
+    const ROAD_ORDER_FIELD = 'road_order';
 
     // =================
     // END CONFIGURATION
@@ -130,7 +131,92 @@ var lizRoadNetwork = function () {
                 if (ROAD_EDITION_FORM_AUTO_GEOM == false) {
                     onEditingGeometryModified(event);
                 }
+            },
+
+            'lizmappopupdisplayed': function(popup, containerId) {
+                // Add button to allow the user the split the chosen line at the clicked point and create two new lines
+                // Get popup container
+                let popupContainerId = popup.containerId;
+                let popupContainer = document.getElementById(popupContainerId);
+                if (!popupContainer) {
+                    return true;
+                }
+                let featureIdInputSelector = 'div.lizmapPopupContent input.lizmap-popup-layer-feature-id';
+                // For each popup, add some tools depending on the status of the authenticated user
+                Array.from(popupContainer.querySelectorAll(featureIdInputSelector)).map(element => {
+
+                    // Get layer id and feature id
+                    let val = element.value;
+                    let featureId = val.split('.').pop();
+                    let layerId = val.replace('.' + featureId, '');
+
+                    // Hide actions
+                    // Hide button with value beginning by split_line_by_point
+                    const splitOriginalBt = element.parentNode.querySelector('button[value^="split_line_by_point"]');
+                    if (splitOriginalBt) splitOriginalBt.remove();
+
+                    // Get action configuration
+                    const splitActionConfig = lizMap.mainLizmap.action.getActionItemByName('split_line_by_point', 'feature');
+                    console.log('splitActionConfig', splitActionConfig);
+                    if (!splitActionConfig) {
+                        return true;
+                    }
+                    const actionLayers = splitActionConfig.layers;
+                    console.log('actionLayers', actionLayers);
+                    if (!actionLayers || !actionLayers.includes(layerId)) {
+                        return true;
+                    }
+
+                    // Add a button to allow the user to split the line at the clicked point
+                    let splitButton = document.createElement('button');
+                    splitButton.classList.add('btn', 'road_network_btn');
+                    splitButton.innerHTML = splitActionConfig.title;
+                    splitButton.setAttribute('title', splitActionConfig.title);
+                    splitButton.addEventListener('click', function(evt) {
+                        evt.preventDefault();
+                        evt.stopPropagation();
+
+                        // Confirm with the user
+                        if ('confirm' in splitActionConfig) {
+                            if (!confirm(splitActionConfig.confirm)) {
+                                return;
+                            }
+                        }
+
+                        // Get action feature geometry
+                        const getActionFeatures = lizMap.mainLizmap.action.actionLayer.getSource().getFeatures();
+                        if (!getActionFeatures || getActionFeatures.length == 0) {
+                            displayMessage(
+                                `Aucun point n'a été trouvé. Veuillez ouvrir le panneau "Graphe routier", puis cliquer un point sur la ligne.`,
+                                'info',
+                                3000
+                            );
+                            return;
+                        }
+                        const feature = getActionFeatures[0];
+                        const geometry = feature.getGeometry();
+                        const WKTformat = new lizMap.ol.format.WKT();
+                        const projOptions = {
+                            featureProjection: lizMap.mainLizmap.projection,
+                            dataProjection: 'EPSG:4326'
+                        };
+                        const wkt = WKTformat.writeGeometry(geometry, projOptions);
+
+                        // Run Lizmap action
+                        lizMap.mainLizmap.action.runLizmapAction(
+                            'split_line_by_point',
+                            'feature',
+                            layerId,
+                            featureId,
+                            wkt
+                        )
+                    });
+                    element.parentNode.appendChild(splitButton);
+
+                });
+
             }
+
         });
 
         return true;
@@ -170,8 +256,8 @@ var lizRoadNetwork = function () {
                     <td><input type="number" min="0" max="100" step="0.1" id="rd_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
                     <td>
                         <select id="rd_side" name="side">
-                            <option value="0" selected>Gauche</option>
-                            <option value="1">Droite</option>
+                            <option value="left" selected>Gauche</option>
+                            <option value="right">Droite</option>
                         </select>
                     </td>
                     <td>
@@ -202,7 +288,7 @@ var lizRoadNetwork = function () {
         // Fill the road combo box
         // The field "ordre" is based on the road_code length, which will help
         // to show the big road first (with a simple and smaller code)
-        let data = await getWfsData(ROAD_ROADS_LAYER_NAME, 'id,road_code', null, 'none', 'ordre');
+        let data = await getWfsData(ROAD_ROADS_LAYER_NAME, 'id,road_code', null, 'none', ROAD_ORDER_FIELD);
         if (data && data.features && data.features.length) {
             const roadCodeList = document.getElementById('rd_road_code_list');
             data.features.forEach(feature => {
@@ -284,7 +370,7 @@ var lizRoadNetwork = function () {
                         input.value = parseInt(refs[inputName]);
                     }
                     if (inputName == 'side') {
-                        input.value = (refs[inputName] == 'left') ? 0 : 1;
+                        input.value = (refs[inputName] == 'left') ? 'left' : 'right';
                     }
                 })
             }
@@ -316,7 +402,7 @@ var lizRoadNetwork = function () {
                     if (inputName == 'abscissa') {
                         input.value = parseInt(refs[inputName]);
                     } else if (inputName == 'side') {
-                        input.value = (refs[inputName] == 'left') ? 0 : 1;
+                        input.value = (refs[inputName] == 'left') ? 'left' : 'right';
                     } else {
                         input.value = refs[inputName];
                     }
@@ -739,16 +825,22 @@ var lizRoadNetwork = function () {
      */
     function buildActionParametersFromForm(sourceForm = 'main') {
         const inputs = ['road_code', 'marker_code', 'abscissa', 'offset', 'side'];
-        const refs = {};
+        // Default values
+        let refs = {
+            road_code: 'D1',
+            marker_code: '0',
+            abscissa: '0',
+            offset: '0',
+            side: 'left'
+        };
         const prefix = (sourceForm == 'editing') ? 'rd_editing_' : 'rd_';
         inputs.forEach(inputName => {
-            const inputValue = document.getElementById(`${prefix}${inputName}`).value;
-            // If the value is empty, add a default value of 0
-            if (inputValue === '') {
-                refs[inputName] = (inputName == 'road_code') ? 'D1' : '0';
+            const inputElement = document.getElementById(`${prefix}${inputName}`);
+            if (!inputElement) {
+                refs[inputName] = '';
                 return;
             }
-
+            const inputValue = inputElement.value;
             refs[inputName] = inputValue;
         });
 
@@ -804,7 +896,7 @@ var lizRoadNetwork = function () {
             marker_code: document.getElementById('rd_editing_marker_code_end').value,
             abscissa: document.getElementById('rd_editing_abscissa_end').value,
             offset: 0,
-            side: '0',
+            side: 'left',
         };
 
         // Do not continue if the references for end and start are not for the same road
@@ -1019,17 +1111,21 @@ var lizRoadNetwork = function () {
                     <!-- For point, only PR and abscissa are needed. For line, we need PR and abscissa for start and end points. -->
                     <th>PR ${(geometryType == 'line') ? 'début' : ''}</td>
                     <th>Abscisse ${(geometryType == 'line') ? 'début' : ''}</td>
-                    ${(geometryType == 'line') ? `<th title="Aller au début du tronçon situé sous la position correspondante aux références">Aller au début</th>` : '<th></th>'}
+                    ${(geometryType == 'line') ? `<th title="Aller au début du tronçon ou de la route situés sous la position correspondante aux références">Début</th>` : '<th></th>'}
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_editing_abscissa" name="abscissa" value="0" placeholder="Ex: 10.5"/></td>
                     <td style="vertical-align:center;">
                     ${(geometryType == 'line') ? `
-                        <span class="road_network_go_to_tip btn btn-sm"
-                            id="rd_editing_go_to_edge_start"
+                        <span class="road_network_go_to_tip edge_tip btn btn-sm"
+                            id="rd_editing_go_to_start_edge"
                             title="Aller au début du tronçon situé sous la position correspondante aux références"
-                        >Début</span>
+                        >Tronçon</span>
+                        <span class="road_network_go_to_tip route_tip btn btn-sm"
+                            id="rd_editing_go_to_start_route"
+                            title="Aller au début de la route correspondante aux références"
+                        >Route</span>
                         ` : ''}
                     </td>
                 </tr>
@@ -1041,16 +1137,20 @@ var lizRoadNetwork = function () {
                 <tr>
                     <th>PR fin</td>
                     <th>Abscisse fin</td>
-                    <th title="Aller à la fin du tronçon situé sous la position correspondante aux références">Aller à la fin</th>
+                    <th title="Aller à la fin du tronçon ou de la route situés sous la position correspondante aux références">Fin</th>
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code_end" name="marker_code_end" value="0" placeholder="Ex: 5"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_editing_abscissa_end" name="abscissa_end" value="0" placeholder="Ex: 60"/></td>
                     <td style="vertical-align:center;">
-                        <span class="road_network_go_to_tip btn btn-sm"
-                            id="rd_editing_go_to_edge_end"
+                        <span class="road_network_go_to_tip edge_tip btn btn-sm"
+                            id="rd_editing_go_to_end_edge"
                             title="Aller à la fin du tronçon situé sous la position correspondante aux références"
-                        >Fin</span>
+                        >Tronçon</span>
+                        <span class="road_network_go_to_tip route_tip btn btn-sm"
+                            id="rd_editing_go_to_end_route"
+                            title="Aller à la fin de la route correspondante aux références"
+                        >Route</span>
                     </td>
                 </tr>
             `;
@@ -1067,13 +1167,23 @@ var lizRoadNetwork = function () {
                     <td><input type="number" min="0" max="100" step="0.1" id="rd_editing_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
                     <td>
                         <select id="rd_editing_side" name="side">
-                            <option value="0" selected>Gauche</option>
-                            <option value="1">Droite</option>
+                            <option value="left" selected>Gauche</option>
+                            <option value="right">Droite</option>
                         </select>
                     </td>
                     <td>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <button
+                            id="rd_editing_reset_geometry" class="btn road_network_btn"
+                            title="Réinitialiser le dessin de la géométrie">Réinitialiser</button>
+                    </td>
+                    <td colspan="2">
                         <button
                             id="rd_editing_build_geometry_from_references" class="btn road_network_btn"
+                            style="width:100%;"
                             title="Créer la géométrie à partir des références renseignées dans le formulaire.">Créer</button>
                     </td>
                 </tr>
@@ -1088,22 +1198,37 @@ var lizRoadNetwork = function () {
         const editingForm = document.querySelector('form#jforms_view_edition');
         editingForm.insertAdjacentHTML('beforebegin', html);
 
+        // Set the road_code from Lizmap editing form
+        const roadCodeInput = document.getElementById('rd_editing_road_code');
+        if (roadCodeInput) {
+            const editingRoadCodeInput = editingForm ? editingForm.querySelector('input[name="road_code"]') : null;
+            if (editingRoadCodeInput) {
+                console.log('## Set road_code from Lizmap editing form', editingRoadCodeInput.value);
+                roadCodeInput.value = editingRoadCodeInput.value;
+            }
+        }
+
         // Catch the click event of the button-like span
         const form = document.getElementById('road_network_editing_form');
         const el = form.querySelectorAll('span.road_network_go_to_tip').forEach(el => {
             el.addEventListener('click', evt => {
+                const isStart = el.id.startsWith('rd_editing_go_to_start_edge');
+                const tipType = el.classList.contains('route_tip') ? 'route' : 'edge';
                 // Get the references for the start or the end edge references of the given reference
                 evt.stopPropagation();
                 evt.preventDefault();
                 const roadCode = document.getElementById('rd_editing_road_code').value;
-                const markerCode = (el.id == 'rd_editing_go_to_edge_start') ? document.getElementById('rd_editing_marker_code').value : document.getElementById('rd_editing_marker_code_end').value;
-                const abscissa = (el.id == 'rd_editing_go_to_edge_start') ? document.getElementById('rd_editing_abscissa').value : document.getElementById('rd_editing_abscissa_end').value;
-                const start_or_end = (el.id == 'rd_editing_go_to_edge_start') ? 'start' : 'end';
+                const markerCode = isStart ? document.getElementById('rd_editing_marker_code').value : document.getElementById('rd_editing_marker_code_end').value;
+                const abscissa = isStart ? document.getElementById('rd_editing_abscissa').value : document.getElementById('rd_editing_abscissa_end').value;
+                const start_or_end = isStart ? 'start' : 'end';
+                const tip_type = tipType;
+
                 const actionParams = {
                     road_code: roadCode,
                     marker_code: markerCode,
                     abscissa: abscissa,
-                    start_or_end: start_or_end
+                    start_or_end: start_or_end,
+                    tip_type: tip_type
                 };
                 // Run the Lizmap action to get the start or end edge references from the given reference
                 lizMap.mainLizmap.action.runLizmapAction(
@@ -1130,17 +1255,36 @@ var lizRoadNetwork = function () {
                 roadMenu.querySelector('a').click();
             }
 
-            // Get the geometry from the form references
-            // depending on the type of the feature being edited (point or line),
-            // we need different references
-            let setGeometry = setEditingGeometryFromReferences();
-            if (setGeometry) {
-                // Display a message to the user
-                displayMessage(
-                    'Géométrie créée à partir des références.',
-                    'info',
-                    3000
-                );
+            // Get the clicked button
+            const clickedButton = evt.submitter;
+            // console.log('Clicked button', clickedButton);
+            if (!clickedButton) return false;
+
+            if (clickedButton.id == 'rd_editing_reset_geometry') {
+                // Reset the geometry of the feature being edited
+                const resetButton = document.getElementById('edition-geomtool-restart-drawing');
+                if (resetButton) {
+                    // Click the reset button to reset the geometry of the feature being edited
+                    resetButton.click();
+                    // Reset the form values
+                    document.getElementById('road_network_editing_form').reset();
+                } else {
+                    console.error('Cannot find the reset button for the editing geometry');
+                }
+            }
+            else if (clickedButton.id == 'rd_editing_build_geometry_from_references') {
+                // Get the geometry from the form references
+                // depending on the type of the feature being edited (point or line),
+                // we need different references
+                let setGeometry = setEditingGeometryFromReferences();
+                if (setGeometry) {
+                    // Display a message to the user
+                    displayMessage(
+                        'La géométrie a bien été créée à partir des références.',
+                        'info',
+                        3000
+                    );
+                }
             }
 
             // Prevent the form from being submitted to the server
@@ -1172,7 +1316,29 @@ var lizRoadNetwork = function () {
         clonedGeom = geom.clone();
         clonedGeom.transform("EPSG:"+event.srid, 'EPSG:4326');
 
-        // console.log('Feature modified, geometry type:', geometryType, 'geometry:', clonedGeom);
+        // Get Lizmap editing form road_code value to use it in the Lizmap action parameters
+        const editingForm = document.querySelector('form#jforms_view_edition');
+        const editingFormRoadCodeElt = editingForm ? editingForm.querySelector('input[name="road_code"]') : null;
+        let editingFormRoadCode = '';
+        let searchedRoadCode = '';
+        if (editingFormRoadCodeElt) {
+            console.log('onEditing - Set road_code from Lizmap editing form', editingFormRoadCodeElt.value);
+            // Set the road_code in the form to the value from the Lizmap editing form
+            editingFormRoadCode = editingFormRoadCodeElt.value;
+            searchedRoadCode = editingFormRoadCode;
+        }
+        const roadCodeElement = document.getElementById('rd_editing_road_code');
+        if (roadCodeElement) {
+            if (
+                (searchedRoadCode && roadCodeElement.value && roadCodeElement.value != searchedRoadCode)
+                ||
+                (!searchedRoadCode && roadCodeElement.value)
+            ) {
+                searchedRoadCode = roadCodeElement.value;
+                console.log('onEditing - new form wins', searchedRoadCode);
+            }
+        }
+        console.log('onEditing - Get references from geometry modification, geometry type:', geometryType, 'road_code:', searchedRoadCode);
 
         // Depending on the geometry type, we get the coordinates of the point or the first and last vertex of the line
         if (geometryType == 'point') {
@@ -1185,7 +1351,7 @@ var lizRoadNetwork = function () {
                 ROAD_EDGES_LAYER_ID,
                 null,
                 wkt,
-                {"vertex_number": 0, "road_code": ""}
+                {"vertex_number": 0, "road_code": searchedRoadCode}
             );
 
         } else if (geometryType == 'line') {
@@ -1214,15 +1380,8 @@ var lizRoadNetwork = function () {
                 // console.log('Feature modified, line geometry is invalid, cannot get first and last vertex WKT');
                 return;
             }
-            // If the geometry has been built from the get_road_substring_from_references WKT received
-            // Force the road_code to be the one written in the form
-            // to prevent the road_code to be overwritten by the road_code of the first and/or last vertex of the line
-            // const searched_road_code = ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM ?  : '';
-            const roadCodeElement = document.getElementById('rd_editing_road_code');
-            let searched_road_code = '';
-            if (roadCodeElement) {
-                searched_road_code = roadCodeElement.value;
-            }
+            console.log('Feature modified, line geometry first vertex WKT:', firstWkt, 'last vertex WKT:', lastWkt);
+
             // console.log('Feature modified, line first vertex WKT:', firstWkt);
             lizMap.mainLizmap.action.runLizmapAction(
                 'get_references_from_point',
@@ -1230,7 +1389,7 @@ var lizRoadNetwork = function () {
                 ROAD_EDGES_LAYER_ID,
                 null,
                 firstWkt,
-                {"vertex_number": 0, "road_code": searched_road_code}
+                {"vertex_number": 0, "road_code": searchedRoadCode}
             );
             // console.log('Feature modified, line last vertex WKT:', lastWkt);
             lizMap.mainLizmap.action.runLizmapAction(
@@ -1239,7 +1398,7 @@ var lizRoadNetwork = function () {
                 ROAD_EDGES_LAYER_ID,
                 null,
                 lastWkt,
-                {"vertex_number": 1, "road_code": searched_road_code}
+                {"vertex_number": 1, "road_code": searchedRoadCode}
             );
         }
 
