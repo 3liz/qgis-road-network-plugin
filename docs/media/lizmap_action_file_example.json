@@ -129,6 +129,10 @@
             "circle-stroke-color": "rgb(255,50,50)"
         },
         "callbacks": [
+            {
+                "method": "redraw",
+                "layerId": "demo_painting_26eb3c57_3374_41a5_8628_391caa42f33a"
+            }
         ]
     },
     {
@@ -154,6 +158,10 @@
             "circle-stroke-color": "rgb(255,50,50)"
         },
         "callbacks": [
+            {
+                "method": "redraw",
+                "layerId": "demo_painting_26eb3c57_3374_41a5_8628_391caa42f33a"
+            }
         ]
     }
 ]
