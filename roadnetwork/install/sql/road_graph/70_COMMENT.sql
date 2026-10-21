@@ -214,6 +214,10 @@ in the session variable ''road.graph.merge.edges.useless.node'' for further use 
 COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
 
 
+-- FUNCTION merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)
+COMMENT ON FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) IS 'Merge two linestring features of the same table. The kept one is the one with the lower start_cumulative. The other one is deleted.';
+
+
 -- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
 COMMENT ON FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) IS 'Reorder the parts of the given road MULTILINESTRING based on the graph.
 For each part, the references of the start & end points is calculated, which helps to reorder the parts.
@@ -224,6 +228,10 @@ We also reverse the geometry if needed (since the ST_OffsetCurve sometimes does 
 -- FUNCTION split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real)
 COMMENT ON FUNCTION road_graph.split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real) IS 'Split an edge by a node. The node must be close enough to the edge and not too close from the edge start or end point.
 The function returns the id of the new created edge or null if the edge has not been split.';
+
+
+-- FUNCTION split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)
+COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.';
 
 
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
