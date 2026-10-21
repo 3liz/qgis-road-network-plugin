@@ -497,3 +497,107 @@ $BODY$;
 COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(text, text, integer, geometry)
 IS 'Splits a table linestring feature by a given point.'
 ;
+
+
+-- Fix search path
+CREATE OR REPLACE FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+    editing_session_record record;
+    sql_record record;
+    road_codes text[];
+    managed_object record;
+    updated_objects_number integer;
+    _set_config text;
+    _toggle_triggers boolean;
+BEGIN
+    -- Get editing session record
+    SET search_path TO road_graph, public;
+    SELECT INTO editing_session_record
+    *
+    FROM editing_sessions
+    WHERE id = _editing_session_id
+    ;
+    RESET search_path;
+
+    IF editing_session_record.id IS NULL THEN
+        RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
+    END IF;
+
+    IF editing_session_record.status != 'edited' THEN
+        RAISE EXCEPTION 'The given id % does not correspond to editing session with status ''edited'' !', _editing_session_id;
+    END IF;
+
+    -- Disable topology triggers
+    SELECT set_config('road.graph.disable.trigger', '1'::text, true)
+        INTO _set_config;
+    SELECT road_graph.toggle_foreign_key_constraints(FALSE)
+        INTO _toggle_triggers;
+
+    -- Get the road codes concerned by the editing session
+    -- no need to prefix the function by the schema name because we set it in the search path
+    SELECT INTO road_codes
+        get_updated_roads_from_editing_session(_editing_session_id)
+    ;
+
+    -- Create SQL to run for each edited data
+    -- no need to prefix the function by the schema name because we set it in the search path
+    FOR sql_record IN
+        SELECT
+            sql_text
+        FROM create_queries_from_editing_session(_editing_session_id)
+    LOOP
+       -- RAISE NOTICE 'SQL = %', sql_record.sql_text;
+       EXECUTE sql_record.sql_text;
+    END LOOP;
+
+    -- Re-enable triggers
+    SELECT set_config('road.graph.disable.trigger', '0'::text, true)
+    INTO _set_config;
+    SELECT road_graph.toggle_foreign_key_constraints(TRUE)
+        INTO _toggle_triggers;
+
+    -- Update the managed objects concerned by the editing session changes
+    IF road_codes IS NOT NULL AND array_length(road_codes, 1) > 0 THEN
+        FOR managed_object IN
+            SELECT o.*
+            FROM "road_graph".managed_objects AS o
+        LOOP
+            SELECT INTO updated_objects_number
+                road_graph.update_managed_objects_on_graph_change(
+                    managed_object.schema_name,
+                    managed_object.table_name,
+                    road_codes
+                )
+            ;
+            RAISE NOTICE 'Number of updated managed objects for "%"."%": %',
+                managed_object.schema_name,
+                managed_object.table_name,
+                Coalesce(updated_objects_number, 0)
+            ;
+        END LOOP;
+
+    END IF;
+
+    -- Truncate editing_session tables
+    TRUNCATE editing_session.roads CASCADE;
+    TRUNCATE editing_session.markers CASCADE;
+    TRUNCATE editing_session.edges CASCADE;
+    TRUNCATE editing_session.nodes CASCADE;
+    TRUNCATE editing_session.editing_sessions CASCADE;
+
+    -- Delete merged editing session
+    SET search_path TO road_graph, public;
+    DELETE FROM editing_sessions
+    WHERE id = _editing_session_id
+    ;
+    RESET search_path;
+
+    RETURN True;
+END;
+$$;
+
+
+-- FUNCTION merge_editing_session_data(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';

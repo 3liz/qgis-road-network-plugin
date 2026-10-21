@@ -4207,6 +4207,8 @@ BEGIN
     FROM editing_sessions
     WHERE id = _editing_session_id
     ;
+    RESET search_path;
+
     IF editing_session_record.id IS NULL THEN
         RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
     END IF;
@@ -4274,11 +4276,10 @@ BEGIN
     TRUNCATE editing_session.editing_sessions CASCADE;
 
     -- Delete merged editing session
+    SET search_path TO road_graph, public;
     DELETE FROM editing_sessions
     WHERE id = _editing_session_id
     ;
-
-    -- Reset the search path
     RESET search_path;
 
     RETURN True;
