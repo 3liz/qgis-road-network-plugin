@@ -84,6 +84,12 @@ var lizRoadNetwork = function () {
                     evt.action.name == 'get_road_substring_from_references'
                 ) {
                     onGetRoadGeometryFromReferenceReceived(evt);
+                } else if (
+                    evt.action.name == 'merge_selected_lines'
+                    || evt.action.name == 'split_line_by_point'
+                ) {
+                    // Clear the hightlighted features
+                    lizMap.mainLizmap.map.clearHighlightFeatures();
                 }
             },
 
