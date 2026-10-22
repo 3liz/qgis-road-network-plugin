@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+## 0.5.7 - 2026-10-22
+
+### Added
+
+* **SQL**
+  * Add a **trigger function** to update a **managed object table references** on insert or update
+    To use it, the table must be configured in `road_graph.managed_objects`. Then create the trigger with:
+    ```sql
+    CREATE TRIGGER trg_calculate_managed_object_references
+    BEFORE INSERT OR UPDATE OF geom
+    ON public.demo_painting
+    FOR EACH ROW EXECUTE PROCEDURE road_graph.calculate_managed_object_references();
+    ```
+  * Add **functions** `road_graph.merge_table_linestring_features` & `road_graph.split_table_linestring_feature_by_point`
+    which are able to **merge two features** of the same table & **split a feature** by a given point
+* **Docs - Lizmap Web Client Javascript & CSS files**
+  * Add buttons to go to the **start/end of the route**
+  * Add a popup button to let the user **split the linestring** with the clicked point.
+* **QGIS Project**: layer `Roads` - Add expression based `road_order` colummn
+
+### Fixed
+
+* **SQL** - `road_graph.merge_editing_session_data`: fix search_path not well resetted
+* **Docs - Lizmap Web Client - Javascript**:
+  * force the `road_code` value to be used when creating geometries
+  * use the `road_order` column for the autocompletion data source
+
+### Changed
+
+* Docs - **Schemaspy**: add functions SQL definition
+
+
 ## 0.5.6 - 2026-09-29
 
 ### Fixed
