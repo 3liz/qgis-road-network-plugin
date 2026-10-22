@@ -537,6 +537,7 @@ BEGIN
 
     -- Get the road codes concerned by the editing session
     -- no need to prefix the function by the schema name because we set it in the search path
+    SET search_path TO road_graph, public;
     SELECT INTO road_codes
         get_updated_roads_from_editing_session(_editing_session_id)
     ;
@@ -551,6 +552,7 @@ BEGIN
        -- RAISE NOTICE 'SQL = %', sql_record.sql_text;
        EXECUTE sql_record.sql_text;
     END LOOP;
+    RESET search_path;
 
     -- Re-enable triggers
     SELECT set_config('road.graph.disable.trigger', '0'::text, true)
@@ -560,6 +562,10 @@ BEGIN
 
     -- Update the managed objects concerned by the editing session changes
     IF road_codes IS NOT NULL AND array_length(road_codes, 1) > 0 THEN
+        -- Disable the trigger (to avoid calculate_managed_object_references to be executed)
+        SELECT set_config('road.graph.disable.trigger', '1'::text, true)
+        INTO _set_config;
+        -- Loop for each managed_object tables
         FOR managed_object IN
             SELECT o.*
             FROM "road_graph".managed_objects AS o
@@ -577,6 +583,9 @@ BEGIN
                 Coalesce(updated_objects_number, 0)
             ;
         END LOOP;
+        -- Re-enable triggers
+        SELECT set_config('road.graph.disable.trigger', '0'::text, true)
+        INTO _set_config;
 
     END IF;
 
@@ -601,3 +610,185 @@ $$;
 
 -- FUNCTION merge_editing_session_data(_editing_session_id integer)
 COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';
+
+
+-- Trigger which update references of an inserted or updated managed object
+CREATE OR REPLACE FUNCTION road_graph.calculate_managed_object_references() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    new_jsonb jsonb;
+    sql_text text;
+    managed_object record;
+    point_references jsonb;
+    start_references jsonb;
+    end_references jsonb;
+BEGIN
+    -- Trigger disabled by session variable
+    -- This variable can be set for example when merging the editing session schema
+    -- The managed object would be updated and the trigger must not be run
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
+    THEN
+        RETURN NEW;
+    END IF;
+
+    new_jsonb = to_jsonb(NEW);
+
+    -- Check road_code values
+    IF NOT new_jsonb ? 'road_code' THEN
+        RAISE NOTICE 'The given feature does not have the mandatory column road_code !';
+        RETURN NEW;
+    END IF;
+
+    -- Get info on the managed object table
+    sql_text = format(
+        $SQL$
+        SELECT *
+        FROM road_graph.managed_objects
+        WHERE
+            schema_name = %1$L
+            AND table_name = %2$L
+        LIMIT 1;
+        $SQL$,
+        TG_TABLE_SCHEMA,
+        TG_TABLE_NAME
+    );
+    EXECUTE sql_text
+    INTO managed_object
+    ;
+    IF managed_object IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" is not registered as managed object in the road graph system !', TG_TABLE_SCHEMA, TG_TABLE_NAME;
+        RETURN NEW;
+    END IF;
+
+    IF lower(managed_object.geometry_type) IN ('linestring', 'multilinestring')
+    THEN
+        -- LINESTRING
+        -- Get the references of the start & end points
+        start_references = road_graph.get_reference_from_point(
+            CASE
+                WHEN lower(GeometryType(NEW.geom)) = 'linestring'
+                    THEN ST_StartPoint(NEW.geom)
+                -- hopefully the last part is really the end part of the multilinestring
+                ELSE ST_StartPoint(ST_GeometryN(NEW.geom, 1))
+            END,
+            Nullif(
+                trim(new_jsonb->>'road_code'),
+                ''
+            )
+        );
+        end_references = road_graph.get_reference_from_point(
+            CASE
+                WHEN lower(GeometryType(NEW.geom)) = 'linestring'
+                    THEN ST_EndPoint(NEW.geom)
+                -- hopefully the last part is really the end part of the multilinestring
+                ELSE ST_EndPoint(ST_GeometryN(NEW.geom, ST_NumGeometries(NEW.geom)))
+            END,
+            Nullif(
+                trim(new_jsonb->>'road_code'),
+                ''
+            )
+        );
+        -- Update the NEW object with the given references
+
+        -- road_code - keep object road_code intact if it is not empty
+        NEW.road_code =
+        CASE
+            WHEN Coalesce(NEW.road_code, '') != ''
+                THEN NEW.road_code
+            ELSE start_references->>'road_code'
+        END;
+
+        -- start_marker_code
+        IF new_jsonb ? 'start_marker_code' THEN
+            NEW.start_marker_code = (start_references->>'marker_code')::int;
+        END IF;
+
+        -- start_abscissa
+        IF new_jsonb ? 'start_abscissa' THEN
+            NEW.start_abscissa = (start_references->>'abscissa')::real;
+        END IF;
+
+        -- start_cumulative
+        IF new_jsonb ? 'start_cumulative' THEN
+            NEW.start_cumulative = (start_references->>'cumulative')::real;
+        END IF;
+
+        -- end_marker_code
+        IF new_jsonb ? 'end_marker_code' THEN
+            NEW.end_marker_code = (end_references->>'marker_code')::int;
+        END IF;
+
+        -- end_abscissa
+        IF new_jsonb ? 'end_abscissa' THEN
+            NEW.end_abscissa = (end_references->>'abscissa')::real;
+        END IF;
+
+        -- end_cumulative
+        IF new_jsonb ? 'end_cumulative' THEN
+            NEW.end_cumulative = (end_references->>'cumulative')::real;
+        END IF;
+
+        -- offset
+        IF new_jsonb ? 'offset' THEN
+            NEW.offset = Coalesce((start_references->>'offset')::real, 0.0::real);
+        END IF;
+
+        -- side
+        IF new_jsonb ? 'side' THEN
+            NEW.side = Coalesce(start_references->>'side', 'right');
+        END IF;
+    ELSE
+        -- POINT
+        point_references = road_graph.get_reference_from_point(
+            NEW.geom,
+            Nullif(
+                trim(new_jsonb->>'road_code'),
+                ''
+            )
+        );
+
+        -- Update the NEW object with the given references
+        -- road_code - keep object road_code intact if it is not empty
+        NEW.road_code =
+        CASE
+            WHEN Coalesce(NEW.road_code, '') != ''
+                THEN NEW.road_code
+            ELSE point_references->>'road_code'
+        END;
+
+        -- marker_code
+        IF new_jsonb ? 'marker_code' THEN
+            NEW.marker_code = (point_references->>'marker_code')::int;
+        END IF;
+
+        -- abscissa
+        IF new_jsonb ? 'abscissa' THEN
+            NEW.abscissa = (point_references->>'abscissa')::real;
+        END IF;
+
+        -- cumulative
+        IF new_jsonb ? 'cumulative' THEN
+            NEW.cumulative = (point_references->>'cumulative')::real;
+        END IF;
+
+        -- offset
+        IF new_jsonb ? 'offset' THEN
+            NEW.offset = Coalesce((point_references->>'offset')::real, 0.0::real);
+        END IF;
+
+        -- side
+        IF new_jsonb ? 'side' THEN
+            NEW.side = Coalesce(point_references->>'side', 'right');
+        END IF;
+
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+-- FUNCTION aa_before_geometry_insert_or_update()
+COMMENT ON FUNCTION road_graph.calculate_managed_object_references()
+IS 'Trigger function allowing to update the references of an inserted or update managed object feature';

@@ -98,6 +98,10 @@ Cached data is store in a temporary table living only until COMMIT
 ';
 
 
+-- FUNCTION calculate_managed_object_references()
+COMMENT ON FUNCTION road_graph.calculate_managed_object_references() IS 'Trigger function allowing to update the references of an inserted or update managed object feature';
+
+
 -- FUNCTION clean_digitized_roundabout(_road_code text)
 COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
 * delete the edges inside the roundabout
