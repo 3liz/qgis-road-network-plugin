@@ -1,7 +1,7 @@
 [
     {
         "name": "get_references_from_point",
-        "title": "Récupérer les références sous un point",
+        "title": "Get the references at a point",
         "scope": "layer",
         "layers": [
             "edges_7df8a321_25e8_4a67_9bf8_796e4782e147"
@@ -26,7 +26,7 @@
     },
     {
         "name": "get_road_point_from_reference",
-        "title": "Récupérer un point à partir des références",
+        "title": "Get a point from references",
         "scope": "layer",
         "layers": [
             "edges_7df8a321_25e8_4a67_9bf8_796e4782e147"
@@ -53,7 +53,7 @@
     },
     {
         "name": "get_road_substring_from_references",
-        "title": "Récupérer une ligne à partir des références de 2 points",
+        "title": "Get a line from the references of 2 points",
         "scope": "layer",
         "layers": [
             "edges_7df8a321_25e8_4a67_9bf8_796e4782e147"
@@ -82,7 +82,7 @@
     },
     {
         "name": "get_edge_start_or_end_tip_from_references",
-        "title": "Récupérer les références du début ou de la fin du tronçon sous la position des références données",
+        "title": "Get the references of the start or the end of the edge located at the given references",
         "scope": "layer",
         "layers": [
             "edges_7df8a321_25e8_4a67_9bf8_796e4782e147"
@@ -109,12 +109,12 @@
     },
     {
         "name": "split_line_by_point",
-        "title": "Couper la ligne par le point rouge",
+        "title": "Split the line at the red point",
         "scope": "feature",
         "layers": [
             "demo_painting_26eb3c57_3374_41a5_8628_391caa42f33a"
         ],
-        "confirm": "Voulez-vous vraiment découper cet objet à partir du point rouge visible sur la carte (où vous avez cliqué)?",
+        "confirm": "Do you really want to split this feature at the red point visible on the map (where you clicked)?",
         "geometry": "point",
         "icon": "icon-asterisk",
         "options": {
@@ -137,12 +137,12 @@
     },
     {
         "name": "merge_selected_lines",
-        "title": "Fusionner les lignes sélectionnées",
+        "title": "Merge the selected lines",
         "scope": "layer",
         "layers": [
             "demo_painting_26eb3c57_3374_41a5_8628_391caa42f33a"
         ],
-        "confirm": "Voulez-vous vraiment fusionner les lignes sélectionnées ?",
+        "confirm": "Do you really want to merge the selected lines?",
         "icon": "icon-fire",
         "options": {
             "feature_id_a": 0,

@@ -1,0 +1,69 @@
+en,fr
+Road network,Graphe routier
+Road,Route
+Marker,PR
+Abscissa,Abscisse
+Cumulative,Cumul
+Offset,Décalage
+Side,Côté
+Left,Gauche
+Right,Droite
+Center,Centrer
+Enable calculation on hover,Activer le calcul au survol
+{road_code} - Marker {marker_code} + {abscissa}m ({offset}m {side}),{road_code} - PR {marker_code} + {abscissa}m ({offset}m {side})
+L,G
+R,D
+No reference found,Aucune référence trouvée
+No edge tip found for these references. The calculation of the new references has been canceled.,Pas d'extrémité de tronçon trouvée pour ces références. Calcul des nouvelles références annulé.
+"No point found for these references.<br/>Possible causes: the road does not exist, the marker does not exist, the abscissa is too big.","Aucun point trouvé pour ces références.<br/>Causes possibles : la route n'existe pas, le PR n'existe pas, l'abscisse est trop grande."
+Hover the map to get the road references,Survolez la carte pour obtenir les références routières
+Calculation of the references on hover disabled,Calcul des références au survol désactivé
+Please zoom in to at least 1:{scale} to display the references,Veuillez zoomer au moins au 1/{scale} pour afficher les références
+"Please fill in the road, the marker and the abscissa to create the geometry","Veuillez renseigner la route, le PR et l'abscisse pour créer la géométrie"
+"Please fill in the road, the marker and the abscissa to center the map","Veuillez renseigner la route, le PR et l'abscisse pour centrer la carte"
+The references must be on the same road to get the corresponding line,Les références doivent être sur la même route pour obtenir la ligne correspondante
+Please enter valid references to get the corresponding line.<br/>The start and end markers and abscissas must be filled in and different.,Veuillez enregistrer des références valides pour obtenir la ligne correspondante.<br/>Les PR et abscisses de départ et d'arrivée doivent être renseignés et différents.
+The geometry type of the layer is not supported to create a geometry from references. Only points and lines are supported. Current geometry type: {geometry_type},Le type de géométrie de la couche n'est pas pris en charge pour la création à partir des références. Seuls les points et lignes sont supportés. Type de géométrie actuel : {geometry_type}
+An unknown problem occurred while creating the geometry,Un problème inconnu est survenu lors de la création de la géométrie
+Create the geometry from references,Créer la géométrie depuis des références
+Start marker,PR début
+Start abscissa,Abscisse début
+Start,Début
+End marker,PR fin
+End abscissa,Abscisse fin
+End,Fin
+Edge,Tronçon
+Go to the start of the edge or of the road located at the references,Aller au début du tronçon ou de la route situés sous la position correspondante aux références
+Go to the start of the edge located at the references,Aller au début du tronçon situé sous la position correspondante aux références
+Go to the start of the road of the references,Aller au début de la route correspondante aux références
+Go to the end of the edge or of the road located at the references,Aller à la fin du tronçon ou de la route situés sous la position correspondante aux références
+Go to the end of the edge located at the references,Aller à la fin du tronçon situé sous la position correspondante aux références
+Go to the end of the road of the references,Aller à la fin de la route correspondante aux références
+Reset the geometry drawing,Réinitialiser le dessin de la géométrie
+Reset,Réinitialiser
+Create the geometry from the references filled in the form,Créer la géométrie à partir des références renseignées dans le formulaire.
+Create,Créer
+The geometry has been created from the references.,La géométrie a bien été créée à partir des références.
+The geometry could not be created automatically from the references.<br/>Possible cause: the geometry point is too far from the road (more than 50m).,La géométrie n'a pas pu être créée automatiquement à partir des références.<br/>Cause possible : le point de la géométrie est trop éloigné de la route (plus de 50m).
+"No point found. Please open the ""{panel}"" panel, then click on a point of the line.","Aucun point n'a été trouvé. Veuillez ouvrir le panneau ""{panel}"", puis cliquer un point sur la ligne."
+Choose this feature to merge,Choisir cet objet pour fusion
+Choose this feature to merge it then with another feature of the same layer,Choisir cet objet pour pouvoir ensuite le fusionner avec un autre objet de la même couche
+Merge with the chosen feature,Fusionner avec l'objet choisi
+Click on this button to merge this feature with the previously chosen feature,"En cliquant sur ce bouton, vous pouvez lancer la fusion entre cet objet et l'objet précédemment choisi."
+Merging...,Fusion en cours...
+The two lines are being merged. Please wait,La fusion des deux lignes est en cours. Veuillez patienter
+Feature chosen to merge,Objet choisi pour la fusion
+"This feature has been chosen to be merged with another feature. Please click on the merge button of another feature, or click again here to cancel","Cet objet a été choisi pour être fusionné avec un autre objet. Veuillez cliquer sur le bouton de fusion d'un autre objet, ou recliquer ici pour annuler"
+Get the references at a point,Récupérer les références sous un point
+Get a point from references,Récupérer un point à partir des références
+Get a line from the references of 2 points,Récupérer une ligne à partir des références de 2 points
+Get the references of the start or the end of the edge located at the given references,Récupérer les références du début ou de la fin du tronçon sous la position des références données
+Split the line at the red point,Couper la ligne par le point rouge
+Do you really want to split this feature at the red point visible on the map (where you clicked)?,Voulez-vous vraiment découper cet objet à partir du point rouge visible sur la carte (où vous avez cliqué) ?
+Merge the selected lines,Fusionner les lignes sélectionnées
+Do you really want to merge the selected lines?,Voulez-vous vraiment fusionner les lignes sélectionnées ?
+The line has been split in two,La ligne a bien été coupée en deux
+An error occurred while splitting the line: {detail},Une erreur s'est produite lors de la découpe de la ligne : {detail}
+The two features have been merged,Les deux objets ont bien été fusionnés
+An error occurred while merging the features: {detail},Une erreur s'est produite lors de la fusion des objets : {detail}
+The geometry of the object has been displayed in the map,La géométrie de l'objet a été affichée sur la carte

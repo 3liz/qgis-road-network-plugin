@@ -14,34 +14,45 @@ var lizRoadNetwork = function () {
     const ROAD_ROADS_LAYER_NAME = 'roads';
     const ROAD_EDGES_LAYER_ID = 'edges_7df8a321_25e8_4a67_9bf8_796e4782e147';
     const ROAD_ORDER_FIELD = 'road_order';
-    const ROAD_MERGE_LINES_STATE = {
-        'layer_id': null,
-        'feature_id_a': null,
-        'feature_id_b': null
-    };
-    const ROAD_MERGE_LINES_BUTTONS = {
-        0: {
-            'text': 'Choisir cet objet pour fusion',
-            'title': 'Choisir cet objet pour pouvoir ensuite le fusionner avec un autre objet de la même couche'
-        },
-        1: {
-            'text': 'Fusionner avec l\'objet choisi',
-            'title': 'En cliquant sur ce bouton, vous pouvez lancer la fusion entre cet objet et l\'objet précédemment choisi.'
-        },
-        2: {
-            'text': 'Fusion en cours...',
-            'title': 'La fusion des deux lignes est en cours. Veuillez patienter'
-        },
-        3: {
-            'text': 'Objet choisi pour la fusion',
-            'title': 'Cet objet a été choisi pour être fusionné avec un autre objet. Veuillez cliquer sur le bouton de fusion d\'un autre objet, ou recliquer ici pour annuler'
-        }
-    };
 
     // =================
     // END CONFIGURATION
     // Do not edit below
     // =================
+
+    // URL of this script, used to find the CSV translation file next to it
+    // It must be read now: document.currentScript is null once the script has been executed
+    const ROAD_SCRIPT_URL = document.currentScript ? document.currentScript.src : null;
+
+    // Translations of the English strings in the user language, loaded from the CSV file
+    let ROAD_TRANSLATIONS = {};
+
+    const ROAD_MERGE_LINES_STATE = {
+        'layer_id': null,
+        'feature_id_a': null,
+        'feature_id_b': null
+    };
+
+    // Text and title of the merge button for each step
+    // They are translated by translateMergeLinesButtons() once the translations are loaded
+    const ROAD_MERGE_LINES_BUTTONS = {
+        0: {
+            'text': 'Choose this feature to merge',
+            'title': 'Choose this feature to merge it then with another feature of the same layer'
+        },
+        1: {
+            'text': 'Merge with the chosen feature',
+            'title': 'Click on this button to merge this feature with the previously chosen feature'
+        },
+        2: {
+            'text': 'Merging...',
+            'title': 'The two lines are being merged. Please wait'
+        },
+        3: {
+            'text': 'Feature chosen to merge',
+            'title': 'This feature has been chosen to be merged with another feature. Please click on the merge button of another feature, or click again here to cancel'
+        }
+    };
 
     // Hover related variables
     let HOVER_WAIT = false;
@@ -82,7 +93,7 @@ var lizRoadNetwork = function () {
                     deactivateMapClickTool();
                     lizMap.mainLizmap.action.resetLizmapAction();
                 }
-                if (evt.id = 'edition') {
+                if (evt.id == 'edition') {
                     // Reactivate the checkbox to allow activating the hover tool when the edition form is closed
                     const toggleHover = document.getElementById('rd_toggle_hover');
                     toggleHover.removeAttribute('disabled');
@@ -90,6 +101,9 @@ var lizRoadNetwork = function () {
             },
 
             'actionResultReceived': function(evt){
+                // Translate the message displayed by Lizmap, if any
+                translateActionMessage(evt);
+
                 if (evt.action.name == 'get_references_from_point') {
                     onGetReferencesFromPointReceived(evt);
                 } else if (
@@ -223,7 +237,7 @@ var lizRoadNetwork = function () {
         <table class="road_network_table" border="0" cellpadding="2" cellspacing="1">
             <tbody>
                 <tr>
-                    <th>Route</th>
+                    <th>${tr('Road')}</th>
                     <td colspan="2">
                         <input list="rd_road_code_list" id="rd_road_code" name="rd_road_code" value="D1" placeholder="Ex: D1"/>
                         <datalist id="rd_road_code_list" name="road_code_list">
@@ -232,9 +246,9 @@ var lizRoadNetwork = function () {
                     </td>
                 </tr>
                 <tr>
-                    <th>PR</td>
-                    <th>Abscisse</td>
-                    <th>Cumul</td>
+                    <th>${tr('Marker')}</td>
+                    <th>${tr('Abscissa')}</td>
+                    <th>${tr('Cumulative')}</td>
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
@@ -242,27 +256,27 @@ var lizRoadNetwork = function () {
                     <td><input type="number" min="0" max="500000" step="0.1"  id="rd_cumulative" name="cumulative" value="" placeholder="" disabled="disabled"/></td>
                 </tr>
                 <tr>
-                    <th>Décalage</th>
-                    <th>Côté</th>
+                    <th>${tr('Offset')}</th>
+                    <th>${tr('Side')}</th>
                     <td></td>
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="0.1" id="rd_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
                     <td>
                         <select id="rd_side" name="side">
-                            <option value="left" selected>Gauche</option>
-                            <option value="right">Droite</option>
+                            <option value="left" selected>${tr('Left')}</option>
+                            <option value="right">${tr('Right')}</option>
                         </select>
                     </td>
                     <td>
-                        <button id="rd_button_center_from_form_references" class="btn road_network_btn">Centrer</button>
+                        <button id="rd_button_center_from_form_references" class="btn road_network_btn">${tr('Center')}</button>
                     </td>
                 </tr>
                 <tr>
                     <td colspan="3">
                         <div>
                             <input type="checkbox" id="rd_toggle_hover" name="toggle_hover">
-                            <label for="rd_toggle_hover">Activer le calcul au survol</label>
+                            <label for="rd_toggle_hover">${tr('Enable calculation on hover')}</label>
                         </div>
                     </td>
                 </tr>
@@ -273,7 +287,7 @@ var lizRoadNetwork = function () {
         `;
         lizMap.addDock(
             'road_network',
-            'Graphe routier',
+            tr('Road network'),
             'minidock',
             html,
             'icon-road'
@@ -345,7 +359,13 @@ var lizRoadNetwork = function () {
         ) {
             // Create references string
             const refs = evt.features[0].getProperties();
-            const refsString = `${refs.road_code} - PR ${refs.marker_code} + ${parseInt(refs.abscissa)}m (${refs.offset}m ${refs.side == 'left' ? 'G' : 'D'})`;
+            const refsString = tr('{road_code} - Marker {marker_code} + {abscissa}m ({offset}m {side})', {
+                road_code: refs.road_code,
+                marker_code: refs.marker_code,
+                abscissa: parseInt(refs.abscissa),
+                offset: refs.offset,
+                side: (refs.side == 'left') ? tr('L') : tr('R')
+            });
 
             // Display it on the map if info is active
             if (info) {
@@ -413,7 +433,7 @@ var lizRoadNetwork = function () {
         } else {
             // No data found
             if (info) {
-                info.innerText = 'Aucune référence trouvée';
+                info.innerText = tr('No reference found');
             }
         }
     }
@@ -454,7 +474,7 @@ var lizRoadNetwork = function () {
         } else {
             // Display a message to the user
             displayMessage(
-                `Pas d'extrémité de tronçon trouvée pour ces références. Calcul des nouvelles références annulé.`,
+                tr('No edge tip found for these references. The calculation of the new references has been canceled.'),
                 'info',
                 3000
             );
@@ -529,8 +549,7 @@ var lizRoadNetwork = function () {
             // console.log('No geometry found for these references');
             // Display a message to the user
             displayMessage(
-                `Aucun point trouvée pour ces références.
-                <br/>Causes possible : la route n'existe pas, le PR n'existe pas, l'abscisse est trop grande.`,
+                tr('No point found for these references.<br/>Possible causes: the road does not exist, the marker does not exist, the abscissa is too big.'),
                 'info',
                 3000
             );
@@ -552,10 +571,10 @@ var lizRoadNetwork = function () {
         const checkbox = evt.currentTarget;
         if (checkbox.checked) {
             activateHoverTool();
-            displayMessage('Survolez la carte pour obtenir les références routières', 'info', 5000);
+            displayMessage(tr('Hover the map to get the road references'), 'info', 5000);
         } else {
             deactivateHoverTool();
-            displayMessage('Calcul des références au survol désactivé', 'info', 1000);
+            displayMessage(tr('Calculation of the references on hover disabled'), 'info', 1000);
         }
     }
 
@@ -579,7 +598,7 @@ var lizRoadNetwork = function () {
         // Do not send a request if the scale is too small
         if (lizMap.mainLizmap.state.map.scaleDenominator > ROAD_MIN_SCALE) {
             displayMessage(
-                `Veuillez zoomer au moins au 1/${ROAD_MIN_SCALE} pour afficher les références`,
+                tr('Please zoom in to at least 1:{scale} to display the references', {scale: ROAD_MIN_SCALE}),
                 'info',
                 3000
             );
@@ -619,6 +638,17 @@ var lizRoadNetwork = function () {
     }
 
     /**
+     * Callback method to hide the hover info when the mouse leaves the map
+     */
+    function onPointerLeave() {
+        const info = document.getElementById('rd_hover_info');
+        if (info) {
+            info.innerText = '';
+            info.style.visibility = 'hidden';
+        }
+    }
+
+    /**
      * Activate the hover tool
      */
     function activateHoverTool() {
@@ -631,16 +661,12 @@ var lizRoadNetwork = function () {
         }
 
         // Add OL pointermove event
-        lizMap.mainLizmap.map.on('pointermove', (evt) => onPointerMove(evt));
+        // We pass the function itself (not an anonymous one)
+        // so that the same reference can be used to remove the listener
+        lizMap.mainLizmap.map.on('pointermove', onPointerMove);
 
         // Remove hover info when the mouse leaves the map
-        lizMap.mainLizmap.map.getViewport().addEventListener('pointerleave', (evt) => {
-            const info = document.getElementById('rd_hover_info');
-            if (info) {
-                info.innerText = '';
-                info.style.visibility = 'hidden';
-            }
-        });
+        lizMap.mainLizmap.map.getViewport().addEventListener('pointerleave', onPointerLeave);
 
     }
 
@@ -654,7 +680,10 @@ var lizRoadNetwork = function () {
         }
 
         // Remove OL pointermove event
-        lizMap.mainLizmap.map.un('pointermove', (evt) => onPointerMove(evt));
+        lizMap.mainLizmap.map.un('pointermove', onPointerMove);
+
+        // Remove the pointerleave event
+        lizMap.mainLizmap.map.getViewport().removeEventListener('pointerleave', onPointerLeave);
     }
 
     /**
@@ -671,7 +700,7 @@ var lizRoadNetwork = function () {
         // Do not send a request if the scale is too small
         if (lizMap.mainLizmap.state.map.scaleDenominator > ROAD_MIN_SCALE) {
             displayMessage(
-                `Veuillez zoomer au moins au 1/${ROAD_MIN_SCALE} pour afficher les références`,
+                tr('Please zoom in to at least 1:{scale} to display the references', {scale: ROAD_MIN_SCALE}),
                 'info',
                 3000
             );
@@ -687,7 +716,9 @@ var lizRoadNetwork = function () {
      */
     function activateMapClickTool() {
         // console.log('activateMapClickTool');
-        lizMap.mainLizmap.map.on('click', (evt) => onPointerClick(evt));
+        // We pass the function itself (not an anonymous one)
+        // so that the same reference can be used to remove the listener
+        lizMap.mainLizmap.map.on('click', onPointerClick);
     }
 
     /**
@@ -695,7 +726,7 @@ var lizRoadNetwork = function () {
      */
     function deactivateMapClickTool() {
         // console.log('deactivateMapClickTool');
-        lizMap.mainLizmap.map.un('click', (evt) => onPointerClick(evt));
+        lizMap.mainLizmap.map.un('click', onPointerClick);
     }
 
 
@@ -812,31 +843,40 @@ var lizRoadNetwork = function () {
      * Create the objects containing the parametres to send to the Lizmap action
      * from the given form values
      *
-     * It returns an object
+     * It returns an object, or null if one of the required fields
+     * (road_code, marker_code, abscissa) is empty.
+     * Empty offset and side fields are replaced by their default values.
      *
      * @param {string} sourceForm The source form: 'editing' or 'main'. Default is 'main'.
-     * @returns {Object}
+     * @returns {Object|null}
      */
     function buildActionParametersFromForm(sourceForm = 'main') {
         const inputs = ['road_code', 'marker_code', 'abscissa', 'offset', 'side'];
-        // Default values
+        const requiredInputs = ['road_code', 'marker_code', 'abscissa'];
+        // Default values for the optional fields
         let refs = {
-            road_code: 'D1',
-            marker_code: '0',
-            abscissa: '0',
+            road_code: '',
+            marker_code: '',
+            abscissa: '',
             offset: '0',
             side: 'left'
         };
         const prefix = (sourceForm == 'editing') ? 'rd_editing_' : 'rd_';
+        let missingRequired = false;
         inputs.forEach(inputName => {
             const inputElement = document.getElementById(`${prefix}${inputName}`);
-            if (!inputElement) {
-                refs[inputName] = '';
+            const inputValue = inputElement ? inputElement.value.trim() : '';
+            if (inputValue === '') {
+                if (requiredInputs.includes(inputName)) {
+                    missingRequired = true;
+                }
                 return;
             }
-            const inputValue = inputElement.value;
             refs[inputName] = inputValue;
         });
+        if (missingRequired) {
+            return null;
+        }
 
         return refs
     }
@@ -853,11 +893,16 @@ var lizRoadNetwork = function () {
         // Create a fake WKT Linestring containing the form values as Y coordinates
         const actionParams = buildActionParametersFromForm(sourceForm);
         if (!actionParams) {
+            const message = (sourceForm == 'editing')
+                ? tr('Please fill in the road, the marker and the abscissa to create the geometry')
+                : tr('Please fill in the road, the marker and the abscissa to center the map');
             displayMessage(
-                'Veuillez remplir tous les champs de référence pour centrer la carte',
+                message,
                 'info',
                 2000
             );
+            // No action will be run, so we are no longer waiting for the geometry
+            ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM = false;
             return;
         }
 
@@ -896,7 +941,7 @@ var lizRoadNetwork = function () {
         // Do not continue if the references for end and start are not for the same road
         if (startReferences.road_code && endReferences.road_code && startReferences.road_code != endReferences.road_code) {
             displayMessage(
-                'Les références doivent être sur la même route pour obtenir la ligne correspondante',
+                tr('The references must be on the same road to get the corresponding line'),
                 'info',
                 5000
             );
@@ -906,12 +951,17 @@ var lizRoadNetwork = function () {
         // Get the fake WKT for start and end references. If they are the same, do not continue
         const paramsA = buildActionParametersFromReferences(startReferences);
         const paramsB = buildActionParametersFromReferences(endReferences);
-        // console.log('Equals ?', paramsA, paramsB, paramsA == paramsB);
-        if (!paramsA || !paramsB || (paramsA == paramsB)) {
+        // Compare the values, not the objects. Offset and side are not compared
+        // because they are not used for the end references
+        const sameReferences = (
+            paramsA && paramsB
+            && paramsA.road_code == paramsB.road_code
+            && parseInt(paramsA.marker_code) == parseInt(paramsB.marker_code)
+            && parseFloat(paramsA.abscissa) == parseFloat(paramsB.abscissa)
+        );
+        if (!paramsA || !paramsB || sameReferences) {
             displayMessage(
-                `Veuillez enregistrer des références valides pour obtenir la ligne correspondante
-                <br>Les PR et abscisses de départ et d'arrivée doivent être renseignés et différents
-                `,
+                tr('Please enter valid references to get the corresponding line.<br/>The start and end markers and abscissas must be filled in and different.'),
                 'info',
                 5000
             );
@@ -990,9 +1040,7 @@ var lizRoadNetwork = function () {
         // If the geometry type is not point or line, we cannot create a geometry from the references
         if (!['point', 'line'].includes(geometryType)) {
             displayMessage(
-                `Le type de géométrie de la couche n\'est pas pris en charge pour la création à partir des références.
-                Seuls les points et lignes sont supportés.
-                Type de géométrie actuel : ${geometryType}`,
+                tr('The geometry type of the layer is not supported to create a geometry from references. Only points and lines are supported. Current geometry type: {geometry_type}', {geometry_type: geometryType}),
                 'error',
                 5000
             );
@@ -1047,7 +1095,7 @@ var lizRoadNetwork = function () {
         let feat = format.read(wkt);
         if (!feat) {
             displayMessage(
-                "Un problème inconnu est survenu lors de la création de la géométrie",
+                tr('An unknown problem occurred while creating the geometry'),
                 'error',
                 3000
             );
@@ -1089,13 +1137,13 @@ var lizRoadNetwork = function () {
         // Create the HTML text to add above the editing form
         let html = `
         <details class="road_network_details">
-        <summary>Créer la géométrie depuis des références</summary>
+        <summary>${tr('Create the geometry from references')}</summary>
         <div>
         <form id="road_network_editing_form" class="road_network_form">
         <table class="road_network_table" border="0" cellpadding="2" cellspacing="1">
             <tbody>
                 <tr>
-                    <th>Route</th>
+                    <th>${tr('Road')}</th>
                     <td colspan="2">
                         <!-- We use the same datalist as the main form to avoid duplicating the list of roads -->
                         <input list="rd_road_code_list" id="rd_editing_road_code" name="rd_road_code" value="" placeholder="Ex: D1"/>
@@ -1103,9 +1151,9 @@ var lizRoadNetwork = function () {
                 </tr>
                 <tr>
                     <!-- For point, only PR and abscissa are needed. For line, we need PR and abscissa for start and end points. -->
-                    <th>PR ${(geometryType == 'line') ? 'début' : ''}</td>
-                    <th>Abscisse ${(geometryType == 'line') ? 'début' : ''}</td>
-                    ${(geometryType == 'line') ? `<th title="Aller au début du tronçon ou de la route situés sous la position correspondante aux références">Début</th>` : '<th></th>'}
+                    <th>${(geometryType == 'line') ? tr('Start marker') : tr('Marker')}</td>
+                    <th>${(geometryType == 'line') ? tr('Start abscissa') : tr('Abscissa')}</td>
+                    ${(geometryType == 'line') ? `<th title="${tr('Go to the start of the edge or of the road located at the references')}">${tr('Start')}</th>` : '<th></th>'}
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
@@ -1114,12 +1162,12 @@ var lizRoadNetwork = function () {
                     ${(geometryType == 'line') ? `
                         <span class="road_network_go_to_tip edge_tip btn btn-sm"
                             id="rd_editing_go_to_start_edge"
-                            title="Aller au début du tronçon situé sous la position correspondante aux références"
-                        >Tronçon</span>
+                            title="${tr('Go to the start of the edge located at the references')}"
+                        >${tr('Edge')}</span>
                         <span class="road_network_go_to_tip route_tip btn btn-sm"
                             id="rd_editing_go_to_start_route"
-                            title="Aller au début de la route correspondante aux références"
-                        >Route</span>
+                            title="${tr('Go to the start of the road of the references')}"
+                        >${tr('Road')}</span>
                         ` : ''}
                     </td>
                 </tr>
@@ -1129,9 +1177,9 @@ var lizRoadNetwork = function () {
         if (geometryType == 'line') {
             html += `
                 <tr>
-                    <th>PR fin</td>
-                    <th>Abscisse fin</td>
-                    <th title="Aller à la fin du tronçon ou de la route situés sous la position correspondante aux références">Fin</th>
+                    <th>${tr('End marker')}</td>
+                    <th>${tr('End abscissa')}</td>
+                    <th title="${tr('Go to the end of the edge or of the road located at the references')}">${tr('End')}</th>
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code_end" name="marker_code_end" value="0" placeholder="Ex: 5"/></td>
@@ -1139,12 +1187,12 @@ var lizRoadNetwork = function () {
                     <td style="vertical-align:center;">
                         <span class="road_network_go_to_tip edge_tip btn btn-sm"
                             id="rd_editing_go_to_end_edge"
-                            title="Aller à la fin du tronçon situé sous la position correspondante aux références"
-                        >Tronçon</span>
+                            title="${tr('Go to the end of the edge located at the references')}"
+                        >${tr('Edge')}</span>
                         <span class="road_network_go_to_tip route_tip btn btn-sm"
                             id="rd_editing_go_to_end_route"
-                            title="Aller à la fin de la route correspondante aux références"
-                        >Route</span>
+                            title="${tr('Go to the end of the road of the references')}"
+                        >${tr('Road')}</span>
                     </td>
                 </tr>
             `;
@@ -1153,16 +1201,16 @@ var lizRoadNetwork = function () {
         // Add offset and side inputs
         html += `
                 <tr>
-                    <th>Décalage</th>
-                    <th>Côté</th>
+                    <th>${tr('Offset')}</th>
+                    <th>${tr('Side')}</th>
                     <th></th>
                 </tr>
                 <tr>
                     <td><input type="number" min="0" max="100" step="0.1" id="rd_editing_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
                     <td>
                         <select id="rd_editing_side" name="side">
-                            <option value="left" selected>Gauche</option>
-                            <option value="right">Droite</option>
+                            <option value="left" selected>${tr('Left')}</option>
+                            <option value="right">${tr('Right')}</option>
                         </select>
                     </td>
                     <td>
@@ -1172,13 +1220,13 @@ var lizRoadNetwork = function () {
                     <td>
                         <button
                             id="rd_editing_reset_geometry" class="btn road_network_btn"
-                            title="Réinitialiser le dessin de la géométrie">Réinitialiser</button>
+                            title="${tr('Reset the geometry drawing')}">${tr('Reset')}</button>
                     </td>
                     <td colspan="2">
                         <button
                             id="rd_editing_build_geometry_from_references" class="btn road_network_btn"
                             style="width:100%;"
-                            title="Créer la géométrie à partir des références renseignées dans le formulaire.">Créer</button>
+                            title="${tr('Create the geometry from the references filled in the form')}">${tr('Create')}</button>
                     </td>
                 </tr>
             </tbody>
@@ -1274,7 +1322,7 @@ var lizRoadNetwork = function () {
                 if (setGeometry) {
                     // Display a message to the user
                     displayMessage(
-                        'La géométrie a bien été créée à partir des références.',
+                        tr('The geometry has been created from the references.'),
                         'info',
                         3000
                     );
@@ -1425,8 +1473,7 @@ var lizRoadNetwork = function () {
 
                 // Display a message to the user
                 displayMessage(
-                    `La géométrie n'a pas pu être créée automatiquement à partir des références.
-                    <br/>Cause possible : le point de la géométrie est trop éloigné de la route (plus de 50m).`,
+                    tr('The geometry could not be created automatically from the references.<br/>Possible cause: the geometry point is too far from the road (more than 50m).'),
                     'info',
                     5000
                 );
@@ -1502,7 +1549,7 @@ var lizRoadNetwork = function () {
             const getActionFeatures = lizMap.mainLizmap.action.actionLayer.getSource().getFeatures();
             if (!getActionFeatures || getActionFeatures.length == 0) {
                 displayMessage(
-                    `Aucun point n'a été trouvé. Veuillez ouvrir le panneau "Graphe routier", puis cliquer un point sur la ligne.`,
+                    tr('No point found. Please open the "{panel}" panel, then click on a point of the line.', {panel: tr('Road network')}),
                     'info',
                     3000
                 );
@@ -1715,6 +1762,197 @@ var lizRoadNetwork = function () {
 
 
     /**
+     * Get the URL of the CSV translation file.
+     *
+     * It has the same name as this script, with the csv extension.
+     * Lizmap serves the media files with an URL like
+     * index.php/view/media/getMedia?repository=x&project=y&path=media/js/y/road_network.js
+     * so we change the path parameter if it exists, or the URL path otherwise.
+     *
+     * @returns {string|null}
+     */
+    function getTranslationFileUrl() {
+        if (!ROAD_SCRIPT_URL) return null;
+        const url = new URL(ROAD_SCRIPT_URL, window.location.href);
+        if (url.searchParams.has('path')) {
+            url.searchParams.set('path', url.searchParams.get('path').replace(/\.js$/, '.csv'));
+        } else {
+            url.pathname = url.pathname.replace(/\.js$/, '.csv');
+        }
+        return url.toString();
+    }
+
+    /**
+     * Get the user interface language, for example 'fr'
+     * @returns {string}
+     */
+    function getLanguage() {
+        const lang = document.documentElement.lang || navigator.language || 'en';
+        // fr_FR or fr-FR -> fr
+        return lang.substring(0, 2).toLowerCase();
+    }
+
+    /**
+     * Parse a CSV text into an array of rows
+     *
+     * Values containing commas, double quotes or new lines
+     * must be enclosed in double quotes. Double quotes inside
+     * a value must be doubled.
+     *
+     * @param {string} text The CSV content
+     * @returns {Array<Array<string>>}
+     */
+    function parseCsv(text) {
+        let rows = [];
+        let row = [];
+        let value = '';
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (inQuotes) {
+                if (c == '"' && text[i + 1] == '"') {
+                    value += '"';
+                    i++;
+                } else if (c == '"') {
+                    inQuotes = false;
+                } else {
+                    value += c;
+                }
+            } else if (c == '"') {
+                inQuotes = true;
+            } else if (c == ',') {
+                row.push(value);
+                value = '';
+            } else if (c == '\n' || c == '\r') {
+                if (c == '\r' && text[i + 1] == '\n') i++;
+                row.push(value);
+                rows.push(row);
+                row = [];
+                value = '';
+            } else {
+                value += c;
+            }
+        }
+        if (value !== '' || row.length) {
+            row.push(value);
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    /**
+     * Load the translations for the user language from the CSV file.
+     *
+     * The first line of the CSV file contains the language codes: en,fr,...
+     * The first column contains the English strings used in this script.
+     * If the file or the language is not found, the interface stays in English.
+     */
+    async function loadTranslations() {
+        const lang = getLanguage();
+        const url = getTranslationFileUrl();
+        if (lang == 'en' || !url) return;
+        try {
+            const response = await fetch(url);
+            if (response.status !== 200) return;
+            const rows = parseCsv(await response.text());
+            if (!rows.length) return;
+            const langIndex = rows[0].map(code => code.trim().toLowerCase()).indexOf(lang);
+            if (langIndex < 1) return;
+            rows.slice(1).forEach(row => {
+                if (row[0] && row[langIndex]) {
+                    ROAD_TRANSLATIONS[row[0]] = row[langIndex];
+                }
+            });
+        } catch (error) {
+            console.error('Road network - cannot load the translations:', error);
+        }
+    }
+
+    /**
+     * Translate the given English text, and replace the {name} placeholders
+     *
+     * @param {string} text The English text
+     * @param {Object} params The values of the placeholders
+     * @returns {string}
+     */
+    function tr(text, params = {}) {
+        let translated = ROAD_TRANSLATIONS[text] ?? text;
+        for (const key in params) {
+            translated = translated.replaceAll(`{${key}}`, params[key]);
+        }
+        return translated;
+    }
+
+    /**
+     * Translate the text and title of the merge buttons
+     */
+    function translateMergeLinesButtons() {
+        for (const step in ROAD_MERGE_LINES_BUTTONS) {
+            ROAD_MERGE_LINES_BUTTONS[step].text = tr(ROAD_MERGE_LINES_BUTTONS[step].text);
+            ROAD_MERGE_LINES_BUTTONS[step].title = tr(ROAD_MERGE_LINES_BUTTONS[step].title);
+        }
+    }
+
+    /**
+     * Translate the title and the confirm message of the Lizmap actions
+     * defined in the project .qgs.action file.
+     *
+     * The actions configuration is changed in place,
+     * so that Lizmap also displays the translated texts.
+     */
+    function translateActions() {
+        if (typeof actionConfig === 'undefined' || !actionConfig) return;
+        for (const i in actionConfig) {
+            const action = actionConfig[i];
+            if (action.title) {
+                action.title = tr(action.title);
+            }
+            if (action.confirm) {
+                action.confirm = tr(action.confirm);
+            }
+        }
+    }
+
+    /**
+     * Translate the message returned by a Lizmap action
+     * and displayed by Lizmap at the top of the map.
+     *
+     * The message is given by the "message" field of the first returned feature.
+     * If the feature also has a "message_detail" field, for example the detail of an error,
+     * the detail is not translated: the message is translated with a {detail} placeholder.
+     * For example, the CSV must contain the English text
+     * "An error occurred while splitting the line: {detail}"
+     *
+     * @param {Object} evt The actionResultReceived event
+     */
+    function translateActionMessage(evt) {
+        if (!evt || !evt.features || evt.features.length == 0) return;
+        const properties = evt.features[0].getProperties();
+        const message = properties.message ? properties.message.trim() : '';
+        if (!message) return;
+
+        // Get the message displayed by Lizmap
+        const messageElement = document.getElementById('lizmap-action-message');
+        if (!messageElement) return;
+
+        // Translate the message
+        let translated = '';
+        const detail = properties.message_detail ? properties.message_detail.trim() : '';
+        if (detail && message.endsWith(detail)) {
+            const template = message.slice(0, -detail.length) + '{detail}';
+            translated = tr(template, {detail: detail});
+        } else {
+            translated = tr(message);
+        }
+        if (translated == message) return;
+
+        // Replace the displayed message by the translated one
+        // We keep the same id so that Lizmap removes it when the action is reset
+        messageElement.remove();
+        lizMap.addMessage(translated, 'info', true).attr('id', 'lizmap-action-message');
+    }
+
+    /**
      * Wait for lizMap and mainLizmap objects to be available
      * @returns {Promise<boolean>}
      */
@@ -1730,7 +1968,11 @@ var lizRoadNetwork = function () {
     }
 
     // Start when lizMap and mainLizmap are available
-    waitForObject().then((response) => {
+    // and when the translations have been loaded
+    waitForObject().then(async (response) => {
+        await loadTranslations();
+        translateMergeLinesButtons();
+        translateActions();
         init();
     });
 
