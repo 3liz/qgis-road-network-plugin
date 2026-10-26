@@ -1503,6 +1503,31 @@ var lizRoadNetwork = function () {
     }
 
     /**
+     * Check if the user has all the given editing capabilities for a layer
+     *
+     * The editing configuration only contains the layers
+     * the authenticated user is allowed to edit.
+     *
+     * @param {string} layerId The layer ID
+     * @param {Array<string>} capabilities The needed capabilities, among
+     *                                     createFeature, modifyAttribute, modifyGeometry, deleteFeature
+     * @return {boolean} True if the user has all the capabilities
+     */
+    function hasEditionCapabilities(layerId, capabilities) {
+        if (!lizMap.mainLizmap.edition || !lizMap.mainLizmap.edition.hasEditionLayers) {
+            return false;
+        }
+
+        // Get the layer edition configuration
+        const getLayerConfig = lizMap.getLayerConfigById(layerId);
+        if (!getLayerConfig) return false;
+        const editionLayerConfig = lizMap.config.editionLayers[getLayerConfig[1].name];
+        if (!editionLayerConfig || !editionLayerConfig.capabilities) return false;
+
+        return capabilities.every(capability => editionLayerConfig.capabilities[capability] == 'True');
+    }
+
+    /**
      * Add split buttons for a given linestring layer feature popup
      *
      * @param {HTMLElement} element Popup element
@@ -1525,6 +1550,16 @@ var lizRoadNetwork = function () {
         }
         const actionLayers = actionConfig.layers;
         if (!actionLayers || !actionLayers.includes(layerId)) {
+            return true;
+        }
+
+        // Hide original toolbar action button with value beginning by split_line_by_point
+        const originalBt = element.parentNode.querySelector('button[value^="split_line_by_point"]');
+        if (originalBt) originalBt.remove();
+
+        // Do not add the button if the user cannot edit the layer features
+        // Splitting a line modifies the feature geometry and creates a new feature
+        if (!hasEditionCapabilities(layerId, ['modifyGeometry', 'createFeature'])) {
             return true;
         }
 
@@ -1575,10 +1610,6 @@ var lizRoadNetwork = function () {
         });
         element.parentNode.appendChild(button);
 
-        // Hide original toolbar action button with value beginning by split_line_by_point
-        const originalBt = element.parentNode.querySelector('button[value^="split_line_by_point"]');
-        if (originalBt) originalBt.remove();
-
         return true;
     }
 
@@ -1605,6 +1636,12 @@ var lizRoadNetwork = function () {
         }
         const actionLayers = actionConfig.layers;
         if (!actionLayers || !actionLayers.includes(layerId)) {
+            return true;
+        }
+
+        // Do not add the button if the user cannot edit the layer features
+        // Merging two lines modifies the geometry of one feature and deletes the other one
+        if (!hasEditionCapabilities(layerId, ['modifyGeometry', 'deleteFeature'])) {
             return true;
         }
 
