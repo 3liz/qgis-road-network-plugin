@@ -82,7 +82,7 @@ var lizRoadNetwork = function () {
                     deactivateMapClickTool();
                     lizMap.mainLizmap.action.resetLizmapAction();
                 }
-                if (evt.id = 'edition') {
+                if (evt.id == 'edition') {
                     // Reactivate the checkbox to allow activating the hover tool when the edition form is closed
                     const toggleHover = document.getElementById('rd_toggle_hover');
                     toggleHover.removeAttribute('disabled');
@@ -619,6 +619,17 @@ var lizRoadNetwork = function () {
     }
 
     /**
+     * Callback method to hide the hover info when the mouse leaves the map
+     */
+    function onPointerLeave() {
+        const info = document.getElementById('rd_hover_info');
+        if (info) {
+            info.innerText = '';
+            info.style.visibility = 'hidden';
+        }
+    }
+
+    /**
      * Activate the hover tool
      */
     function activateHoverTool() {
@@ -631,16 +642,12 @@ var lizRoadNetwork = function () {
         }
 
         // Add OL pointermove event
-        lizMap.mainLizmap.map.on('pointermove', (evt) => onPointerMove(evt));
+        // We pass the function itself (not an anonymous one)
+        // so that the same reference can be used to remove the listener
+        lizMap.mainLizmap.map.on('pointermove', onPointerMove);
 
         // Remove hover info when the mouse leaves the map
-        lizMap.mainLizmap.map.getViewport().addEventListener('pointerleave', (evt) => {
-            const info = document.getElementById('rd_hover_info');
-            if (info) {
-                info.innerText = '';
-                info.style.visibility = 'hidden';
-            }
-        });
+        lizMap.mainLizmap.map.getViewport().addEventListener('pointerleave', onPointerLeave);
 
     }
 
@@ -654,7 +661,10 @@ var lizRoadNetwork = function () {
         }
 
         // Remove OL pointermove event
-        lizMap.mainLizmap.map.un('pointermove', (evt) => onPointerMove(evt));
+        lizMap.mainLizmap.map.un('pointermove', onPointerMove);
+
+        // Remove the pointerleave event
+        lizMap.mainLizmap.map.getViewport().removeEventListener('pointerleave', onPointerLeave);
     }
 
     /**
@@ -687,7 +697,9 @@ var lizRoadNetwork = function () {
      */
     function activateMapClickTool() {
         // console.log('activateMapClickTool');
-        lizMap.mainLizmap.map.on('click', (evt) => onPointerClick(evt));
+        // We pass the function itself (not an anonymous one)
+        // so that the same reference can be used to remove the listener
+        lizMap.mainLizmap.map.on('click', onPointerClick);
     }
 
     /**
@@ -695,7 +707,7 @@ var lizRoadNetwork = function () {
      */
     function deactivateMapClickTool() {
         // console.log('deactivateMapClickTool');
-        lizMap.mainLizmap.map.un('click', (evt) => onPointerClick(evt));
+        lizMap.mainLizmap.map.un('click', onPointerClick);
     }
 
 
@@ -812,31 +824,40 @@ var lizRoadNetwork = function () {
      * Create the objects containing the parametres to send to the Lizmap action
      * from the given form values
      *
-     * It returns an object
+     * It returns an object, or null if one of the required fields
+     * (road_code, marker_code, abscissa) is empty.
+     * Empty offset and side fields are replaced by their default values.
      *
      * @param {string} sourceForm The source form: 'editing' or 'main'. Default is 'main'.
-     * @returns {Object}
+     * @returns {Object|null}
      */
     function buildActionParametersFromForm(sourceForm = 'main') {
         const inputs = ['road_code', 'marker_code', 'abscissa', 'offset', 'side'];
-        // Default values
+        const requiredInputs = ['road_code', 'marker_code', 'abscissa'];
+        // Default values for the optional fields
         let refs = {
-            road_code: 'D1',
-            marker_code: '0',
-            abscissa: '0',
+            road_code: '',
+            marker_code: '',
+            abscissa: '',
             offset: '0',
             side: 'left'
         };
         const prefix = (sourceForm == 'editing') ? 'rd_editing_' : 'rd_';
+        let missingRequired = false;
         inputs.forEach(inputName => {
             const inputElement = document.getElementById(`${prefix}${inputName}`);
-            if (!inputElement) {
-                refs[inputName] = '';
+            const inputValue = inputElement ? inputElement.value.trim() : '';
+            if (inputValue === '') {
+                if (requiredInputs.includes(inputName)) {
+                    missingRequired = true;
+                }
                 return;
             }
-            const inputValue = inputElement.value;
             refs[inputName] = inputValue;
         });
+        if (missingRequired) {
+            return null;
+        }
 
         return refs
     }
@@ -853,11 +874,14 @@ var lizRoadNetwork = function () {
         // Create a fake WKT Linestring containing the form values as Y coordinates
         const actionParams = buildActionParametersFromForm(sourceForm);
         if (!actionParams) {
+            const goal = (sourceForm == 'editing') ? 'créer la géométrie' : 'centrer la carte';
             displayMessage(
-                'Veuillez remplir tous les champs de référence pour centrer la carte',
+                `Veuillez renseigner la route, le PR et l'abscisse pour ${goal}`,
                 'info',
                 2000
             );
+            // No action will be run, so we are no longer waiting for the geometry
+            ROAD_WAIT_FOR_GEOMETRY_IN_EDITING_FORM = false;
             return;
         }
 
@@ -906,8 +930,15 @@ var lizRoadNetwork = function () {
         // Get the fake WKT for start and end references. If they are the same, do not continue
         const paramsA = buildActionParametersFromReferences(startReferences);
         const paramsB = buildActionParametersFromReferences(endReferences);
-        // console.log('Equals ?', paramsA, paramsB, paramsA == paramsB);
-        if (!paramsA || !paramsB || (paramsA == paramsB)) {
+        // Compare the values, not the objects. Offset and side are not compared
+        // because they are not used for the end references
+        const sameReferences = (
+            paramsA && paramsB
+            && paramsA.road_code == paramsB.road_code
+            && parseInt(paramsA.marker_code) == parseInt(paramsB.marker_code)
+            && parseFloat(paramsA.abscissa) == parseFloat(paramsB.abscissa)
+        );
+        if (!paramsA || !paramsB || sameReferences) {
             displayMessage(
                 `Veuillez enregistrer des références valides pour obtenir la ligne correspondante
                 <br>Les PR et abscisses de départ et d'arrivée doivent être renseignés et différents
