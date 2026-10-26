@@ -27,7 +27,7 @@ BEGIN
 
 IF action_name = 'get_references_from_point' THEN
     -- Action get_references_from_point
-    -- Récupère les PR+abscisses et autres infos à partir d'un point
+    -- Get the markers, abscissas and other information from a point
         datasource:= format(
             $SQL$
                 WITH
@@ -221,12 +221,17 @@ IF action_name = 'get_references_from_point' THEN
                     1::integer AS id,
                     CASE
                         WHEN s.work->>'status' = 'success'
-                            THEN 'La ligne a bien été coupée en deux'
+                            THEN 'The line has been split in two'
                         ELSE concat(
-                            'Une erreur s''est produite lors de la découpe de la ligne : ',
+                            'An error occurred while splitting the line: ',
                             s.work->>'message'
                         )
                     END AS "message",
+                    -- detail of the error, used by the JavaScript script to translate the message
+                    CASE
+                        WHEN s.work->>'status' = 'success' THEN ''
+                        ELSE s.work->>'message'
+                    END AS message_detail,
                     -- given point
                     ST_Transform(ST_SetSRID(ST_GeomFromText(%4$L), 4326), 2154) AS geom
                 FROM
@@ -259,12 +264,17 @@ IF action_name = 'get_references_from_point' THEN
                     1::integer AS id,
                     CASE
                         WHEN s.work->>'status' = 'success'
-                            THEN 'Les deux objets ont bien été fusionnés'
+                            THEN 'The two features have been merged'
                         ELSE concat(
-                            'Une erreur s''est produite lors de la fusion des objets : ',
+                            'An error occurred while merging the features: ',
                             s.work->>'message'
                         )
                     END AS "message",
+                    -- detail of the error, used by the JavaScript script to translate the message
+                    CASE
+                        WHEN s.work->>'status' = 'success' THEN ''
+                        ELSE s.work->>'message'
+                    END AS message_detail,
                     -- empty geometry
                     NULL::geometry(point, 2154) AS geom
                 FROM
@@ -285,7 +295,7 @@ IF action_name = 'get_references_from_point' THEN
         datasource:= format('
             SELECT
             %1$L AS id,
-            ''The geometry of the object have been displayed in the map'' AS message,
+            ''The geometry of the object has been displayed in the map'' AS message,
             geom
             FROM %2$I.%3$I
             WHERE id = %1$L
