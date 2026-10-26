@@ -127,6 +127,9 @@ When the feature is saved, the **Graphe routier** panel opens again.
 This tool adds a button to the popup of the features of a line layer.
 It splits a line in two features at a point.
 
+The button is only displayed if the user can **modify the geometry** and
+**create features** in this layer, in the Lizmap editing configuration.
+
 1. Open the **Graphe routier** panel and click on the line where it must be split.
    A red point is displayed on the map.
 2. In the popup of the line, click the button. Its label is the `title`
@@ -144,6 +147,9 @@ the clicked point.
 
 This tool adds a button to the popup of the features of a line layer.
 It merges two features of the same layer into one feature.
+
+The button is only displayed if the user can **modify the geometry** and
+**delete features** in this layer, in the Lizmap editing configuration.
 
 1. In the popup of the first line, click **Choisir cet objet pour fusion**
    (*Choose this feature to merge*). The button label becomes
