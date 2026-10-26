@@ -25,8 +25,6 @@ BEGIN
     layer_schema:= parameters->>'layer_schema';
     layer_table:= parameters->>'layer_table';
 
-    -- Action get_references_from_point
-    -- Récupère les PR+abscisses et autres infos à partir d'un point
 IF action_name = 'get_references_from_point' THEN
     -- Action get_references_from_point
     -- Récupère les PR+abscisses et autres infos à partir d'un point

@@ -14,14 +14,35 @@ var lizRoadNetwork = function () {
     const ROAD_ROADS_LAYER_NAME = 'roads';
     const ROAD_EDGES_LAYER_ID = 'edges_7df8a321_25e8_4a67_9bf8_796e4782e147';
     const ROAD_ORDER_FIELD = 'road_order';
+    const ROAD_MERGE_LINES_STATE = {
+        'layer_id': null,
+        'feature_id_a': null,
+        'feature_id_b': null
+    };
+    const ROAD_MERGE_LINES_BUTTONS = {
+        0: {
+            'text': 'Choisir cet objet pour fusion',
+            'title': 'Choisir cet objet pour pouvoir ensuite le fusionner avec un autre objet de la même couche'
+        },
+        1: {
+            'text': 'Fusionner avec l\'objet choisi',
+            'title': 'En cliquant sur ce bouton, vous pouvez lancer la fusion entre cet objet et l\'objet précédemment choisi.'
+        },
+        2: {
+            'text': 'Fusion en cours...',
+            'title': 'La fusion des deux lignes est en cours. Veuillez patienter'
+        },
+        3: {
+            'text': 'Objet choisi pour la fusion',
+            'title': 'Cet objet a été choisi pour être fusionné avec un autre objet. Veuillez cliquer sur le bouton de fusion d\'un autre objet, ou recliquer ici pour annuler'
+        }
+    };
 
     // =================
     // END CONFIGURATION
     // Do not edit below
     // =================
 
-    // Global variables
-    //
     // Hover related variables
     let HOVER_WAIT = false;
     let HOVER_WAIT_MILLISECONDS = 200;
@@ -85,11 +106,38 @@ var lizRoadNetwork = function () {
                 ) {
                     onGetRoadGeometryFromReferenceReceived(evt);
                 } else if (
-                    evt.action.name == 'merge_selected_lines'
-                    || evt.action.name == 'split_line_by_point'
+                    evt.action.name == 'split_line_by_point'
                 ) {
                     // Clear the hightlighted features
                     lizMap.mainLizmap.map.clearHighlightFeatures();
+                } else if (
+                    evt.action.name == 'merge_selected_lines'
+                ) {
+                    // Clear the hightlighted features
+                    lizMap.mainLizmap.map.clearHighlightFeatures();
+
+                    // Get object layer and feature ids
+                    const featureId = ROAD_MERGE_LINES_STATE.feature_id_b;
+                    const layerId = ROAD_MERGE_LINES_STATE.layer_id;
+
+                    // Clean the popup : keep only the merged feature (to avoid issues)
+                    document.querySelectorAll(`div.lizmapPopupSingleFeature[data-layer-id="${layerId}"]:not([data-feature-id="${featureId}"])`).forEach(elt => {
+                        elt.remove();
+                    });
+
+                    // Refresh the visible button to its initial state
+                    const button = document.querySelectorAll(`button.road_network_btn[data-action-name="${evt.action.name}"]`).forEach(bt => {
+                        bt.innerText = ROAD_MERGE_LINES_BUTTONS[0].text;
+                        bt.title = ROAD_MERGE_LINES_BUTTONS[0].title;
+                        bt.disabled = false;
+                        bt.classList.toggle('active', false);
+                    });
+
+                    // Clear merge line global object
+                    ROAD_MERGE_LINES_STATE.layer_id = null;
+                    ROAD_MERGE_LINES_STATE.feature_id_a = null;
+                    ROAD_MERGE_LINES_STATE.feature_id_b = null;
+
                 }
             },
 
@@ -156,69 +204,9 @@ var lizRoadNetwork = function () {
                     let featureId = val.split('.').pop();
                     let layerId = val.replace('.' + featureId, '');
 
-                    // Hide actions
-                    // Hide button with value beginning by split_line_by_point
-                    const splitOriginalBt = element.parentNode.querySelector('button[value^="split_line_by_point"]');
-                    if (splitOriginalBt) splitOriginalBt.remove();
-
-                    // Get action configuration
-                    const splitActionConfig = lizMap.mainLizmap.action.getActionItemByName('split_line_by_point', 'feature');
-                    console.log('splitActionConfig', splitActionConfig);
-                    if (!splitActionConfig) {
-                        return true;
-                    }
-                    const actionLayers = splitActionConfig.layers;
-                    console.log('actionLayers', actionLayers);
-                    if (!actionLayers || !actionLayers.includes(layerId)) {
-                        return true;
-                    }
-
-                    // Add a button to allow the user to split the line at the clicked point
-                    let splitButton = document.createElement('button');
-                    splitButton.classList.add('btn', 'road_network_btn');
-                    splitButton.innerHTML = splitActionConfig.title;
-                    splitButton.setAttribute('title', splitActionConfig.title);
-                    splitButton.addEventListener('click', function(evt) {
-                        evt.preventDefault();
-                        evt.stopPropagation();
-
-                        // Confirm with the user
-                        if ('confirm' in splitActionConfig) {
-                            if (!confirm(splitActionConfig.confirm)) {
-                                return;
-                            }
-                        }
-
-                        // Get action feature geometry
-                        const getActionFeatures = lizMap.mainLizmap.action.actionLayer.getSource().getFeatures();
-                        if (!getActionFeatures || getActionFeatures.length == 0) {
-                            displayMessage(
-                                `Aucun point n'a été trouvé. Veuillez ouvrir le panneau "Graphe routier", puis cliquer un point sur la ligne.`,
-                                'info',
-                                3000
-                            );
-                            return;
-                        }
-                        const feature = getActionFeatures[0];
-                        const geometry = feature.getGeometry();
-                        const WKTformat = new lizMap.ol.format.WKT();
-                        const projOptions = {
-                            featureProjection: lizMap.mainLizmap.projection,
-                            dataProjection: 'EPSG:4326'
-                        };
-                        const wkt = WKTformat.writeGeometry(geometry, projOptions);
-
-                        // Run Lizmap action
-                        lizMap.mainLizmap.action.runLizmapAction(
-                            'split_line_by_point',
-                            'feature',
-                            layerId,
-                            featureId,
-                            wkt
-                        )
-                    });
-                    element.parentNode.appendChild(splitButton);
-
+                    // Add popup buttons
+                    addSplitPopupButton(element, layerId, featureId);
+                    addMergePopupButton(element, layerId, featureId);
                 });
 
             }
@@ -1209,7 +1197,7 @@ var lizRoadNetwork = function () {
         if (roadCodeInput) {
             const editingRoadCodeInput = editingForm ? editingForm.querySelector('input[name="road_code"]') : null;
             if (editingRoadCodeInput) {
-                console.log('## Set road_code from Lizmap editing form', editingRoadCodeInput.value);
+                // console.log('## Set road_code from Lizmap editing form', editingRoadCodeInput.value);
                 roadCodeInput.value = editingRoadCodeInput.value;
             }
         }
@@ -1328,7 +1316,7 @@ var lizRoadNetwork = function () {
         let editingFormRoadCode = '';
         let searchedRoadCode = '';
         if (editingFormRoadCodeElt) {
-            console.log('onEditing - Set road_code from Lizmap editing form', editingFormRoadCodeElt.value);
+            // console.log('onEditing - Set road_code from Lizmap editing form', editingFormRoadCodeElt.value);
             // Set the road_code in the form to the value from the Lizmap editing form
             editingFormRoadCode = editingFormRoadCodeElt.value;
             searchedRoadCode = editingFormRoadCode;
@@ -1341,10 +1329,10 @@ var lizRoadNetwork = function () {
                 (!searchedRoadCode && roadCodeElement.value)
             ) {
                 searchedRoadCode = roadCodeElement.value;
-                console.log('onEditing - new form wins', searchedRoadCode);
+                // console.log('onEditing - new form wins', searchedRoadCode);
             }
         }
-        console.log('onEditing - Get references from geometry modification, geometry type:', geometryType, 'road_code:', searchedRoadCode);
+        // console.log('onEditing - Get references from geometry modification, geometry type:', geometryType, 'road_code:', searchedRoadCode);
 
         // Depending on the geometry type, we get the coordinates of the point or the first and last vertex of the line
         if (geometryType == 'point') {
@@ -1466,6 +1454,265 @@ var lizRoadNetwork = function () {
         }, 100);
 
     }
+
+    /**
+     * Add split buttons for a given linestring layer feature popup
+     *
+     * @param {HTMLElement} element Popup element
+     * @param {string} layerId The layer ID
+     * @param {number} featureId The feature ID
+     */
+    function addSplitPopupButton(element, layerId, featureId) {
+        // Do not use the buttons for the edges layer
+        if (layerId == ROAD_EDGES_LAYER_ID) return true;
+
+        // Get Lizmap layer configuration to check the geometry type of the layer
+        const getLayerConfig = lizMap.getLayerConfigById(layerId);
+        if (!getLayerConfig) return true;
+        if (getLayerConfig[1].geometryType != 'line') return true;
+
+        // Get action configuration
+        const actionConfig = lizMap.mainLizmap.action.getActionItemByName('split_line_by_point', 'feature');
+        if (!actionConfig) {
+            return true;
+        }
+        const actionLayers = actionConfig.layers;
+        if (!actionLayers || !actionLayers.includes(layerId)) {
+            return true;
+        }
+
+        // Add a button to allow the user to split the line at the clicked point
+        const button = document.createElement('button');
+        button.classList.add('btn', 'road_network_btn');
+        button.innerHTML = actionConfig.title;
+        button.setAttribute('title', actionConfig.title);
+        button.dataset.actionName = 'split_line_by_point';
+        button.addEventListener('click', function(evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+
+            // Confirm with the user
+            if ('confirm' in actionConfig) {
+                if (!confirm(actionConfig.confirm)) {
+                    return;
+                }
+            }
+
+            // Get action feature geometry
+            const getActionFeatures = lizMap.mainLizmap.action.actionLayer.getSource().getFeatures();
+            if (!getActionFeatures || getActionFeatures.length == 0) {
+                displayMessage(
+                    `Aucun point n'a été trouvé. Veuillez ouvrir le panneau "Graphe routier", puis cliquer un point sur la ligne.`,
+                    'info',
+                    3000
+                );
+                return;
+            }
+            const feature = getActionFeatures[0];
+            const geometry = feature.getGeometry();
+            const WKTformat = new lizMap.ol.format.WKT();
+            const projOptions = {
+                featureProjection: lizMap.mainLizmap.projection,
+                dataProjection: 'EPSG:4326'
+            };
+            const wkt = WKTformat.writeGeometry(geometry, projOptions);
+
+            // Run Lizmap action
+            lizMap.mainLizmap.action.runLizmapAction(
+                'split_line_by_point',
+                'feature',
+                layerId,
+                featureId,
+                wkt
+            );
+        });
+        element.parentNode.appendChild(button);
+
+        // Hide original toolbar action button with value beginning by split_line_by_point
+        const originalBt = element.parentNode.querySelector('button[value^="split_line_by_point"]');
+        if (originalBt) originalBt.remove();
+
+        return true;
+    }
+
+    /**
+     * Add merge button for a given linestring layer feature popup
+     *
+     * @param {HTMLElement} element Popup element
+     * @param {string} layerId The layer ID
+     * @param {number} featureId The feature ID
+     */
+    function addMergePopupButton(element, layerId, featureId) {
+        // Do not use the buttons for the edges layer
+        if (layerId == ROAD_EDGES_LAYER_ID) return true;
+
+        // Get Lizmap layer configuration to check the geometry type of the layer
+        const getLayerConfig = lizMap.getLayerConfigById(layerId);
+        if (!getLayerConfig) return true;
+        if (getLayerConfig[1].geometryType != 'line') return true;
+
+        // Get action configuration
+        const actionConfig = lizMap.mainLizmap.action.getActionItemByName('merge_selected_lines', 'layer');
+        if (!actionConfig) {
+            return true;
+        }
+        const actionLayers = actionConfig.layers;
+        if (!actionLayers || !actionLayers.includes(layerId)) {
+            return true;
+        }
+
+        // Get current step
+        let currentStep = 0;
+        if (ROAD_MERGE_LINES_STATE.feature_id_a > 0) {
+            currentStep = (ROAD_MERGE_LINES_STATE.feature_id_b > 0) ? 2 : 1;
+        }
+
+        // Do not add a button if the first feature has already been chosen
+        if (currentStep > 0 && layerId != ROAD_MERGE_LINES_STATE.layer_id) return true;
+
+        // Add a button to allow the user to select then the selected features
+        const button = document.createElement('button');
+        button.classList.add('btn', 'road_network_btn');
+        button.dataset.actionName = 'merge_selected_lines';
+        button.disabled = false;
+        if (currentStep == 2) {
+            button.disabled = true;
+        }
+        button.innerText = ROAD_MERGE_LINES_BUTTONS[currentStep].text;
+        button.setAttribute('title', ROAD_MERGE_LINES_BUTTONS[currentStep].title);
+        button.classList.toggle('active', false);
+        button.dataset.currentStep = currentStep;
+        button.dataset.layerId = layerId;
+        button.dataset.featureId = parseInt(featureId);
+        if (featureId == ROAD_MERGE_LINES_STATE.feature_id_a) {
+            button.innerText = ROAD_MERGE_LINES_BUTTONS[3].text;
+            button.title = ROAD_MERGE_LINES_BUTTONS[3].title;
+            button.classList.toggle('active', true);
+        }
+
+        button.addEventListener('click', function(evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+
+            const clickedButton = evt.currentTarget;
+            const clickedLayerId = clickedButton.dataset.layerId;
+            const clickedFeatureId = clickedButton.dataset.featureId;
+            // console.log('DEBUT ROAD_MERGE_LINES_STATE = ', ROAD_MERGE_LINES_STATE);
+
+            // Get current step when clicking
+            let stepBeforeClick = 0;
+            if (ROAD_MERGE_LINES_STATE.feature_id_a > 0) {
+                stepBeforeClick = (ROAD_MERGE_LINES_STATE.feature_id_b > 0) ? 2 : 1;
+            }
+
+            if (stepBeforeClick == 0) {
+                // Set state
+                ROAD_MERGE_LINES_STATE.layer_id = clickedButton.dataset.layerId;
+                ROAD_MERGE_LINES_STATE.feature_id_a = parseInt(clickedButton.dataset.featureId);
+                ROAD_MERGE_LINES_STATE.feature_id_b = null;
+
+                // Change button
+                clickedButton.innerText = ROAD_MERGE_LINES_BUTTONS[3].text;
+                clickedButton.title = ROAD_MERGE_LINES_BUTTONS[3].title;
+                clickedButton.classList.toggle('active', true);
+
+                // Change other buttons of the same action and layer
+                document.querySelectorAll('button.road_network_btn[data-action-name="merge_selected_lines"]').forEach(otherButton => {
+                    if (otherButton.dataset.layerId != clickedLayerId) return true;
+                    if (otherButton.dataset.featureId == clickedFeatureId) return true;
+                    otherButton.innerText = ROAD_MERGE_LINES_BUTTONS[1].text;
+                    otherButton.title = ROAD_MERGE_LINES_BUTTONS[1].title;
+                    otherButton.classList.toggle('active', false);
+                });
+
+            } else if (stepBeforeClick == 1) {
+                // Set state depending on the feature Id clicked
+                if (clickedButton.dataset.featureId == ROAD_MERGE_LINES_STATE.feature_id_a) {
+                    // If it is the same, cancel the operation
+                    // Set state
+                    ROAD_MERGE_LINES_STATE.layer_id = null;
+                    ROAD_MERGE_LINES_STATE.feature_id_a = null;
+                    ROAD_MERGE_LINES_STATE.feature_id_b = null;
+                    // Change button
+                    clickedButton.innerText = ROAD_MERGE_LINES_BUTTONS[0].text;
+                    clickedButton.title = ROAD_MERGE_LINES_BUTTONS[0].title;
+                    clickedButton.classList.toggle('active', false);
+                    // Change other buttons of the same action and layer
+                    document.querySelectorAll('button.road_network_btn[data-action-name="merge_selected_lines"]').forEach(otherButton => {
+                        if (otherButton.dataset.layerId != clickedLayerId) return true;
+                        if (otherButton.dataset.featureId == clickedFeatureId) return true;
+                        otherButton.innerText = ROAD_MERGE_LINES_BUTTONS[0].text;
+                        otherButton.title = ROAD_MERGE_LINES_BUTTONS[0].title;
+                        otherButton.classList.toggle('active', false);
+                    });
+                } else {
+                    // Run the action
+                    ROAD_MERGE_LINES_STATE.feature_id_b = parseInt(clickedButton.dataset.featureId);
+
+                    // Change button
+                    clickedButton.innerText = ROAD_MERGE_LINES_BUTTONS[2].text;
+                    clickedButton.title = ROAD_MERGE_LINES_BUTTONS[2].title;
+                    clickedButton.disabled = true;
+                    clickedButton.classList.toggle('active', true);
+                    // Change other buttons of the same action and layer
+                    document.querySelectorAll('button.road_network_btn[data-action-name="merge_selected_lines"]').forEach(otherButton => {
+                        if (otherButton.dataset.layerId != clickedLayerId) return true;
+                        otherButton.innerText = ROAD_MERGE_LINES_BUTTONS[2].text;
+                        otherButton.title = ROAD_MERGE_LINES_BUTTONS[2].title;
+                        otherButton.disabled = true;
+                        otherButton.classList.toggle('active', true);
+                    });
+
+                    // Confirm with the user
+                    if ('confirm' in actionConfig) {
+                        if (!confirm(actionConfig.confirm)) {
+                            // If it is the same, cancel the operation
+                            // Set state
+                            ROAD_MERGE_LINES_STATE.layer_id = null;
+                            ROAD_MERGE_LINES_STATE.feature_id_a = null;
+                            ROAD_MERGE_LINES_STATE.feature_id_b = null;
+                            // Change button
+                            clickedButton.innerText = ROAD_MERGE_LINES_BUTTONS[0].text;
+                            clickedButton.title = ROAD_MERGE_LINES_BUTTONS[0].title;
+                            clickedButton.classList.toggle('active', false);
+                            // Change other buttons of the same action and layer
+                            document.querySelectorAll('button.road_network_btn[data-action-name="merge_selected_lines"]').forEach(otherButton => {
+                                if (otherButton.dataset.layerId != clickedLayerId) return true;
+                                if (otherButton.dataset.featureId == clickedFeatureId) return true;
+                                otherButton.innerText = ROAD_MERGE_LINES_BUTTONS[0].text;
+                                otherButton.title = ROAD_MERGE_LINES_BUTTONS[0].title;
+                                otherButton.classList.toggle('active', false);
+                            });
+
+                            return;
+                        }
+                    }
+
+                    // Run Lizmap action
+                    const actionOptions = {
+                        'feature_id_a': ROAD_MERGE_LINES_STATE.feature_id_a,
+                        'feature_id_b': ROAD_MERGE_LINES_STATE.feature_id_b
+                    };
+                    lizMap.mainLizmap.action.runLizmapAction(
+                        'merge_selected_lines',
+                        'layer',
+                        clickedLayerId,
+                        null,
+                        null,
+                        actionOptions
+                    );
+                }
+            } else {
+                // Do nothing
+                // console.log(`layerId = ${clickedButton.dataset.layerId}, featureId = ${parseInt(clickedButton.dataset.featureId)}, stepBeforeClick = ${stepBeforeClick}, on ne fait rien`);
+            }
+        });
+
+        element.parentNode.appendChild(button);
+
+        return true;
+    }
+
 
     /**
      * Wait for lizMap and mainLizmap objects to be available
