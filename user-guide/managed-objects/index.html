@@ -731,6 +731,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#automatic-calculation-of-the-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic calculation of the references
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#update-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -903,6 +914,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#automatic-calculation-of-the-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic calculation of the references
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#update-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -943,7 +965,36 @@ When the road graph is modified, these objects must be updated.</p>
 <h2 id="the-managed-objects-layer">The managed objects layer<a class="headerlink" href="#the-managed-objects-layer" title="Permanent link">#</a></h2>
 <p>The <code>managed_objects</code> layer lists <strong>all the PostgreSQL tables</strong> impacted by any <strong>graph modification</strong>,
 with the update policy to apply to each of them:</p>
-<p><img alt="Managed objects" src="../../media/user-guide/qgis_managed_objects.png" /></p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>schema_name</th>
+<th>table_name</th>
+<th>geometry_type</th>
+<th>update_policy_on_graph_change</th>
+<th>add_trigger_on_geom_change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>managed</td>
+<td>demo_trees</td>
+<td>POINT</td>
+<td>references</td>
+<td>True</td>
+</tr>
+<tr>
+<td>2</td>
+<td>managed</td>
+<td>demo_safety_barriers</td>
+<td>MULTILINESTRING</td>
+<td>geometry</td>
+<td>False</td>
+</tr>
+</tbody>
+</table>
 <ul>
 <li><code>schema_name</code> and <code>table_name</code>: the business table,</li>
 <li><code>geometry_type</code>: the geometry type of the table, e.g. <code>POINT</code> or <code>MULTILINESTRING</code>,</li>
@@ -952,7 +1003,68 @@ with the update policy to apply to each of them:</p>
 <li><code>geometry</code>: the references are kept and the <strong>geometry is updated</strong>.</li>
 </ul>
 </li>
+<li><code>add_trigger_on_geom_change</code>: if <code>True</code>, the trigger calculating the references
+  is created on this table by the function <code>road_graph.add_managed_objects_triggers()</code>
+  (see <a href="#automatic-calculation-of-the-references">below</a>). Default: <code>False</code>.</li>
 </ul>
+<h2 id="automatic-calculation-of-the-references">Automatic calculation of the references<a class="headerlink" href="#automatic-calculation-of-the-references" title="Permanent link">#</a></h2>
+<p>The trigger function <code>road_graph.calculate_managed_object_references</code> <strong>calculates the references</strong>
+of a managed object feature each time it is <strong>inserted</strong> or its <strong>geometry is updated</strong>.
+The table must be listed in <code>road_graph.managed_objects</code>, and have a <code>road_code</code> and a <code>geom</code> column.</p>
+<p>The function <code>road_graph.add_managed_objects_triggers()</code> creates this trigger, named
+<code>trg_calculate_managed_object_references</code>, on <strong>every table</strong> listed in <code>road_graph.managed_objects</code>
+with the column <code>add_trigger_on_geom_change</code> set to <code>True</code>.
+Run it after adding new tables in the managed objects layer, or after checking this column:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">road_graph</span><span class="p">.</span><span class="n">add_managed_objects_triggers</span><span class="p">();</span>
+</code></pre></div></td></tr></table></div>
+<p>It can be run several times: the trigger is only created when it does not already exist.
+Unchecking <code>add_trigger_on_geom_change</code> does not remove an existing trigger.
+The function returns one line per managed object, with its trigger status:</p>
+<table>
+<thead>
+<tr>
+<th>schema_name</th>
+<th>table_name</th>
+<th>trigger_status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>public</td>
+<td>demo_painting</td>
+<td>created</td>
+</tr>
+<tr>
+<td>public</td>
+<td>demo_trees</td>
+<td>already exists</td>
+</tr>
+<tr>
+<td>public</td>
+<td>demo_nogeom</td>
+<td>geom column not found</td>
+</tr>
+<tr>
+<td>public</td>
+<td>missing_table</td>
+<td>table not found</td>
+</tr>
+<tr>
+<td>public</td>
+<td>demo_signs</td>
+<td>not requested</td>
+</tr>
+</tbody>
+</table>
+<p>For each table, the created trigger is equivalent to:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TRIGGER</span><span class="w"> </span><span class="n">trg_calculate_managed_object_references</span>
+<span class="k">BEFORE</span><span class="w"> </span><span class="k">INSERT</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">UPDATE</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">geom</span>
+<span class="k">ON</span><span class="w"> </span><span class="k">public</span><span class="p">.</span><span class="n">demo_painting</span>
+<span class="k">FOR</span><span class="w"> </span><span class="k">EACH</span><span class="w"> </span><span class="k">ROW</span><span class="w"> </span><span class="k">EXECUTE</span><span class="w"> </span><span class="k">PROCEDURE</span><span class="w"> </span><span class="n">road_graph</span><span class="p">.</span><span class="n">calculate_managed_object_references</span><span class="p">();</span>
+</code></pre></div></td></tr></table></div>
 <h2 id="update-rules">Update rules<a class="headerlink" href="#update-rules" title="Permanent link">#</a></h2>
 <p>When the user <strong>merges the data from the editing session</strong>, every impacted object is
 <strong>automatically updated based on the rule</strong> chosen by the administrator:</p>
