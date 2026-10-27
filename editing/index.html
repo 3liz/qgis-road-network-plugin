@@ -12,13 +12,13 @@
         <meta name="author" content="3Liz">
       
       
-        <link rel="canonical" href="https://docs.3liz.org/qgis-road-network-plugin/admin-guide/">
+        <link rel="canonical" href="https://docs.3liz.org/qgis-road-network-plugin/editing/">
       
       
-        <link rel="prev" href="../concepts/">
+        <link rel="prev" href="../installation/">
       
       
-        <link rel="next" href="../user-guide/">
+        <link rel="next" href="../changelog/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Admin guide - RoadNetwork plugin</title>
+        <title>Editing - RoadNetwork plugin</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#introduction" class="md-skip">
+        <a href="#how-to-edit-the-data" class="md-skip">
           Skip to content
         </a>
       
@@ -109,7 +109,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Admin guide
+              Editing
             
           </span>
         </div>
@@ -225,18 +225,36 @@
   
   
   
-    
-    
-      <li class="md-tabs__item">
-        <a href="../concepts/" class="md-tabs__link">
-          
+    <li class="md-tabs__item">
+      <a href="../concepts/" class="md-tabs__link">
+        
   
+  
+    
   
   Concepts
 
-        </a>
-      </li>
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../installation/" class="md-tabs__link">
+        
+  
+  
     
+  
+  Installation
+
+      </a>
+    </li>
   
 
       
@@ -254,30 +272,10 @@
   
     
   
-  Admin guide
+  Editing
 
       </a>
     </li>
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../user-guide/" class="md-tabs__link">
-          
-  
-  
-  User guide
-
-        </a>
-      </li>
-    
   
 
       
@@ -467,56 +465,6 @@
   
   
   
-    
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Concepts
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Concepts
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
       <a href="../concepts/" class="md-nav__link">
         
@@ -525,7 +473,7 @@
   <span class="md-ellipsis">
     
   
-    Main
+    Concepts
   
 
     
@@ -537,11 +485,30 @@
     </li>
   
 
-              
-            
-          </ul>
-        </nav>
+    
       
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -562,24 +529,6 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Admin guide
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -587,7 +536,7 @@
   <span class="md-ellipsis">
     
   
-    Admin guide
+    Editing
   
 
     
@@ -596,216 +545,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#create-your-database-local-interface" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create your database local interface
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#edit-the-database-metadata" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Edit the database metadata
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Edit the database metadata">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-administration-project" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The administration project
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#how-to-edit-the-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How to edit the data
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example data
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example data">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#sample_table" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sample_table
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    User guide
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    User guide
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../user-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Main
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../user-guide/installation/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Installation
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
       
     </li>
   
@@ -939,92 +678,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#create-your-database-local-interface" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create your database local interface
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#edit-the-database-metadata" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Edit the database metadata
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Edit the database metadata">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#the-administration-project" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The administration project
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#how-to-edit-the-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How to edit the data
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example data
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example data">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#sample_table" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sample_table
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -1043,44 +696,19 @@
   
 
 
-<h1 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">#</a></h1>
-<p>To go on, you must first have installed and configured the plugin for QGIS Desktop.
-See the doc <a href="../installation/">installation and configuration</a></p>
-<h2 id="create-your-database-local-interface">Create your database local interface<a class="headerlink" href="#create-your-database-local-interface" title="Permanent link">#</a></h2>
-<p>This algorithm will create a <strong>new QGIS project file</strong> for administration purpose.</p>
-<p>The generated QGIS project must then be opened by the administrator
-to create the needed metadata by using QGIS editing capabilities</p>
-<p>Parameters:</p>
-<ul>
-<li><code>PostgreSQL connection to the database</code>: name of the database connection
-  you would like to use for the new QGIS project.</li>
-<li><code>QGIS project file to create</code>: choose the output file destination.
-  We advise you to choose a name reflecting the database name.</li>
-</ul>
-<h2 id="edit-the-database-metadata">Edit the database metadata<a class="headerlink" href="#edit-the-database-metadata" title="Permanent link">#</a></h2>
-<h3 id="the-administration-project">The administration project<a class="headerlink" href="#the-administration-project" title="Permanent link">#</a></h3>
-<p>The <strong>administration project</strong> created beforehand will allow the administrator
-to <strong>create, modify and delete metadata</strong> in the database. As an administrator,
-you must open this project with QGIS.</p>
-<p>Before going on, be sure you have a working connection between your computer and the database server.</p>
-<p>Once opened, the QGIS project is configured to allow the administrator to edit the data.</p>
-<h3 id="how-to-edit-the-data">How to edit the data<a class="headerlink" href="#how-to-edit-the-data" title="Permanent link">#</a></h3>
+<h1 id="how-to-edit-the-data">How to edit the data<a class="headerlink" href="#how-to-edit-the-data" title="Permanent link">#</a></h1>
 <p>In QGIS, you can edit the layer data by toggling the <strong>editing mode</strong> for each layer:</p>
 <ul>
-<li>Select the layer in the panel by clicking on it: the layer is highlighted in blue</li>
-<li>Right-click on the layer name and select <code>Toggle Editing</code> or use the menu <code>Layer / Toggle Editing</code></li>
-</ul>
-<p>Before going on, please <strong>toggle editing</strong> for all the following layers:</p>
-<ul>
-<li>test</li>
+<li><strong>Select the layer</strong> in the panel by clicking on it: the layer is highlighted in blue</li>
+<li><strong>Right-click on the layer name</strong> and select <code>Toggle Editing</code> or use the menu <code>Layer / Toggle Editing</code></li>
 </ul>
 <p>To <strong>add a new record</strong>, select the layer in the <code>Layers</code> panel,
-then use the menu <code>Edit / Add record</code> (or <code>CTRL+.</code>). It will open a form which lets you enter the needed data.
+then use the menu <code>Edit / Add Record</code> (or <code>CTRL+.</code>). It will open a form which lets you enter the needed data.
 Once every required fields have been filled, validate with the <code>OK</code> button on the bottom-right.</p>
 <p>To <strong>view all the records</strong> of a layer, select the layer in the <code>Layers</code> panel,
-then open the attribute table with the menu <code>Layers / Open attribute table</code> (or <code>F6</code>)</p>
+then open the attribute table with the menu <code>Layer / Open Attribute Table</code> (or <code>F6</code>)</p>
 <p>You can <strong>undo previous modifications</strong> with the menu <code>Edit / Undo</code> (or <code>CTRL+Z</code>).</p>
-<p>To permanently <strong>save the changed data</strong> in the layer, you need to use the menu <code>Layer / Saver layer edits</code>.
+<p>To permanently <strong>save the changed data</strong> in the layer, you need to use the menu <code>Layer / Save Layer Edits</code>.
 After saving the data, you will not be able to undo your changes
 (but you can always reopen the data and changed the values).</p>
 <p>To <strong>edit a record</strong>, open the layer attribute table, and then click on the small button <code>Switch to form view</code>
@@ -1089,35 +717,6 @@ and use the displayed form to edit the data.</p>
 <p>To <strong>delete a record</strong>, select the record in the attribute table by clicking on the line number on the left:
 the line must be highlighted in blue. Then use the trash icon <code>Delete selected features</code> (or <code>Del</code>).
 <em>You can undo the deletion if you have not yet saved layer edits</em>.</p>
-<h3 id="example-data">Example data<a class="headerlink" href="#example-data" title="Permanent link">#</a></h3>
-<h4 id="sample_table">sample_table<a class="headerlink" href="#sample_table" title="Permanent link">#</a></h4>
-<p>Example content:</p>
-<table>
-<thead>
-<tr>
-<th>id</th>
-<th>ac_label</th>
-<th>ac_description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>Public organizations</td>
-<td></td>
-</tr>
-<tr>
-<td>2</td>
-<td>Research centers</td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<p>Notes:</p>
-<ul>
-<li><strong>Id</strong> will be automatically given after saving layer edits. Do not modify.</li>
-<li><strong>Label</strong> and <strong>description</strong> are mandatory</li>
-</ul>
 
 
 
