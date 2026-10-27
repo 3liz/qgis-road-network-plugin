@@ -1036,7 +1036,7 @@ of an editing session, as a 10m buffer around them. It is useful to have a quick
 which can be slow to compute. It is <strong>refreshed automatically at the end of the merge</strong>
 of an editing session. To refresh it manually, for example after running the algorithm
 <code>Update managed objects from the road graph</code>, use:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">road_graph</span><span class="p">.</span><span class="n">vm_managed_objects</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">CONCURRENTLY</span><span class="w"> </span><span class="n">road_graph</span><span class="p">.</span><span class="n">vm_managed_objects</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h2 id="automatic-calculation-of-the-references">Automatic calculation of the references<a class="headerlink" href="#automatic-calculation-of-the-references" title="Permanent link">#</a></h2>
 <p>The trigger function <code>road_graph.calculate_managed_object_references</code> <strong>calculates the references</strong>
