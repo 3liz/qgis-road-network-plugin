@@ -25,15 +25,27 @@
          <lastmod>2026-10-27</lastmod>
     </url>
     <url>
-         <loc>https://docs.3liz.org/qgis-road-network-plugin/editing/</loc>
-         <lastmod>2026-10-27</lastmod>
-    </url>
-    <url>
          <loc>https://docs.3liz.org/qgis-road-network-plugin/installation/</loc>
          <lastmod>2026-10-27</lastmod>
     </url>
     <url>
          <loc>https://docs.3liz.org/qgis-road-network-plugin/lizmap-web-client/</loc>
+         <lastmod>2026-10-27</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.3liz.org/qgis-road-network-plugin/user-guide/</loc>
+         <lastmod>2026-10-27</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.3liz.org/qgis-road-network-plugin/user-guide/graph-editing/</loc>
+         <lastmod>2026-10-27</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.3liz.org/qgis-road-network-plugin/user-guide/managed-objects/</loc>
+         <lastmod>2026-10-27</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.3liz.org/qgis-road-network-plugin/user-guide/qgis-project/</loc>
          <lastmod>2026-10-27</lastmod>
     </url>
 </urlset>

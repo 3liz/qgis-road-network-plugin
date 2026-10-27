@@ -12,31 +12,31 @@
         <meta name="author" content="3Liz">
       
       
-        <link rel="canonical" href="https://docs.3liz.org/qgis-road-network-plugin/editing/">
+        <link rel="canonical" href="https://docs.3liz.org/qgis-road-network-plugin/user-guide/managed-objects/">
       
       
-        <link rel="prev" href="../installation/">
+        <link rel="prev" href="../graph-editing/">
       
       
-        <link rel="next" href="../changelog/">
+        <link rel="next" href="../../changelog/">
       
       
         
       
       
-      <link rel="icon" href="../icon.png">
+      <link rel="icon" href="../../icon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Editing - RoadNetwork plugin</title>
+        <title>Managed objects - RoadNetwork plugin</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,7 +51,7 @@
     
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#how-to-edit-the-data" class="md-skip">
+        <a href="#managed-objects" class="md-skip">
           Skip to content
         </a>
       
@@ -90,9 +90,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="RoadNetwork plugin" class="md-header__button md-logo" aria-label="RoadNetwork plugin" data-md-component="logo">
+    <a href="../.." title="RoadNetwork plugin" class="md-header__button md-logo" aria-label="RoadNetwork plugin" data-md-component="logo">
       
-  <img src="../icon.png" alt="logo">
+  <img src="../../icon.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -109,7 +109,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Editing
+              Managed objects
             
           </span>
         </div>
@@ -188,7 +188,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../" class="md-tabs__link">
+      <a href="../../../" class="md-tabs__link">
         
   
   
@@ -207,7 +207,7 @@
   
   
     <li class="md-tabs__item">
-      <a href=".." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -226,7 +226,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../concepts/" class="md-tabs__link">
+      <a href="../../concepts/" class="md-tabs__link">
         
   
   
@@ -245,7 +245,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../installation/" class="md-tabs__link">
+      <a href="../../installation/" class="md-tabs__link">
         
   
   
@@ -265,17 +265,18 @@
     
   
   
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
   
-  Editing
+  
+  User Guide
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -285,7 +286,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../changelog/" class="md-tabs__link">
+      <a href="../../changelog/" class="md-tabs__link">
         
   
   
@@ -304,7 +305,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../contributing/" class="md-tabs__link">
+      <a href="../../contributing/" class="md-tabs__link">
         
   
   
@@ -323,7 +324,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../database/index.html" class="md-tabs__link">
+      <a href="../../database/index.html" class="md-tabs__link">
         
   
   
@@ -342,7 +343,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../lizmap-web-client/" class="md-tabs__link">
+      <a href="../../lizmap-web-client/" class="md-tabs__link">
         
   
   
@@ -383,9 +384,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="RoadNetwork plugin" class="md-nav__button md-logo" aria-label="RoadNetwork plugin" data-md-component="logo">
+    <a href="../.." title="RoadNetwork plugin" class="md-nav__button md-logo" aria-label="RoadNetwork plugin" data-md-component="logo">
       
-  <img src="../icon.png" alt="logo">
+  <img src="../../icon.png" alt="logo">
 
     </a>
     RoadNetwork plugin
@@ -412,7 +413,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../" class="md-nav__link">
+      <a href="../../../" class="md-nav__link">
         
   
   
@@ -439,7 +440,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -466,7 +467,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../concepts/" class="md-nav__link">
+      <a href="../../concepts/" class="md-nav__link">
         
   
   
@@ -493,7 +494,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -521,22 +522,68 @@
   
   
   
-    <li class="md-nav__item md-nav__item--active">
+    
+    
+    
+    
       
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
+        
         
       
       
-      <a href="./" class="md-nav__link md-nav__link--active">
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Editing
+    Introduction
   
 
     
@@ -545,6 +592,166 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qgis-project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QGIS project and tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../graph-editing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Road graph editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed objects
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed objects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-managed-objects-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The managed objects layer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#update-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Update rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
       
     </li>
   
@@ -557,7 +764,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../changelog/" class="md-nav__link">
+      <a href="../../changelog/" class="md-nav__link">
         
   
   
@@ -584,7 +791,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   
@@ -611,7 +818,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../database/index.html" class="md-nav__link">
+      <a href="../../database/index.html" class="md-nav__link">
         
   
   
@@ -638,7 +845,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../lizmap-web-client/" class="md-nav__link">
+      <a href="../../lizmap-web-client/" class="md-nav__link">
         
   
   
@@ -678,6 +885,36 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-managed-objects-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The managed objects layer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#update-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Update rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -696,27 +933,40 @@
   
 
 
-<h1 id="how-to-edit-the-data">How to edit the data<a class="headerlink" href="#how-to-edit-the-data" title="Permanent link">#</a></h1>
-<p>In QGIS, you can edit the layer data by toggling the <strong>editing mode</strong> for each layer:</p>
+<h1 id="managed-objects">Managed objects<a class="headerlink" href="#managed-objects" title="Permanent link">#</a></h1>
+<p>The <strong>local authorities</strong> manage a lot of data based on the road network:
+roadworks, asphalt rehabilitation, road signs, hedge pruning, etc.</p>
+<p>Each data object, <strong>point</strong> or <strong>(multi)linestring</strong>, is defined by its <strong>references</strong>
+calculated from the road network (see <a href="../concepts/">Concepts</a>).
+When the road graph is modified, these objects must be updated.</p>
+<p><img alt="Linear referencing illustration" src="../../media/concepts/illustration.png" /></p>
+<h2 id="the-managed-objects-layer">The managed objects layer<a class="headerlink" href="#the-managed-objects-layer" title="Permanent link">#</a></h2>
+<p>The <code>managed_objects</code> layer lists <strong>all the PostgreSQL tables</strong> impacted by any <strong>graph modification</strong>,
+with the update policy to apply to each of them:</p>
+<p><img alt="Managed objects" src="../../media/user-guide/qgis_managed_objects.png" /></p>
 <ul>
-<li><strong>Select the layer</strong> in the panel by clicking on it: the layer is highlighted in blue</li>
-<li><strong>Right-click on the layer name</strong> and select <code>Toggle Editing</code> or use the menu <code>Layer / Toggle Editing</code></li>
+<li><code>schema_name</code> and <code>table_name</code>: the business table,</li>
+<li><code>geometry_type</code>: the geometry type of the table, e.g. <code>POINT</code> or <code>MULTILINESTRING</code>,</li>
+<li><code>update_policy_on_graph_change</code>: the rule chosen by the administrator:<ul>
+<li><code>references</code>: the geometry is kept and the <strong>references are updated</strong>,</li>
+<li><code>geometry</code>: the references are kept and the <strong>geometry is updated</strong>.</li>
 </ul>
-<p>To <strong>add a new record</strong>, select the layer in the <code>Layers</code> panel,
-then use the menu <code>Edit / Add Record</code> (or <code>CTRL+.</code>). It will open a form which lets you enter the needed data.
-Once every required fields have been filled, validate with the <code>OK</code> button on the bottom-right.</p>
-<p>To <strong>view all the records</strong> of a layer, select the layer in the <code>Layers</code> panel,
-then open the attribute table with the menu <code>Layer / Open Attribute Table</code> (or <code>F6</code>)</p>
-<p>You can <strong>undo previous modifications</strong> with the menu <code>Edit / Undo</code> (or <code>CTRL+Z</code>).</p>
-<p>To permanently <strong>save the changed data</strong> in the layer, you need to use the menu <code>Layer / Save Layer Edits</code>.
-After saving the data, you will not be able to undo your changes
-(but you can always reopen the data and changed the values).</p>
-<p>To <strong>edit a record</strong>, open the layer attribute table, and then click on the small button <code>Switch to form view</code>
-on the bottom-right of the dialog (the first one). Then select a record in the left panel,
-and use the displayed form to edit the data.</p>
-<p>To <strong>delete a record</strong>, select the record in the attribute table by clicking on the line number on the left:
-the line must be highlighted in blue. Then use the trash icon <code>Delete selected features</code> (or <code>Del</code>).
-<em>You can undo the deletion if you have not yet saved layer edits</em>.</p>
+</li>
+</ul>
+<h2 id="update-rules">Update rules<a class="headerlink" href="#update-rules" title="Permanent link">#</a></h2>
+<p>When the user <strong>merges the data from the editing session</strong>, every impacted object is
+<strong>automatically updated based on the rule</strong> chosen by the administrator:</p>
+<ul>
+<li><strong>Point objects</strong> are often not moved, but their <strong>references must be updated</strong>, e.g. a road sign.</li>
+<li><strong>(Multi)linestring objects</strong> must often follow the changes: the start and end points are kept
+  and only the nodes in between are edited, e.g. a painting roadwork.</li>
+</ul>
+<p>The algorithm <code>Update managed objects from the road graph</code> can also be run manually on a given layer,
+with the following parameters:</p>
+<ul>
+<li><code>Update policy</code>: <code>Update geometries</code> or <code>Update references</code>,</li>
+<li><code>Update geometries - Preserve start &amp; end points when updating line geometries</code>: <code>No</code> or <code>Yes</code>.</li>
+</ul>
 
 
 
@@ -836,10 +1086,10 @@ the line must be highlighted in blue. Then use the trash icon <code>Delete selec
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.top"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.top"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
       
