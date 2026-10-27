@@ -120,6 +120,7 @@ CREATE TABLE road_graph.managed_objects (
     update_policy_on_graph_change text DEFAULT 'references'::text NOT NULL,
     last_update timestamp without time zone DEFAULT (now())::timestamp(0) without time zone,
     last_updated_objects_ids integer[],
+    add_trigger_on_geom_change boolean DEFAULT false NOT NULL,
     CONSTRAINT check_geometry_type CHECK ((lower(geometry_type) = ANY (ARRAY['point'::text, 'linestring'::text, 'multilinestring'::text]))),
     CONSTRAINT check_update_policy_on_graph_change CHECK ((update_policy_on_graph_change = ANY (ARRAY['geometry'::text, 'references'::text])))
 );

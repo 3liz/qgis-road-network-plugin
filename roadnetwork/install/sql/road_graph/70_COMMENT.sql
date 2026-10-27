@@ -31,6 +31,15 @@ car l''ordre alphabétique compte.
 COMMENT ON FUNCTION road_graph.aa_before_record_insert_or_update() IS 'Set the created_at and updated_at fields';
 
 
+-- FUNCTION add_managed_objects_triggers()
+COMMENT ON FUNCTION road_graph.add_managed_objects_triggers() IS 'Create the trigger trg_calculate_managed_object_references for each table listed in road_graph.managed_objects
+with the column add_trigger_on_geom_change set to True, if it does not already exist.
+This trigger calculates the references of the inserted or updated features
+with the function road_graph.calculate_managed_object_references.
+It returns one line per managed object with its schema name, table name and trigger status:
+created, already exists, not requested, table not found or geom column not found.';
+
+
 -- FUNCTION after_edge_delete()
 COMMENT ON FUNCTION road_graph.after_edge_delete() IS 'Lors de la suppression d''un tronçon, on supprime les Nodes qui étaient rattachés aux sommets amont et aval du tronçon,
 uniquement si ces derniers ne sont plus rattachés à aucun autre tronçon.
@@ -377,6 +386,12 @@ COMMENT ON COLUMN road_graph.managed_objects.last_update IS 'The date and time o
 
 -- managed_objects.last_updated_objects_ids
 COMMENT ON COLUMN road_graph.managed_objects.last_updated_objects_ids IS 'The list of the last updated objects ids based on the road graph.';
+
+
+-- managed_objects.add_trigger_on_geom_change
+COMMENT ON COLUMN road_graph.managed_objects.add_trigger_on_geom_change IS 'If True, the function road_graph.add_managed_objects_triggers will create the trigger
+trg_calculate_managed_object_references on this table, which calculates the references
+of the features on insert or on geometry update.';
 
 
 -- markers

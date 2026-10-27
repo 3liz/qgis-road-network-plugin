@@ -14,13 +14,55 @@ When the road graph is modified, these objects must be updated.
 The `managed_objects` layer lists **all the PostgreSQL tables** impacted by any **graph modification**,
 with the update policy to apply to each of them:
 
-![Managed objects](../media/user-guide/qgis_managed_objects.png)
+| id | schema_name | table_name           | geometry_type   | update_policy_on_graph_change | add_trigger_on_geom_change |
+|----|-------------|----------------------|-----------------|-------------------------------|----------------------------|
+| 1  | managed     | demo_trees           | POINT           | references                    | True                       |
+| 2  | managed     | demo_safety_barriers | MULTILINESTRING | geometry                      | False                      |
 
 * `schema_name` and `table_name`: the business table,
 * `geometry_type`: the geometry type of the table, e.g. `POINT` or `MULTILINESTRING`,
 * `update_policy_on_graph_change`: the rule chosen by the administrator:
     * `references`: the geometry is kept and the **references are updated**,
     * `geometry`: the references are kept and the **geometry is updated**.
+* `add_trigger_on_geom_change`: if `True`, the trigger calculating the references
+  is created on this table by the function `road_graph.add_managed_objects_triggers()`
+  (see [below](#automatic-calculation-of-the-references)). Default: `False`.
+
+## Automatic calculation of the references
+
+The trigger function `road_graph.calculate_managed_object_references` **calculates the references**
+of a managed object feature each time it is **inserted** or its **geometry is updated**.
+The table must be listed in `road_graph.managed_objects`, and have a `road_code` and a `geom` column.
+
+The function `road_graph.add_managed_objects_triggers()` creates this trigger, named
+`trg_calculate_managed_object_references`, on **every table** listed in `road_graph.managed_objects`
+with the column `add_trigger_on_geom_change` set to `True`.
+Run it after adding new tables in the managed objects layer, or after checking this column:
+
+```sql
+SELECT * FROM road_graph.add_managed_objects_triggers();
+```
+
+It can be run several times: the trigger is only created when it does not already exist.
+Unchecking `add_trigger_on_geom_change` does not remove an existing trigger.
+The function returns one line per managed object, with its trigger status:
+
+| schema_name | table_name    | trigger_status        |
+|-------------|---------------|-----------------------|
+| public      | demo_painting | created               |
+| public      | demo_trees    | already exists        |
+| public      | demo_nogeom   | geom column not found |
+| public      | missing_table | table not found       |
+| public      | demo_signs    | not requested         |
+
+For each table, the created trigger is equivalent to:
+
+```sql
+CREATE TRIGGER trg_calculate_managed_object_references
+BEFORE INSERT OR UPDATE OF geom
+ON public.demo_painting
+FOR EACH ROW EXECUTE PROCEDURE road_graph.calculate_managed_object_references();
+```
 
 ## Update rules
 
