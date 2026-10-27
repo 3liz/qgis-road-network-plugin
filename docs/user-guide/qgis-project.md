@@ -23,7 +23,7 @@ The project contains the following groups of layers:
 ## Quick search
 
 The QGIS **locator search bar** (`CTRL+K`) can be used to search a road or a position on a road.
-Use the `rr` prefix to restrict the search to the RoadNetwork results.
+No prefix is needed: the RoadNetwork results are displayed in the `RoadNetwork` group.
 
 Type the road code and, optionally, the marker code, the abscissa, the offset and the side, separated by spaces:
 

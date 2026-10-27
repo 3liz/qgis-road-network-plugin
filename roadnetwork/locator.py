@@ -21,7 +21,7 @@ from .processing.tools import get_connection_name
 class LocatorFilter(QgsLocatorFilter):
     def __init__(self, iface):
         self.iface = iface
-        super(QgsLocatorFilter, self).__init__()
+        super().__init__()
 
     def name(self):
         return "road_network"
@@ -33,7 +33,8 @@ class LocatorFilter(QgsLocatorFilter):
         return "RoadNetwork"
 
     def prefix(self) -> str:
-        return "rr"
+        # No prefix: the search is run without typing any prefix
+        return ""
 
     # def setEnabled(self):
     #     return True

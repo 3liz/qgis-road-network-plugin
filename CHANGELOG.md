@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed
+
+* **Locator**: remove the prefix `rr`, which was ignored by QGIS
+  (plugin prefixes must have at least 3 characters).
+  The search is run without typing any prefix.
+
 ## 0.5.7 - 2026-10-22
 
 ### Added
