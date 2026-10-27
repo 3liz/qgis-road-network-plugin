@@ -11,12 +11,9 @@ site_dir: build
 nav:
     - docs.3liz.org: '../'
     - Home: index.md
-    - Concepts:
-      - Main: concepts/index.md
+    - Concepts: concepts/index.md
+    - Installation: installation/index.md
     - Admin guide: admin-guide/index.md
-    - User guide:
-      - Main: user-guide/index.md
-      - Installation: user-guide/installation.md
     # - Références: references.md
     - Changelog: changelog.md
     - Contribution: contributing.md
