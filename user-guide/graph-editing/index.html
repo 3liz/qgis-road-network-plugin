@@ -703,6 +703,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#create-a-roundabout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a roundabout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-to-edit-the-data-in-qgis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -903,6 +914,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#create-a-roundabout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a roundabout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-to-edit-the-data-in-qgis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -947,7 +969,7 @@ but in a <strong>dedicated editing session schema</strong> <code>editing_session
    The status becomes <code>edited</code> after the first change.<ul>
 <li>QGIS <strong>automatic transaction grouping</strong> is activated in the project:
   the changes made by the database triggers (node creation, edge split, etc.) are visible <strong>live</strong>.</li>
-<li>A map tool helps to <strong>create roundabouts</strong>.</li>
+<li>A layer action helps to <strong>create roundabouts</strong>, see <a href="#create-a-roundabout">Create a roundabout</a>.</li>
 </ul>
 </li>
 <li>The algorithm <code>Merge editing session data</code> (toolbar button <code>Merge editing sandbox data</code>)
@@ -956,6 +978,29 @@ but in a <strong>dedicated editing session schema</strong> <code>editing_session
    The sandbox data and the merged editing session are then deleted.</li>
 </ol>
 <p><img alt="Editing in QGIS" src="../../media/user-guide/qgis_editing.gif" /></p>
+<h2 id="create-a-roundabout">Create a roundabout<a class="headerlink" href="#create-a-roundabout" title="Permanent link">#</a></h2>
+<p>Roundabouts have their own road code, e.g. <code>GIR_D40_D80</code>, and cut the other roads
+(see <a href="../../concepts/#corner-cases">Concepts</a>).
+The road of the roundabout must exist in the <code>roads</code> layer with the road type <code>roundabout</code>.</p>
+<p>To create a roundabout in the editing session:</p>
+<ol>
+<li><strong>Toggle editing</strong> on the edges layer.</li>
+<li>Use the QGIS shape digitizing tool <code>Circle by a center point and another point</code>
+   to draw the roundabout circle, and give it the road code of the roundabout.</li>
+<li>Once the circle is created, the database <strong>trigger functions</strong> automatically <strong>split the circle into edges</strong>
+   at each intersection with the edges of the existing crossroads.</li>
+<li>Right-click on one of the edges of the roundabout circle with the <code>Identify Features</code> tool,
+   and choose the action <code>Finalize the roundabout</code>.</li>
+</ol>
+<p>This QGIS Python action runs the database function <code>clean_digitized_roundabout</code>, which:</p>
+<ul>
+<li><strong>deletes the pieces of edges inside the roundabout</strong>, and updates the previous and next edges of the remaining roads,</li>
+<li><strong>deletes the node</strong> created by QGIS at the <strong>top of the circle</strong>, by merging the two edges around it,</li>
+<li><strong>adds a marker <code>0</code></strong> for this roundabout, on its westernmost node, if it does not already exist.</li>
+</ul>
+<p>The action is cancelled with a warning if the layer is not in editing mode,
+or if the road type of the selected edge is not <code>roundabout</code>.
+You may have to refresh the map canvas to see the changes.</p>
 <h2 id="how-to-edit-the-data-in-qgis">How to edit the data in QGIS<a class="headerlink" href="#how-to-edit-the-data-in-qgis" title="Permanent link">#</a></h2>
 <p>In QGIS, you can edit the layer data by toggling the <strong>editing mode</strong> for each layer:</p>
 <ul>
