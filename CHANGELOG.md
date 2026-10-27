@@ -7,6 +7,9 @@
 * **SQL**: add the function `road_graph.add_managed_objects_triggers()` which creates the trigger
   `trg_calculate_managed_object_references` on every table listed in `road_graph.managed_objects`
   with the new column `add_trigger_on_geom_change` set to `True`, if it does not already exist
+* **SQL**: add the materialized view `road_graph.vm_managed_objects`, based on the view `v_managed_objects`
+  and refreshed at the end of the function `merge_editing_session_data`.
+  The QGIS administration project uses it instead of the view `v_managed_objects`
 
 ### Fixed
 

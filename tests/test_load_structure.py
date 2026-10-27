@@ -2222,3 +2222,25 @@ def test_merge_editing_session_data():
     assert result is not None
     assert result[0] == 1
     assert result[1] == "1,2,4,6,7"
+
+    # Check the materialized view road_graph.vm_managed_objects
+    # has been refreshed at the end of the merge
+    sql = """
+        SELECT
+            id,
+            array_to_string(last_updated_objects_ids, ',') AS last_updated_objects_ids,
+            ST_GeometryType(geom) AS geometry_type
+        FROM road_graph.vm_managed_objects
+        WHERE schema_name = 'managed' AND table_name = 'demo_trees'
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+    result = None
+    for a in data:
+        result = a if a else None
+    assert result is not None
+    assert result[0] == 1
+    assert result[1] == "1,2,4,6,7"
+    assert result[2] == "ST_MultiPolygon"

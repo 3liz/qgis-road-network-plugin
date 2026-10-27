@@ -94,7 +94,7 @@
           <Option name="wmsShortName" type="QString" value="Data"></Option>
         </Option>
       </customproperties>
-      <layer-tree-layer checked="Qt::Checked" expanded="1" id="v_managed_objects_09c36669_2e57_4ec9_9e51_1a529ca47e9c" legend_exp="" legend_split_behavior="0" name="v_managed_objects" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=MultiPolygon checkPrimaryKeyUnicity='1' table=&quot;road_graph&quot;.&quot;v_managed_objects&quot; (geom)">
+      <layer-tree-layer checked="Qt::Checked" expanded="1" id="v_managed_objects_09c36669_2e57_4ec9_9e51_1a529ca47e9c" legend_exp="" legend_split_behavior="0" name="vm_managed_objects" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=MultiPolygon checkPrimaryKeyUnicity='1' table=&quot;road_graph&quot;.&quot;v_managed_objects&quot; (geom)">
         <customproperties>
           <Option></Option>
         </customproperties>
@@ -259,7 +259,7 @@
       </legendgroup>
     </legendgroup>
     <legendgroup checked="Qt::Checked" name="Data" open="true">
-      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="v_managed_objects" open="true" showFeatureCount="0">
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="vm_managed_objects" open="true" showFeatureCount="0">
         <filegroup hidden="false" open="true">
           <legendlayerfile isInOverview="0" layerid="v_managed_objects_09c36669_2e57_4ec9_9e51_1a529ca47e9c" visible="1"></legendlayerfile>
         </filegroup>
@@ -12808,11 +12808,11 @@ def my_form_open(dialog, layer, feature):
         <ymax>49.1206084486180572</ymax>
       </wgs84extent>
       <id>v_managed_objects_09c36669_2e57_4ec9_9e51_1a529ca47e9c</id>
-      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=MultiPolygon checkPrimaryKeyUnicity='1' table="road_graph"."v_managed_objects" (geom)</datasource>
+      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=MultiPolygon checkPrimaryKeyUnicity='1' table="road_graph"."vm_managed_objects" (geom)</datasource>
       <keywordList>
         <value></value>
       </keywordList>
-      <layername>v_managed_objects</layername>
+      <layername>vm_managed_objects</layername>
       <srs>
         <spatialrefsys nativeFormat="Wkt">
           <wkt>PROJCRS["RGF93 v1 / Lambert-93",BASEGEOGCRS["RGF93 v1",DATUM["Reseau Geodesique Francais 1993 v1",ELLIPSOID["GRS 1980",6378137,298.257222101,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],ID["EPSG",4171]],CONVERSION["Lambert-93",METHOD["Lambert Conic Conformal (2SP)",ID["EPSG",9802]],PARAMETER["Latitude of false origin",46.5,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8821]],PARAMETER["Longitude of false origin",3,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8822]],PARAMETER["Latitude of 1st standard parallel",49,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8823]],PARAMETER["Latitude of 2nd standard parallel",44,ANGLEUNIT["degree",0.0174532925199433],ID["EPSG",8824]],PARAMETER["Easting at false origin",700000,LENGTHUNIT["metre",1],ID["EPSG",8826]],PARAMETER["Northing at false origin",6600000,LENGTHUNIT["metre",1],ID["EPSG",8827]]],CS[Cartesian,2],AXIS["easting (X)",east,ORDER[1],LENGTHUNIT["metre",1]],AXIS["northing (Y)",north,ORDER[2],LENGTHUNIT["metre",1]],USAGE[SCOPE["Engineering survey, topographic mapping."],AREA["France - onshore and offshore, mainland and Corsica (France métropolitaine including Corsica)."],BBOX[41.15,-9.86,51.56,10.38]],ID["EPSG",2154]]</wkt>

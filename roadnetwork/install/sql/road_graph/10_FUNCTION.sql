@@ -2692,6 +2692,7 @@ This behaviour can be overriden by setting _use_cache TO True;
 -- get_merged_geom_from_table_and_ids(text, text, integer[])
 CREATE FUNCTION road_graph.get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[]) RETURNS geometry
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $_$
 DECLARE
     primary_key_field text;
@@ -4557,6 +4558,9 @@ BEGIN
     WHERE id = _editing_session_id
     ;
     RESET search_path;
+
+    -- Refresh the materialized view of the last updated managed objects
+    REFRESH MATERIALIZED VIEW road_graph.vm_managed_objects;
 
     RETURN True;
 END;

@@ -62,6 +62,8 @@ for ITEM in FUNCTION "TABLE|SEQUENCE|DEFAULT" VIEW INDEX TRIGGER CONSTRAINT COMM
     sed -i "s#FOR EACH ROW EXECUTE FUNCTION#FOR EACH ROW EXECUTE PROCEDURE#g" "$OUTDIR"/"$I"_"$ITEM".sql;
     # Remove new pg_dump 17 restrict lines
     sed -i -E "s#\\\(un)?restrict .*##g" "$OUTDIR"/"$I"_"$ITEM".sql;
+    # Populate the materialized views on creation (the schema-only dump creates them WITH NO DATA)
+    sed -i "s#  WITH NO DATA;#  WITH DATA;#g" "$OUTDIR"/"$I"_"$ITEM".sql;
     # Replace public.geometry by geometry
     sed -i "s#public.geometry#geometry#g" "$OUTDIR"/"$I"_"$ITEM".sql;
     # Rename

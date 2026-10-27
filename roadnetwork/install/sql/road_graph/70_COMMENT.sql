@@ -442,6 +442,11 @@ COMMENT ON COLUMN road_graph.roads.road_type IS 'Type of the road : road, rounda
 COMMENT ON VIEW road_graph.v_managed_objects IS 'View allowing to see the merged geometries of each managed table for the last editing session merge. Useful to have a quick look at the edited objects.';
 
 
+-- MATERIALIZED VIEW vm_managed_objects
+COMMENT ON MATERIALIZED VIEW road_graph.vm_managed_objects IS 'Materialized view based on the view v_managed_objects, showing the merged geometries of each managed table
+for the last editing session merge. It is refreshed at the end of the function merge_editing_session_data.';
+
+
 --
 -- PostgreSQL database dump complete
 --

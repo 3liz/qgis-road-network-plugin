@@ -28,6 +28,20 @@ with the update policy to apply to each of them:
   is created on this table by the function `road_graph.add_managed_objects_triggers()`
   (see [below](#automatic-calculation-of-the-references)). Default: `False`.
 
+## Last updated objects
+
+The layer `vm_managed_objects` shows, for each managed table, the **objects updated by the last merge**
+of an editing session, as a 10m buffer around them. It is useful to have a quick look at the impacted objects.
+
+This layer is a **materialized view** based on the view `road_graph.v_managed_objects`,
+which can be slow to compute. It is **refreshed automatically at the end of the merge**
+of an editing session. To refresh it manually, for example after running the algorithm
+`Update managed objects from the road graph`, use:
+
+```sql
+REFRESH MATERIALIZED VIEW road_graph.vm_managed_objects;
+```
+
 ## Automatic calculation of the references
 
 The trigger function `road_graph.calculate_managed_object_references` **calculates the references**

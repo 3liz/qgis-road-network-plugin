@@ -69,6 +69,14 @@ CREATE INDEX nodes_geom_idx ON road_graph.nodes USING gist (geom);
 CREATE INDEX roads_road_code_idx ON road_graph.roads USING btree (road_code);
 
 
+-- vm_managed_objects_geom_idx
+CREATE INDEX vm_managed_objects_geom_idx ON road_graph.vm_managed_objects USING gist (geom);
+
+
+-- vm_managed_objects_id_idx
+CREATE UNIQUE INDEX vm_managed_objects_id_idx ON road_graph.vm_managed_objects USING btree (id);
+
+
 --
 -- PostgreSQL database dump complete
 --

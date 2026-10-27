@@ -53,6 +53,29 @@ CREATE VIEW road_graph.v_road_without_zero_marker AS
   WHERE (m.id IS NULL);
 
 
+SET default_tablespace = '';
+
+;
+
+-- vm_managed_objects
+CREATE MATERIALIZED VIEW road_graph.vm_managed_objects AS
+ SELECT id,
+    schema_name,
+    table_name,
+    geometry_type,
+    update_policy_on_graph_change,
+    last_update,
+    last_updated_objects_ids,
+    (geom)::geometry(MultiPolygon,2154) AS geom
+   FROM road_graph.v_managed_objects v
+  WITH DATA;
+
+
+-- MATERIALIZED VIEW vm_managed_objects
+COMMENT ON MATERIALIZED VIEW road_graph.vm_managed_objects IS 'Materialized view based on the view v_managed_objects, showing the merged geometries of each managed table
+for the last editing session merge. It is refreshed at the end of the function merge_editing_session_data.';
+
+
 --
 -- PostgreSQL database dump complete
 --
