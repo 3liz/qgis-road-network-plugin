@@ -30,7 +30,7 @@ The script adds four tools:
 The script adds a mini-dock named **Graphe routier** (*Road network*).
 It opens when the map loads.
 
-![Dock panel](../media/dock_panel.png)
+![Lizmap Dock panel](../media/lizmap/lizmap_dock_panel.png)
 
 The panel contains a form with these fields:
 
@@ -77,7 +77,9 @@ then click **Centrer** (*Center*). The script runs the action
 
 When the user opens the Lizmap editing form for a **point** or **line** layer,
 the script adds a collapsible section above the form:
-**Créer la géométrie depuis des références** (*Create the geometry from references*).
+**Create the geometry from references**.
+
+![Lizmap editing geometry from references](../media/lizmap/lizmap_editing_geometry_from_references.png)
 
 The fields depend on the geometry type of the layer:
 
@@ -92,12 +94,12 @@ into the **Route** field.
 
 | Button | Action |
 |--------|--------|
-| **Créer** (*Create*) | Computes the geometry from the references and replaces the geometry of the edited feature. For a point layer, the script runs `get_road_point_from_reference`. For a line layer, it runs `get_road_substring_from_references`. If the start references are after the end references, the script swaps them. |
-| **Réinitialiser** (*Reset*) | Deletes the drawn geometry and resets the reference fields. |
-| **Tronçon** (*Edge*), start row | Sets the start references to the start of the edge located at the start references. |
-| **Route** (*Road*), start row | Sets the start references to the start of the road. |
-| **Tronçon** (*Edge*), end row | Sets the end references to the end of the edge located at the end references. |
-| **Route** (*Road*), end row | Sets the end references to the end of the road. |
+| **Create** | Computes the geometry from the references and replaces the geometry of the edited feature. For a point layer, the script runs `get_road_point_from_reference`. For a line layer, it runs `get_road_substring_from_references`. If the start references are after the end references, the script swaps them. |
+| **Reset** | Deletes the drawn geometry and resets the reference fields. |
+| **Edge**, start row | Sets the start references to the start of the edge located at the start references. |
+| **Road**, start row | Sets the start references to the start of the road. |
+| **Edge**, end row | Sets the end references to the end of the edge located at the end references. |
+| **Road**, end row | Sets the end references to the end of the road. |
 
 The **Tronçon** and **Route** buttons are only available for line layers.
 They run the action `get_edge_start_or_end_tip_from_references`.
@@ -151,12 +153,11 @@ It merges two features of the same layer into one feature.
 The button is only displayed if the user can **modify the geometry** and
 **delete features** in this layer, in the Lizmap editing configuration.
 
-1. In the popup of the first line, click **Choisir cet objet pour fusion**
-   (*Choose this feature to merge*). The button label becomes
-   **Objet choisi pour la fusion** (*Feature chosen to merge*).
+1. In the popup of the first line, click **Choose this feature to merge**. The button label becomes
+   **Feature chosen to merge**.
    To cancel, click this button again.
 2. Click on the second line on the map. In its popup, click
-   **Fusionner avec l'objet choisi** (*Merge with the chosen feature*).
+   **Merge with the chosen feature**.
 3. Confirm the operation.
 
 The script runs the action `merge_selected_lines` with the IDs of the two features.

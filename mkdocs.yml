@@ -11,18 +11,17 @@ site_dir: build
 nav:
     - docs.3liz.org: '../'
     - Home: index.md
+    - Concepts:
+      - Main: concepts/index.md
+    - Admin guide: admin-guide/index.md
     - User guide:
       - Main: user-guide/index.md
       - Installation: user-guide/installation.md
-      - Lizmap Web Client: user-guide/lizmap_web_client.md
-    - Admin guide: admin-guide/index.md
-    - Concepts:
-      - Main: concepts/index.md
-    - Processing: processing/README.md
     # - Références: references.md
     - Changelog: changelog.md
     - Contribution: contributing.md
     - Database: database/index.html
+    - Lizmap Web Client: lizmap-web-client/index.md
 
 plugins:
   - search

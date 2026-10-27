@@ -11,4 +11,3 @@ hide:
 * [User guide](./user-guide/)
 * [Installation](./user-guide/installation.md)
 * [Database](./database/)
-* [Processing](./processing/)
