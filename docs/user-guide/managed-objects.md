@@ -39,7 +39,7 @@ of an editing session. To refresh it manually, for example after running the alg
 `Update managed objects from the road graph`, use:
 
 ```sql
-REFRESH MATERIALIZED VIEW road_graph.vm_managed_objects;
+REFRESH MATERIALIZED VIEW CONCURRENTLY road_graph.vm_managed_objects;
 ```
 
 ## Automatic calculation of the references

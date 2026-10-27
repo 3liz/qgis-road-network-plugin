@@ -3855,13 +3855,13 @@ BEGIN
     -- Get ordered edges for the road, then build the road geometry
     WITH ordered_ids AS (
         SELECT *
-        FROM road_graph.get_ordered_edges(_road_code, -1, 'downstream') 
+        FROM road_graph.get_ordered_edges(_road_code, -1, 'downstream')
     ),
     build_geom AS (
         SELECT
             ST_Collect(e.geom ORDER BY o.edge_order, e.start_cumulative) AS geom
         FROM road_graph.edges AS e
-        INNER JOIN ordered_ids AS o 
+        INNER JOIN ordered_ids AS o
             ON e.id = o.id
         WHERE e.road_code = o.road_code
     )
@@ -4560,7 +4560,7 @@ BEGIN
     RESET search_path;
 
     -- Refresh the materialized view of the last updated managed objects
-    REFRESH MATERIALIZED VIEW road_graph.vm_managed_objects;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY road_graph.vm_managed_objects;
 
     RETURN True;
 END;
@@ -5681,10 +5681,10 @@ BEGIN
     WITH ordered_edges AS (
         SELECT *
         FROM road_graph.get_ordered_edges(
-            _road_code, 
+            _road_code,
             -- get edge ID corresponding to the given start node
             (
-                SELECT e.id 
+                SELECT e.id
                 FROM road_graph.edges AS e
                 WHERE e.start_node = _start_node
                 AND e.road_code = _road_code
@@ -5694,20 +5694,20 @@ BEGIN
     ),
     neighbours AS (
         SELECT
-            *, 
+            *,
             lag(o.id) OVER(ORDER BY o.edge_order) AS previous_edge_id,
             lead(o.id) OVER(ORDER BY o.edge_order) AS next_edge_id
         FROM ordered_edges AS o
         ORDER BY o.edge_order
     )
     UPDATE road_graph.edges AS e
-    SET 
+    SET
         previous_edge_id = n.previous_edge_id,
         next_edge_id = n.next_edge_id
     FROM neighbours AS n
     WHERE e.id = n.id
     ;
-    
+
     -- Return boolean
     RETURN True
     ;

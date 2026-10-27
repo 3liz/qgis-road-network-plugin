@@ -237,7 +237,7 @@ BEGIN
     RESET search_path;
 
     -- Refresh the materialized view of the last updated managed objects
-    REFRESH MATERIALIZED VIEW road_graph.vm_managed_objects;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY road_graph.vm_managed_objects;
 
     RETURN True;
 END;
