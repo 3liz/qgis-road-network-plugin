@@ -126,6 +126,17 @@ docker-test:
 #	@docker run --rm -w /plugin -v $(shell pwd):/plugin etrimaille/pymarkdown:latest docs/pro#cessing/README.md docs/processing/index.html
 #
 
+# Screenshots of the Processing algorithm dialogs, used in the documentation
+# Rendered by QGIS in the docker image, without display
+processing-screenshots:
+	docker run --rm \
+		-u $(UID):$(GID) \
+		-e HOME=/tmp \
+		-v $(shell pwd):/src \
+		-w /src \
+		$(QGIS_IMAGE_TAG) \
+		python3 .docker/processing_screenshots.py docs/media/installation
+
 #
 # Update the project's environment
 #

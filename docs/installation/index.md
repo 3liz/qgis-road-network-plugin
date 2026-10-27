@@ -55,6 +55,8 @@ Parameters:
 
 * `PostgreSQL connection to the database`: name of the database connection you would like to use for the current QGIS project. This connection will be used for the other algorithms.
 
+![Configure plugin](../media/installation/configure_plugin.png)
+
 
 ## Create the database structure
 
@@ -64,7 +66,15 @@ This script will add a `road_graph` schema with needed tables and functions.
 
 Parameters:
 
-* `PostgreSQL connection to database`: name of the database connection you would like to use for the installation.
+* `Connection to the PostgreSQL database`: name of the database connection you would like to use for the installation.
+* `Overwrite the database schema and all data ?`: if the schema already exists in the database,
+  the algorithm stops with an error, unless this box is checked.
+  In this case, the existing schema is **dropped with all its data** and created again.
+  Unchecked by default.
+* `Geometry CRS`: coordinate reference system of the geometries stored in the database.
+  It must be a valid EPSG code. Default: `EPSG:2154 - RGF93 v1 / Lambert-93`.
+
+![Create database structure](../media/installation/create_database_structure.png)
 
 
 ## Upgrade database structure
@@ -75,7 +85,13 @@ If you have upgraded your QGIS plugin, you can run this script to upgrade your d
 
 Parameters:
 
-* `PostgreSQL connection to the database`: name of the database connection you would like to use for the upgrade.
+* `Connection to the PostgreSQL database`: name of the database connection you would like to use for the upgrade.
+* `Check this box to upgrade. No action will be done otherwise`: safety checkbox.
+  The algorithm refuses to run if it is not checked.
+
+The coordinate reference system is not asked: it is read from the existing `edges` table.
+
+![Upgrade database structure](../media/installation/upgrade_database_structure.png)
 
 ## Create your database local interface
 
@@ -86,9 +102,14 @@ to **edit the road network data** by using QGIS editing capabilities
 
 Parameters:
 
-* `PostgreSQL connection to the database`: name of the database connection
+* `Connection to the PostgreSQL database`: name of the database connection
   you would like to use for the new QGIS project.
+* `Geometry CRS`: coordinate reference system of the QGIS project and its layers.
+  Use the same CRS as the one chosen when creating the database structure.
+  Default: `EPSG:2154 - RGF93 v1 / Lambert-93`.
 * `QGIS project file to create`: choose the output file destination.
   We advise you to choose a name reflecting the database name.
+
+![Create database local interface](../media/installation/create_database_local_interface.png)
 
 You can then open the generated QGIS project.
