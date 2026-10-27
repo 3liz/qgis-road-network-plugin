@@ -18,8 +18,6 @@ You can download QGIS in the [official download page](https://qgis.org/fr/site/f
 At present, the plugin is not yet in QGIS official plugin repository. To install the plugin, you need to:
 
 * open QGIS **Plugin manager** (menu Plugins)
-* in the **Parameters** tab, add a new plugin repository name **RoadNetwork** with the URL: https://github.com/3liz/qgis-road-network-plugin/releases/latest/download/plugins.xml
-
 * In the **All** tab, search for the word `RoadNetwork` and install the **RoadNetwork** plugin.
 
 After a successful installation, you should see a new dock called **RoadNetwork**
@@ -78,3 +76,19 @@ If you have upgraded your QGIS plugin, you can run this script to upgrade your d
 Parameters:
 
 * `PostgreSQL connection to the database`: name of the database connection you would like to use for the upgrade.
+
+## Create your database local interface
+
+This algorithm will create a **new QGIS project file** for administration purpose.
+
+The generated QGIS project must then be opened by the administrator
+to **edit the road network data** by using QGIS editing capabilities
+
+Parameters:
+
+* `PostgreSQL connection to the database`: name of the database connection
+  you would like to use for the new QGIS project.
+* `QGIS project file to create`: choose the output file destination.
+  We advise you to choose a name reflecting the database name.
+
+You can then open the generated QGIS project.
