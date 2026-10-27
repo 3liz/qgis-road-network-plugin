@@ -798,6 +798,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#screenshots-of-the-processing-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screenshots of the Processing algorithms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -910,6 +927,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#screenshots-of-the-processing-algorithms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screenshots of the Processing algorithms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -963,6 +997,26 @@ to create a Github release with a package for this version:</p>
 <span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements/doc.txt
 mkdocs<span class="w"> </span>serve
 </code></pre></div></td></tr></table></div>
+<h3 id="screenshots-of-the-processing-algorithms">Screenshots of the Processing algorithms<a class="headerlink" href="#screenshots-of-the-processing-algorithms" title="Permanent link">#</a></h3>
+<p>The screenshots of the Processing algorithm dialogs, used in the
+<a href="https://docs.3liz.org/qgis-road-network-plugin/installation/">Installation</a> page,
+are generated automatically from the Python algorithms in <code>roadnetwork/processing</code>.</p>
+<p>The script <code>.docker/processing_screenshots.py</code> opens each algorithm dialog in QGIS,
+without any display (Qt <code>offscreen</code> platform), in a temporary QGIS profile with a demo
+PostgreSQL connection named <code>road_network_demo</code>. The images are saved in <code>docs/media/installation</code>.</p>
+<p>To regenerate them locally, with the QGIS docker image (Docker is required):</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>make<span class="w"> </span>processing-screenshots
+<span class="c1"># Or with another QGIS version</span>
+make<span class="w"> </span>processing-screenshots<span class="w"> </span><span class="nv">QGIS_VERSION</span><span class="o">=</span><span class="m">3</span>.40
+</code></pre></div></td></tr></table></div>
+<p>To add a new algorithm, add its name and the output file name in the <code>ALGORITHMS</code> dictionary
+of the script, then reference the image in the documentation.</p>
+<p>The GitHub workflow <code>.github/workflows/processing-screenshots.yml</code> runs this command whenever
+the files in <code>roadnetwork/processing</code> are modified on the <code>main</code> branch,
+and opens a pull request if the screenshots have changed.
+It can also be run manually from the <code>Actions</code> tab.</p>
 
 
 

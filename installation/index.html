@@ -1080,31 +1080,47 @@
 <ul>
 <li><code>PostgreSQL connection to the database</code>: name of the database connection you would like to use for the current QGIS project. This connection will be used for the other algorithms.</li>
 </ul>
+<p><img alt="Configure plugin" src="../media/installation/configure_plugin.png" /></p>
 <h2 id="create-the-database-structure">Create the database structure<a class="headerlink" href="#create-the-database-structure" title="Permanent link">#</a></h2>
 <p>Install the database structure with tables and function on the chosen database connection.</p>
 <p>This script will add a <code>road_graph</code> schema with needed tables and functions.</p>
 <p>Parameters:</p>
 <ul>
-<li><code>PostgreSQL connection to database</code>: name of the database connection you would like to use for the installation.</li>
+<li><code>Connection to the PostgreSQL database</code>: name of the database connection you would like to use for the installation.</li>
+<li><code>Overwrite the database schema and all data ?</code>: if the schema already exists in the database,
+  the algorithm stops with an error, unless this box is checked.
+  In this case, the existing schema is <strong>dropped with all its data</strong> and created again.
+  Unchecked by default.</li>
+<li><code>Geometry CRS</code>: coordinate reference system of the geometries stored in the database.
+  It must be a valid EPSG code. Default: <code>EPSG:2154 - RGF93 v1 / Lambert-93</code>.</li>
 </ul>
+<p><img alt="Create database structure" src="../media/installation/create_database_structure.png" /></p>
 <h2 id="upgrade-database-structure">Upgrade database structure<a class="headerlink" href="#upgrade-database-structure" title="Permanent link">#</a></h2>
 <p>Upgrade the tables and functions in the chosen database.</p>
 <p>If you have upgraded your QGIS plugin, you can run this script to upgrade your database to the new plugin version.</p>
 <p>Parameters:</p>
 <ul>
-<li><code>PostgreSQL connection to the database</code>: name of the database connection you would like to use for the upgrade.</li>
+<li><code>Connection to the PostgreSQL database</code>: name of the database connection you would like to use for the upgrade.</li>
+<li><code>Check this box to upgrade. No action will be done otherwise</code>: safety checkbox.
+  The algorithm refuses to run if it is not checked.</li>
 </ul>
+<p>The coordinate reference system is not asked: it is read from the existing <code>edges</code> table.</p>
+<p><img alt="Upgrade database structure" src="../media/installation/upgrade_database_structure.png" /></p>
 <h2 id="create-your-database-local-interface">Create your database local interface<a class="headerlink" href="#create-your-database-local-interface" title="Permanent link">#</a></h2>
 <p>This algorithm will create a <strong>new QGIS project file</strong> for administration purpose.</p>
 <p>The generated QGIS project must then be opened by the administrator
 to <strong>edit the road network data</strong> by using QGIS editing capabilities</p>
 <p>Parameters:</p>
 <ul>
-<li><code>PostgreSQL connection to the database</code>: name of the database connection
+<li><code>Connection to the PostgreSQL database</code>: name of the database connection
   you would like to use for the new QGIS project.</li>
+<li><code>Geometry CRS</code>: coordinate reference system of the QGIS project and its layers.
+  Use the same CRS as the one chosen when creating the database structure.
+  Default: <code>EPSG:2154 - RGF93 v1 / Lambert-93</code>.</li>
 <li><code>QGIS project file to create</code>: choose the output file destination.
   We advise you to choose a name reflecting the database name.</li>
 </ul>
+<p><img alt="Create database local interface" src="../media/installation/create_database_local_interface.png" /></p>
 <p>You can then open the generated QGIS project.</p>
 
 
