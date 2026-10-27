@@ -7,6 +7,7 @@ hide:
 # RoadNetwork plugin
 
 * [Concepts](./concepts/)
-* [Editing](./editing/)
 * [Installation](./installation/)
+* [User guide](./user-guide/)
+* [Changelog](./changelog/)
 * [Database](./database/)

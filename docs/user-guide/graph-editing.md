@@ -1,4 +1,28 @@
-# How to edit the data
+# Road graph editing
+
+## Editing rules
+
+The road graph data are **not edited directly** in the production schema `road_graph`,
+but in a **dedicated editing session schema** `editing_session`, which acts as a sandbox:
+
+1. The user **draws a polygon** in the `editing_sessions` layer around the area to edit.
+   The new editing session has the status `created`.
+2. The algorithm `Clone data to a new editing session` (toolbar button `Clone data to the editing sandbox`)
+   **copies an extract of the production data** inside this polygon into the sandbox.
+   The status becomes `cloned`.
+3. The **editing** is made with the **QGIS tools**: forms, topological editing, etc.
+   The status becomes `edited` after the first change.
+    * QGIS **automatic transaction grouping** is activated in the project:
+      the changes made by the database triggers (node creation, edge split, etc.) are visible **live**.
+    * A map tool helps to **create roundabouts**.
+4. The algorithm `Merge editing session data` (toolbar button `Merge editing sandbox data`)
+   **merges the modifications back** into the `road_graph` schema
+   and updates the [managed objects](managed-objects.md).
+   The sandbox data and the merged editing session are then deleted.
+
+![Editing in QGIS](../media/user-guide/qgis_editing.gif)
+
+## How to edit the data in QGIS
 
 In QGIS, you can edit the layer data by toggling the **editing mode** for each layer:
 

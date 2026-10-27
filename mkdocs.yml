@@ -13,8 +13,11 @@ nav:
     - Home: index.md
     - Concepts: concepts/index.md
     - Installation: installation/index.md
-    - Editing: editing/index.md
-    # - Références: references.md
+    - User Guide:
+      - Introduction: user-guide/index.md
+      - QGIS project and tools: user-guide/qgis-project.md
+      - Road graph editing: user-guide/graph-editing.md
+      - Managed objects: user-guide/managed-objects.md
     - Changelog: changelog.md
     - Contribution: contributing.md
     - Database: database/index.html
