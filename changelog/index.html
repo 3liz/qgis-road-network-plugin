@@ -2676,6 +2676,9 @@ On your local, make a symlink with ln -s
 <li><strong>SQL</strong>: add the function <code>road_graph.add_managed_objects_triggers()</code> which creates the trigger
   <code>trg_calculate_managed_object_references</code> on every table listed in <code>road_graph.managed_objects</code>
   with the new column <code>add_trigger_on_geom_change</code> set to <code>True</code>, if it does not already exist</li>
+<li><strong>SQL</strong>: add the materialized view <code>road_graph.vm_managed_objects</code>, based on the view <code>v_managed_objects</code>
+  and refreshed at the end of the function <code>merge_editing_session_data</code>.
+  The QGIS administration project uses it instead of the view <code>v_managed_objects</code></li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>

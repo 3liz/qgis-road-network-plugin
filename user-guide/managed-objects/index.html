@@ -731,6 +731,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#last-updated-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Last updated objects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#automatic-calculation-of-the-references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -914,6 +925,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#last-updated-objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Last updated objects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#automatic-calculation-of-the-references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1007,6 +1029,15 @@ with the update policy to apply to each of them:</p>
   is created on this table by the function <code>road_graph.add_managed_objects_triggers()</code>
   (see <a href="#automatic-calculation-of-the-references">below</a>). Default: <code>False</code>.</li>
 </ul>
+<h2 id="last-updated-objects">Last updated objects<a class="headerlink" href="#last-updated-objects" title="Permanent link">#</a></h2>
+<p>The layer <code>vm_managed_objects</code> shows, for each managed table, the <strong>objects updated by the last merge</strong>
+of an editing session, as a 10m buffer around them. It is useful to have a quick look at the impacted objects.</p>
+<p>This layer is a <strong>materialized view</strong> based on the view <code>road_graph.v_managed_objects</code>,
+which can be slow to compute. It is <strong>refreshed automatically at the end of the merge</strong>
+of an editing session. To refresh it manually, for example after running the algorithm
+<code>Update managed objects from the road graph</code>, use:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">road_graph</span><span class="p">.</span><span class="n">vm_managed_objects</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h2 id="automatic-calculation-of-the-references">Automatic calculation of the references<a class="headerlink" href="#automatic-calculation-of-the-references" title="Permanent link">#</a></h2>
 <p>The trigger function <code>road_graph.calculate_managed_object_references</code> <strong>calculates the references</strong>
 of a managed object feature each time it is <strong>inserted</strong> or its <strong>geometry is updated</strong>.
