@@ -31,12 +31,14 @@ mkdocs serve
 ### Screenshots of the Processing algorithms
 
 The screenshots of the Processing algorithm dialogs, used in the
-[Installation](https://docs.3liz.org/qgis-road-network-plugin/installation/) page,
+[Installation](https://docs.3liz.org/qgis-road-network-plugin/installation/) and
+[Import data](https://docs.3liz.org/qgis-road-network-plugin/user-guide/import/) pages,
 are generated automatically from the Python algorithms in `roadnetwork/processing`.
 
 The script `.docker/processing_screenshots.py` opens each algorithm dialog in QGIS,
 without any display (Qt `offscreen` platform), in a temporary QGIS profile with a demo
-PostgreSQL connection named `road_network_demo`. The images are saved in `docs/media/installation`.
+PostgreSQL connection named `road_network_demo` and the template layers of `roadnetwork/resources/import`.
+The images are saved in `docs/media/installation` and `docs/media/user-guide`.
 
 To regenerate them locally, with the QGIS docker image (Docker is required):
 
@@ -46,7 +48,7 @@ make processing-screenshots
 make processing-screenshots QGIS_VERSION=3.40
 ```
 
-To add a new algorithm, add its name and the output file name in the `ALGORITHMS` dictionary
+To add a new algorithm, add its name and the output file name (relative to `docs/media`) in the `ALGORITHMS` dictionary
 of the script, then reference the image in the documentation.
 
 The GitHub workflow `.github/workflows/processing-screenshots.yml` runs this command whenever

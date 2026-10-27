@@ -15,6 +15,7 @@ nav:
     - Installation: installation/index.md
     - User Guide:
       - Introduction: user-guide/index.md
+      - Import data: user-guide/import.md
       - QGIS project and tools: user-guide/qgis-project.md
       - Road graph editing: user-guide/graph-editing.md
       - Managed objects: user-guide/managed-objects.md

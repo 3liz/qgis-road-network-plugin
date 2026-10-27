@@ -135,7 +135,7 @@ processing-screenshots:
 		-v $(shell pwd):/src \
 		-w /src \
 		$(QGIS_IMAGE_TAG) \
-		python3 .docker/processing_screenshots.py docs/media/installation
+		python3 .docker/processing_screenshots.py docs/media
 
 #
 # Update the project's environment

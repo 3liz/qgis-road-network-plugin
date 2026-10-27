@@ -27,7 +27,9 @@ jobs:
       - name: Create a pull request with the updated screenshots
         uses: peter-evans/create-pull-request@v7
         with:
-          add-paths: docs/media/installation/*.png
+          add-paths: |
+            docs/media/installation/*.png
+            docs/media/user-guide/import_data.png
           branch: bot/processing-screenshots
           delete-branch: true
           commit-message: "Documentation - Update the screenshots of the Processing algorithms"

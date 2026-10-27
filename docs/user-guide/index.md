@@ -4,8 +4,10 @@ The RoadNetwork plugin stores all the business logic **inside a PostgreSQL datab
 The QGIS plugin helps to create and upgrade this database, to visualize the road network,
 to edit it safely and to keep the business data up to date.
 
-This guide is split in three parts:
+This guide is split in four parts:
 
+* [Import data](import.md): how to import the road graph (edges and markers)
+  and the managed objects into the database.
 * [QGIS project and tools](qgis-project.md): the administration project, the map layers
   and the tools available to search and get references.
 * [Road graph editing](graph-editing.md): how to edit the roads, edges and markers
