@@ -11,7 +11,6 @@ from qgis.core import (
     QgsProcessingParameterBoolean,
     QgsProcessingParameterCrs,
     QgsProcessingParameterProviderConnection,
-    QgsProcessingParameterString,
     QgsProject,
     QgsProviderConnectionException,
     QgsProviderRegistry,
@@ -31,7 +30,6 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
 
     CONNECTION_NAME = "CONNECTION_NAME"
     OVERRIDE = "OVERRIDE"
-    SCHEMA = "SCHEMA"
     CRS = "CRS"
 
     OUTPUT_STATUS = "OUTPUT_STATUS"
@@ -86,13 +84,6 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
         )
 
         self.addParameter(
-            QgsProcessingParameterString(
-                self.SCHEMA,
-                tr("Schema name"),
-                defaultValue=resources.schema_name(),
-            ),
-        )
-        self.addParameter(
             QgsProcessingParameterCrs(
                 self.CRS,
                 tr("Geometry CRS"),
@@ -116,7 +107,8 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
         )
         connection = metadata.findConnection(connection_name)
         override = self.parameterAsBoolean(parameters, self.OVERRIDE, context)
-        schema = self.parameterAsString(parameters, self.SCHEMA, context)
+        # The plugin schema name cannot be changed
+        schema = resources.schema_name()
 
         if schema in connection.schemas() and not override:
             msg = tr(
@@ -243,7 +235,8 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
-        schema = self.parameterAsString(parameters, self.SCHEMA, context)
+        # The plugin schema name cannot be changed
+        schema = resources.schema_name()
         override = self.parameterAsBool(parameters, self.OVERRIDE, context)
         install_dir = resources.plugin_path().joinpath("install", "sql")
         version = resources.schema_version()

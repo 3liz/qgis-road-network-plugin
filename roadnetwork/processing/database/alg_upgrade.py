@@ -8,7 +8,6 @@ from qgis.core import (
     QgsProcessingOutputString,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterProviderConnection,
-    QgsProcessingParameterString,
     QgsProject,
     QgsProviderConnectionException,
     QgsProviderRegistry,
@@ -24,7 +23,6 @@ tr = i18n.tr
 class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
     CONNECTION_NAME = "CONNECTION_NAME"
     RUN_MIGRATIONS = "RUN_MIGRATIONS"
-    SCHEMA = "SCHEMA"
     OUTPUT_STATUS = "OUTPUT_STATUS"
     OUTPUT_STRING = "OUTPUT_STRING"
 
@@ -68,13 +66,6 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
             )
         )
 
-        self.addParameter(
-            QgsProcessingParameterString(
-                self.SCHEMA,
-                tr("Schema name"),
-                defaultValue=resources.schema_name(),
-            ),
-        )
 
         # OUTPUTS
         # Add output for status (integer) and message (string)
@@ -95,7 +86,8 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
             return False, tr('You must use the "Configure plugin" alg to set the database connection name')
 
         connection = metadata.findConnection(connection_name)
-        schema = self.parameterAsString(parameters, self.SCHEMA, context)
+        # The plugin schema name cannot be changed
+        schema = resources.schema_name()
 
         # # Check that it corresponds to an existing connection
         # if connection_name not in get_postgis_connection_list():
@@ -299,7 +291,8 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         connection_name = self.parameterAsConnectionName(parameters, self.CONNECTION_NAME, context)
-        schema = self.parameterAsString(parameters, self.SCHEMA, context)
+        # The plugin schema name cannot be changed
+        schema = resources.schema_name()
         # Run migration
         run_migrations = self.parameterAsBool(parameters, self.RUN_MIGRATIONS, context)
         if not run_migrations:

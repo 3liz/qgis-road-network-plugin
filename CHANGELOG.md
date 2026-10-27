@@ -11,6 +11,11 @@
   and refreshed at the end of the function `merge_editing_session_data`.
   The QGIS administration project uses it instead of the view `v_managed_objects`
 
+### Changed
+
+* **Processing**: remove the `Schema name` parameter from the algorithms `Create database structure`
+  and `Upgrade database structure`: the plugin schema is always `road_graph`
+
 ### Fixed
 
 * **Locator**: remove the prefix `rr`, which was ignored by QGIS
