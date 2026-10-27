@@ -14,13 +14,39 @@ but in a **dedicated editing session schema** `editing_session`, which acts as a
    The status becomes `edited` after the first change.
     * QGIS **automatic transaction grouping** is activated in the project:
       the changes made by the database triggers (node creation, edge split, etc.) are visible **live**.
-    * A map tool helps to **create roundabouts**.
+    * A layer action helps to **create roundabouts**, see [Create a roundabout](#create-a-roundabout).
 4. The algorithm `Merge editing session data` (toolbar button `Merge editing sandbox data`)
    **merges the modifications back** into the `road_graph` schema
    and updates the [managed objects](managed-objects.md).
    The sandbox data and the merged editing session are then deleted.
 
 ![Editing in QGIS](../media/user-guide/qgis_editing.gif)
+
+## Create a roundabout
+
+Roundabouts have their own road code, e.g. `GIR_D40_D80`, and cut the other roads
+(see [Concepts](../concepts/index.md#corner-cases)).
+The road of the roundabout must exist in the `roads` layer with the road type `roundabout`.
+
+To create a roundabout in the editing session:
+
+1. **Toggle editing** on the edges layer.
+2. Use the QGIS shape digitizing tool `Circle by a center point and another point`
+   to draw the roundabout circle, and give it the road code of the roundabout.
+3. Once the circle is created, the database **trigger functions** automatically **split the circle into edges**
+   at each intersection with the edges of the existing crossroads.
+4. Right-click on one of the edges of the roundabout circle with the `Identify Features` tool,
+   and choose the action `Finalize the roundabout`.
+
+This QGIS Python action runs the database function `clean_digitized_roundabout`, which:
+
+* **deletes the pieces of edges inside the roundabout**, and updates the previous and next edges of the remaining roads,
+* **deletes the node** created by QGIS at the **top of the circle**, by merging the two edges around it,
+* **adds a marker `0`** for this roundabout, on its westernmost node, if it does not already exist.
+
+The action is cancelled with a warning if the layer is not in editing mode,
+or if the road type of the selected edge is not `roundabout`.
+You may have to refresh the map canvas to see the changes.
 
 ## How to edit the data in QGIS
 
