@@ -251,7 +251,7 @@ var lizRoadNetwork = function () {
                     <th>${tr('Cumulative')}</td>
                 </tr>
                 <tr>
-                    <td><input type="number" min="0" max="100" step="1"  id="rd_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
+                    <td><input type="number" min="0" max="500" step="1"  id="rd_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_abscissa" name="abscissa" value="0" placeholder="Ex: 10.5"/></td>
                     <td><input type="number" min="0" max="500000" step="0.1"  id="rd_cumulative" name="cumulative" value="" placeholder="" disabled="disabled"/></td>
                 </tr>
@@ -1156,7 +1156,7 @@ var lizRoadNetwork = function () {
                     ${(geometryType == 'line') ? `<th title="${tr('Go to the start of the edge or of the road located at the references')}">${tr('Start')}</th>` : '<th></th>'}
                 </tr>
                 <tr>
-                    <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
+                    <td><input type="number" min="0" max="500" step="1"  id="rd_editing_marker_code" name="marker_code" value="0" placeholder="Ex: 3"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_editing_abscissa" name="abscissa" value="0" placeholder="Ex: 10.5"/></td>
                     <td style="vertical-align:center;">
                     ${(geometryType == 'line') ? `
@@ -1182,7 +1182,7 @@ var lizRoadNetwork = function () {
                     <th title="${tr('Go to the end of the edge or of the road located at the references')}">${tr('End')}</th>
                 </tr>
                 <tr>
-                    <td><input type="number" min="0" max="100" step="1"  id="rd_editing_marker_code_end" name="marker_code_end" value="0" placeholder="Ex: 5"/></td>
+                    <td><input type="number" min="0" max="500" step="1"  id="rd_editing_marker_code_end" name="marker_code_end" value="0" placeholder="Ex: 5"/></td>
                     <td><input type="number" min="0" max="2000" step="0.1"  id="rd_editing_abscissa_end" name="abscissa_end" value="0" placeholder="Ex: 60"/></td>
                     <td style="vertical-align:center;">
                         <span class="road_network_go_to_tip edge_tip btn btn-sm"
@@ -1254,7 +1254,9 @@ var lizRoadNetwork = function () {
         const form = document.getElementById('road_network_editing_form');
         const el = form.querySelectorAll('span.road_network_go_to_tip').forEach(el => {
             el.addEventListener('click', evt => {
-                const isStart = el.id.startsWith('rd_editing_go_to_start_edge');
+                // Both buttons Edge and Road of the start references:
+                // rd_editing_go_to_start_edge & rd_editing_go_to_start_route
+                const isStart = el.id.startsWith('rd_editing_go_to_start_');
                 const tipType = el.classList.contains('route_tip') ? 'route' : 'edge';
                 // Get the references for the start or the end edge references of the given reference
                 evt.stopPropagation();

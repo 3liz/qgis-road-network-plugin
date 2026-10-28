@@ -34,6 +34,8 @@
 
 ### Fixed
 
+* **Lizmap**: in the references form of the road network panel, the button `Road` of the start references
+  went to the end of the road instead of its start
 * **SQL**: split of a managed object linestring by a point (Lizmap action `split_line_by_point`):
   the references were not updated when the table has no trigger calculating them.
   The first part now ends, and the second part starts, at the references of the cut point.
