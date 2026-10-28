@@ -724,6 +724,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#layer-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layer actions
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -963,6 +974,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#layer-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layer actions
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -992,7 +1014,7 @@ with all the layers, styles, labels and actions needed to visualize and edit the
 <ul>
 <li><code>editing_sessions</code>: the areas of the editing sessions (created, cloned, edited),
   see <a href="../graph-editing/">Road graph editing</a>,</li>
-<li><code>Editing</code>: the layers of the editing session schema,</li>
+<li><code>Editing</code>: the layers of the editing session schema <code>road_graph_editing</code>,</li>
 <li><code>Data</code>: the production data<ul>
 <li><code>managed_objects</code>: the list of business tables based on the road network,
   see <a href="../managed-objects/">Managed objects</a>,</li>
@@ -1018,6 +1040,45 @@ No prefix is needed: the RoadNetwork results are displayed in the <code>RoadNetw
 road code, marker, abscissa, offset and side. It can be toggled with the plugin toolbar button
 or with the shortcut <code>CTRL+SHIFT+K</code>. Hovering over the map is supported.</p>
 <p><img alt="Get references on map click" src="../../media/user-guide/qgis_get_references_map_click.gif" /></p>
+<h2 id="layer-actions">Layer actions<a class="headerlink" href="#layer-actions" title="Permanent link">#</a></h2>
+<p>Some layers of the project have <strong>actions</strong>, run by the RoadNetwork plugin,
+which must be installed and activated:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Action</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>editing_sessions</code></td>
+<td><a href="../graph-editing/#create-editing-session">Create editing session</a></td>
+<td>Create a new editing session</td>
+</tr>
+<tr>
+<td><code>editing_sessions</code></td>
+<td><a href="../graph-editing/#display-edited-data">Display edited data</a></td>
+<td>Highlight the objects modified in the session</td>
+</tr>
+<tr>
+<td><code>editing_sessions</code></td>
+<td><a href="../graph-editing/#drop-editing-session">Drop editing session</a></td>
+<td>Delete the session and its data</td>
+</tr>
+<tr>
+<td><code>edges copie</code></td>
+<td><a href="../graph-editing/#create-a-roundabout">Finalize the roundabout</a></td>
+<td>Clean a roundabout digitized as a circle</td>
+</tr>
+</tbody>
+</table>
+<p>They are used when the user would like to modify the Road graph. See the corresponding documentation.</p>
+<p>To run an action on a feature, use the <code>Identify Features</code> tool and <strong>right-click</strong> on the feature in the map,
+or use the <code>Run Feature Action</code> tool of the <code>Attributes</code> toolbar.</p>
+<p>The Python code of these actions is stored in the plugin: the actions of the project only call it,
+for example <code>plugins['roadnetwork'].run_action('drop_editing_session', ...)</code>.</p>
 
 
 

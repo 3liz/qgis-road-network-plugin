@@ -731,6 +731,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#editing-session-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing session actions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Editing session actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-editing-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create editing session
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#display-edited-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Display edited data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drop-editing-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drop editing session
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#create-a-roundabout" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -942,6 +992,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#editing-session-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Editing session actions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Editing session actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#create-editing-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create editing session
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#display-edited-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Display edited data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drop-editing-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drop editing session
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#create-a-roundabout" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -986,11 +1086,12 @@
 <h1 id="road-graph-editing">Road graph editing<a class="headerlink" href="#road-graph-editing" title="Permanent link">#</a></h1>
 <h2 id="editing-rules">Editing rules<a class="headerlink" href="#editing-rules" title="Permanent link">#</a></h2>
 <p>The road graph data are <strong>not edited directly</strong> in the production schema <code>road_graph</code>,
-but in a <strong>dedicated editing session schema</strong> <code>editing_session</code>, which acts as a sandbox:</p>
+but in a <strong>dedicated editing session schema</strong> <code>road_graph_editing</code>, which acts as a sandbox:</p>
 <ol>
 <li>The user <strong>draws a polygon</strong> in the <code>editing_sessions</code> layer around the area to edit.
    The new editing session has the status <code>created</code>.</li>
-<li>The algorithm <code>Clone data to a new editing session</code> (toolbar button <code>Clone data to the editing sandbox</code>)
+<li>The algorithm <code>Clone data to a new editing session</code> (toolbar button <code>Clone data to the editing sandbox</code>,
+   or layer action <a href="#create-editing-session">Create editing session</a>)
    <strong>copies an extract of the production data</strong> inside this polygon into the sandbox.
    The status becomes <code>cloned</code>.</li>
 <li>The <strong>editing</strong> is made with the <strong>QGIS tools</strong>: forms, topological editing, etc.
@@ -1005,7 +1106,70 @@ but in a <strong>dedicated editing session schema</strong> <code>editing_session
    and updates the <a href="../managed-objects/">managed objects</a>.
    The sandbox data and the merged editing session are then deleted.</li>
 </ol>
+<p>At any time, the modifications of the editing session can be highlighted with the action
+<a href="#display-edited-data">Display edited data</a>, and the editing session can be cancelled
+with the action <a href="#drop-editing-session">Drop editing session</a>.</p>
 <p><img alt="Editing in QGIS" src="../../media/user-guide/qgis_editing.gif" /></p>
+<h2 id="editing-session-actions">Editing session actions<a class="headerlink" href="#editing-session-actions" title="Permanent link">#</a></h2>
+<p>The <code>editing_sessions</code> layer has three <strong>layer actions</strong>.
+To run an action on an editing session, use the <code>Identify Features</code> tool and <strong>right-click</strong>
+on the editing session polygon in the map, or use the <code>Run Feature Action</code> tool of the <code>Attributes</code> toolbar.
+See also <a href="../qgis-project/#layer-actions">Layer actions</a>.</p>
+<h3 id="create-editing-session">Create editing session<a class="headerlink" href="#create-editing-session" title="Permanent link">#</a></h3>
+<p>This action opens the algorithm <code>Clone data to a new editing session</code>, which copies the production data
+inside the last created editing session polygon into the editing schema, like the toolbar button
+<code>Clone data to the editing sandbox</code>.
+It is a <strong>layer action</strong>: it is available in the <code>Actions</code> menu of the <code>editing_sessions</code> attribute table toolbar,
+and does not need any selected feature.</p>
+<p><img alt="Action Create editing session" src="../../media/user-guide/qgis_action_create_editing_session.png" /></p>
+<h3 id="display-edited-data">Display edited data<a class="headerlink" href="#display-edited-data" title="Permanent link">#</a></h3>
+<p>This action <strong>highlights in the map</strong> the objects modified in the editing session,
+from the content of its <code>logged_ids</code> column of the layer <code>editing_sessions</code>. The objects <strong>flash with a color</strong> depending on the modification:</p>
+<table>
+<thead>
+<tr>
+<th>Color</th>
+<th>Modification</th>
+<th>Layer used to display the object</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Yellow</strong></td>
+<td>Updated</td>
+<td>the editing layer, e.g. <code>edges copie</code></td>
+</tr>
+<tr>
+<td><strong>Red</strong></td>
+<td>Deleted</td>
+<td>the production layer, e.g. <code>edges</code></td>
+</tr>
+<tr>
+<td><strong>Green</strong></td>
+<td>Inserted</td>
+<td>the editing layer, e.g. <code>edges copie</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>edges</strong>, <strong>nodes</strong> and <strong>markers</strong> are displayed. A message is displayed if the editing session
+does not contain any modification.</p>
+<p><img alt="Action Display edited data" src="../../media/user-guide/qgis_action_display_edited_data.png" /></p>
+<h3 id="drop-editing-session">Drop editing session<a class="headerlink" href="#drop-editing-session" title="Permanent link">#</a></h3>
+<p>This action <strong>deletes the editing session</strong> and <strong>all the data of the editing schema</strong> <code>road_graph_editing</code>,
+with the database function <code>road_graph.drop_editing_session</code>.
+The modifications which have not been merged are <strong>lost</strong>: a confirmation is asked before.</p>
+<p>The action is cancelled with a warning if:</p>
+<ul>
+<li>the <code>editing_sessions</code> layer is <strong>not in editing mode</strong>,</li>
+<li>the tool <code>Get references on hover</code> is activated: uncheck the checkbox <code>Get references on hover ?</code>
+  in the <code>Road network tools</code> panel before.</li>
+</ul>
+<p>You may have to refresh the map canvas to see the changes.</p>
+<div class="admonition none">
+<p class="admonition-title">None</p>
+<p>Do not forget to save the state by clicking on the <strong>Save</strong> button of QGIS editing toolbar.</p>
+</div>
+<p><img alt="Action Drop editing session" src="../../media/user-guide/qgis_action_drop_editing_session.png" /></p>
 <h2 id="create-a-roundabout">Create a roundabout<a class="headerlink" href="#create-a-roundabout" title="Permanent link">#</a></h2>
 <p>Roundabouts have their own road code, e.g. <code>GIR_D40_D80</code>, and cut the other roads
 (see <a href="../../concepts/#corner-cases">Concepts</a>).
@@ -1020,7 +1184,8 @@ The road of the roundabout must exist in the <code>roads</code> layer with the r
 <li>Right-click on one of the edges of the roundabout circle with the <code>Identify Features</code> tool,
    and choose the action <code>Finalize the roundabout</code>.</li>
 </ol>
-<p>This QGIS Python action runs the database function <code>clean_digitized_roundabout</code>, which:</p>
+<p><img alt="Action Finalize the roundabout" src="../../media/user-guide/qgis_action_finalize_roundabout.png" /></p>
+<p>This layer action of the <code>edges copie</code> layer runs the database function <code>clean_digitized_roundabout</code>, which:</p>
 <ul>
 <li><strong>deletes the pieces of edges inside the roundabout</strong>, and updates the previous and next edges of the remaining roads,</li>
 <li><strong>deletes the node</strong> created by QGIS at the <strong>top of the circle</strong>, by merging the two edges around it,</li>

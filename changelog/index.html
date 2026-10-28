@@ -2732,11 +2732,30 @@ On your local, make a symlink with ln -s
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
 <ul>
+<li><strong>QGIS project</strong>: the Python code of the layer actions has been moved into the plugin
+  (module <code>roadnetwork/actions</code>). The actions of the administration project now only call
+  <code>plugins['roadnetwork'].run_action(...)</code>: <code>finalize_roundabout</code> (layer <code>edges copie</code>),
+  <code>display_edited_data</code>, <code>create_editing_session</code> and <code>drop_editing_session</code> (layer <code>editing_sessions</code>)</li>
 <li><strong>Processing</strong>: remove the <code>Schema name</code> parameter from the algorithms <code>Create database structure</code>
   and <code>Upgrade database structure</code>: the plugin schema is always <code>road_graph</code></li>
+<li><strong>SQL</strong>: rename the editing schema <code>editing_session</code> to <code>road_graph_editing</code>
+  (migration <code>upgrade_to_32.sql</code>). The table <code>road_graph.editing_sessions</code> and the functions
+  <code>*_editing_session*</code> keep their names. The QGIS administration project and the plugin tools
+  use the new schema name: QGIS projects created before must be recreated
+  with the algorithm <code>Create database local interface</code>, or their data sources updated</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>
+<li><strong>SQL</strong>: when the first edge of a road is updated, for example when it is split by a new node,
+  do not create a marker <code>0</code> if the road already has markers. Some roads do not start with the marker <code>0</code>
+  (e.g. a road starting at the marker <code>4 + 918</code>): a wrong marker <code>0</code> was created, or the editing failed
+  with the error <code>The object geometry must intersect the editing session polygon</code>
+  if the start of the road was outside the editing session (migration <code>upgrade_to_33.sql</code>)</li>
+<li><strong>SQL</strong>: the session variables <code>road.graph.*</code> used by the topology triggers are set with <code>SET LOCAL</code>,
+  so that their value cannot leak outside of the current transaction (migration <code>upgrade_to_33.sql</code>)</li>
+<li><strong>SQL</strong>: remove the <code>SET search_path</code> / <code>RESET search_path</code> inside the functions
+  <code>drop_editing_session</code>, <code>editing_survey</code> and <code>split_edge_by_node</code>, which now use the quoted schema name
+  <code>"road_graph"</code>. The function <code>merge_editing_session_data</code> has its <code>search_path</code> set in its definition</li>
 <li><strong>Locator</strong>: remove the prefix <code>rr</code>, which was ignored by QGIS
   (plugin prefixes must have at least 3 characters).
   The search is run without typing any prefix.</li>

@@ -109,7 +109,7 @@
                                         <td>false</td>
                                         <td>boolean</td>
                                         <td>DEFINER</td>
-                                        <td><p>Delete the given editing session and truncate all the table of the editing_session schema</p></td>
+                                        <td><p>Delete the given editing session and truncate all the table of the road_graph_editing schema</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/get_merged_geom_from_table_and__3cb04418.html">get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[])</a></td>
@@ -346,7 +346,7 @@
                                         <td>false</td>
                                         <td>trigger</td>
                                         <td>INVOKER</td>
-                                        <td><p>Prevent from updating an editing session geometry if there is data inside the editing_session schema</p></td>
+                                        <td><p>Prevent from updating an editing session geometry if there is data inside the road_graph_editing schema</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/calculate_managed_object_referen_96c5490.html">calculate_managed_object_references()</a></td>
@@ -382,7 +382,7 @@
                                         <td>false</td>
                                         <td>boolean</td>
                                         <td>DEFINER</td>
-                                        <td><p>Copy production data from the road_graph shema to the editing_session schema corresponding to the given editing session ID.</p></td>
+                                        <td><p>Copy production data from the road_graph shema to the road_graph_editing schema corresponding to the given editing session ID.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/editing_survey___e14344a2.html">editing_survey()</a></td>
@@ -472,7 +472,7 @@
                                         <td>false</td>
                                         <td>boolean</td>
                                         <td>DEFINER</td>
-                                        <td><p>Deactivate or reactivate the foreign key constraints to ease the merging editing_session data into road_graph schema. It is also used when importing data from templates.</p>
+                                        <td><p>Deactivate or reactivate the foreign key constraints to ease the merging road_graph_editing data into road_graph schema. It is also used when importing data from templates.</p>
 <p>Under the hood, it drops or drops &amp; creates the constraint depending on the value of the _toggle parameter</p></td>
                                     </tr>
                                     <tr>
