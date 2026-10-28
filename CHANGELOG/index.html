@@ -1848,6 +1848,8 @@
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">#</a></h3>
 <ul>
+<li><strong>SQL</strong>: add the function <code>road_graph.add_managed_object_reference_fields</code> which adds to a managed object table
+  the reference fields corresponding to its geometry type (migration <code>upgrade_to_39.sql</code>)</li>
 <li><strong>SQL</strong>: add the function <code>road_graph.add_managed_objects_triggers()</code> which creates the trigger
   <code>trg_calculate_managed_object_references</code> on every table listed in <code>road_graph.managed_objects</code>
   with the new column <code>add_trigger_on_geom_change</code> set to <code>True</code>, if it does not already exist</li>

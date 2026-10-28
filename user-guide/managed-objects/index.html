@@ -1144,6 +1144,9 @@ with the update policy to apply to each of them:</p>
   is created on this table by the function <code>road_graph.add_managed_objects_triggers()</code>
   (see <a href="#automatic-calculation-of-the-references">below</a>). Default: <code>False</code>.</li>
 </ul>
+<p>Each table must have the <strong>reference columns</strong> corresponding to its geometry type.
+They can be added automatically with the function <code>road_graph.add_managed_object_reference_fields</code>,
+for one table or for all the tables of this layer (see <a href="../import/#add-the-reference-fields">Add the reference fields</a>).</p>
 <h2 id="last-updated-objects">Last updated objects<a class="headerlink" href="#last-updated-objects" title="Permanent link">#</a></h2>
 <p>The layer <code>vm_managed_objects</code> shows, for each managed table, the <strong>objects updated by the last merge</strong>
 of an editing session, as a 10m buffer around them. It is useful to have a quick look at the impacted objects.</p>
