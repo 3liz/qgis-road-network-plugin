@@ -10,6 +10,12 @@
 * **SQL**: add the materialized view `road_graph.vm_managed_objects`, based on the view `v_managed_objects`
   and refreshed at the end of the function `merge_editing_session_data`.
   The QGIS administration project uses it instead of the view `v_managed_objects`
+* **SQL**: add the functions `road_graph.get_snapped_line_from_track` which snaps an imprecise GPS track
+  (for example from a GPX file) on the road graph edges, without zigzags between close roads,
+  and `road_graph.get_road_sections_from_snapped_line` which returns the ordered list of the roads
+  followed by the snapped line, with their start and end references (migration `upgrade_to_34.sql`)
+* **Docs**: the `Database` menu now contains the pages `Useful functions`,
+  which explains how to use these functions, and `Database structure`, which embeds the SchemaSpy documentation
 
 ### Changed
 

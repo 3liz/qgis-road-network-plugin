@@ -137,6 +137,13 @@ processing-screenshots:
 		$(QGIS_IMAGE_TAG) \
 		python3 .docker/processing_screenshots.py docs/media
 
+# Map screenshots of the GPS track snapping, rendered by the local QGIS
+# with the administration project, on the test database containing the test data
+map-screenshots: start-db
+	$(UV) pytest tests/test_load_structure.py -k "test_processing_create or test_reset_test_data"
+	python3 .docker/map_screenshots.py docs/media
+	$(MAKE) stop-db
+
 #
 # Update the project's environment
 #

@@ -21,7 +21,9 @@ nav:
       - Managed objects: user-guide/managed-objects.md
     - Changelog: changelog.md
     - Contribution: contributing.md
-    - Database: database/index.html
+    - Database:
+      - Useful functions: database-guide/functions.md
+      - Database structure: database-guide/structure.md
     - Lizmap Web Client: lizmap-web-client/index.md
 
 plugins:

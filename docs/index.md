@@ -10,4 +10,6 @@ hide:
 * [Installation](./installation/)
 * [User guide](./user-guide/)
 * [Changelog](./changelog/)
-* [Database](./database/)
+* Database
+    * [Useful functions](./database-guide/functions/)
+    * [Database structure](./database-guide/structure/)

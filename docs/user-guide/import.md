@@ -115,7 +115,7 @@ CREATE TABLE managed.demo_trees (
 ```
 
 Then import your data into this table, for example with the QGIS tools
-(drag and drop in the `Browser` panel, `Database / DB Manager`, or the Processing algorithm
+(drag and drop in the `Browser` panel, or the Processing algorithm
 `Export to PostgreSQL`), or with SQL.
 
 ### Register the table

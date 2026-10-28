@@ -31,7 +31,7 @@ All the logic is stored inside a **PostgreSQL database**:
 
 ![Database model](../media/user-guide/database_model.png)
 
-See the [Database](../database/) documentation for a complete description of the tables and functions.
+See the [Database structure](../database-guide/structure/) documentation for a complete description of the tables and functions.
 
 ## Administration tools
 
