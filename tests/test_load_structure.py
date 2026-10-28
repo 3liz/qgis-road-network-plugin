@@ -667,7 +667,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
     assert [edges[1][10], edges[1][11]] == [861, 926]
 
     # Check references
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 981.0, 8995.61] # not changed
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 981.0, 8995.61]  # not changed
     assert [edges[0][7], edges[0][8], edges[0][9]] == [9, 740.81, 9762.14]  # changed
     assert [edges[1][4], edges[1][5], edges[1][6]] == [9, 740.81, 9762.14]  # new edge
     assert [edges[1][7], edges[1][8], edges[1][9]] == [14, 490.62, 14564.0]  # like previous edge
@@ -843,22 +843,10 @@ def test_create_roundabout(processing_provider: Provider):
     assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [3529, 7822, 862, 7816]
 
     # Check the references of the edges
-    assert [
-        edges[0][4], edges[0][5], edges[0][6],
-        edges[0][7], edges[0][8], edges[0][9]
-    ] == [8, 243, 8257.66, 8, 971.93, 8986.59]
-    assert [
-        edges[1][4], edges[1][5], edges[1][6],
-        edges[1][7], edges[1][8], edges[1][9]
-    ] == [8, 981, 8986.59, 9, 740.81, 9744.13]
-    assert [
-        edges[2][4], edges[2][5], edges[2][6],
-        edges[2][7], edges[2][8], edges[2][9]
-    ] == [4, 153, 4281.04, 8, 983, 9063.46]
-    assert [
-        edges[3][4], edges[3][5], edges[3][6],
-        edges[3][7], edges[3][8], edges[3][9]
-    ] == [8, 992, 9063.46, 9, 668, 9773.13]
+    assert list(edges[0][4:10]) == [8, 243, 8257.66, 8, 971.93, 8986.59]
+    assert list(edges[1][4:10]) == [8, 981, 8986.59, 9, 740.81, 9744.13]
+    assert list(edges[2][4:10]) == [4, 153, 4281.04, 8, 983, 9063.46]
+    assert list(edges[3][4:10]) == [8, 992, 9063.46, 9, 668, 9773.13]
 
     # Check the marker 0 has been created
     sql = """
@@ -971,10 +959,10 @@ def test_move_road_marker():
     assert edges[6] is not None
 
     # Check the references of the edges before moving the marker
-    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 8, 243.0, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [8, 243.0, 8257.66, 8, 971.93, 8986.59]
-    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [8, 981.0, 8986.59, 9, 740.81, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 8, 243.0, 8257.66]
+    assert list(edges[1][1:7]) == [8, 243.0, 8257.66, 8, 971.93, 8986.59]
+    assert list(edges[2][1:7]) == [8, 981.0, 8986.59, 9, 740.81, 9744.13]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
 
     # Move the marker 8 of the road D138 by 60 meters southwards
     sql_update = """
@@ -1008,10 +996,10 @@ def test_move_road_marker():
     assert edges[6] is not None
 
     # Check the references of the edges after moving the marker [7, 837.0, 7930.97, 8, 243.0, 8257.66]
-    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 8, 243.0, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [8, 243.0, 8257.66, 8, 971.93, 8986.59]
-    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [8, 981.0, 8986.59, 9, 740.81, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 8, 243.0, 8257.66]
+    assert list(edges[1][1:7]) == [8, 243.0, 8257.66, 8, 971.93, 8986.59]
+    assert list(edges[2][1:7]) == [8, 981.0, 8986.59, 9, 740.81, 9744.13]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
 
 
 def test_delete_road_marker():
@@ -1061,13 +1049,13 @@ def test_delete_road_marker():
     assert edges[6] is not None
 
     # Check the references of the edges after deleting the markers
-    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 7, 1163.69, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [7, 1163.69, 8257.66, 7, 1892.62, 8986.59]
-    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [7, 1892.62, 8986.59, 9, 740.81, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
-    assert [edges[4][1], edges[4][2], edges[4][3], edges[4][4], edges[4][5], edges[4][6]] == [14, 491.0, 14546.0, 15, 1806.29, 16856.8]
-    assert [edges[5][1], edges[5][2], edges[5][3], edges[5][4], edges[5][5], edges[5][6]] == [15, 1806.29, 16856.8, 15, 1840.55, 16891.1]
-    assert [edges[6][1], edges[6][2], edges[6][3], edges[6][4], edges[6][5], edges[6][6]] == [15, 1840.55, 16891.1, 18, 1341.55, 19428.5]
+    assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 7, 1163.69, 8257.66]
+    assert list(edges[1][1:7]) == [7, 1163.69, 8257.66, 7, 1892.62, 8986.59]
+    assert list(edges[2][1:7]) == [7, 1892.62, 8986.59, 9, 740.81, 9744.13]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[4][1:7]) == [14, 491.0, 14546.0, 15, 1806.29, 16856.8]
+    assert list(edges[5][1:7]) == [15, 1806.29, 16856.8, 15, 1840.55, 16891.1]
+    assert list(edges[6][1:7]) == [15, 1840.55, 16891.1, 18, 1341.55, 19428.5]
 
 
 def test_add_road_marker():
@@ -1106,10 +1094,10 @@ def test_add_road_marker():
     assert edges[3] is not None
 
     # Check the references of the edges before adding the marker
-    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 7, 1163.69, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [7, 1163.69, 8257.66, 7, 1892.62, 8986.59]
-    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [7, 1892.62, 8986.59, 9, 740.81, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 7, 1163.69, 8257.66]
+    assert list(edges[1][1:7]) == [7, 1163.69, 8257.66, 7, 1892.62, 8986.59]
+    assert list(edges[2][1:7]) == [7, 1892.62, 8986.59, 9, 740.81, 9744.13]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
 
     # Add the marker 8 for the road D138
     sql_insert = """
@@ -1146,10 +1134,10 @@ def test_add_road_marker():
     assert edges[3] is not None
 
     # Check the references of the edges after adding the marker
-    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [7, 837.0, 7930.97, 8, 202.8, 8257.66]
-    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [8, 202.8, 8257.66, 8, 931.73, 8986.59]
-    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [8, 931.73, 8986.59, 9, 740.81, 9744.13]
-    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 8, 202.8, 8257.66]
+    assert list(edges[1][1:7]) == [8, 202.8, 8257.66, 8, 931.73, 8986.59]
+    assert list(edges[2][1:7]) == [8, 931.73, 8986.59, 9, 740.81, 9744.13]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
 
 
 def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider: Provider):
@@ -1186,10 +1174,10 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     assert edges[3] is not None
 
     # Check the references of the edges before deleting the edge
-    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [0, 0, 0, 0, 22.45, 22.45]
-    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [0, 22.45, 22.45, 0, 30.52, 30.52]
-    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [0, 30.52, 30.52, 0, 51.18, 51.18]
-    assert [edges[3][1], edges[3][2], edges[3][3], edges[3][4], edges[3][5], edges[3][6]] == [0, 51.18, 51.18, 0, 56.46, 56.46]
+    assert list(edges[0][1:7]) == [0, 0, 0, 0, 22.45, 22.45]
+    assert list(edges[1][1:7]) == [0, 22.45, 22.45, 0, 30.52, 30.52]
+    assert list(edges[2][1:7]) == [0, 30.52, 30.52, 0, 51.18, 51.18]
+    assert list(edges[3][1:7]) == [0, 51.18, 51.18, 0, 56.46, 56.46]
 
     # Delete the edge of the road D138 which ends on the marker 0 of the roundabout R001
     sql_delete = """
@@ -1226,9 +1214,9 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
     assert edges[2] is not None
 
     # Check the references of the edges after deleting the edge
-    assert [edges[0][1], edges[0][2], edges[0][3], edges[0][4], edges[0][5], edges[0][6]] == [0, 0, 0, 0, 27.74, 27.74]
-    assert [edges[1][1], edges[1][2], edges[1][3], edges[1][4], edges[1][5], edges[1][6]] == [0, 27.74, 27.74, 0, 35.8, 35.8]
-    assert [edges[2][1], edges[2][2], edges[2][3], edges[2][4], edges[2][5], edges[2][6]] == [0, 35.8, 35.8, 0, 56.46, 56.46]
+    assert list(edges[0][1:7]) == [0, 0, 0, 0, 27.74, 27.74]
+    assert list(edges[1][1:7]) == [0, 27.74, 27.74, 0, 35.8, 35.8]
+    assert list(edges[2][1:7]) == [0, 35.8, 35.8, 0, 56.46, 56.46]
 
 
 def test_no_cutting_of_edges_with_field_no_intersection_cutting():
@@ -1941,7 +1929,7 @@ def test_update_managed_objects():
             "6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473170 "
             "6894821.5,473149.7 6894786.6,473133.5 6894748.7,473116.2 "
             "6894712.8,473103.1 6894690.9,473055.6 6894624.2,473026.9 6894579.8))",
-        ]
+        ],
     ]
 
 
