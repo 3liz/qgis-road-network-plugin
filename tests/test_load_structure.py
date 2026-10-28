@@ -11,9 +11,13 @@ import pytest
 
 from qgis import processing
 from qgis.core import (
+    QgsFeature,
+    QgsGeometry,
+    QgsPointXY,
     QgsProcessingException,
     QgsProviderConnectionException,
     QgsProviderRegistry,
+    QgsVectorLayer,
 )
 
 from roadnetwork.plugin_tools.feedback import LoggerProcessingFeedBack
@@ -2561,6 +2565,102 @@ def test_split_table_linestring_feature_by_point(rollback_db_connection: psycopg
     assert rows[1][5] == end_point
     # The first feature ends where the second feature starts
     assert rows[0][5] == rows[1][4]
+
+
+def test_update_managed_objects_algorithm_preserve_start_end_points(
+    processing_provider: Provider, db_connection: psycopg.Connection
+):
+    """Test the algorithm Update managed objects from the road graph, with the update policy
+    Update geometries, and the option Preserve start & end points when updating line geometries.
+
+    The line follows the road D72 from 2 + 200 m to 2 + 600 m, but its references are outdated:
+    2 + 100 m -> 3 + 10 m, for example after a move of the line.
+    * without the option, the geometry is calculated from the stored references,
+    * with the option, the references are first calculated from the start and end points of the line,
+      then the geometry is calculated from them: the line keeps its start and end points.
+    The database is not modified: the algorithm creates a new layer."""
+    cursor = db_connection.cursor()
+    cursor.execute("""
+        SELECT
+            ST_AsText(
+                (
+                    road_graph.get_road_substring_from_references('D72', 2, 200, 2, 600, 0, 'right')->>'geom'
+                )::geometry
+            ),
+            ST_AsText(
+                (
+                    road_graph.get_road_substring_from_references('D72', 2, 100, 3, 10, 0, 'right')->>'geom'
+                )::geometry
+            )
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    line_wkt, stored_references_line_wkt = row
+    db_connection.close()
+
+    line = QgsGeometry.fromWkt(line_wkt)
+    stored_references_line = QgsGeometry.fromWkt(stored_references_line_wkt)
+    assert not line.isNull() and not stored_references_line.isNull()
+
+    # Memory layer with the line and its outdated references
+    layer = QgsVectorLayer(
+        "MultiLineString?crs=EPSG:2154"
+        "&field=id:integer&field=road_code:string"
+        "&field=start_marker_code:integer&field=start_abscissa:double"
+        "&field=end_marker_code:integer&field=end_abscissa:double"
+        "&field=offset:double&field=side:string",
+        "barriers",
+        "memory",
+    )
+    assert layer.isValid()
+    feature = QgsFeature(layer.fields())
+    feature.setAttributes([1, "D72", 2, 100.0, 3, 10.0, 0.0, "right"])
+    feature.setGeometry(line)
+    assert layer.dataProvider().addFeatures([feature])[0]
+
+    alg = f"{processing_provider.id()}:update_managed_objects"
+
+    def run(preserve_start_end_points: int) -> QgsFeature:
+        output = processing.run(
+            alg,
+            {
+                "CONNECTION_NAME": "test",
+                "INPUT": layer,
+                # Update geometries
+                "UPDATE_POLICY": 0,
+                # 0: No, 1: Yes
+                "PRESERVE_START_END_POSITIONS": preserve_start_end_points,
+                "OUTPUT": "TEMPORARY_OUTPUT",
+            },
+            feedback=LoggerProcessingFeedBack(),
+        )
+        output_layer = output["OUTPUT"]
+        features = list(output_layer.getFeatures())
+        assert len(features) == 1
+        return features[0]
+
+    def first_point(geometry: QgsGeometry) -> QgsPointXY:
+        return geometry.asMultiPolyline()[0][0]
+
+    def last_point(geometry: QgsGeometry) -> QgsPointXY:
+        return geometry.asMultiPolyline()[-1][-1]
+
+    # Without the option: the geometry is calculated from the stored references
+    result = run(0)
+    assert [result["start_marker_code"], result["start_abscissa"]] == [2, 100.0]
+    assert [result["end_marker_code"], result["end_abscissa"]] == [3, 10.0]
+    assert first_point(result.geometry()).distance(first_point(stored_references_line)) < 0.05
+    assert last_point(result.geometry()).distance(last_point(stored_references_line)) < 0.05
+
+    # With the option: the references are calculated from the line start and end points,
+    # and the line keeps its start and end points
+    result = run(1)
+    assert result["start_marker_code"] == 2
+    assert abs(result["start_abscissa"] - 200) < 0.05
+    assert result["end_marker_code"] == 2
+    assert abs(result["end_abscissa"] - 600) < 0.05
+    assert first_point(result.geometry()).distance(first_point(line)) < 0.05
+    assert last_point(result.geometry()).distance(last_point(line)) < 0.05
 
 
 def test_changes_on_marker_and_edge_geometry():

@@ -43,6 +43,9 @@
 
 ### Fixed
 
+* **Processing**: in the algorithm `Update managed objects from the road graph`, the option
+  `Preserve start & end points when updating line geometries` had no effect
+
 * **QGIS**: in the panel `RoadNetwork tools`, pressing `Enter` in a field did not run the search `Find`
 * **QGIS**: the error message of the tool `Get references under the cursor` raised an error itself
 * **Processing**: the help of the algorithm `Merge editing session data` was the help of the algorithm cloning the data

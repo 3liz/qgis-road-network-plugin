@@ -98,7 +98,13 @@ Parameters:
 * `Update policy`:
     * `Update references`: the references of each feature are calculated from its geometry,
     * `Update geometries`: the geometry of each feature is calculated from its references,
-* `Update geometries - Preserve start & end points when updating line geometries`: `No` or `Yes`,
+* `Update geometries - Preserve start & end points when updating line geometries`: `No` or `Yes`.
+  Used only to update the geometries of a line layer:
+    * `No`: the geometry is calculated from the **stored references**,
+    * `Yes`: the references are first calculated from the **start and end points** of the line,
+      then the geometry is calculated from them. The line keeps its start and end points,
+      and follows the road between them. Use it when the start and end points are right
+      but the references are outdated or the line does not follow the road,
 * `Output layer`: the layer created with the updated features.
 
 ![Update managed objects from the road graph](../media/user-guide/processing_update_managed_objects.png)

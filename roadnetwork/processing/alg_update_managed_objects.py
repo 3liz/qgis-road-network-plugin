@@ -423,10 +423,10 @@ class UpdateManagedObjects(BaseProcessingAlgorithm):
 
             # Calculate references from the geometry
             # We do it if update_policy is "update_references"
-            # and also for update_geometry
-            # if the parameter UPDATE_REFERENCES is set to yes
+            # and also for "update_geom"
+            # if the parameter PRESERVE_START_END_POSITIONS is set to yes
             if update_policy == "update_references" or (
-                update_policy == "update_geometry" and preserve_start_end_positions == "yes"
+                update_policy == "update_geom" and preserve_start_end_positions == "yes"
             ):
                 # We need to update the feature references from the feature geometry
                 if QgsWkbTypes.geometryType(source.wkbType()) == QgsWkbTypes.PointGeometry:
