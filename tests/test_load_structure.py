@@ -1661,6 +1661,107 @@ def test_get_road_substring_from_references():
     ]
 
 
+# Imprecise GPS track in EPSG:4326 (+/- 7m) going through the road D40,
+# the roundabout GIR_D40_D16-1 and the road D16
+GPS_TRACK_WKT = (
+    "LINESTRING(-0.044052 49.020203,-0.043663 49.019952,-0.043503 49.019834,-0.043232 49.019758,"
+    "-0.042817 49.01972,-0.04232 49.019707,-0.041969 49.019717,-0.041419 49.01973,-0.040947 49.019721,"
+    "-0.040215 49.019705,-0.039546 49.019687,-0.039268 49.019656,-0.039167 49.019629,-0.038928 49.019567,"
+    "-0.038934 49.019524,-0.038806 49.019484,-0.038675 49.019444,-0.038629 49.019401,-0.038761 49.019223,"
+    "-0.038928 49.018876,-0.038944 49.018562,-0.038938 49.018271,-0.039021 49.018016,-0.03919 49.017737,"
+    "-0.039312 49.017429,-0.039288 49.017182,-0.039202 49.017039,-0.039198 49.016874,-0.039302 49.016683,"
+    "-0.039396 49.016463,-0.039369 49.016225,-0.039223 49.015851,-0.039072 49.015271,-0.039042 49.014722,"
+    "-0.039105 49.014463,-0.039099 49.014186,-0.039025 49.01388,-0.038989 49.013559,-0.0391 49.013213,"
+    "-0.039313 49.012978)"
+)
+
+
+def test_get_snapped_line_from_track():
+    """Test the function get_snapped_line_from_track
+    which snaps an imprecise GPS track on the road graph edges."""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # The snapped line must be made of only one part
+    # and all its vertices must be on the edges of the 3 roads
+    sql = f"""
+    WITH snapped AS (
+        SELECT road_graph.get_snapped_line_from_track(
+            ST_GeomFromText('{GPS_TRACK_WKT}', 4326)
+        ) AS geom
+    ),
+    vertices AS (
+        SELECT d.geom
+        FROM snapped AS s, ST_DumpPoints(s.geom) AS d
+    )
+    SELECT
+        ST_SRID(s.geom),
+        ST_NumGeometries(s.geom),
+        round(ST_Length(s.geom)::numeric, 2),
+        (
+            SELECT count(*)
+            FROM vertices AS v
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM road_graph.edges AS e
+                WHERE e.road_code IN ('D40', 'GIR_D40_D16-1', 'D16')
+                AND ST_DWithin(e.geom, v.geom, 0.01)
+            )
+        ) AS vertices_outside_edges
+    FROM snapped AS s
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    result = None
+    for a in data:
+        result = a if a else None
+
+    assert result is not None
+    assert result == [2154, 1, 1153.96, 0]
+
+
+def test_get_road_sections_from_snapped_line():
+    """Test the function get_road_sections_from_snapped_line
+    which returns the references of the roads followed by a line."""
+
+    # Get PostgreSQL connection
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection_name = "test"
+    connection = metadata.findConnection(connection_name)
+
+    # The zigzags of the GPS track between the roads must have been removed
+    # and the roundabout start must have the abscissa 0 (and not its length)
+    sql = f"""
+    SELECT
+        r.road_order, r.road_code,
+        r.start_marker, round(r.start_abscissa::numeric, 2),
+        r.end_marker, round(r.end_abscissa::numeric, 2),
+        r.direction, round(r.length::numeric, 2)
+    FROM road_graph.get_road_sections_from_snapped_line(
+        road_graph.get_snapped_line_from_track(
+            ST_GeomFromText('{GPS_TRACK_WKT}', 4326)
+        )
+    ) AS r
+    ORDER BY r.road_order
+    """
+    try:
+        data = connection.executeSql(sql)
+    except QgsProviderConnectionException as e:
+        raise QgsProcessingException(str(e))
+
+    assert data == [
+        [1, "D40", 14, 905.27, 15, 396.15, "downstream", 399.6],
+        [2, "GIR_D40_D16-1", 0, 0.0, 0, 39.17, "downstream", 39.17],
+        [3, "D16", 0, 716.82, 0, 1.62, "upstream", 715.19],
+    ]
+
+
 def test_get_updated_roads_from_editing_session():
     """Test the function get_updated_roads_from_editing_session
     which returns an array of a distinct road codes for the edited objects."""

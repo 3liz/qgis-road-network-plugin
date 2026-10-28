@@ -191,9 +191,31 @@ The function also returns:
 ';
 
 
+-- FUNCTION get_road_sections_from_snapped_line(_line geometry, _tolerance real)
+COMMENT ON FUNCTION road_graph.get_road_sections_from_snapped_line(_line geometry, _tolerance real) IS 'Return the ordered list of the roads followed by the given line, with the start and end references (marker, abscissa and cumulative) for each road, the direction (downstream or upstream) and the line portion on this road.
+The line must follow the road graph edges, for example the result of the function get_snapped_line_from_track. The parameter _tolerance (default 1m) is the maximum distance between the line and the edges.
+A line without SRID is considered to be in the road graph projection, and other lines are reprojected.
+Example of output (the geom column is not shown):
+ road_order | road_code     | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative | direction  | length
+------------+---------------+--------------+----------------+------------------+------------+--------------+----------------+------------+--------
+          1 | D40           |           14 |         905.27 |          16361.8 |         15 |       396.15 |        16761.4 | downstream |  399.6
+          2 | GIR_D40_D16-1 |            0 |              0 |                0 |          0 |        39.17 |          39.17 | downstream |  39.17
+          3 | D16           |            0 |         716.82 |           716.82 |          0 |         1.62 |           1.62 | upstream   | 715.19
+';
+
+
 -- FUNCTION get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean, _to_last_edge_end boolean)
 COMMENT ON FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean, _to_last_edge_end boolean) IS 'Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part.
 The parameters _from_first_edge_start & _to_last_edge_end allows to respectively add the edge under the result linestring start point & the edge under the result linestring end point.';
+
+
+-- FUNCTION get_snapped_line_from_track(_track geometry, _densify_distance real, _max_distance real, _road_change_penalty real)
+COMMENT ON FUNCTION road_graph.get_snapped_line_from_track(_track geometry, _densify_distance real, _max_distance real, _road_change_penalty real) IS 'Build a multilinestring snapped on the road graph edges from a GPS track (for example from a GPX file) which can be imprecise.
+The track is densified with a point every _densify_distance meters (default 2m), and each point is assigned to one of the roads closer than _max_distance (default 25m).
+To avoid zigzags between two close roads, the chosen sequence of roads minimizes the sum of the distances between the points and their roads, plus a penalty _road_change_penalty (default 100, expressed as a surface in m² between the track and the roads) each time the road changes.
+The returned geometry follows the edges geometries, in the direction of the track. Gaps between two unconnected edges are filled with the shortest path of maximum 5 edges. If no path is found, a new part is created in the multilinestring.
+A track without SRID is considered to be in the road graph projection, and other tracks are reprojected. The result is returned in the road graph projection.
+The result can be passed to the function get_road_sections_from_snapped_line to get the references of the crossed roads.';
 
 
 -- FUNCTION get_spatial_road(_road_code text)
