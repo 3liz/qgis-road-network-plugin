@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[])</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Updates managed objects geometries or references when the road graph changes. It uses the information stored in the road_graph.managed_objects table</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_schema_name</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_table_name</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_road_codes</td>
+                                    <td>text[]</td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    sql_text text;&#10;    table_exists boolean;&#10;    managed_object record;&#10;    updated_stats_geometry jsonb;&#10;    updated_stats_references jsonb;&#10;    merged_last_updated_objects_ids integer[];&#10;    updated_stats jsonb;&#10;    update_count integer;&#10;BEGIN&#10;    -- Get info on the managed object table&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT *&#10;        FROM road_graph.managed_objects&#10;        WHERE&#10;            schema_name &#61; &#39;%1$s&#39;&#10;            AND table_name &#61; &#39;%2$s&#39;&#10;        LIMIT 1;&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO managed_object&#10;    ;&#10;    IF managed_object IS NULL THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; is not registered as managed object in the road graph system !&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Check if the table exists in the database&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT to_regclass(&#39;%1$I.%2$I&#39;) IS NOT NULL AS exists&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO table_exists&#10;    ;&#10;    IF NOT table_exists THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; does not exist in the database !&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- CHOIX IMPORTANT&#10;    -- Lorsqu&#39;on demande la modification de la géométrie,&#10;    -- il faut toujours au préalable recalculer d&#39;abord les références&#10;    -- de début et de fin à partir du nouveau graphe,&#10;    -- pour ensuite adapter la géométrie (si jamais les edges support ont été modifiés)&#10;    -- Cela assure que le début et la fin des lignes des données métiers restent&#10;    -- les &quot;mêmes&quot; sur le terrain (ex: début à cette maison, et fin à ce carrefour)&#10;    -- Par contre on ne calcule pas les offset et side (pour respecter cette donnée)&#10;&#10;    -- Update objects references in both cases&#10;    -- But when we do it before updating geometries, we should not modify the offset and side values&#10;&#10;    SELECT road_graph.update_table_references_from_geometries(&#10;        _schema_name,&#10;        _table_name,&#10;        _road_codes,&#10;        CASE&#10;            WHEN managed_object.update_policy_on_graph_change &#61; &#39;geometry&#39;&#10;                THEN False&#10;            ELSE True&#10;        END&#10;    )&#10;    INTO updated_stats_references&#10;    ;&#10;    IF updated_stats_references IS NULL THEN&#10;        updated_stats_references &#61; jsonb_build_object(&#10;            &#39;nb&#39;, 0,&#10;            &#39;last_updated_objects_ids&#39;, ARRAY[]::integer[]&#10;        );&#10;    END IF;&#10;    updated_stats &#61; updated_stats_references;&#10;&#10;    IF managed_object.update_policy_on_graph_change &#61; &#39;geometry&#39; THEN&#10;        -- Update geometries based on references&#10;        SELECT road_graph.update_table_geometries_from_references(&#10;            _schema_name,&#10;            _table_name,&#10;            _road_codes&#10;        )&#10;        INTO updated_stats_geometry&#10;        ;&#10;        IF updated_stats_geometry IS NULL THEN&#10;            updated_stats_geometry &#61; jsonb_build_object(&#10;                &#39;nb&#39;, 0,&#10;                &#39;last_updated_objects_ids&#39;, ARRAY[]::integer[]&#10;            );&#10;        END IF;&#10;        -- Get combined stats&#10;        -- RAISE NOTICE &#39;--------------&#39;;&#10;        -- RAISE NOTICE &#39;refs, %&#39;, updated_stats_references::json;&#10;        -- RAISE NOTICE &#39;geoms, %&#39;, updated_stats_geometry::json;&#10;        merged_last_updated_objects_ids &#61; (&#10;            WITH a AS (&#10;                SELECT t FROM jsonb_array_elements(&#10;                        CASE&#10;                        WHEN jsonb_typeof(updated_stats_references-&gt;&#39;last_updated_objects_ids&#39;) &#61; &#39;array&#39;&#10;                        THEN updated_stats_references-&gt;&#39;last_updated_objects_ids&#39;&#10;                        ELSE &#39;[]&#39;&#10;                        END&#10;                ) AS t&#10;                UNION&#10;                SELECT t FROM jsonb_array_elements(&#10;                        CASE&#10;                        WHEN jsonb_typeof(updated_stats_geometry-&gt;&#39;last_updated_objects_ids&#39;) &#61; &#39;array&#39;&#10;                        THEN updated_stats_geometry-&gt;&#39;last_updated_objects_ids&#39;&#10;                        ELSE &#39;[]&#39;&#10;                        END&#10;                ) AS t&#10;            )&#10;            SELECT array_agg(t ORDER BY t)&#10;            FROM a&#10;        );&#10;        -- RAISE NOTICE &#39;merged_last_updated_objects_ids, %&#39;, merged_last_updated_objects_ids;&#10;        -- RAISE NOTICE &#39;--------------&#39;;&#10;&#10;&#10;        updated_stats &#61; jsonb_build_object(&#10;            &#39;nb&#39;,&#10;            array_length(merged_last_updated_objects_ids, 1),&#10;            &#39;last_updated_objects_ids&#39;,&#10;            merged_last_updated_objects_ids&#10;        )&#10;        ;&#10;&#10;    END IF;&#10;&#10;    -- Check results&#10;    IF updated_stats IS NULL THEN&#10;        RAISE NOTICE &#39;No object updated for %.%&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;    IF (updated_stats-&gt;&gt;&#39;nb&#39;)::integer &#61; 0 THEN&#10;        RAISE NOTICE &#39;No object updated for %.%&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;    -- Update the managed_objects table&#10;    EXECUTE format(&#10;        $SQL$&#10;            UPDATE road_graph.managed_objects AS o&#10;            SET (&#10;                last_updated_objects_ids,&#10;                last_update&#10;            ) &#61; (&#10;                ARRAY[%3$s]::integer[],&#10;                now()::timestamp(0)&#10;            )&#10;            WHERE o.schema_name &#61; &#39;%1$I&#39;&#10;            AND o.table_name &#61; &#39;%2$I&#39;&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name,&#10;        -- convert json array to string like 1,3,10&#10;        (&#10;            SELECT array_to_string(array_agg(j)::text[], &#39;,&#39;)&#10;            FROM jsonb_array_elements(&#10;                CASE&#10;                    WHEN jsonb_typeof(updated_stats-&gt;&#39;last_updated_objects_ids&#39;) &#61; &#39;array&#39;&#10;                        THEN updated_stats-&gt;&#39;last_updated_objects_ids&#39;&#10;                    ELSE &#39;[]&#39;&#10;                END&#10;            ) AS j&#10;        )&#10;    );&#10;&#10;    -- Return the number of updated features&#10;    RETURN (updated_stats-&gt;&gt;&#39;nb&#39;)::integer;&#10;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

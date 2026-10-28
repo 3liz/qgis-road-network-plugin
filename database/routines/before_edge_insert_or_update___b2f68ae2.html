@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>before_edge_insert_or_update()</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>During the creation or modification of an edge, we verify that the upstream and downstream nodes exist within 50 cm of the start and end of the edge. If they do, we use them and update the edge geometry so that the start and end are exactly on these nodes. Otherwise, we create the missing nodes. Additionally, during the creation of an edge, if the road code is provided and no marker 0 exists for this road, we automatically create one at the start of the edge. During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point, we move marker 0 to this new starting point. Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge based on its geometry and position on the road.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    start_point geometry(point);&#10;    end_point geometry(point);&#10;    upstream_node record;&#10;    downstream_node record;&#10;    distance real;&#10;    start_references jsonb;&#10;    end_references jsonb;&#10;    marker_zero record;&#10;    raise_notice text;&#10;    edge_road record;&#10;    is_roundabout boolean;&#10;    has_changed_road_code boolean;&#10;&#9;v_sqlstate text;&#10;&#9;v_message text;&#10;&#9;v_context text;&#10;BEGIN&#10;    -- Trigger disabled by session variable&#10;    IF road_graph.get_current_setting(&#39;road.graph.disable.trigger&#39;, &#39;0&#39;) &#61; &#39;1&#39;&#10;    THEN&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    -- log level&#10;    raise_notice &#61; road_graph.get_current_setting(&#39;road.graph.raise.notice&#39;, &#39;no&#39;);&#10;&#10;    -- Get road&#10;    SELECT INTO edge_road&#10;        r.*&#10;    FROM road_graph.roads AS r&#10;    WHERE r.road_code &#61; NEW.road_code&#10;    ;&#10;    IF edge_road.id IS NULL THEN&#10;        RAISE EXCEPTION &#39;The road code given for this edge does not exist !&#39;;&#10;    END IF;&#10;&#10;    -- check if edge is a part of a roundabout&#10;    is_roundabout &#61; (edge_road.road_type &#61; &#39;roundabout&#39;);&#10;    IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;        RAISE NOTICE &#39;% BEFORE edge % n° %, edge is_roundabout %,&#10;        %&#39;,&#10;            repeat(&#39;    &#39;, pg_trigger_depth()::integer), TG_OP, NEW.id, is_roundabout,&#10;            to_json(edge_road)&#10;        ;&#10;    END IF;&#10;&#10;    -- If it is a new roundabout, reverse the geometry if needed&#10;    -- QGIS digitizing circle tool create counter-clockwise polygons&#10;    IF is_roundabout AND ST_IsRing(NEW.geom) AND ST_IsPolygonCW(ST_MakePolygon(NEW.geom))&#10;    THEN&#10;        NEW.geom &#61; ST_Reverse(NEW.geom);&#10;    END IF;&#10;&#10;    -- For UPDATE, check if the road_code has changed&#10;    -- If so, we need to empty the next_edge_id and previous_edge_id to avoid wrong calculations&#10;    has_changed_road_code &#61; false;&#10;    IF NOT is_roundabout&#10;        AND TG_OP &#61; &#39;UPDATE&#39;&#10;        AND Coalesce(OLD.road_code, &#39;&#39;) !&#61; Coalesce(NEW.road_code, &#39;&#39;)&#10;    THEN&#10;        has_changed_road_code &#61; true;&#10;        IF Coalesce(OLD.previous_edge_id, -1) &#61; Coalesce(NEW.previous_edge_id, -1) THEN&#10;            NEW.previous_edge_id &#61; NULL;&#10;        END IF;&#10;        IF Coalesce(OLD.next_edge_id, -1) &#61; Coalesce(NEW.next_edge_id, -1) THEN&#10;            NEW.next_edge_id &#61; NULL;&#10;        END IF;&#10;    END IF;&#10;&#10;    -- Create missing nodes if necessary&#10;    -- start &amp; end point&#10;    start_point &#61; ST_StartPoint(NEW.geom);&#10;    end_point &#61; ST_EndPoint(NEW.geom);&#10;&#10;    IF TG_OP &#61; &#39;INSERT&#39;&#10;    OR (TG_OP &#61; &#39;UPDATE&#39; AND NOT ST_Equals(NEW.geom, OLD.geom) AND NEW.geom IS NOT NULL)&#10;    THEN&#10;&#10;        -- Get first nodes &lt; 0.5 m - If found, edit NEW geom&#10;        -- upstream&#10;        SELECT INTO upstream_node&#10;            n.id, n.geom&#10;        FROM road_graph.nodes AS n&#10;        WHERE ST_DWithin(n.geom, start_point, 0.50)&#10;        ORDER BY n.id, n.geom &lt;-&gt; start_point&#10;        LIMIT 1&#10;        ;&#10;&#10;        -- upstream - create node or just update value&#10;        IF upstream_node IS NOT NULL THEN&#10;            IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;                RAISE NOTICE &#39;% BEFORE edge % n° %, upstream_node NOT NULL : % -&gt; use it&#39;,&#10;                    repeat(&#39;    &#39;, pg_trigger_depth()::integer), TG_OP, NEW.id, upstream_node.id&#10;                ;&#10;            END IF;&#10;&#10;            -- Update the geometry&#10;            NEW.geom &#61; ST_SetPoint(NEW.geom, 0, upstream_node.geom);&#10;            -- Update the node ID in upstream attribute&#10;            NEW.start_node &#61; upstream_node.id;&#10;        ELSE&#10;            IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;                RAISE NOTICE &#39;% BEFORE edge % n° %, upstream node IS NULL -&gt; create it&#39;,&#10;                    repeat(&#39;    &#39;, pg_trigger_depth()::integer), TG_OP, NEW.id&#10;                ;&#10;            END IF;&#10;&#10;            -- Create the missing node&#10;            -- only for INSERT&#10;            -- or for UPDATE if the start_node value has been deleted&#10;            IF TG_OP &#61; &#39;INSERT&#39; OR (TG_OP &#61; &#39;UPDATE&#39; AND NEW.start_node IS NULL) THEN&#10;                WITH new_node AS (&#10;                    INSERT INTO road_graph.nodes&#10;                    (geom)&#10;                    VALUES&#10;                    (start_point)&#10;                    ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING&#10;                    RETURNING id&#10;                )&#10;                SELECT new_node.id&#10;                FROM new_node&#10;                INTO NEW.start_node&#10;                ;&#10;                IF NEW.start_node IS NOT NULL AND raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;                    RAISE NOTICE &#39;% BEFORE edge % n° %, upstream node created : % %&#39;,&#10;                        repeat(&#39;    &#39;, pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.start_node,&#10;                        (SELECT ST_AsText(geom) FROM road_graph.nodes WHERE id &#61; NEW.start_node)&#10;                    ;&#10;                END IF;&#10;            END IF;&#10;        END IF;&#10;&#10;        -- get downstream node&#10;        SELECT INTO downstream_node&#10;            n.id, n.geom&#10;        FROM road_graph.nodes AS n&#10;        WHERE ST_DWithin(n.geom, end_point, 0.50)&#10;        ORDER BY n.id, n.geom &lt;-&gt; end_point&#10;        LIMIT 1&#10;        ;&#10;        -- downstream node - create or update value&#10;        IF downstream_node IS NOT NULL THEN&#10;            IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;                RAISE NOTICE &#39;% BEFORE edge % n° %, downstream node NOT NULL : % -&gt; use it&#39;,&#10;                    repeat(&#39;    &#39;, pg_trigger_depth()::integer), TG_OP, NEW.id, downstream_node.id&#10;                ;&#10;            END IF;&#10;            -- Update the geometry&#10;            NEW.geom &#61; ST_SetPoint(NEW.geom, ST_NPoints(NEW.geom) - 1, downstream_node.geom);&#10;            -- Update the node ID in downstream attribute&#10;            NEW.end_node &#61; downstream_node.id;&#10;        ELSE&#10;            IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;                RAISE NOTICE &#39;% BEFORE edge % n° %, downstream node IS NULL -&gt; create it&#39;,&#10;                    repeat(&#39;    &#39;, pg_trigger_depth()::integer), TG_OP, NEW.id&#10;                ;&#10;            END IF;&#10;&#10;            -- Create the missing node&#10;            -- only for INSERT&#10;            -- or for UPDATE if the end_node value has been deleted&#10;            IF TG_OP &#61; &#39;INSERT&#39; OR (TG_OP &#61; &#39;UPDATE&#39; AND NEW.end_node IS NULL) THEN&#10;                -- Create the missing node&#10;                WITH new_node AS (&#10;                    INSERT INTO road_graph.nodes&#10;                    (geom)&#10;                    VALUES&#10;                    (end_point)&#10;                    ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING&#10;                    RETURNING id&#10;                )&#10;                SELECT new_node.id&#10;                FROM new_node&#10;                INTO NEW.end_node&#10;                ;&#10;                IF NEW.end_node IS NOT NULL AND raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;                    RAISE NOTICE &#39;% BEFORE edge % n° %, downstream node created : % %&#39;,&#10;                        repeat(&#39;    &#39;, pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.end_node,&#10;                        (SELECT ST_AsText(geom) FROM road_graph.nodes WHERE id &#61; NEW.end_node)&#10;                    ;&#10;                END IF;&#10;            END IF;&#10;        END IF;&#10;    END IF;&#10;&#10;    -- Calculate previous_edge_id and next_edge_id values&#10;    -- for touching edges if the road_code has not changed&#10;    IF NOT is_roundabout AND NOT has_changed_road_code&#10;    THEN&#10;        IF NEW.previous_edge_id IS NULL THEN&#10;            -- Get the previous edge&#10;            NEW.previous_edge_id &#61; (&#10;                SELECT e.id&#10;                FROM road_graph.edges AS e&#10;                WHERE e.road_code &#61; NEW.road_code&#10;                AND e.end_node &#61; NEW.start_node&#10;                LIMIT 1&#10;            );&#10;        END IF;&#10;        IF NEW.next_edge_id IS NULL THEN&#10;            -- Get the next edge&#10;            NEW.next_edge_id &#61; (&#10;                SELECT e.id&#10;                FROM road_graph.edges AS e&#10;                WHERE e.road_code &#61; NEW.road_code&#10;                AND e.start_node &#61; NEW.end_node&#10;            );&#10;        END IF;&#10;    END IF;&#10;&#10;    -- Move marker 0 if needed&#10;    -- If the first edge of the road has changed&#10;    -- move it to the start_point of the changed geometry&#10;    IF TG_OP &#61; &#39;UPDATE&#39;&#10;        AND NOT is_roundabout&#10;        AND NOT has_changed_road_code&#10;        AND OLD.start_abscissa &#61; 0 AND NEW.start_abscissa &#61; 0&#10;        AND OLD.start_cumulative &#61; 0 AND NEW.start_cumulative &#61; 0&#10;        AND OLD.start_marker &#61; 0 AND NEW.start_marker &#61; 0&#10;        AND OLD.road_code &#61; NEW.road_code&#10;        AND NOT ST_Equals(ST_StartPoint(NEW.geom), ST_StartPoint(OLD.geom))&#10;    THEN&#10;        -- Do not run the function update_edge_references&#10;        -- on the road triggered inside the after_marker_insert_or_update_or_delete&#10;        -- trigger since it will already been triggered with the edge geometry change&#10;        SET road.graph.edge.ref.calc.disabled &#61; &#39;yes&#39;;&#10;        UPDATE road_graph.markers AS m&#10;        SET geom &#61; ST_StartPoint(NEW.geom)&#10;        WHERE m.road_code &#61; NEW.road_code&#10;        AND m.code &#61; 0&#10;        AND ST_Equals(m.geom, ST_StartPoint(OLD.geom))&#10;        ;&#10;        SET road.graph.edge.ref.calc.disabled &#61; &#39;no&#39;;&#10;    END IF;&#10;&#10;    -- Calculate references&#10;    IF NOT is_roundabout&#10;    THEN&#10;        BEGIN&#10;            -- start point&#10;            SELECT INTO start_references&#10;                road_graph.get_reference_from_point(start_point, NEW.road_code) AS ref&#10;            ;&#10;            NEW.start_marker &#61; (start_references-&gt;&gt;&#39;marker_code&#39;)::text::integer;&#10;            NEW.start_abscissa &#61; (start_references-&gt;&gt;&#39;abscissa&#39;)::text::real;&#10;            NEW.start_cumulative &#61; (start_references-&gt;&gt;&#39;cumulative&#39;)::text::real;&#10;&#10;            -- end point&#10;            SELECT INTO end_references&#10;                road_graph.get_reference_from_point(end_point, NEW.road_code) AS ref&#10;            ;&#10;            NEW.end_marker &#61; (end_references-&gt;&gt;&#39;marker_code&#39;)::text::integer;&#10;            NEW.end_abscissa &#61; (end_references-&gt;&gt;&#39;abscissa&#39;)::text::real;&#10;            NEW.end_cumulative &#61; (end_references-&gt;&gt;&#39;cumulative&#39;)::text::real;&#10;&#10;        EXCEPTION WHEN OTHERS THEN&#10;            IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;                GET STACKED DIAGNOSTICS&#10;                    v_sqlstate &#61; returned_sqlstate,&#10;                    v_message &#61; message_text,&#10;                    v_context &#61; pg_exception_context&#10;                ;&#10;                RAISE NOTICE &#39;% BEFORE edge % n° %, NEW references NOT calculated, error &#61; %&#39;,&#10;                    repeat(&#39;    &#39;, pg_trigger_depth()::integer), TG_OP,&#10;                    NEW.id, v_sqlstate || &#39; - &#39; || v_message&#10;                ;&#10;            END IF;&#10;        END;&#10;    END IF;&#10;&#10;    RETURN NEW;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean DEFAULT true)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects. The given columns must exists: * for points: road_code, marker_code, abscissa. Optional columns: offset &amp; side, * road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset &amp; side</p>
+<p>The parameter _update_offset_and_side allows to not update the offset and side columns of the target table. It is useful when used before updating the table geometries from the references (to keep the object in the same start and end places but adapt the geometry)</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_schema_name</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_table_name</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_road_codes</td>
+                                    <td>text[]</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_update_offset_and_side</td>
+                                    <td>boolean</td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    road_code text;&#10;    update_count integer;&#10;    sql_text text;&#10;    table_exists boolean;&#10;    primary_key_field text;&#10;    geometry_column text;&#10;    needed_fields text[];&#10;    managed_object record;&#10;    table_cols text[];&#10;    updated_stats record;&#10;BEGIN&#10;&#10;    -- Get info on the managed object table&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT *&#10;        FROM road_graph.managed_objects&#10;        WHERE&#10;            schema_name &#61; &#39;%1$s&#39;&#10;            AND table_name &#61; &#39;%2$s&#39;&#10;        LIMIT 1;&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO managed_object&#10;    ;&#10;    IF managed_object IS NULL THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; is not registered as managed object in the road graph system !&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Check if the table exists in the database&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT to_regclass(&#39;%1$I.%2$I&#39;) IS NOT NULL AS exists&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO table_exists&#10;    ;&#10;    IF NOT table_exists THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; does not exist in the database !&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Get the table primary key field&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT a.attname&#10;        FROM pg_index i&#10;        JOIN pg_attribute a ON a.attrelid &#61; i.indrelid AND a.attnum &#61; ANY(i.indkey)&#10;        WHERE i.indrelid &#61; &#39;%1$I.%2$I&#39;::regclass AND i.indisprimary&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO primary_key_field&#10;    ;&#10;    IF primary_key_field IS NULL THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; does not have a primary key !&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Get geometry column name&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT f_geometry_column&#10;        FROM geometry_columns&#10;        WHERE f_table_schema &#61; &#39;%1$s&#39; AND f_table_name &#61; &#39;%2$s&#39;;&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO geometry_column&#10;    ;&#10;    IF geometry_column IS NULL THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; does not have a geometry column !&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Check the table contains the needed fields based on the geometry type of the managed object&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT array_agg(column_name) AS cols&#10;        FROM information_schema.columns&#10;        WHERE table_schema &#61; &#39;%1$s&#39; AND table_name &#61; &#39;%2$s&#39;;&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO table_cols&#10;    ;&#10;    -- For point geometry type, we need road_code, marker_code and abscissa fields&#10;    needed_fields &#61; ARRAY[&#10;        &#39;road_code&#39;, &#39;marker_code&#39;, &#39;abscissa&#39;&#10;    ]::text[];&#10;    -- For line geometry type, we also need start_marker_code, start_abscissa, end_marker_code and end_abscissa fields&#10;    IF lower(managed_object.geometry_type) IN (&#39;linestring&#39;, &#39;multilinestring&#39;)&#10;    THEN&#10;        needed_fields &#61; ARRAY[&#10;            &#39;road_code&#39;,&#10;            &#39;start_marker_code&#39;, &#39;start_abscissa&#39;,&#10;            &#39;end_marker_code&#39;, &#39;end_abscissa&#39;&#10;        ]::text[];&#10;    END IF;&#10;    IF NOT (table_cols @&gt; needed_fields)&#10;        THEN&#10;            RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; does not contain the necessary fields to update references from geometries !&#39;, _schema_name, _table_name;&#10;            RETURN NULL;&#10;    END IF;&#10;&#10;    -- Get road information&#10;&#10;&#10;    -- Update references based on geometries&#10;    -- and geometry type of the managed object&#10;    -- We filter the objects to update based on the given road codes&#10;    IF lower(managed_object.geometry_type) &#61; &#39;point&#39; THEN&#10;        sql_text &#61; format(&#10;            $SQL$&#10;                WITH&#10;                objects AS (&#10;                    SELECT&#10;                        mo.%1$I AS id,&#10;                        trim(mo.road_code)::text AS road_code,&#10;                        mo.%9$I AS geom&#10;                    FROM&#10;                        %2$I.%3$I AS mo&#10;                    WHERE (&#10;                        mo.road_code::text &#61; ANY(string_to_array(&#39;%4$s&#39;, &#39;,&#39;)::text[])&#10;                        OR &#39;%4$s&#39; &#61; &#39;&#39;&#10;                    )&#10;                ),&#10;                refs AS (&#10;                    SELECT&#10;                        o.id,&#10;                        road_graph.get_reference_from_point(&#10;                            o.geom,&#10;                            -- We need to pass the road code to force the calculation to keep references for this road&#10;                            o.road_code::text,&#10;                            -- NULL::text,&#10;                            -- Do not use cache. only usable if there is only one road&#10;                            -- see road_graph.build_road_cached_objects(_road_code)&#10;                            -- we could check before if the given table of road codes contains only one road&#10;                            -- or loop for each road_code...&#10;                            FALSE&#10;                        ) AS ref&#10;                    FROM objects AS o&#10;                ),&#10;                run_update AS (&#10;                    UPDATE %2$I.%3$I AS mo&#10;                    SET&#10;                        -- Do no change the road code if no references have been found&#10;                        -- for the given road (meaning the object is too far)&#10;                        road_code &#61;&#10;                        CASE&#10;                            -- keep object road_code intact if it is not empty&#10;                            WHEN Coalesce(mo.road_code, &#39;&#39;) !&#61; &#39;&#39; THEN mo.road_code&#10;                            ELSE r.ref-&gt;&gt;&#39;road_code&#39;&#10;                        END,&#10;                        -- cumulative if present&#10;                        %5$s&#10;                        -- offset if present and if _update_offset_and_side is True&#10;                        %6$s&#10;                        -- side if present and if _update_offset_and_side is True&#10;                        %7$s&#10;                        -- marker code and abscissa put here to avoid errors with commas&#10;                        marker_code &#61; (r.ref-&gt;&gt;&#39;marker_code&#39;)::integer,&#10;                        abscissa &#61; (r.ref-&gt;&gt;&#39;abscissa&#39;)::real&#10;                    FROM refs AS r&#10;                    WHERE TRUE&#10;                    AND mo.%1$I &#61; r.id&#10;                    --AND r.ref-&gt;&#39;road_code&#39; !&#61; &#39;null&#39;::jsonb&#10;                    AND (%8$s)&#10;                    RETURNING mo.*&#10;                )&#10;                SELECT&#10;                    count(r.*) AS nb,&#10;                    array_agg(r.%1$I ORDER BY r.%1$I) AS last_updated_objects_ids&#10;                FROM run_update AS r&#10;            $SQL$,&#10;            primary_key_field,&#10;            _schema_name,&#10;            _table_name,&#10;            Coalesce(array_to_string(_road_codes::text[], &#39;,&#39;), &#39;&#39;),&#10;            -- 5 / add update for cumulative if the columns exists in the target table&#10;            CASE WHEN &#39;cumulative&#39; &#61; ANY(table_cols) THEN $STR$cumulative &#61; (r.ref-&gt;&gt;&#39;cumulative&#39;)::real, $STR$ ELSE &#39;&#39; END,&#10;            -- 6 / add update for offset if the columns exists in the target table&#10;            CASE&#10;                WHEN &#39;offset&#39; &#61; ANY(table_cols) AND _update_offset_and_side IS True&#10;                    THEN $STR$&quot;offset&quot; &#61; Coalesce((r.ref-&gt;&gt;&#39;offset&#39;)::real, 0.0::real), $STR$&#10;                ELSE &#39;&#39;&#10;            END,&#10;            -- 7 / add update for side if the columns exists in the target table&#10;            CASE&#10;                WHEN &#39;side&#39; &#61; ANY(table_cols) AND _update_offset_and_side IS True&#10;                    THEN $STR$side &#61; Coalesce((r.ref-&gt;&gt;&#39;side&#39;)::text, &#39;right&#39;), $STR$&#10;                ELSE &#39;&#39;&#10;            END,&#10;            -- 8 / Detect if we need to update or not&#10;            concat(&#10;                $STR$&#10;                (&#10;                    ( Coalesce(mo.road_code, &#39;&#39;) !&#61; &#39;&#39; AND coalesce((r.ref-&gt;&gt;&#39;road_code&#39;), &#39;&#39;) &#61; &#39;&#39; )&#10;                    OR&#10;                    ( Coalesce(mo.road_code, &#39;&#39;) &#61; &#39;&#39; AND coalesce((r.ref-&gt;&gt;&#39;road_code&#39;), &#39;&#39;) !&#61; &#39;&#39; )&#10;                )&#10;                OR (r.ref-&gt;&gt;&#39;marker_code&#39;)::integer !&#61; Coalesce(mo.marker_code, -1)::integer&#10;                OR (r.ref-&gt;&gt;&#39;abscissa&#39;)::real !&#61; Coalesce(mo.abscissa, -1)::real&#10;                $STR$,&#10;                CASE WHEN &#39;cumulative&#39; &#61; ANY(table_cols)&#10;                    THEN $STR$ OR (r.ref-&gt;&gt;&#39;cumulative&#39;)::real !&#61; Coalesce(mo.cumulative, -1)::real $STR$ ELSE &#39;&#39;&#10;                END,&#10;                CASE&#10;                    WHEN &#39;offset&#39; &#61; ANY(table_cols) AND _update_offset_and_side IS True&#10;                        THEN $STR$ OR Coalesce((r.ref-&gt;&gt;&#39;offset&#39;)::real, 0.0::real) !&#61; Coalesce(mo.offset, 0.0)::real $STR$&#10;                    ELSE &#39;&#39;&#10;                END,&#10;                CASE&#10;                    WHEN &#39;side&#39; &#61; ANY(table_cols) AND _update_offset_and_side IS True&#10;                        THEN $STR$ OR Coalesce((r.ref-&gt;&gt;&#39;side&#39;)::text, &#39;right&#39;) !&#61; Coalesce(mo.side, &#39;right&#39;)::text $STR$&#10;                    ELSE &#39;&#39;&#10;                END&#10;            ),&#10;            -- 9 / geometry_column&#10;            geometry_column&#10;        );&#10;&#10;    ELSIF lower(managed_object.geometry_type) IN (&#39;linestring&#39;, &#39;multilinestring&#39;) THEN&#10;        sql_text &#61; format(&#10;            $SQL$&#10;                WITH&#10;                objects AS (&#10;                    SELECT&#10;                        mo.%1$I AS id,&#10;                        trim(mo.road_code)::text AS road_code,&#10;                        mo.%10$I AS geom&#10;                    FROM&#10;                        %2$I.%3$I AS mo&#10;                    WHERE (&#10;                        mo.road_code::text &#61; ANY(string_to_array(&#39;%4$s&#39;, &#39;,&#39;)::text[])&#10;                        OR &#39;%4$s&#39; &#61; &#39;&#39;&#10;                    )&#10;                ),&#10;                road_info AS (&#10;                    SELECT r.road_code, r.road_type,&#10;                        min(e.start_marker) AS min_code,&#10;                        max(e.end_marker) AS max_code,&#10;                        min(e.start_cumulative) AS min_cumulative,&#10;                        max(e.end_cumulative) AS max_cumulative,&#10;                        min(e.start_abscissa) AS min_abscissa,&#10;                        max(e.end_abscissa) AS max_abscissa&#10;                    FROM road_graph.edges AS e&#10;                    JOIN road_graph.roads AS r&#10;                        USING (road_code)&#10;                    WHERE e.road_code IN (&#10;                        SELECT DISTINCT o.road_code&#10;                        FROM objects AS o&#10;                    )&#10;                    GROUP BY r.road_code, r.road_type&#10;                ),&#10;                refs AS (&#10;                    SELECT&#10;                        o.id, o.road_code,&#10;                        road_graph.get_reference_from_point(&#10;                            -- ST_StartPoint could return NULL for a MULTILINESTRING&#10;                            CASE&#10;                                WHEN lower(GeometryType(o.geom)) &#61; &#39;linestring&#39;&#10;                                    THEN ST_StartPoint(o.geom)&#10;                                -- hopefully the last part is really the end part of the multilinestring&#10;                                ELSE ST_StartPoint(ST_GeometryN(o.geom, 1))&#10;                            END,&#10;                            -- We need to pass the road code to force the calculation to keep references for this road&#10;                            o.road_code,&#10;                            -- NULL::text,&#10;                            -- Do not use cache. only usable if there is only one road&#10;                            -- see road_graph.build_road_cached_objects(_road_code)&#10;                            -- we could check before if the given table of road codes contains only one road&#10;                            -- or loop for each road_code...&#10;                            FALSE&#10;                        ) AS start_ref,&#10;                        road_graph.get_reference_from_point(&#10;                            -- ST_EndPoint could return NULL for a MULTILINESTRING&#10;                            CASE&#10;                                WHEN lower(GeometryType(o.geom)) &#61; &#39;linestring&#39;&#10;                                    THEN ST_EndPoint(o.geom)&#10;                                -- hopefully the last part is really the end part of the multilinestring&#10;                                ELSE ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom)))&#10;                            END,&#10;                            -- We need to pass the road code to force the calculation to keep references for this road&#10;                            o.road_code,&#10;                            -- NULL::text,&#10;                            -- Do not use cache. only usable if there is only one road&#10;                            -- see road_graph.build_road_cached_objects(_road_code)&#10;                            -- we could check before if the given table of road codes contains only one road&#10;                            -- or loop for each road_code...&#10;                            FALSE&#10;                        ) AS end_ref&#10;                    FROM objects AS o&#10;                ),&#10;                processed_refs AS (&#10;                    SELECT&#10;                        r.id,&#10;                        r.road_code,&#10;                        -- start_ref&#10;                        CASE&#10;                            -- For roundabout, if the start and end values are equal&#10;                            -- use 0+0 for start &amp; 0+max_cumulative for end&#10;                            WHEN i.road_type &#61; &#39;roundabout&#39;&#10;                            AND Coalesce((r.start_ref-&gt;&gt;&#39;abscissa&#39;)::real, 0) &#61; Coalesce((r.end_ref-&gt;&gt;&#39;abscissa&#39;)::real, 0)&#10;                                THEN jsonb_build_object(&#10;                                    &#39;road_code&#39;, r.start_ref-&gt;&gt;&#39;road_code&#39;,&#10;                                    &#39;marker_code&#39;, 0,&#10;                                    &#39;abscissa&#39;, 0.0,&#10;                                    &#39;cumulative&#39;, 0.0,&#10;                                    &#39;offset&#39;, r.start_ref-&gt;&gt;&#39;offset&#39;,&#10;                                    &#39;side&#39;, r.start_ref-&gt;&#39;side&#39;&#10;                                )&#10;                            -- for other roads, invert start and end if start &lt; end&#10;                            WHEN&#10;                            Coalesce((r.start_ref-&gt;&gt;&#39;marker_code&#39;)::int * 10000 + (r.start_ref-&gt;&gt;&#39;abscissa&#39;)::real, 0)&#10;                            &gt;&#10;                            Coalesce((r.end_ref-&gt;&gt;&#39;marker_code&#39;)::int * 10000 + (r.end_ref-&gt;&gt;&#39;abscissa&#39;)::real, 0)&#10;                                THEN end_ref&#10;                            ELSE r.start_ref&#10;                        END AS start_ref,&#10;                        -- end_ref&#10;                        CASE&#10;                            -- For roundabout, if the start and end values are equal&#10;                            -- use 0+0 for start &amp; 0+max_cumulative for end&#10;                            WHEN i.road_type &#61; &#39;roundabout&#39;&#10;                            AND Coalesce((r.start_ref-&gt;&gt;&#39;abscissa&#39;)::real, 0) &#61; Coalesce((r.end_ref-&gt;&gt;&#39;abscissa&#39;)::real, 0)&#10;                                THEN jsonb_build_object(&#10;                                    &#39;road_code&#39;, r.end_ref-&gt;&gt;&#39;road_code&#39;,&#10;                                    &#39;marker_code&#39;, 0,&#10;                                    &#39;abscissa&#39;, i.max_abscissa,&#10;                                    &#39;cumulative&#39;, i.max_cumulative,&#10;                                    &#39;offset&#39;, r.end_ref-&gt;&gt;&#39;offset&#39;,&#10;                                    &#39;side&#39;, r.end_ref-&gt;&#39;side&#39;&#10;                                )&#10;                            -- for other roads, invert start and end if start &lt; end&#10;                            WHEN&#10;                            Coalesce((r.start_ref-&gt;&gt;&#39;marker_code&#39;)::int * 10000 + (r.start_ref-&gt;&gt;&#39;abscissa&#39;)::real, 0)&#10;                            &gt;&#10;                            Coalesce((r.end_ref-&gt;&gt;&#39;marker_code&#39;)::int * 10000 + (r.end_ref-&gt;&gt;&#39;abscissa&#39;)::real, 0)&#10;                                THEN start_ref&#10;                            ELSE r.end_ref&#10;                        END AS end_ref&#10;                    FROM refs AS r&#10;                    JOIN road_info AS i&#10;                        USING (road_code)&#10;                ),&#10;                run_update AS (&#10;                    UPDATE %2$I.%3$I AS mo&#10;                    SET&#10;                        -- Do no change the road code if no references have been found&#10;                        -- for the given road (meaning the object is too far)&#10;                        road_code &#61;&#10;                        CASE&#10;                            -- keep object road_code intact if it is not empty&#10;                            WHEN Coalesce(mo.road_code, &#39;&#39;) !&#61; &#39;&#39; THEN mo.road_code&#10;                            ELSE r.start_ref-&gt;&gt;&#39;road_code&#39;&#10;                        END,&#10;&#10;                        -- start_cumulative if present&#10;                        %5$s&#10;                        -- offset if present&#10;                        %6$s&#10;                        -- side if present&#10;                        %7$s&#10;                        -- end_cumulative if present&#10;                        %8$s&#10;                        -- marker code and abscissa put here to avoid errors with commas&#10;                        start_marker_code &#61; (r.start_ref-&gt;&gt;&#39;marker_code&#39;)::integer,&#10;                        start_abscissa &#61; (r.start_ref-&gt;&gt;&#39;abscissa&#39;)::real,&#10;                        end_marker_code &#61; (r.end_ref-&gt;&gt;&#39;marker_code&#39;)::integer,&#10;                        end_abscissa &#61; (r.end_ref-&gt;&gt;&#39;abscissa&#39;)::real&#10;                    FROM processed_refs AS r&#10;                    WHERE TRUE&#10;                    AND mo.%1$I &#61; r.id&#10;                    -- Do not UPDATE if no changes must be made (values already are the same)&#10;                    AND (%9$s)&#10;                    RETURNING mo.*&#10;                )&#10;                SELECT&#10;                    count(r.*) AS nb,&#10;                    array_agg(r.%1$I ORDER BY r.%1$I) AS last_updated_objects_ids&#10;                FROM run_update AS r&#10;            $SQL$,&#10;            primary_key_field,&#10;            _schema_name,&#10;            _table_name,&#10;            Coalesce(array_to_string(_road_codes::text[], &#39;,&#39;), &#39;&#39;),&#10;            -- 5 / add update for cumulative if the columns exists in the target table&#10;            CASE WHEN &#39;start_cumulative&#39; &#61; ANY(table_cols) THEN $STR$&quot;start_cumulative&quot; &#61; (r.start_ref-&gt;&gt;&#39;cumulative&#39;)::real, $STR$ ELSE &#39;&#39; END,&#10;            -- 6 / add update for offset if the columns exists in the target table&#10;            CASE&#10;                WHEN &#39;offset&#39; &#61; ANY(table_cols) AND _update_offset_and_side IS True&#10;                    THEN $STR$&quot;offset&quot; &#61; Coalesce((r.start_ref-&gt;&gt;&#39;offset&#39;)::real, 0.0::real), $STR$&#10;                ELSE &#39;&#39;&#10;            END,&#10;            -- 7 / add update for side if the columns exists in the target table&#10;            CASE&#10;                WHEN &#39;side&#39; &#61; ANY(table_cols) AND _update_offset_and_side IS True&#10;                    THEN $STR$&quot;side&quot; &#61; Coalesce((r.start_ref-&gt;&gt;&#39;side&#39;)::text, &#39;right&#39;::text), $STR$&#10;                ELSE &#39;&#39;&#10;            END,&#10;            -- 8 / add update for cumulative if the columns exists in the target table&#10;            CASE WHEN &#39;end_cumulative&#39; &#61; ANY(table_cols) THEN $STR$&quot;end_cumulative&quot; &#61; (r.end_ref-&gt;&gt;&#39;cumulative&#39;)::real, $STR$ ELSE &#39;&#39; END,&#10;            -- 9 / Detect if we need to update or not&#10;            concat(&#10;                $STR$&#10;                (&#10;                    ( Coalesce(mo.road_code, &#39;&#39;) !&#61; &#39;&#39; AND coalesce((r.start_ref-&gt;&gt;&#39;road_code&#39;), &#39;&#39;) &#61; &#39;&#39; )&#10;                    OR&#10;                    ( Coalesce(mo.road_code, &#39;&#39;) &#61; &#39;&#39; AND coalesce((r.start_ref-&gt;&gt;&#39;road_code&#39;), &#39;&#39;) !&#61; &#39;&#39; )&#10;                )&#10;                OR (r.start_ref-&gt;&gt;&#39;marker_code&#39;)::integer !&#61; Coalesce(mo.start_marker_code, -1)::integer&#10;                OR (r.start_ref-&gt;&gt;&#39;abscissa&#39;)::real !&#61; Coalesce(mo.start_abscissa, -1)::real&#10;                OR (r.end_ref-&gt;&gt;&#39;marker_code&#39;)::integer !&#61; Coalesce(mo.end_marker_code, -1)::integer&#10;                OR (r.end_ref-&gt;&gt;&#39;abscissa&#39;)::real !&#61; Coalesce(mo.end_abscissa, -1)::real&#10;                $STR$,&#10;                CASE WHEN &#39;start_cumulative&#39; &#61; ANY(table_cols)&#10;                    THEN $STR$ OR (r.start_ref-&gt;&gt;&#39;cumulative&#39;)::real !&#61; Coalesce(mo.start_cumulative, -1)::real $STR$ ELSE &#39;&#39;&#10;                END,&#10;                CASE&#10;                    WHEN &#39;offset&#39; &#61; ANY(table_cols) AND _update_offset_and_side IS True&#10;                        THEN $STR$ OR Coalesce((r.start_ref-&gt;&gt;&#39;offset&#39;)::real, 0.0::real) !&#61; Coalesce(mo.offset, 0.0)::real $STR$&#10;                    ELSE &#39;&#39;&#10;                END,&#10;                CASE&#10;                    WHEN &#39;side&#39; &#61; ANY(table_cols) AND _update_offset_and_side IS True&#10;                        THEN $STR$ OR Coalesce((r.start_ref-&gt;&gt;&#39;side&#39;)::text, &#39;right&#39;) !&#61; Coalesce(mo.side, &#39;right&#39;)::text $STR$&#10;                    ELSE &#39;&#39;&#10;                END,&#10;                CASE WHEN &#39;end_cumulative&#39; &#61; ANY(table_cols)&#10;                    THEN $STR$ OR (r.end_ref-&gt;&gt;&#39;cumulative&#39;)::real !&#61; Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE &#39;&#39;&#10;                END&#10;            ),&#10;            -- 10 / geometry_column&#10;            geometry_column&#10;        );&#10;    END IF;&#10;&#10;    RAISE NOTICE &#39;sql &#61; %&#39;, sql_text;&#10;    EXECUTE sql_text&#10;    INTO updated_stats;&#10;&#10;    RETURN to_jsonb(updated_stats);&#10;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

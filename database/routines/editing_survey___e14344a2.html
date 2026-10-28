@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>editing_survey()</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Logs the modifications done inside the editing session schema tables. It also check that the edited geometries are inside the editing session polygon.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    object_geom geometry;&#10;    object_id integer;&#10;    editing_session_geom geometry;&#10;    original_edge_object record;&#10;    new_logged_ids jsonb;&#10;BEGIN&#10;&#10;    -- Do nothing if the table is inside the production road_graph schema&#10;    IF TG_TABLE_SCHEMA &#61; &#39;road_graph&#39; THEN&#10;        IF TG_OP &#61; &#39;DELETE&#39; THEN&#10;            RETURN OLD;&#10;        ELSE&#10;            RETURN NEW;&#10;        END IF;&#10;    END IF;&#10;&#10;    -- Do nothing if the object has not changed for an update&#10;    IF TG_OP &#61; &#39;UPDATE&#39; AND OLD IS NOT DISTINCT FROM NEW THEN&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    -- Do nothing if data are the same as the road_graph data&#10;    -- Since UPDATEs can occur on newly created object in the editing_session schema&#10;    -- we must check if a corresponding object exists in the road_graph schema&#10;    -- before checking if they are equal&#10;    IF TG_OP &#61; &#39;UPDATE&#39; AND TG_TABLE_NAME &#61; &#39;edges&#39; THEN&#10;        -- We need to defined the search_path to avoid using syntax&#10;        -- such as road_graph.xxxxx as it can be replaced by QGIS plugin&#10;        -- when creating an editing_session_xxx schema&#10;        SET search_path TO road_graph, public;&#10;&#10;        -- Get original edge&#10;        SELECT INTO original_edge_object&#10;            *&#10;        FROM edges&#10;        WHERE id &#61; NEW.id&#10;        ;&#10;        IF&#10;            original_edge_object IS NOT NULL&#10;            AND md5(to_json(NEW.*)::text) &#61; md5(to_json(original_edge_object.*)::text)&#10;        THEN&#10;            -- Reset the search path&#10;            RESET search_path;&#10;            RETURN NEW;&#10;        END IF;&#10;        -- Reset the search path&#10;        RESET search_path;&#10;    END IF;&#10;&#10;    -- 1/ Check if geometry is inside the editing session geometry&#10;    -- Get editing session geometry&#10;    IF to_jsonb(NEW) ? &#39;geom&#39; THEN&#10;        SELECT INTO editing_session_geom&#10;            geom&#10;        FROM editing_session.editing_sessions&#10;        LIMIT 1&#10;        ;&#10;&#10;        -- Get edited object geometry&#10;        IF TG_OP &#61; &#39;DELETE&#39; THEN&#10;            object_geom &#61; OLD.geom;&#10;        ELSE&#10;            object_geom &#61; NEW.geom;&#10;        END IF;&#10;&#10;        -- Check if the inserted, updated or deleted geometry is inside the editing session polygon&#10;        -- The actual check depends on the operation&#10;        IF TG_OP IN (&#39;INSERT&#39;, &#39;DELETE&#39;) THEN&#10;            -- INSERT AND DELETE must concern geometries which are fully inside the polygon&#10;            -- NB : We must be less rigid since split actions can insert or update&#10;            -- an edge which is not fully in the polygon&#10;            -- IF NOT ST_Within(object_geom, editing_session_geom) THEN&#10;            IF NOT ST_Intersects(object_geom, editing_session_geom) THEN&#10;                RAISE EXCEPTION&#10;                    -- &#39;The object geometry must be strictly inside the editing session polygon&#10;                    -- object &#61; %, polygon &#61; %&#39;,&#10;                    &#39;The object geometry must intersect the editing session polygon&#10;                    object &#61; %, polygon &#61; %&#39;,&#10;                    ST_AsText(object_geom),&#10;                    ST_AsText(editing_session_geom)&#10;                ;&#10;            END IF;&#10;        END IF;&#10;&#10;        -- UPDATE must modify only the part of the geometry which is inside the polygon&#10;        IF TG_OP &#61; &#39;UPDATE&#39; AND NOT ST_Equals(OLD.geom, NEW.geom) THEN&#10;            IF (&#10;                -- Easy for points&#10;                TG_TABLE_NAME !&#61; &#39;edges&#39;&#10;                AND NOT ST_Within(object_geom, editing_session_geom)&#10;            )&#10;            OR (&#10;                -- For edges (linestrings) we must check the user did not change&#10;                -- the geometry outside the polygon&#10;                -- TODO : issue when deleting node which launches the merge of 2 edges&#10;                -- the edge which was outside the polygon has been merged which modifies its geometry&#10;                -- We do not enforce this constraint&#10;                TG_TABLE_NAME &#61; &#39;edges&#39;&#10;                /*&#10;                AND NOT ST_Equals(&#10;                    ST_SymDifference(OLD.geom, editing_session_geom),&#10;                    ST_SymDifference(NEW.geom, editing_session_geom)&#10;                )&#10;                */&#10;                AND NOT ST_Intersects(object_geom, editing_session_geom)&#10;            )&#10;            THEN&#10;                -- RAISE EXCEPTION &#39;The updated geometry must be strictly inside the editing session polygon&#39;;&#10;                RAISE EXCEPTION &#39;The updated geometry must intersect the editing session polygon&#39;;&#10;            END IF;&#10;        END IF;&#10;    END IF;&#10;&#10;    -- 2/ Log editing inside the editing_session table*&#10;    -- edited object id&#10;    object_id :&#61; CASE&#10;        WHEN TG_OP &#61; &#39;DELETE&#39; THEN OLD.id&#10;        ELSE NEW.id&#10;    END&#10;    ;&#10;&#10;    -- Update log in the editing session&#10;    -- We need to defined the search_path to avoid using syntax&#10;    -- such as road_graph.xxxxx as it can be replaced by QGIS plugin&#10;    -- when creating an editing_session_xxx schema&#10;    SET search_path TO road_graph, public;&#10;    SELECT INTO new_logged_ids&#10;        logged_ids&#10;    FROM editing_sessions&#10;    WHERE unique_code &#61; (&#10;        SELECT unique_code&#10;        FROM editing_session.editing_sessions&#10;        LIMIT 1&#10;    )&#10;    ;&#10;&#10;    IF new_logged_ids[TG_TABLE_NAME] IS NULL THEN&#10;        new_logged_ids[TG_TABLE_NAME] &#61; &#39;{}&#39;::jsonb;&#10;        new_logged_ids[TG_TABLE_NAME][object_id::text] &#61; format(&#39;&quot;%s&quot;&#39;, substr(TG_OP, 1, 1))::jsonb;&#10;    ELSE&#10;        IF new_logged_ids[TG_TABLE_NAME][object_id::text] IS NULL THEN&#10;            new_logged_ids[TG_TABLE_NAME][object_id::text] &#61; format(&#39;&quot;%s&quot;&#39;, substr(TG_OP, 1, 1))::jsonb;&#10;        ELSE&#10;            -- DELETE&#10;            IF TG_OP &#61; &#39;DELETE&#39; THEN&#10;                -- If the DELETE comes after an INSERT, remove it completely&#10;                -- The user has just deleted an object which has been inserted in the editing session&#10;                IF new_logged_ids[TG_TABLE_NAME][object_id::text] &#61; &#39;&quot;I&quot;&#39;::jsonb THEN&#10;                    new_logged_ids &#61; new_logged_ids #- (format(&#39;{%s,%s}&#39;, TG_TABLE_NAME, object_id::text))::text[];&#10;                ELSE&#10;                    new_logged_ids[TG_TABLE_NAME][object_id::text] &#61; &#39;&quot;D&quot;&#39;;&#10;                END IF;&#10;            -- UPDATE&#10;            ELSIF TG_OP &#61; &#39;UPDATE&#39; THEN&#10;                -- If the UPDATE comes after an INSERT, keep the I&#10;                -- The object could be updated several times afterwards&#10;                -- we must keep the track of its insert&#10;                IF new_logged_ids[TG_TABLE_NAME][object_id::text] &#61; &#39;&quot;I&quot;&#39;::jsonb THEN&#10;                     new_logged_ids &#61; new_logged_ids;&#10;                ELSE&#10;                    new_logged_ids[TG_TABLE_NAME][object_id::text] &#61; &#39;&quot;U&quot;&#39;;&#10;                END IF;&#10;            -- INSERT&#10;            ELSE&#10;                new_logged_ids[TG_TABLE_NAME][object_id::text] &#61; &#39;&quot;I&quot;&#39;;&#10;            END IF;&#10;        END IF;&#10;    END IF;&#10;&#10;    UPDATE editing_sessions&#10;    SET&#10;        -- Add the id of the object&#10;        logged_ids &#61; new_logged_ids,&#10;        &quot;status&quot; &#61; &#39;edited&#39;&#10;    WHERE unique_code &#61; (&#10;        SELECT unique_code&#10;        FROM editing_session.editing_sessions&#10;        LIMIT 1&#10;    )&#10;    ;&#10;    -- Reset the search path&#10;    RESET search_path;&#10;&#10;    -- Return object&#10;    IF TG_OP &#61; &#39;DELETE&#39; THEN&#10;        RETURN OLD;&#10;    ELSE&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>merge_edges(id_edge_a integer, id_edge_b integer)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Merge two edges by their geometry. The merged edge is the one with the lowest id. The other edge is deleted. The node between the two edges is not deleted but its id is stored in the session variable &lsquo;road.graph.merge.edges.useless.node&rsquo; for further use if needed.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>id_edge_a</td>
+                                    <td>integer</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>id_edge_b</td>
+                                    <td>integer</td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    edge_a record;&#10;    edge_b record;&#10;    edge_to_delete record;&#10;    node_to_be_deleted integer;&#10;    node_geom_to_be_deleted geometry(Point, 2154);&#10;    _set_config text;&#10;BEGIN&#10;&#10;    -- Get both edges&#10;    -- edge A&#10;    SELECT INTO edge_a&#10;    *&#10;    FROM road_graph.edges&#10;    WHERE id &#61; id_edge_a;&#10;    IF edge_a.id IS NULL THEN&#10;        RAISE EXCEPTION &#39;No edge found with id &#61; % &#39;, id_edge_a;&#10;    END IF;&#10;&#10;    -- edge B&#10;    SELECT INTO edge_b&#10;    *&#10;    FROM road_graph.edges&#10;    WHERE id &#61; id_edge_b;&#10;    IF edge_b.id IS NULL THEN&#10;        RAISE EXCEPTION &#39;No edge found with id &#61; % &#39;, id_edge_b;&#10;    END IF;&#10;&#10;    -- edge A and B touches&#10;    IF NOT ST_Touches(edge_a.geom, edge_b.geom) THEN&#10;        RAISE NOTICE &#39;Edges does not touch&#39;;&#10;        RETURN FALSE;&#10;    END IF;&#10;&#10;    -- RETURN FALSE;&#10;    -- Merge edges: keep the oldest one,&#10;    -- and add geometry from the other one&#10;    edge_to_delete &#61; edge_a;&#10;    IF edge_a.id &lt; edge_b.id OR edge_a.id &lt; edge_b.id THEN&#10;        edge_to_delete &#61; edge_b;&#10;    END IF;&#10;    RAISE NOTICE &#39;merge_edges - % and %. Delete %&#39;, id_edge_a, id_edge_b, edge_to_delete.id&#10;    ;&#10;&#10;    -- Get node to be deleted&#10;    node_to_be_deleted &#61; -1;&#10;    IF edge_a.start_node &#61; edge_b.end_node THEN&#10;        node_to_be_deleted &#61; edge_a.start_node;&#10;    END IF;&#10;    IF edge_b.start_node &#61; edge_a.end_node THEN&#10;        node_to_be_deleted &#61; edge_b.start_node;&#10;    END IF;&#10;    node_geom_to_be_deleted &#61; (SELECT geom FROM road_graph.nodes WHERE id &#61; node_to_be_deleted);&#10;    SELECT set_config(&#39;road.graph.merge.edges.useless.node&#39;, node_to_be_deleted::text, true)&#10;    INTO _set_config&#10;    ;&#10;    RAISE NOTICE &#39;merge_edges -  % and %. node to be deleted &#61; %&#39;, id_edge_a, id_edge_b, node_to_be_deleted&#10;    ;&#10;&#10;    -- Delete and UPDATE in the same request&#10;    WITH del AS (&#10;        DELETE FROM road_graph.edges&#10;        WHERE id &#61; edge_to_delete.id&#10;        RETURNING *&#10;    ),&#10;    up AS (&#10;        UPDATE road_graph.edges&#10;        SET geom &#61; ST_LineMerge(ST_Union(geom, edge_to_delete.geom))&#10;        WHERE True&#10;        AND id IN (id_edge_a, id_edge_b)&#10;        AND id !&#61; edge_to_delete.id&#10;        RETURNING id, geom&#10;    )&#10;    -- Move the marker 0 of the edge road if it was located on the node to be deleted&#10;    UPDATE road_graph.markers AS m&#10;    SET geom &#61; ST_StartPoint(u.geom)&#10;    FROM up AS u&#10;    WHERE m.road_code &#61; edge_a.road_code&#10;    AND m.code &#61; 0&#10;    AND ST_DWithin(m.geom, node_geom_to_be_deleted, 0.50)&#10;    ;&#10;    SELECT set_config(&#39;road.graph.merge.edges.useless.node&#39;, &#39;-1&#39;, true)&#10;    INTO _set_config&#10;    ;&#10;&#10;&#10;&#10;    RETURN TRUE;&#10;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

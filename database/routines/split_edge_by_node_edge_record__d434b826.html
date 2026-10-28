@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Split an edge by a node. The node must be close enough to the edge and not too close from the edge start or end point. The function returns the id of the new created edge or null if the edge has not been split.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>edge_record</td>
+                                    <td>record</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>node_record</td>
+                                    <td>record</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>minimum_distance_from_linestring</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>maximum_distance_from_start_end_points</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    source_fields text;&#10;    start_geom geometry;&#10;    end_geom geometry;&#10;    id_new_object integer;&#10;    new_edge_record record;&#10;    sql_text text;&#10;    raise_notice text;&#10;    edge_road record;&#10;    is_roundabout boolean;&#10;BEGIN&#10;    -- log level&#10;    raise_notice &#61; coalesce(current_setting(&#39;road.graph.raise.notice&#39;, true), &#39;no&#39;);&#10;&#10;    -- Get edge road&#10;    SELECT INTO edge_road&#10;        r.*&#10;    FROM road_graph.roads AS r&#10;    WHERE r.road_code &#61; edge_record.road_code&#10;    ;&#10;    IF edge_road.id IS NULL THEN&#10;        RAISE EXCEPTION &#39;The road code given for this edge does not exist !&#39;;&#10;    END IF;&#10;    is_roundabout &#61; (edge_road.road_type &#61; &#39;roundabout&#39;);&#10;&#10;    -- Check point is close enough to the given edge&#10;    IF ST_Distance(node_record.geom, edge_record.geom) &gt; minimum_distance_from_linestring THEN&#10;        RAISE NOTICE &#39;No edge found close enough to the node : Distance % m &gt; % m &#39;,&#10;            ST_Distance(node_record.geom, edge_record.geom), minimum_distance_from_linestring&#10;        ;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Check the edge is not already cut&#10;    IF node_record.id IN (edge_record.start_node, edge_record.end_node)&#10;        OR ST_DWithin(node_record.geom, ST_StartPoint(edge_record.geom), 0.50)&#10;        OR ST_DWithin(node_record.geom, ST_EndPoint(edge_record.geom), 0.50)&#10;    THEN&#10;        RAISE NOTICE &#39;Given edge is already cut for this node which corresponds to its start or end point&#39;&#10;        ;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Create new geometries&#10;    start_geom :&#61; ST_LineSubstring(&#10;        edge_record.geom,&#10;        0,&#10;        ST_LineLocatePoint(edge_record.geom, node_record.geom)&#10;    );&#10;    end_geom :&#61; ST_LineSubstring(&#10;        edge_record.geom,&#10;        ST_LineLocatePoint(edge_record.geom, node_record.geom),&#10;        1&#10;    );&#10;&#10;    -- Check the cut point is not to close to the start or end point of the given linestring&#10;    IF ST_length(start_geom) &lt; maximum_distance_from_start_end_points&#10;        OR ST_length(end_geom) &lt; maximum_distance_from_start_end_points&#10;    THEN-- Set variable to avoid infinite loops&#10;        RAISE NOTICE &#39;Abort splitting the edge: given point too close from the edge end points ( &lt; %m)&#39;, maximum_distance_from_start_end_points;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Modify the initial edge :&#10;    -- OA----------(O)----------OB becomes  OA----------(O)&#10;    -- we must get the new edge id beforehand to use it as next_edge_id&#10;    -- For roundabout, do not calculate previous and next edge id&#10;    -- To let the user decide&#10;    SET search_path TO road_graph, public;&#10;    id_new_object &#61; nextval(pg_get_serial_sequence(&#39;edges&#39;, &#39;id&#39;));&#10;    RESET search_path;&#10;&#10;    UPDATE road_graph.edges&#10;    SET&#10;        -- Set the geometry&#10;        geom &#61; start_geom,&#10;        -- We must also set the downstream node id column&#10;        end_node &#61; node_record.id,&#10;        -- next edge_id&#10;        next_edge_id &#61; CASE WHEN is_roundabout THEN NULL ELSE id_new_object END,&#10;        -- end_cumulative&#10;        end_cumulative &#61; (end_cumulative - ST_Length(end_geom))&#10;    WHERE id &#61; edge_record.id&#10;    ;&#10;&#10;    -- Get the object fields minus the PK, upstream node &amp; geometry column&#10;    WITH fields AS (&#10;        SELECT json_object_keys(to_json(edge_record.*)) AS field&#10;    )&#10;    SELECT concat (&#39;&quot;&#39;, string_agg(field, &#39;&quot;, &quot;&#39;), &#39;&quot;&#39;)&#10;    INTO source_fields&#10;    FROM fields&#10;    WHERE field NOT IN (&#10;        &#39;id&#39;, &#39;start_node&#39;, &#39;geom&#39;,&#10;        &#39;previous_edge_id&#39;, &#39;next_edge_id&#39;,&#10;        &#39;start_cumulative&#39;, &#39;uid&#39;&#10;    )&#10;    ;&#10;&#10;    -- Check if the new edge geometry does not exists&#10;    -- This avoid to create 2 superimposed edges&#10;    -- especially for roundabouts.&#10;    SELECT INTO new_edge_record&#10;        e.id&#10;    FROM road_graph.edges AS e&#10;    WHERE&#10;        -- use ST_DWithin and not ST_Intersects to use spatial indexing&#10;        -- but keep a tolerance to avoid precision issues&#10;        ST_DWithin(e.geom, end_geom, 1)&#10;        AND (&#10;            ST_Equals(e.geom, end_geom)&#10;            OR ST_Equals(e.geom, ST_ReducePrecision(end_geom, 0.10))&#10;        )&#10;    LIMIT 1&#10;    ;&#10;&#10;    -- Create the new edge:&#10;    -- (O)----------OB&#10;    -- Get the values from the original linestring&#10;    -- Only if the geometry does not exists&#10;    IF new_edge_record.id IS NULL&#10;    THEN&#10;        sql_text &#61; format(&#10;            $$&#10;                INSERT INTO road_graph.edges (&#10;                    id,&#10;                    %1$s,&#10;                    start_node,&#10;                    geom,&#10;                    previous_edge_id,&#10;                    next_edge_id,&#10;                    start_cumulative,&#10;                    uid&#10;                )&#10;                WITH source AS (&#10;                    SELECT e.*, r.road_type&#10;                    FROM road_graph.edges AS e&#10;                    JOIN road_graph.roads AS r&#10;                        ON r.road_code &#61; e.road_code&#10;                    WHERE e.id &#61; %2$s::integer&#10;                    LIMIT 1&#10;                )&#10;                SELECT&#10;                    %5$s::integer AS id,&#10;                    %1$s,&#10;                    %3$s::integer AS start_node,&#10;                    &#39;%4$s&#39;::geometry(LINESTRING) AS geom,&#10;                    CASE WHEN road_type &#61; &#39;roundabout&#39; THEN NULL ELSE %2$s::integer END AS previous_edge_id,&#10;                    CASE WHEN road_type &#61; &#39;roundabout&#39; THEN NULL ELSE(Nullif(%6$s, -1))::integer END AS next_edge_id,&#10;                    %7$s::real AS start_cumulative,&#10;                    uuid_generate_v4()::text&#10;                FROM source&#10;                LIMIT 1&#10;                RETURNING id&#10;            $$,&#10;            source_fields,&#10;            edge_record.id,&#10;            node_record.id,&#10;            end_geom,&#10;            id_new_object,&#10;            Coalesce(edge_record.next_edge_id, -1),&#10;            Coalesce(edge_record.end_cumulative, 0)&#10;        );&#10;&#10;        EXECUTE sql_text&#10;        INTO id_new_object&#10;        ;&#10;&#10;        IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;            RAISE NOTICE &#39;% split_edge_by_node - node n° % %- splitting edge n° % : created edge n° %&#39;,&#10;               repeat(&#39;    &#39;, pg_trigger_depth()::integer), node_record.id, ST_AsText(node_record.geom), edge_record.id, id_new_object&#10;            ;&#10;        END IF;&#10;    ELSE&#10;        id_new_object &#61; -1;&#10;    END IF;&#10;&#10;    -- Return True&#10;    RETURN id_new_object;&#10;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

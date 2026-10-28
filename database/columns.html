@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="bower/html5shiv/html5shiv.min.js"></script>
+        <script src="bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>Columns</h1>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 class="box-title">Columns</h3>
+                        </div>
+                        <div class="box-body">
+                            <table
+                                    id="column_table"
+                                    class="table table-bordered table-striped dataTable"
+                                    role="grid"
+                                    data-paging="false"
+                                    data-page-length="50"
+                                    data-length-change="false">
+                                <thead align='left'>
+                                    <tr>
+                                        <th>Table</th>
+                                        <th>Type</th>
+                                        <th>Column</th>
+                                        <th>Type</th>
+                                        <th>Size</th>
+                                        <th title='Are nulls allowed?'>Nullable</th>
+                                        <th title='Is column automatically updated?'>Auto</th>
+                                        <th title='Default value'>Default</th>
+                                        <th title='Comments' class="toggle"><span>Comments</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <script>
+                    var tableData = [
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "null",
+        "comments": "<p>Unique integer ID (automatic)</p>"
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>road_code",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>The code of the parent road. Used to group the edges together. Ex: RD230</p>"
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>start_node",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>The start node (also called source node or upstream node)</p>"
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>end_node",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>The end node (also called target node or downstream node)</p>"
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "start_marker",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "start_abscissa",
+        "type": "float4",
+        "length": 8,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "start_cumulative",
+        "type": "float4",
+        "length": 8,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "end_marker",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "end_abscissa",
+        "type": "float4",
+        "length": 8,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "end_cumulative",
+        "type": "float4",
+        "length": 8,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "created_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "updated_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>geom",
+        "type": "geometry",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "previous_edge_id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "next_edge_id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "uid",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(uuid_generate_v4())::text",
+        "comments": ""
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "no_intersection_cutting",
+        "type": "bool",
+        "length": 1,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "false",
+        "comments": "<p>Prevents the trigger functions from automatically cutting the edges having this value set to True. Useful for access roads, edges located under a bridge, etc.</p>"
+    },
+    {
+        "tableName": "edges",
+        "tableFileName": "edges",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "id_source",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>Original ID of the source data (used after an import, for example to check references between original data and the imported data in road_graph</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "null",
+        "comments": "<p>Unique ID</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "label",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>Editing session label. Keep it short</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "author",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>Author of the editing session</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "created_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": "<p>Creation timestamp</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "updated_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": "<p>Update timestamp</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "description",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>Description of the session</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>geom",
+        "type": "geometry",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "status",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "'created'::text",
+        "comments": "<p>Current status : created, cloned, edited, merged</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "unique_code",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "concat('editing_session_', to_char(now(), 'YYYY_MM_DD_HH_MI_SS'::text))",
+        "comments": "<p>Automatically generated code with timestamp like editing_session_2025_09_26_08_37_24</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "cloned_ids",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>Object containing the list of unique ids for each cloned data (roads, edges, nodes, etc.)</p>"
+    },
+    {
+        "tableName": "editing_sessions",
+        "tableFileName": "editing_sessions",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "logged_ids",
+        "type": "jsonb",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "glossary_road_class",
+        "tableFileName": "glossary_road_class",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "glossary_road_class",
+        "tableFileName": "glossary_road_class",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>code",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "glossary_road_class",
+        "tableFileName": "glossary_road_class",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>label",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "managed_objects",
+        "tableFileName": "managed_objects",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "managed_objects",
+        "tableFileName": "managed_objects",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>schema_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>The schema name of the managed object table</p>"
+    },
+    {
+        "tableName": "managed_objects",
+        "tableFileName": "managed_objects",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>table_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>The table name of the managed object table</p>"
+    },
+    {
+        "tableName": "managed_objects",
+        "tableFileName": "managed_objects",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>geometry_type",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>The geometry type of the managed object table. It can be POINT or LINESTRING or MULTILINESTRING.</p>"
+    },
+    {
+        "tableName": "managed_objects",
+        "tableFileName": "managed_objects",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "update_policy_on_graph_change",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "'references'::text",
+        "comments": "<p>The update policy to apply on the managed objects when the road graph changes. It can be &ldquo;geometry&rdquo; to update only the geometries based on the references, &ldquo;references&rdquo; to update only the references based on the geometries or &ldquo;none&rdquo; to not update anything.</p>"
+    },
+    {
+        "tableName": "managed_objects",
+        "tableFileName": "managed_objects",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "last_update",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": "<p>The date and time of the last update of table objects based on the road graph.</p>"
+    },
+    {
+        "tableName": "managed_objects",
+        "tableFileName": "managed_objects",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "last_updated_objects_ids",
+        "type": "_int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>The list of the last updated objects ids based on the road graph.</p>"
+    },
+    {
+        "tableName": "managed_objects",
+        "tableFileName": "managed_objects",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "add_trigger_on_geom_change",
+        "type": "bool",
+        "length": 1,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "false",
+        "comments": "<p>If True, the function road_graph.add_managed_objects_triggers will create the trigger trg_calculate_managed_object_references on this table, which calculates the references of the features on insert or on geometry update.</p>"
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "null",
+        "comments": "<p>Unique integer ID (automatic)</p>"
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>road_code",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>Code of the parent road</p>"
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>code",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "0",
+        "comments": "<p>Code of the marker. Should be unique for a given road code</p>"
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "created_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": ""
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "updated_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": ""
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>geom",
+        "type": "geometry",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>abscissa",
+        "type": "float4",
+        "length": 8,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "0",
+        "comments": ""
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "is_virtual",
+        "type": "bool",
+        "length": 1,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "false",
+        "comments": ""
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "uid",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(uuid_generate_v4())::text",
+        "comments": ""
+    },
+    {
+        "tableName": "markers",
+        "tableFileName": "markers",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "id_source",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>Original ID of the source data (used after an import, for example to check references between original data and the imported data in road_graph</p>"
+    },
+    {
+        "tableName": "metadata",
+        "tableFileName": "metadata",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "metadata",
+        "tableFileName": "metadata",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "me_version",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "metadata",
+        "tableFileName": "metadata",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "me_version_date",
+        "type": "date",
+        "length": 13,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "metadata",
+        "tableFileName": "metadata",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "me_status",
+        "type": "int2",
+        "length": 5,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "nodes",
+        "tableFileName": "nodes",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "null",
+        "comments": "<p>Unique integer ID (automatic)</p>"
+    },
+    {
+        "tableName": "nodes",
+        "tableFileName": "nodes",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "created_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": ""
+    },
+    {
+        "tableName": "nodes",
+        "tableFileName": "nodes",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "updated_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": ""
+    },
+    {
+        "tableName": "nodes",
+        "tableFileName": "nodes",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>geom",
+        "type": "geometry",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "nodes",
+        "tableFileName": "nodes",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "uid",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(uuid_generate_v4())::text",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
+        "autoUpdated": "√",
+        "defaultValue": "null",
+        "comments": "<p>Unique integer ID (automatic)</p>"
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i>road_code",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "road_type",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "'road'::text",
+        "comments": "<p>Type of the road : road, roundabout. It is used by the trigger functions: glossary must be respected</p>"
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'></i>road_class",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "road_class_code",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "is_active",
+        "type": "bool",
+        "length": 1,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "true",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "road_topic",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "is_access_road",
+        "type": "bool",
+        "length": 1,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "false",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "created_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "updated_at",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(now())::timestamp(0) without time zone",
+        "comments": ""
+    },
+    {
+        "tableName": "roads",
+        "tableFileName": "roads",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "uid",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "(uuid_generate_v4())::text",
+        "comments": ""
+    },
+    {
+        "tableName": "v_managed_objects",
+        "tableFileName": "v_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "v_managed_objects",
+        "tableFileName": "v_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "schema_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "v_managed_objects",
+        "tableFileName": "v_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "table_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "v_managed_objects",
+        "tableFileName": "v_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "geometry_type",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "v_managed_objects",
+        "tableFileName": "v_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "update_policy_on_graph_change",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "v_managed_objects",
+        "tableFileName": "v_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "last_update",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "v_managed_objects",
+        "tableFileName": "v_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "last_updated_objects_ids",
+        "type": "_int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "v_managed_objects",
+        "tableFileName": "v_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "geom",
+        "type": "geometry",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "v_road_without_zero_marker",
+        "tableFileName": "v_road_without_zero_marker",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "road_code",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "vm_managed_objects",
+        "tableFileName": "vm_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "id",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "vm_managed_objects",
+        "tableFileName": "vm_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "schema_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "vm_managed_objects",
+        "tableFileName": "vm_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "table_name",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "vm_managed_objects",
+        "tableFileName": "vm_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "geometry_type",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "vm_managed_objects",
+        "tableFileName": "vm_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "update_policy_on_graph_change",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "vm_managed_objects",
+        "tableFileName": "vm_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "last_update",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "vm_managed_objects",
+        "tableFileName": "vm_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "last_updated_objects_ids",
+        "type": "_int4",
+        "length": 10,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    },
+    {
+        "tableName": "vm_managed_objects",
+        "tableFileName": "vm_managed_objects",
+        "tableType": "View",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "geom",
+        "type": "geometry",
+        "length": 2147483647,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": ""
+    }
+];
+                    var config = {
+                        pagination: false
+                    };
+                </script>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="bower/pdfmake/pdfmake.min.js"></script>
+        <script src="bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="bower/codemirror/codemirror.js"></script>
+        <script src="bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="column.js"></script>
+        <script src="schemaSpy.js"></script>
+    </body>
+</html>

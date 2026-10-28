@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>get_reference_from_point(_point geometry, _road_code text DEFAULT NULL::text, _use_cache boolean DEFAULT false)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Calculate the references for the given point. The second parameter _road_code allows to narrow the search to the specified road. Since this method is heavily used and the calculation is costly, we can pass a third parameter _use_cache which allows to use a pre-generated cache (to be build before using this function).</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_point</td>
+                                    <td>geometry</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_road_code</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_use_cache</td>
+                                    <td>boolean</td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    closest_edge record;&#10;    closest_edge_marker record;&#10;    previous_marker record;&#10;    merged_upstream_edges record;&#10;    upstream_road_from_marker record;&#10;    upstream_road_from_start record;&#10;    found_road_code text;&#10;    found_marker_code integer;&#10;    found_abscissa real;&#10;    found_offset real;&#10;    found_side text;&#10;    found_cumulative real;&#10;    raise_notice text;&#10;BEGIN&#10;    raise_notice &#61; road_graph.get_current_setting(&#39;road.graph.raise.notice&#39;, &#39;no&#39;);&#10;    IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;        RAISE NOTICE &#39;% get_reference_from_point - _point &#61; % &amp; _road_code &#61; %&#39;,&#10;            REPEAT(&#39;    &#39;, pg_trigger_depth()::INTEGER),&#10;            ST_AsText(_point),&#10;            _road_code&#10;        ;&#10;    END IF;&#10;&#10;    -- Get the splitted closest road depending on given road_code&#10;    -- we keep only the edge part between start point and given _point&#10;    IF _road_code IS NOT NULL THEN&#10;        WITH ordered_ids AS (&#10;            SELECT *&#10;            FROM road_graph.get_ordered_edges(_road_code, -1, &#39;downstream&#39;)&#10;        )&#10;        SELECT INTO closest_edge&#10;            e.*,&#10;            -- Calculate the distance between the edge and the point&#10;            -- Do not use e.geom &lt;-&gt; _point AS distance&#10;            -- since it can lead to some PostGIS errors if used in the ORDER BY&#10;            -- such as &quot;ERROR:  index returned tuples in wrong order&quot;&#10;            ST_Distance(e.geom, _point) AS distance,&#10;            -- create the line portion from edge start point to the given point&#10;            -- BEWARE: it can be a point e.g if the _point is edge start point&#10;            -- it why we do not cast with ::geometry(LINESTRING, 2154)&#10;            ST_LineSubstring(&#10;                e.geom,&#10;                0,&#10;                ST_LineLocatePoint(e.geom, _point)&#10;            ) AS sub_geom,&#10;            -- calculate the measure for the point on this edge&#10;            ST_LineLocatePoint(e.geom, _point) AS point_measure&#10;        FROM&#10;            road_graph.edges AS e&#10;        INNER JOIN ordered_ids AS o ON e.id &#61; o.id&#10;        -- Limit search for the given road code&#10;        WHERE e.road_code &#61; _road_code&#10;        -- Limit search to 50m&#10;        AND ST_DWithin(e.geom, _point, 50)&#10;        -- we must also order by edge_order, start_cumulative&#10;        -- in case the point catches multiple edges (start and end points)&#10;        ORDER BY distance, o.edge_order, e.start_cumulative --, ST_X(ST_Centroid(e.geom)), ST_Y(ST_Centroid(e.geom))&#10;        -- Get only the closest edge, with the least edge_order -- start cumulative&#10;        LIMIT 1&#10;        ;&#10;    ELSE&#10;        SELECT INTO closest_edge&#10;            e.*,&#10;            -- Calculate the distance between the edge and the point&#10;            -- Do not use e.geom &lt;-&gt; _point AS distance&#10;            -- since it can lead to some PostGIS errors if used in the ORDER BY&#10;            -- such as &quot;ERROR:  index returned tuples in wrong order&quot;&#10;            ST_Distance(e.geom, _point) AS distance,&#10;            -- create the line portion from edge start point to the given point&#10;            -- BEWARE: it can be a point e.g if the _point is edge start point&#10;            -- it why we do not cast with ::geometry(LINESTRING, 2154)&#10;            ST_LineSubstring(&#10;                e.geom,&#10;                0,&#10;                ST_LineLocatePoint(e.geom, _point)&#10;            ) AS sub_geom,&#10;            -- calculate the measure for the point on this edge&#10;            ST_LineLocatePoint(e.geom, _point) AS point_measure&#10;        FROM&#10;            road_graph.edges AS e&#10;            -- LIMIT search without road_code TO 50m&#10;        WHERE ST_DWithin(e.geom, _point, 50)&#10;        -- we must also order by edge_order, start_cumulative&#10;        -- in case the point catches multiple edges (start and end points)&#10;        ORDER BY distance --, ST_X(ST_Centroid(e.geom)), ST_Y(ST_Centroid(e.geom))&#10;        -- Get only the closest edge, with the least edge_order, start cumulative&#10;        LIMIT 1&#10;        ;&#10;    END IF;&#10;    IF closest_edge IS NULL THEN&#10;        IF raise_notice &#61; &#39;debug&#39; THEN&#10;            RAISE NOTICE &#39;CLOSEST_EDGE is NULL&#39;;&#10;        END IF;&#10;        RETURN NULL;&#10;    END IF;&#10;    IF raise_notice &#61; &#39;debug&#39; THEN&#10;        RAISE NOTICE &#39;CLOSEST_EDGE %&#39;, to_json(closest_edge);&#10;        RAISE NOTICE &#39;CLOSEST_EDGE subgeom %&#39;, ST_AsText(closest_edge.sub_geom);&#10;    END IF;&#10;&#10;    -- Get road_code&#10;    found_road_code &#61; closest_edge.road_code;&#10;&#10;    WITH&#10;    get_previous_marker AS (&#10;        SELECT *&#10;        FROM road_graph.get_road_previous_marker_from_point(&#10;            found_road_code,&#10;            _point,&#10;            _use_cache&#10;        )&#10;    ),&#10;    marker_data AS (&#10;        SELECT&#10;            -- marker data&#10;            m.*,&#10;            -- Multilinestring from the marker to the point&#10;            ST_Difference(&#10;                -- linestring between the marker and _point&#10;                m.road_linestring_from_marker_to_point,&#10;                -- multilinestring made with connectors between edges end points and start points&#10;                m.closing_multilinestring,&#10;                -- grid size to avoid rounding issues&#10;                0.01&#10;            ) AS upstream_road_from_marker,&#10;            -- Multilinestring from the road start to the point&#10;            ST_Difference(&#10;                -- linestring between the road start and the point&#10;                m.road_linestring_from_start_to_point,&#10;                -- multilinestring made with connectors between edges end points and start points&#10;                m.closing_multilinestring,&#10;                -- grid size to avoid rounding issues&#10;                0.01&#10;            ) AS upstream_road_from_start&#10;        FROM&#10;            get_previous_marker AS m&#10;    )&#10;    SELECT INTO closest_edge_marker&#10;        m.*&#10;    FROM marker_data AS m&#10;    ;&#10;&#10;    IF raise_notice &#61; &#39;debug&#39; THEN&#10;        RAISE NOTICE &#39;CLOSEST_EDGE_MARKER %&#39;, to_json(closest_edge_marker);&#10;        RAISE NOTICE &#39;-&#39;;&#10;    END IF;&#10;&#10;    -- Calculate values to return based on the generated geometries&#10;    -- If the marker is the next edge start marker, because the point&#10;    -- was not on an edge but between two unconnected edges,&#10;    -- we should take information from this edge.&#10;    found_marker_code &#61; closest_edge_marker.code;&#10;    found_abscissa &#61;&#10;        CASE&#10;            WHEN closest_edge_marker.is_next_edge_start_marker IS NOT TRUE&#10;                THEN ST_Length(closest_edge_marker.upstream_road_from_marker) + closest_edge_marker.abscissa&#10;            ELSE closest_edge_marker.abscissa&#10;        END&#10;    ;&#10;    found_cumulative &#61;&#10;        CASE&#10;            WHEN closest_edge_marker.is_next_edge_start_marker IS NOT TRUE&#10;                THEN Coalesce(ST_Length(closest_edge_marker.upstream_road_from_start), 0)&#10;            ELSE closest_edge_marker.cumulative&#10;        END&#10;    ;&#10;    found_offset &#61;&#10;        CASE&#10;            WHEN closest_edge_marker.is_next_edge_start_marker IS NOT TRUE&#10;                THEN closest_edge.distance&#10;            ELSE 0.0&#10;        END&#10;    ;&#10;    found_side &#61; (&#10;        CASE&#10;            WHEN ST_Contains(&#10;                ST_Buffer(&#10;                    closest_edge.geom,&#10;                    closest_edge.distance +1,&#10;                    &#39;side&#61;left&#39;&#10;                ), _point&#10;            ) THEN &#39;left&#39;&#10;            ELSE &#39;right&#39;&#10;        END&#10;    );&#10;&#10;    -- Build the JSON to return&#10;    RETURN json_build_object(&#10;        &#39;road_code&#39;, found_road_code,&#10;        &#39;marker_code&#39;, found_marker_code,&#10;        &#39;abscissa&#39;, round(found_abscissa::numeric, 2),&#10;        &#39;cumulative&#39;, round(found_cumulative::numeric, 2),&#10;        &#39;offset&#39;, round(found_offset::numeric, 2),&#10;        &#39;side&#39;, found_side&#10;    );&#10;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

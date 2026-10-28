@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Merge two linestring features of the same table. The kept one is the one with the lower start_cumulative. The other one is deleted.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_schema_name</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_table_name</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_feature_id_a</td>
+                                    <td>integer</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_feature_id_b</td>
+                                    <td>integer</td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    primary_key_field text;&#10;    geometry_column_data record;&#10;    feature_a record;&#10;    feature_b record;&#10;    feature_to_delete record;&#10;    sql_text text;&#10;    target_geometry geometry(MULTILINESTRING, 2154);&#10;    update_result record;&#10;BEGIN&#10;    -- Check the given feature ids&#10;    IF Coalesce(_feature_id_a, 0) &#61; Coalesce(_feature_id_b, 0) THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, format(&#39;The given feature ids are equals: %L and %L&#39;, _feature_id_a, _feature_id_b)&#10;        );&#10;    END IF;&#10;&#10;    -- Get the table primary key field&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT a.attname&#10;        FROM pg_index i&#10;        JOIN pg_attribute a ON a.attrelid &#61; i.indrelid AND a.attnum &#61; ANY(i.indkey)&#10;        WHERE i.indrelid &#61; &#39;%1$I.%2$I&#39;::regclass AND i.indisprimary&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO primary_key_field&#10;    ;&#10;    IF primary_key_field IS NULL THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, format(&#39;The table %I.%I does not have a primary key !&#39;, _schema_name, _table_name)&#10;        );&#10;    END IF;&#10;&#10;    -- Get geometry column name&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT f_geometry_column AS geom_name, &quot;type&quot; AS geom_type&#10;        FROM geometry_columns&#10;        WHERE f_table_schema &#61; &#39;%1$s&#39; AND f_table_name &#61; &#39;%2$s&#39;;&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO geometry_column_data&#10;    ;&#10;    IF geometry_column_data.geom_name IS NULL THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, format(&#39;The table %I.%I does not have a geometry column !&#39;, _schema_name, _table_name)&#10;        );&#10;    END IF;&#10;&#10;    -- Get both features&#10;    -- feature A&#10;    sql_text &#61; format(&#10;        $SQL$&#10;            SELECT *&#10;            FROM %1$I.%2$I&#10;            WHERE %3$I &#61; %4$s&#10;            LIMIT 1&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name,&#10;        primary_key_field,&#10;        _feature_id_a&#10;    );&#10;    EXECUTE sql_text&#10;    INTO feature_a&#10;    ;&#10;    IF feature_a.geom IS NULL THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, format(&#39;No object found with id &#61; %L &#39;, _feature_id_a)&#10;        );&#10;    END IF;&#10;&#10;    -- Check road_code values&#10;    IF NOT to_jsonb(feature_a) ? &#39;road_code&#39; THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, &#39;The given feature does not have the mandatory column road_code !&#39;&#10;        );&#10;    END IF;&#10;&#10;    -- feature B&#10;    sql_text &#61; format(&#10;        $SQL$&#10;            SELECT *&#10;            FROM %1$I.%2$I&#10;            WHERE %3$I &#61; %4$s&#10;            LIMIT 1&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name,&#10;        primary_key_field,&#10;        _feature_id_b&#10;    );&#10;    EXECUTE sql_text&#10;    INTO feature_b&#10;    ;&#10;    IF feature_b.geom IS NULL THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, format(&#39;No object found with id &#61; %L &#39;, _feature_id_b)&#10;        );&#10;    END IF;&#10;&#10;    -- Prevent from merging if features does not share the same road_code&#10;    IF Coalesce(feature_a.road_code, &#39;&#39;) !&#61; Coalesce(feature_b.road_code, &#39;&#39;) THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, format(&#10;                &#39;The given features do not share the same road_code: %L VS %L&#39;,&#10;                feature_a.road_code,&#10;                feature_b.road_code&#10;            )&#10;        );&#10;    END IF;&#10;&#10;    -- Merge features: keep the one with the smallest start_cumulative&#10;    -- and add geometry from the other one&#10;    -- Decide which feature must be deleted&#10;    feature_to_delete &#61; feature_b;&#10;    IF&#10;        Coalesce(feature_b.start_marker_code * 10000 + feature_b.start_abscissa, 0.0)&#10;        &lt; Coalesce(feature_a.start_marker_code * 10000 + feature_a.start_abscissa, 0.0)&#10;    THEN&#10;        feature_to_delete &#61; feature_a;&#10;    END IF;&#10;&#10;    -- Compute merged geometry&#10;    target_geometry &#61; road_graph.reorder_multilinestring_parts(&#10;        ST_Multi(&#10;            ST_Union(&#10;                ST_GeomFromGeoJSON((to_json(feature_a))-&gt;&gt;geometry_column_data.geom_name),&#10;                ST_GeomFromGeoJSON((to_json(feature_b))-&gt;&gt;geometry_column_data.geom_name)&#10;            )&#10;        ),&#10;        feature_a.road_code&#10;    );&#10;&#10;    -- Delete and UPDATE in the same request&#10;    sql_text &#61; format(&#10;        $SQL$&#10;            WITH del AS (&#10;                DELETE FROM %1$I.%2$I&#10;                WHERE %3$I &#61; %4$s&#10;                RETURNING *&#10;            ),&#10;            up AS (&#10;                UPDATE %1$I.%2$I&#10;                SET %5$I &#61; ST_GeomFromGeoJSON(&#39;%6$s&#39;)&#10;                WHERE True&#10;                AND %3$I IN (%7$s, %8$s)&#10;                AND %3$I !&#61; %4$s&#10;                RETURNING *&#10;            )&#10;            SELECT *&#10;            FROM up&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name,&#10;        primary_key_field,&#10;        (to_jsonb(feature_to_delete))-&gt;&gt;primary_key_field,&#10;        geometry_column_data.geom_name,&#10;        ST_AsGeoJSON(target_geometry),&#10;        _feature_id_a, _feature_id_b&#10;    );&#10;    EXECUTE sql_text&#10;    INTO update_result&#10;    ;&#10;&#10;    RETURN json_build_object(&#10;        &#39;status&#39;, &#39;success&#39;,&#10;        &#39;message&#39;, &#39;The two features have been successfully merged.&#39;&#10;    );&#10;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

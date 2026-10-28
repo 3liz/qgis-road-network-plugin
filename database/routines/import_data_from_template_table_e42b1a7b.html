@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>import_data_from_template_tables(_source_schema text, _source_edges_table text, _source_markers_table text)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Import data from the given schema and edges &amp; markers source tables</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_source_schema</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_source_edges_table</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_source_markers_table</td>
+                                    <td>text</td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    sql_text text;&#10;    roads_count integer;&#10;    edges_count integer;&#10;    nodes_count integer;&#10;    markers_zero_count integer;&#10;    markers_count integer;&#10;    _set_config text;&#10;    _toggle_triggers boolean;&#10;    _set_val_result integer;&#10;    wrong_road_type record;&#10;    wrong_road_class record;&#10;BEGIN&#10;    -- Default values&#10;    roads_count &#61; 0;&#10;    edges_count &#61; 0;&#10;    nodes_count &#61; 0;&#10;    markers_zero_count &#61; 0;&#10;    markers_count &#61; 0;&#10;&#10;    -- Reset edges sequence&#10;    SELECT INTO _set_val_result&#10;    setval(&#10;        pg_get_serial_sequence(&#39;road_graph.edges&#39;, &#39;id&#39;),&#10;        (SELECT max(id) FROM road_graph.edges)&#10;    );&#10;&#10;    -- Build temporary tables from source tables&#10;    -- Temporary edges&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        CREATE TEMPORARY TABLE temp_edges ON COMMIT DROP AS (&#10;            WITH source AS (&#10;                SELECT&#10;                    -- Stores the original data&#10;                    -- We must use the sequences to keep a link between previous and next edges&#10;                    nextval(pg_get_serial_sequence(&#39;road_graph.edges&#39;, &#39;id&#39;)) AS id,&#10;                    e.id_source AS id_source,&#10;                    e.&quot;edge_order&quot;,&#10;                    trim(e.&quot;road_code&quot;) AS road_code,&#10;                    trim(e.&quot;road_class&quot;) AS road_class,&#10;                    trim(e.&quot;road_type&quot;) AS road_type,&#10;                    trim(e.&quot;road_class_code&quot;) AS road_class_code,&#10;                    e.&quot;is_active&quot;,&#10;                    trim(e.&quot;road_topic&quot;) AS road_topic,&#10;                    e.&quot;is_access_road&quot;,&#10;                    -- Move the geometries nodes to a grid&#10;                    ST_ReducePrecision(ST_geometryN(e.geom, 1), 0.10) AS geom&#10;                FROM %I.%I AS e&#10;            )&#10;            SELECT&#10;                s.*,&#10;                -- get the start point&#10;                ST_StartPoint(s.geom) AS start_point,&#10;                -- get the end point&#10;                ST_EndPoint(s.geom) AS end_point,&#10;                -- previous and next edges&#10;                lag(s.id) OVER(PARTITION BY s.road_code ORDER BY s.edge_order) AS previous_edge_id,&#10;                lead(s.id) OVER(PARTITION BY s.road_code ORDER BY s.edge_order) AS next_edge_id&#10;            FROM source AS s&#10;            WHERE TRUE&#10;            ORDER BY road_code, edge_order&#10;        )&#10;        ;&#10;        $SQL$,&#10;        _source_schema,&#10;        _source_edges_table&#10;    );&#10;    -- RAISE NOTICE &#39;sql_text &#61; %&#39;, sql_text;&#10;    EXECUTE sql_text;&#10;&#10;    CREATE INDEX ON temp_edges (road_code);&#10;    CREATE INDEX ON temp_edges USING GIST (start_point);&#10;    CREATE INDEX ON temp_edges USING GIST (end_point);&#10;&#10;    -- Check unique values of some fields&#10;    -- road_type&#10;    SELECT INTO wrong_road_type&#10;        count(*) AS nb,&#10;        string_agg(DISTINCT e.road_type, &#39;, &#39; ORDER BY e.road_type) AS road_types&#10;    FROM temp_edges AS e&#10;    WHERE e.road_type NOT IN (&#39;road&#39;, &#39;roundabout&#39;)&#10;    ;&#10;    IF wrong_road_type.nb &gt; 0 THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, &#39;Some values of the field &quot;road_type&quot; are not road or roundabout&#39;,&#10;            &#39;data&#39;, json_build_object(&#10;                &#39;number&#39;, wrong_road_type.nb,&#10;                &#39;details&#39;, wrong_road_type.road_types&#10;            ),&#10;            &#39;roads_count&#39;, roads_count,&#10;            &#39;edges_count&#39;, edges_count,&#10;            &#39;nodes_count&#39;, nodes_count,&#10;            &#39;markers_count&#39;, markers_zero_count + markers_count&#10;        );&#10;    END IF;&#10;&#10;    -- road_class&#10;    SELECT INTO wrong_road_class&#10;        count(*) AS nb,&#10;        string_agg(DISTINCT e.road_class, &#39;, &#39; ORDER BY e.road_class) AS road_classes&#10;    FROM temp_edges AS e&#10;    WHERE e.road_class NOT IN (&#10;        SELECT &quot;code&quot; FROM road_graph.glossary_road_class&#10;    )&#10;    ;&#10;    IF wrong_road_class.nb &gt; 0 THEN&#10;        RETURN json_build_object(&#10;            &#39;status&#39;, &#39;error&#39;,&#10;            &#39;message&#39;, &#39;Some values of the field &quot;road_class&quot; are not present in the table &quot;glossary_road_class&quot;&#39;,&#10;            &#39;data&#39;, json_build_object(&#10;                &#39;number&#39;, wrong_road_class.nb,&#10;                &#39;details&#39;, wrong_road_class.road_classes&#10;            ),&#10;            &#39;roads_count&#39;, roads_count,&#10;            &#39;edges_count&#39;, edges_count,&#10;            &#39;nodes_count&#39;, nodes_count,&#10;            &#39;markers_count&#39;, markers_zero_count + markers_count&#10;        );&#10;    END IF;&#10;&#10;    -- Temporary nodes&#10;    CREATE TEMPORARY TABLE temp_nodes ON COMMIT DROP AS (&#10;        WITH&#10;        union_start_end AS (&#10;            SELECT id AS start_of, NULL AS end_of, start_point AS geom&#10;            FROM temp_edges&#10;            UNION ALL&#10;            SELECT NULL AS start_of, id AS end_of, end_point AS geom&#10;            FROM temp_edges&#10;        ),&#10;        distinct_nodes AS (&#10;            SELECT&#10;                json_agg(DISTINCT start_of) FILTER (WHERE start_of IS NOT NULL) AS start_of,&#10;                json_agg(DISTINCT end_of) FILTER (WHERE end_of IS NOT NULL) AS end_of,&#10;                geom&#10;            FROM union_start_end&#10;            GROUP BY geom&#10;        )&#10;        SELECT *&#10;        FROM distinct_nodes&#10;    )&#10;    ;&#10;    CREATE INDEX ON temp_nodes USING GIST (geom);&#10;&#10;    -- Disable topology triggers&#10;    SELECT set_config(&#39;road.graph.disable.trigger&#39;, &#39;1&#39;::text, true)&#10;        INTO _set_config;&#10;    SELECT road_graph.toggle_foreign_key_constraints(FALSE)&#10;        INTO _toggle_triggers;&#10;&#10;    -- Insert nodes&#10;    RAISE NOTICE &#39;insert nodes&#39;;&#10;    INSERT INTO road_graph.nodes AS n&#10;    (created_at, updated_at, geom)&#10;    SELECT&#10;        now()::timestamp(0) without time zone,&#10;        now()::timestamp(0) without time zone,&#10;        geom&#10;    FROM temp_nodes&#10;    ON CONFLICT DO NOTHING&#10;    ;&#10;    GET DIAGNOSTICS nodes_count &#61; ROW_COUNT;&#10;&#10;    -- Insert roads&#10;    RAISE NOTICE &#39;insert roads&#39;;&#10;    INSERT INTO road_graph.roads (&#10;        road_code, road_type, road_class,&#10;        road_class_code, is_active, road_topic,&#10;        is_access_road,&#10;        created_at, updated_at&#10;    )&#10;    SELECT DISTINCT&#10;        road_code,&#10;        road_type,&#10;        road_class,&#10;        road_class_code,&#10;        is_active,&#10;        road_topic,&#10;        is_access_road,&#10;        now()::timestamp(0) without time zone,&#10;        now()::timestamp(0) without time zone&#10;    FROM temp_edges&#10;    ON CONFLICT DO NOTHING&#10;    ;&#10;    GET DIAGNOSTICS roads_count &#61; ROW_COUNT;&#10;&#10;    -- Insert edges&#10;    RAISE NOTICE &#39;insert edges&#39;;&#10;    INSERT INTO road_graph.edges (&#10;        id, id_source,&#10;        road_code, start_node, end_node,&#10;        previous_edge_id, next_edge_id,&#10;        geom,&#10;        created_at, updated_at&#10;    )&#10;    SELECT&#10;        e.id, e.id_source, e.road_code,&#10;        ns.id, ne.id,&#10;        e.previous_edge_id, e.next_edge_id,&#10;        e.geom,&#10;        now()::timestamp(0) without time zone,&#10;        now()::timestamp(0) without time zone&#10;    FROM temp_edges AS e&#10;    LEFT JOIN road_graph.nodes AS ns&#10;        -- &#61; is faster than ST_Equals&#10;        ON ns.geom &#61; e.start_point&#10;    LEFT JOIN road_graph.nodes AS ne&#10;        ON ne.geom &#61; e.end_point&#10;    ON CONFLICT DO NOTHING&#10;    ;&#10;    GET DIAGNOSTICS edges_count &#61; ROW_COUNT;&#10;&#10;    DROP TABLE IF EXISTS temp_nodes;&#10;    DROP TABLE IF EXISTS temp_edges;&#10;&#10;    -- Insert markers from source data&#10;    RAISE NOTICE &#39;insert markers from source&#39;;&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        INSERT INTO road_graph.markers (&#10;            id_source,&#10;            road_code, code, abscissa, is_virtual, geom,&#10;            created_at, updated_at&#10;        )&#10;        SELECT&#10;            id_source,&#10;            road_code,&#10;            code,&#10;            abscissa,&#10;            is_virtual,&#10;            ST_ReducePrecision(geom, 0.10) AS geom,&#10;            now()::timestamp(0) without time zone,&#10;            now()::timestamp(0) without time zone&#10;        FROM %I.%I&#10;        -- Only import markers if their road_code is referenced in road_graph.roads&#10;        -- WHERE road_code IN (&#10;        --     SELECT road_code FROM road_graph.roads&#10;        -- )&#10;        ON CONFLICT DO NOTHING&#10;        ;&#10;        $SQL$,&#10;        _source_schema,&#10;        _source_markers_table&#10;    );&#10;    EXECUTE sql_text;&#10;    GET DIAGNOSTICS markers_count &#61; ROW_COUNT;&#10;&#10;    -- Insert markers automatic markers at the start of the first edge&#10;    -- Only if there is no other marker nearby (for example with a given abscissa)&#10;    RAISE NOTICE &#39;insert markers zero&#39;;&#10;    WITH zero AS (&#10;        SELECT&#10;            e.road_code,&#10;            0,&#10;            0,&#10;            True,&#10;            ST_StartPoint(e.geom),&#10;            now()::timestamp(0) without time zone,&#10;            now()::timestamp(0) without time zone&#10;        FROM road_graph.edges AS e&#10;        LEFT JOIN road_graph.markers AS m&#10;            ON e.road_code &#61; m.road_code&#10;            AND ST_DWithin(ST_StartPoint(e.geom), m.geom, 1)&#10;        WHERE TRUE&#10;        -- No previous edge : this means it is the start of the road&#10;        AND e.previous_edge_id IS NULL&#10;        -- No corresponding marker within the given distance&#10;        AND m.id IS NULL&#10;    )&#10;    INSERT INTO road_graph.markers (&#10;        road_code, code, abscissa, is_virtual, geom,&#10;        created_at, updated_at&#10;    )&#10;    SELECT *&#10;    FROM zero&#10;    ON CONFLICT DO NOTHING&#10;    ;&#10;    GET DIAGNOSTICS markers_zero_count &#61; ROW_COUNT;&#10;&#10;    -- Set the serial values&#10;    RAISE NOTICE &#39;set serials&#39;;&#10;    SELECT INTO _set_val_result&#10;    setval(&#10;        pg_get_serial_sequence(&#39;road_graph.edges&#39;, &#39;id&#39;),&#10;        (SELECT max(id) FROM road_graph.edges)&#10;    );&#10;    SELECT INTO _set_val_result&#10;    setval(&#10;        pg_get_serial_sequence(&#39;road_graph.nodes&#39;, &#39;id&#39;),&#10;        (SELECT max(id) FROM road_graph.nodes)&#10;    );&#10;    SELECT INTO _set_val_result&#10;    setval(&#10;        pg_get_serial_sequence(&#39;road_graph.roads&#39;, &#39;id&#39;),&#10;        (SELECT max(id) FROM road_graph.roads)&#10;    );&#10;    SELECT INTO _set_val_result&#10;    setval(&#10;        pg_get_serial_sequence(&#39;road_graph.markers&#39;, &#39;id&#39;),&#10;        (SELECT max(id) FROM road_graph.markers)&#10;    );&#10;&#10;    -- Update edges references&#10;    RAISE NOTICE &#39;update references&#39;;&#10;    WITH s AS (&#10;        SELECT e.road_code, array_agg(DISTINCT e.id) AS ids&#10;        FROM road_graph.edges AS e&#10;        WHERE start_marker IS NULL OR end_marker IS NULL&#10;        GROUP BY road_code&#10;    ),&#10;    up AS (&#10;        SELECT&#10;            road_code,&#10;            road_graph.update_edge_references(s.road_code, s.ids) AS travail&#10;        FROM s&#10;        ORDER BY road_code&#10;    )&#10;    SELECT count(*)&#10;    FROM up&#10;    INTO _set_val_result&#10;    ;&#10;&#10;    -- Re-enable triggers&#10;    RAISE NOTICE &#39;triggers and config&#39;;&#10;    SELECT set_config(&#39;road.graph.disable.trigger&#39;, &#39;0&#39;::text, true)&#10;        INTO _set_config;&#10;    SELECT road_graph.toggle_foreign_key_constraints(TRUE)&#10;        INTO _toggle_triggers;&#10;&#10;    RETURN json_build_object(&#10;        &#39;status&#39;, &#39;success&#39;,&#10;        &#39;message&#39;, &#39;ok&#39;,&#10;        &#39;data&#39;, null::json,&#10;        &#39;roads_count&#39;, roads_count,&#10;        &#39;edges_count&#39;, edges_count,&#10;        &#39;nodes_count&#39;, nodes_count,&#10;        &#39;markers_count&#39;, markers_zero_count + markers_count&#10;    );&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>
