@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+## 0.6.0 - 2026-10-28
+
+### Summary
+
+**Highlights**
+
+* **GPS tracks**: snap a GPS track, for example from a GPX file, on the road graph,
+  and get the references of each road it follows (new SQL functions)
+* **Performance**: the calculation of the references is about 9 times faster for the edges,
+  and about 3.5 times faster for the managed objects
+* **Road graph editing**: the field `no_intersection_cutting` is respected by all the trigger functions,
+  drawing an edge across a highway interchange no longer hangs, and no orphan node is created anymore
+* **Managed objects**: new functions to add the reference fields and the triggers calculating the references,
+  materialized view of the last updated objects, and fixed split of a line by a point in Lizmap
+* **Documentation**: reorganized and completed: Processing algorithms, tables and fields, functions examples,
+  demo database, toolbar and panels, training plan
+
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migrations 31 to 39)
+* The editing schema `editing_session` is renamed `road_graph_editing`: recreate the QGIS administration project
+  with the algorithm `Create database local interface`, or update the data sources of the existing projects
+* The Python code of the layer actions is now stored in the plugin: the plugin must be installed and activated
+  to use the actions of the administration project
+
 ### Added
 
 * **SQL**: add the function `road_graph.add_managed_object_reference_fields` which adds to a managed object table
@@ -28,7 +53,6 @@
   creation of a demo database, example of the impacts of a graph modification on the business data,
   the preparation of the business tables moved to the page `Managed objects`,
   and a training plan in appendix
-
 * **QGIS project**: the Python code of the layer actions has been moved into the plugin
   (module `roadnetwork/actions`). The actions of the administration project now only call
   `plugins['roadnetwork'].run_action(...)`: `finalize_roundabout` (layer `edges copie`),
@@ -45,11 +69,9 @@
 
 * **Processing**: in the algorithm `Update managed objects from the road graph`, the option
   `Preserve start & end points when updating line geometries` had no effect
-
 * **QGIS**: in the panel `RoadNetwork tools`, pressing `Enter` in a field did not run the search `Find`
 * **QGIS**: the error message of the tool `Get references under the cursor` raised an error itself
 * **Processing**: the help of the algorithm `Merge editing session data` was the help of the algorithm cloning the data
-
 * **SQL**: the geometry of an editing session which status is not `created` could still be modified
   by setting its status back to `created` in the same query, or by removing it (migration `upgrade_to_38.sql`)
 * **Lizmap**: in the references form of the road network panel, the button `Road` of the start references
