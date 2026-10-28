@@ -837,8 +837,30 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#060-2026-10-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.6.0 - 2026-10-28
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.6.0 - 2026-10-28">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
@@ -2051,8 +2073,30 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#060-2026-10-28" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.6.0 - 2026-10-28
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.6.0 - 2026-10-28">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
@@ -2969,6 +3013,29 @@ On your local, make a symlink with ln -s
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<h2 id="060-2026-10-28">0.6.0 - 2026-10-28<a class="headerlink" href="#060-2026-10-28" title="Permanent link">#</a></h2>
+<h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>
+<p><strong>Highlights</strong></p>
+<ul>
+<li><strong>GPS tracks</strong>: snap a GPS track, for example from a GPX file, on the road graph,
+  and get the references of each road it follows (new SQL functions)</li>
+<li><strong>Performance</strong>: the calculation of the references is about 9 times faster for the edges,
+  and about 3.5 times faster for the managed objects</li>
+<li><strong>Road graph editing</strong>: the field <code>no_intersection_cutting</code> is respected by all the trigger functions,
+  drawing an edge across a highway interchange no longer hangs, and no orphan node is created anymore</li>
+<li><strong>Managed objects</strong>: new functions to add the reference fields and the triggers calculating the references,
+  materialized view of the last updated objects, and fixed split of a line by a point in Lizmap</li>
+<li><strong>Documentation</strong>: reorganized and completed: Processing algorithms, tables and fields, functions examples,
+  demo database, toolbar and panels, training plan</li>
+</ul>
+<p><strong>Upgrade notes</strong></p>
+<ul>
+<li>Run the algorithm <code>Upgrade database structure</code> to upgrade the database (migrations 31 to 39)</li>
+<li>The editing schema <code>editing_session</code> is renamed <code>road_graph_editing</code>: recreate the QGIS administration project
+  with the algorithm <code>Create database local interface</code>, or update the data sources of the existing projects</li>
+<li>The Python code of the layer actions is now stored in the plugin: the plugin must be installed and activated
+  to use the actions of the administration project</li>
+</ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>SQL</strong>: add the function <code>road_graph.add_managed_object_reference_fields</code> which adds to a managed object table
@@ -2989,20 +3056,16 @@ On your local, make a symlink with ln -s
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
 <ul>
-<li>
-<p><strong>Docs</strong>: reorganization and new content of the documentation:
+<li><strong>Docs</strong>: reorganization and new content of the documentation:
   new pages <code>Processing algorithms</code> and <code>Tables and fields</code>,
   description of the toolbar and panels of the plugin, examples of the linear referencing functions,
   creation of a demo database, example of the impacts of a graph modification on the business data,
   the preparation of the business tables moved to the page <code>Managed objects</code>,
-  and a training plan in appendix</p>
-</li>
-<li>
-<p><strong>QGIS project</strong>: the Python code of the layer actions has been moved into the plugin
+  and a training plan in appendix</li>
+<li><strong>QGIS project</strong>: the Python code of the layer actions has been moved into the plugin
   (module <code>roadnetwork/actions</code>). The actions of the administration project now only call
   <code>plugins['roadnetwork'].run_action(...)</code>: <code>finalize_roundabout</code> (layer <code>edges copie</code>),
-  <code>display_edited_data</code>, <code>create_editing_session</code> and <code>drop_editing_session</code> (layer <code>editing_sessions</code>)</p>
-</li>
+  <code>display_edited_data</code>, <code>create_editing_session</code> and <code>drop_editing_session</code> (layer <code>editing_sessions</code>)</li>
 <li><strong>Processing</strong>: remove the <code>Schema name</code> parameter from the algorithms <code>Create database structure</code>
   and <code>Upgrade database structure</code>: the plugin schema is always <code>road_graph</code></li>
 <li><strong>SQL</strong>: rename the editing schema <code>editing_session</code> to <code>road_graph_editing</code>
@@ -3013,21 +3076,13 @@ On your local, make a symlink with ln -s
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>
-<li>
-<p><strong>Processing</strong>: in the algorithm <code>Update managed objects from the road graph</code>, the option
-  <code>Preserve start &amp; end points when updating line geometries</code> had no effect</p>
-</li>
-<li>
-<p><strong>QGIS</strong>: in the panel <code>RoadNetwork tools</code>, pressing <code>Enter</code> in a field did not run the search <code>Find</code></p>
-</li>
+<li><strong>Processing</strong>: in the algorithm <code>Update managed objects from the road graph</code>, the option
+  <code>Preserve start &amp; end points when updating line geometries</code> had no effect</li>
+<li><strong>QGIS</strong>: in the panel <code>RoadNetwork tools</code>, pressing <code>Enter</code> in a field did not run the search <code>Find</code></li>
 <li><strong>QGIS</strong>: the error message of the tool <code>Get references under the cursor</code> raised an error itself</li>
-<li>
-<p><strong>Processing</strong>: the help of the algorithm <code>Merge editing session data</code> was the help of the algorithm cloning the data</p>
-</li>
-<li>
-<p><strong>SQL</strong>: the geometry of an editing session which status is not <code>created</code> could still be modified
-  by setting its status back to <code>created</code> in the same query, or by removing it (migration <code>upgrade_to_38.sql</code>)</p>
-</li>
+<li><strong>Processing</strong>: the help of the algorithm <code>Merge editing session data</code> was the help of the algorithm cloning the data</li>
+<li><strong>SQL</strong>: the geometry of an editing session which status is not <code>created</code> could still be modified
+  by setting its status back to <code>created</code> in the same query, or by removing it (migration <code>upgrade_to_38.sql</code>)</li>
 <li><strong>Lizmap</strong>: in the references form of the road network panel, the button <code>Road</code> of the start references
   went to the end of the road instead of its start</li>
 <li><strong>SQL</strong>: split of a managed object linestring by a point (Lizmap action <code>split_line_by_point</code>):
