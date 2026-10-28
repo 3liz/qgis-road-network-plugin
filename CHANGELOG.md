@@ -38,6 +38,9 @@
   With the road cache, the previous marker is only searched among the markers of the road
   (all the markers of the database were read), and the edge order is stored in the cache
   instead of being calculated again for each point
+* **SQL**: performance of the update of the managed objects references (`update_table_references_from_geometries`),
+  about 3.5 times faster on long roads: the road cache can now contain several roads,
+  and is built for the roads of the objects before calculating their references
 * **SQL**: `get_ordered_edges` returned twice the edge of the roads having only one edge
 * **SQL**: when the first edge of a road is updated, for example when it is split by a new node,
   do not create a marker `0` if the road already has markers. Some roads do not start with the marker `0`

@@ -104,7 +104,10 @@ COMMENT ON FUNCTION road_graph.build_road_cached_objects(_road_code text) IS 'Ca
 * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
 * the order of the edges, used by get_reference_from_point to avoid calculating it again for each point
 
-Cached data is store in a temporary table living only until COMMIT
+Cached data is stored in the temporary table road_cache, with one row per road, living only until COMMIT.
+Each call replaces the row of the given road: the cache of a road must be built again after any modification
+of its edges or markers in the same transaction, before using it.
+The functions using the cache fall back to the calculation without cache if the road is not in the cache.
 ';
 
 

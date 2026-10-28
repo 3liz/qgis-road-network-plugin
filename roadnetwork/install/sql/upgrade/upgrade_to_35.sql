@@ -6,12 +6,19 @@
 --   to avoid calling get_ordered_edges for each point
 -- * get_ordered_edges: a road with only one edge returned this edge twice
 -- * update_edge_references: the notice was always raised
+-- * build_road_cached_objects: the cache can contain several roads (one row per road).
+--   Each build replaces the row of the road, so the cache of a road is rebuilt after a graph modification
+--   (update_edge_references) and before its use (update_table_references_from_geometries)
+-- * get_road_previous_marker_from_point: fall back to the calculation without cache if the road is not in the cache
+-- * update_table_references_from_geometries: build the cache of the roads of the objects, then use it
 --
 -- This migration is idempotent: it only contains CREATE OR REPLACE FUNCTION.
 
+
 -- FUNCTION: road_graph.get_road_previous_marker_from_point
 -- Cached branch: only use the markers of the road (the query was reading all the markers of the database).
--- Fix the linestring returned when the point is between two edges
+-- Fix the linestring returned when the point is between two edges.
+-- Fall back to the calculation without cache if the road is not in the cache
 CREATE OR REPLACE FUNCTION road_graph.get_road_previous_marker_from_point(_road_code text, _point geometry, _use_cache boolean DEFAULT false) RETURNS TABLE(id integer, road_code text, code integer, abscissa real, geom geometry, road_linestring_from_marker_to_point geometry, road_linestring_from_start_to_point geometry, closing_multilinestring geometry, is_next_edge_start_marker boolean, cumulative real)
     LANGUAGE plpgsql
     AS $$
@@ -45,6 +52,18 @@ BEGIN
             ELSE _use_cache
         END
     ;
+
+    -- The road must be in the cache (see build_road_cached_objects).
+    -- If not, the calculation is done without cache
+    -- Two separate tests: the query on road_cache cannot be planned if the table does not exist
+    IF _use_cache AND to_regclass('road_cache') IS NULL THEN
+        _use_cache = False;
+    END IF;
+    IF _use_cache THEN
+        IF NOT EXISTS (SELECT 1 FROM road_cache AS r WHERE r.road_code = _road_code) THEN
+            _use_cache = False;
+        END IF;
+    END IF;
 
     -- Retrieve cached objects such as road simple linestring and closing multilinestring
     -- and also the road markers locations agains the simple road linestring
@@ -455,20 +474,40 @@ $$;
 
 
 -- FUNCTION: road_graph.build_road_cached_objects
--- Add the edge orders in the road cache.
--- Do not raise a notice when the cache table does not exist yet
+-- Cache with one row per road, replaced at each build. Add the edge orders
 CREATE OR REPLACE FUNCTION road_graph.build_road_cached_objects(_road_code text) RETURNS boolean
     LANGUAGE plpgsql
     AS $$
 BEGIN
 
-    -- Drop the cache of the previous road
-    -- Test before to avoid the notice raised by DROP TABLE IF EXISTS
-    IF to_regclass('road_cache') IS NOT NULL THEN
-        DROP TABLE road_cache;
+    -- The cache contains one row per road. It is dropped at the end of the transaction.
+    -- Test before to avoid the notice raised by CREATE TABLE IF NOT EXISTS
+    IF to_regclass('road_cache') IS NULL THEN
+        CREATE TEMPORARY TABLE road_cache (
+            road_code text PRIMARY KEY,
+            simple_linestring geometry,
+            closing_multilinestring geometry,
+            edges_multilinestring geometry,
+            marker_locations jsonb,
+            edge_orders jsonb
+        ) ON COMMIT DROP;
     END IF;
-    CREATE TEMPORARY TABLE IF NOT EXISTS road_cache
-    ON COMMIT DROP AS (
+
+    -- Remove the previous cache of the road, which could be outdated
+    -- if the road graph has been modified since in the same transaction
+    DELETE FROM road_cache AS r
+    WHERE r.road_code = _road_code
+    ;
+
+    -- The cache is not used for roads with less than 2 edges
+    IF (SELECT count(*) FROM road_graph.edges AS e WHERE e.road_code = _road_code) < 2 THEN
+        RETURN TRUE;
+    END IF;
+
+    INSERT INTO road_cache (
+        road_code, simple_linestring, closing_multilinestring, edges_multilinestring,
+        marker_locations, edge_orders
+    )
         WITH
         ordered_edges AS (
             -- get road ordered edges (use previous and next edge ids)
@@ -548,7 +587,7 @@ BEGIN
         AND m.road_code = _road_code
         AND l.road_code = _road_code
         GROUP BY l.geom, l.closing_multilinestring, l.edges_multilinestring
-    );
+    ;
 
     RETURN TRUE;
 
@@ -560,7 +599,10 @@ COMMENT ON FUNCTION road_graph.build_road_cached_objects(_road_code text) IS 'Ca
 * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
 * the order of the edges, used by get_reference_from_point to avoid calculating it again for each point
 
-Cached data is store in a temporary table living only until COMMIT
+Cached data is stored in the temporary table road_cache, with one row per road, living only until COMMIT.
+Each call replaces the row of the given road: the cache of a road must be built again after any modification
+of its edges or markers in the same transaction, before using it.
+The functions using the cache fall back to the calculation without cache if the road is not in the cache.
 ';
 
 
@@ -763,7 +805,7 @@ $$;
 
 
 -- FUNCTION: road_graph.update_edge_references
--- Fix the condition of the notice, which was always raised
+-- Always rebuild the cache of the road. Fix the condition of the notice, which was always raised
 CREATE OR REPLACE FUNCTION road_graph.update_edge_references(_road_code text DEFAULT NULL::text, _edge_ids integer[] DEFAULT NULL::integer[]) RETURNS boolean
     LANGUAGE plpgsql
     AS $$
@@ -796,8 +838,9 @@ BEGIN
     END IF;
 
     -- Build road & marker objects cache for speeding up linear referencing
-    -- only if it exists at least one edge for the road
-    IF _use_cache THEN
+    -- It is always built again, since the road graph has been modified:
+    -- it also removes the outdated cache of a road which has now less than 2 edges
+    IF _road_code IS NOT NULL THEN
         SELECT road_graph.build_road_cached_objects(_road_code)
         INTO _run_build_cache;
     END IF;
@@ -842,3 +885,487 @@ BEGIN
 
 END;
 $$;
+
+
+-- FUNCTION: road_graph.update_table_references_from_geometries
+-- Build the cache of the roads of the objects, then use it
+CREATE OR REPLACE FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean DEFAULT true) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+    road_code text;
+    update_count integer;
+    sql_text text;
+    table_exists boolean;
+    primary_key_field text;
+    geometry_column text;
+    needed_fields text[];
+    managed_object record;
+    table_cols text[];
+    updated_stats record;
+    cached_road_codes text[];
+    cached_road_code text;
+BEGIN
+
+    -- Get info on the managed object table
+    sql_text = format(
+        $SQL$
+        SELECT *
+        FROM road_graph.managed_objects
+        WHERE
+            schema_name = '%1$s'
+            AND table_name = '%2$s'
+        LIMIT 1;
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO managed_object
+    ;
+    IF managed_object IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" is not registered as managed object in the road graph system !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Check if the table exists in the database
+    sql_text = format(
+        $SQL$
+        SELECT to_regclass('%1$I.%2$I') IS NOT NULL AS exists
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO table_exists
+    ;
+    IF NOT table_exists THEN
+        RAISE NOTICE 'The table "%"."%" does not exist in the database !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Get the table primary key field
+    sql_text = format(
+        $SQL$
+        SELECT a.attname
+        FROM pg_index i
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = '%1$I.%2$I'::regclass AND i.indisprimary
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO primary_key_field
+    ;
+    IF primary_key_field IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" does not have a primary key !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Get geometry column name
+    sql_text = format(
+        $SQL$
+        SELECT f_geometry_column
+        FROM geometry_columns
+        WHERE f_table_schema = '%1$s' AND f_table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO geometry_column
+    ;
+    IF geometry_column IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" does not have a geometry column !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Check the table contains the needed fields based on the geometry type of the managed object
+    sql_text = format(
+        $SQL$
+        SELECT array_agg(column_name) AS cols
+        FROM information_schema.columns
+        WHERE table_schema = '%1$s' AND table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO table_cols
+    ;
+    -- For point geometry type, we need road_code, marker_code and abscissa fields
+    needed_fields = ARRAY[
+        'road_code', 'marker_code', 'abscissa'
+    ]::text[];
+    -- For line geometry type, we also need start_marker_code, start_abscissa, end_marker_code and end_abscissa fields
+    IF lower(managed_object.geometry_type) IN ('linestring', 'multilinestring')
+    THEN
+        needed_fields = ARRAY[
+            'road_code',
+            'start_marker_code', 'start_abscissa',
+            'end_marker_code', 'end_abscissa'
+        ]::text[];
+    END IF;
+    IF NOT (table_cols @> needed_fields)
+        THEN
+            RAISE NOTICE 'The table "%"."%" does not contain the necessary fields to update references from geometries !', _schema_name, _table_name;
+            RETURN NULL;
+    END IF;
+
+    -- Build the road cache for the roads of the objects to update
+    -- It is always built again here, even if it already exists for a road,
+    -- since the road graph could have been modified since its last build in the same transaction
+    sql_text = format(
+        $SQL$
+        SELECT array_agg(DISTINCT trim(mo.road_code)::text)
+        FROM %1$I.%2$I AS mo
+        WHERE Coalesce(trim(mo.road_code), '') != ''
+        AND (
+            mo.road_code::text = ANY(string_to_array('%3$s', ',')::text[])
+            OR '%3$s' = ''
+        )
+        $SQL$,
+        _schema_name,
+        _table_name,
+        Coalesce(array_to_string(_road_codes::text[], ','), '')
+    );
+    EXECUTE sql_text
+    INTO cached_road_codes
+    ;
+    FOREACH cached_road_code IN ARRAY Coalesce(cached_road_codes, ARRAY[]::text[]) LOOP
+        PERFORM road_graph.build_road_cached_objects(cached_road_code);
+    END LOOP;
+
+    -- Get road information
+
+
+    -- Update references based on geometries
+    -- and geometry type of the managed object
+    -- We filter the objects to update based on the given road codes
+    IF lower(managed_object.geometry_type) = 'point' THEN
+        sql_text = format(
+            $SQL$
+                WITH
+                objects AS (
+                    SELECT
+                        mo.%1$I AS id,
+                        trim(mo.road_code)::text AS road_code,
+                        mo.%9$I AS geom
+                    FROM
+                        %2$I.%3$I AS mo
+                    WHERE (
+                        mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
+                        OR '%4$s' = ''
+                    )
+                ),
+                refs AS (
+                    SELECT
+                        o.id,
+                        road_graph.get_reference_from_point(
+                            o.geom,
+                            -- We need to pass the road code to force the calculation to keep references for this road
+                            o.road_code::text,
+                            -- NULL::text,
+                            -- Use the road cache built before
+                            TRUE
+                        ) AS ref
+                    FROM objects AS o
+                ),
+                run_update AS (
+                    UPDATE %2$I.%3$I AS mo
+                    SET
+                        -- Do no change the road code if no references have been found
+                        -- for the given road (meaning the object is too far)
+                        road_code =
+                        CASE
+                            -- keep object road_code intact if it is not empty
+                            WHEN Coalesce(mo.road_code, '') != '' THEN mo.road_code
+                            ELSE r.ref->>'road_code'
+                        END,
+                        -- cumulative if present
+                        %5$s
+                        -- offset if present and if _update_offset_and_side is True
+                        %6$s
+                        -- side if present and if _update_offset_and_side is True
+                        %7$s
+                        -- marker code and abscissa put here to avoid errors with commas
+                        marker_code = (r.ref->>'marker_code')::integer,
+                        abscissa = (r.ref->>'abscissa')::real
+                    FROM refs AS r
+                    WHERE TRUE
+                    AND mo.%1$I = r.id
+                    --AND r.ref->'road_code' != 'null'::jsonb
+                    AND (%8$s)
+                    RETURNING mo.*
+                )
+                SELECT
+                    count(r.*) AS nb,
+                    array_agg(r.%1$I ORDER BY r.%1$I) AS last_updated_objects_ids
+                FROM run_update AS r
+            $SQL$,
+            primary_key_field,
+            _schema_name,
+            _table_name,
+            Coalesce(array_to_string(_road_codes::text[], ','), ''),
+            -- 5 / add update for cumulative if the columns exists in the target table
+            CASE WHEN 'cumulative' = ANY(table_cols) THEN $STR$cumulative = (r.ref->>'cumulative')::real, $STR$ ELSE '' END,
+            -- 6 / add update for offset if the columns exists in the target table
+            CASE
+                WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
+                    THEN $STR$"offset" = Coalesce((r.ref->>'offset')::real, 0.0::real), $STR$
+                ELSE ''
+            END,
+            -- 7 / add update for side if the columns exists in the target table
+            CASE
+                WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
+                    THEN $STR$side = Coalesce((r.ref->>'side')::text, 'right'), $STR$
+                ELSE ''
+            END,
+            -- 8 / Detect if we need to update or not
+            concat(
+                $STR$
+                (
+                    ( Coalesce(mo.road_code, '') != '' AND coalesce((r.ref->>'road_code'), '') = '' )
+                    OR
+                    ( Coalesce(mo.road_code, '') = '' AND coalesce((r.ref->>'road_code'), '') != '' )
+                )
+                OR (r.ref->>'marker_code')::integer != Coalesce(mo.marker_code, -1)::integer
+                OR (r.ref->>'abscissa')::real != Coalesce(mo.abscissa, -1)::real
+                $STR$,
+                CASE WHEN 'cumulative' = ANY(table_cols)
+                    THEN $STR$ OR (r.ref->>'cumulative')::real != Coalesce(mo.cumulative, -1)::real $STR$ ELSE ''
+                END,
+                CASE
+                    WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
+                        THEN $STR$ OR Coalesce((r.ref->>'offset')::real, 0.0::real) != Coalesce(mo.offset, 0.0)::real $STR$
+                    ELSE ''
+                END,
+                CASE
+                    WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
+                        THEN $STR$ OR Coalesce((r.ref->>'side')::text, 'right') != Coalesce(mo.side, 'right')::text $STR$
+                    ELSE ''
+                END
+            ),
+            -- 9 / geometry_column
+            geometry_column
+        );
+
+    ELSIF lower(managed_object.geometry_type) IN ('linestring', 'multilinestring') THEN
+        sql_text = format(
+            $SQL$
+                WITH
+                objects AS (
+                    SELECT
+                        mo.%1$I AS id,
+                        trim(mo.road_code)::text AS road_code,
+                        mo.%10$I AS geom
+                    FROM
+                        %2$I.%3$I AS mo
+                    WHERE (
+                        mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
+                        OR '%4$s' = ''
+                    )
+                ),
+                road_info AS (
+                    SELECT r.road_code, r.road_type,
+                        min(e.start_marker) AS min_code,
+                        max(e.end_marker) AS max_code,
+                        min(e.start_cumulative) AS min_cumulative,
+                        max(e.end_cumulative) AS max_cumulative,
+                        min(e.start_abscissa) AS min_abscissa,
+                        max(e.end_abscissa) AS max_abscissa
+                    FROM road_graph.edges AS e
+                    JOIN road_graph.roads AS r
+                        USING (road_code)
+                    WHERE e.road_code IN (
+                        SELECT DISTINCT o.road_code
+                        FROM objects AS o
+                    )
+                    GROUP BY r.road_code, r.road_type
+                ),
+                refs AS (
+                    SELECT
+                        o.id, o.road_code,
+                        road_graph.get_reference_from_point(
+                            -- ST_StartPoint could return NULL for a MULTILINESTRING
+                            CASE
+                                WHEN lower(GeometryType(o.geom)) = 'linestring'
+                                    THEN ST_StartPoint(o.geom)
+                                -- hopefully the last part is really the end part of the multilinestring
+                                ELSE ST_StartPoint(ST_GeometryN(o.geom, 1))
+                            END,
+                            -- We need to pass the road code to force the calculation to keep references for this road
+                            o.road_code,
+                            -- NULL::text,
+                            -- Use the road cache built before
+                            TRUE
+                        ) AS start_ref,
+                        road_graph.get_reference_from_point(
+                            -- ST_EndPoint could return NULL for a MULTILINESTRING
+                            CASE
+                                WHEN lower(GeometryType(o.geom)) = 'linestring'
+                                    THEN ST_EndPoint(o.geom)
+                                -- hopefully the last part is really the end part of the multilinestring
+                                ELSE ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom)))
+                            END,
+                            -- We need to pass the road code to force the calculation to keep references for this road
+                            o.road_code,
+                            -- NULL::text,
+                            -- Use the road cache built before
+                            TRUE
+                        ) AS end_ref
+                    FROM objects AS o
+                ),
+                processed_refs AS (
+                    SELECT
+                        r.id,
+                        r.road_code,
+                        -- start_ref
+                        CASE
+                            -- For roundabout, if the start and end values are equal
+                            -- use 0+0 for start & 0+max_cumulative for end
+                            WHEN i.road_type = 'roundabout'
+                            AND Coalesce((r.start_ref->>'abscissa')::real, 0) = Coalesce((r.end_ref->>'abscissa')::real, 0)
+                                THEN jsonb_build_object(
+                                    'road_code', r.start_ref->>'road_code',
+                                    'marker_code', 0,
+                                    'abscissa', 0.0,
+                                    'cumulative', 0.0,
+                                    'offset', r.start_ref->>'offset',
+                                    'side', r.start_ref->'side'
+                                )
+                            -- for other roads, invert start and end if start < end
+                            WHEN
+                            Coalesce((r.start_ref->>'marker_code')::int * 10000 + (r.start_ref->>'abscissa')::real, 0)
+                            >
+                            Coalesce((r.end_ref->>'marker_code')::int * 10000 + (r.end_ref->>'abscissa')::real, 0)
+                                THEN end_ref
+                            ELSE r.start_ref
+                        END AS start_ref,
+                        -- end_ref
+                        CASE
+                            -- For roundabout, if the start and end values are equal
+                            -- use 0+0 for start & 0+max_cumulative for end
+                            WHEN i.road_type = 'roundabout'
+                            AND Coalesce((r.start_ref->>'abscissa')::real, 0) = Coalesce((r.end_ref->>'abscissa')::real, 0)
+                                THEN jsonb_build_object(
+                                    'road_code', r.end_ref->>'road_code',
+                                    'marker_code', 0,
+                                    'abscissa', i.max_abscissa,
+                                    'cumulative', i.max_cumulative,
+                                    'offset', r.end_ref->>'offset',
+                                    'side', r.end_ref->'side'
+                                )
+                            -- for other roads, invert start and end if start < end
+                            WHEN
+                            Coalesce((r.start_ref->>'marker_code')::int * 10000 + (r.start_ref->>'abscissa')::real, 0)
+                            >
+                            Coalesce((r.end_ref->>'marker_code')::int * 10000 + (r.end_ref->>'abscissa')::real, 0)
+                                THEN start_ref
+                            ELSE r.end_ref
+                        END AS end_ref
+                    FROM refs AS r
+                    JOIN road_info AS i
+                        USING (road_code)
+                ),
+                run_update AS (
+                    UPDATE %2$I.%3$I AS mo
+                    SET
+                        -- Do no change the road code if no references have been found
+                        -- for the given road (meaning the object is too far)
+                        road_code =
+                        CASE
+                            -- keep object road_code intact if it is not empty
+                            WHEN Coalesce(mo.road_code, '') != '' THEN mo.road_code
+                            ELSE r.start_ref->>'road_code'
+                        END,
+
+                        -- start_cumulative if present
+                        %5$s
+                        -- offset if present
+                        %6$s
+                        -- side if present
+                        %7$s
+                        -- end_cumulative if present
+                        %8$s
+                        -- marker code and abscissa put here to avoid errors with commas
+                        start_marker_code = (r.start_ref->>'marker_code')::integer,
+                        start_abscissa = (r.start_ref->>'abscissa')::real,
+                        end_marker_code = (r.end_ref->>'marker_code')::integer,
+                        end_abscissa = (r.end_ref->>'abscissa')::real
+                    FROM processed_refs AS r
+                    WHERE TRUE
+                    AND mo.%1$I = r.id
+                    -- Do not UPDATE if no changes must be made (values already are the same)
+                    AND (%9$s)
+                    RETURNING mo.*
+                )
+                SELECT
+                    count(r.*) AS nb,
+                    array_agg(r.%1$I ORDER BY r.%1$I) AS last_updated_objects_ids
+                FROM run_update AS r
+            $SQL$,
+            primary_key_field,
+            _schema_name,
+            _table_name,
+            Coalesce(array_to_string(_road_codes::text[], ','), ''),
+            -- 5 / add update for cumulative if the columns exists in the target table
+            CASE WHEN 'start_cumulative' = ANY(table_cols) THEN $STR$"start_cumulative" = (r.start_ref->>'cumulative')::real, $STR$ ELSE '' END,
+            -- 6 / add update for offset if the columns exists in the target table
+            CASE
+                WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
+                    THEN $STR$"offset" = Coalesce((r.start_ref->>'offset')::real, 0.0::real), $STR$
+                ELSE ''
+            END,
+            -- 7 / add update for side if the columns exists in the target table
+            CASE
+                WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
+                    THEN $STR$"side" = Coalesce((r.start_ref->>'side')::text, 'right'::text), $STR$
+                ELSE ''
+            END,
+            -- 8 / add update for cumulative if the columns exists in the target table
+            CASE WHEN 'end_cumulative' = ANY(table_cols) THEN $STR$"end_cumulative" = (r.end_ref->>'cumulative')::real, $STR$ ELSE '' END,
+            -- 9 / Detect if we need to update or not
+            concat(
+                $STR$
+                (
+                    ( Coalesce(mo.road_code, '') != '' AND coalesce((r.start_ref->>'road_code'), '') = '' )
+                    OR
+                    ( Coalesce(mo.road_code, '') = '' AND coalesce((r.start_ref->>'road_code'), '') != '' )
+                )
+                OR (r.start_ref->>'marker_code')::integer != Coalesce(mo.start_marker_code, -1)::integer
+                OR (r.start_ref->>'abscissa')::real != Coalesce(mo.start_abscissa, -1)::real
+                OR (r.end_ref->>'marker_code')::integer != Coalesce(mo.end_marker_code, -1)::integer
+                OR (r.end_ref->>'abscissa')::real != Coalesce(mo.end_abscissa, -1)::real
+                $STR$,
+                CASE WHEN 'start_cumulative' = ANY(table_cols)
+                    THEN $STR$ OR (r.start_ref->>'cumulative')::real != Coalesce(mo.start_cumulative, -1)::real $STR$ ELSE ''
+                END,
+                CASE
+                    WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
+                        THEN $STR$ OR Coalesce((r.start_ref->>'offset')::real, 0.0::real) != Coalesce(mo.offset, 0.0)::real $STR$
+                    ELSE ''
+                END,
+                CASE
+                    WHEN 'side' = ANY(table_cols) AND _update_offset_and_side IS True
+                        THEN $STR$ OR Coalesce((r.start_ref->>'side')::text, 'right') != Coalesce(mo.side, 'right')::text $STR$
+                    ELSE ''
+                END,
+                CASE WHEN 'end_cumulative' = ANY(table_cols)
+                    THEN $STR$ OR (r.end_ref->>'cumulative')::real != Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE ''
+                END
+            ),
+            -- 10 / geometry_column
+            geometry_column
+        );
+    END IF;
+
+    RAISE NOTICE 'sql = %', sql_text;
+    EXECUTE sql_text
+    INTO updated_stats;
+
+    RETURN to_jsonb(updated_stats);
+
+END;
+$_$;
