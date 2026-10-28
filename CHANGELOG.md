@@ -13,6 +13,10 @@
 
 ### Changed
 
+* **QGIS project**: the Python code of the layer actions has been moved into the plugin
+  (module `roadnetwork/actions`). The actions of the administration project now only call
+  `plugins['roadnetwork'].run_action(...)`: `finalize_roundabout` (layer `edges copie`),
+  `display_edited_data`, `create_editing_session` and `drop_editing_session` (layer `editing_sessions`)
 * **Processing**: remove the `Schema name` parameter from the algorithms `Create database structure`
   and `Upgrade database structure`: the plugin schema is always `road_graph`
 * **SQL**: rename the editing schema `editing_session` to `road_graph_editing`

@@ -1,6 +1,8 @@
 import os
 import webbrowser
 
+from typing import Any
+
 import processing
 
 from qgis.core import (
@@ -12,6 +14,7 @@ from qgis.PyQt.QtCore import QCoreApplication, Qt, QTranslator
 from qgis.PyQt.QtGui import QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import QAction, QShortcut
 
+from .actions import action_runner
 from .dockwidget import PluginDockWidget
 from .dockwidget_tools import ToolsDockWidget
 from .hover_map_tool import HoverMapTool
@@ -212,6 +215,19 @@ class Plugin:
         param = {}
         alg_name = "roadnetwork:merge_editing_session"
         processing.execAlgorithmDialog(alg_name, param)
+
+    @staticmethod
+    def run_action(name: str, **kwargs: Any):
+        """Run a specific action.
+
+        Do not rename this function, it's part of the public API of the plugin.
+
+        These lines are included in the QGIS project actions:
+
+            from qgis.utils import plugins
+            plugins['roadnetwork'].run_action('action_name', param_name=param_value)
+        """
+        action_runner(name, **kwargs)
 
     def on_hover_references_received(self, references: dict):
         """Receive the references from the hover tool and display them in the dock"""

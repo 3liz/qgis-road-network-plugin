@@ -40,3 +40,24 @@ road code, marker, abscissa, offset and side. It can be toggled with the plugin 
 or with the shortcut `CTRL+SHIFT+K`. Hovering over the map is supported.
 
 ![Get references on map click](../media/user-guide/qgis_get_references_map_click.gif)
+
+
+## Layer actions
+
+Some layers of the project have **actions**, run by the RoadNetwork plugin,
+which must be installed and activated:
+
+| Layer              | Action                                                                  | Usage                                          |
+|--------------------|-------------------------------------------------------------------------|------------------------------------------------|
+| `editing_sessions` | [Create editing session](graph-editing.md#create-editing-session)       | Create a new editing session                   |
+| `editing_sessions` | [Display edited data](graph-editing.md#display-edited-data)             | Highlight the objects modified in the session  |
+| `editing_sessions` | [Drop editing session](graph-editing.md#drop-editing-session)           | Delete the session and its data                |
+| `edges copie`      | [Finalize the roundabout](graph-editing.md#create-a-roundabout)         | Clean a roundabout digitized as a circle       |
+
+They are used when the user would like to modify the Road graph. See the corresponding documentation.
+
+To run an action on a feature, use the `Identify Features` tool and **right-click** on the feature in the map,
+or use the `Run Feature Action` tool of the `Attributes` toolbar.
+
+The Python code of these actions is stored in the plugin: the actions of the project only call it,
+for example `plugins['roadnetwork'].run_action('drop_editing_session', ...)`.
