@@ -259,13 +259,13 @@ class CreateDatabaseStructure(BaseDatabaseAlgorithm):
 
         feedback.pushInfo(f"Database version '{version}'.")
 
-        # Launch also the algorithme on the editing_session schema
+        # Launch also the algorithme on the road_graph_editing schema
         if feedback.isCanceled():
             return {}
 
         self.create_database(
             connection_name,
-            "editing_session",
+            "road_graph_editing",
             srid,
             version=version,
             override=override,

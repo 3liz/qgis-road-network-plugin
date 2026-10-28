@@ -186,9 +186,9 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             pg_conn.close()
             return {}
 
-        # Merge editing_session data to road_graph schema
+        # Merge road_graph_editing data to road_graph schema
         feedback.pushInfo(
-            tr("Merge the 'editing_session' data to the production schema 'road_graph'").upper()
+            tr("Merge the 'road_graph_editing' data to the production schema 'road_graph'").upper()
         )
         sql = (
             pg_sql.SQL("""
@@ -218,7 +218,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         feedback.pushInfo(
             tr(f"* The data of the editing session '{editing_session[1]}' has been successfully merged")
         )
-        feedback.pushInfo(tr("Data inside the 'editing_session' tables have been deleted"))
+        feedback.pushInfo(tr("Data inside the 'road_graph_editing' tables have been deleted"))
         feedback.pushInfo("")
 
         # Reload layers

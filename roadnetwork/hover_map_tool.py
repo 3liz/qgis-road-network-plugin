@@ -144,7 +144,7 @@ class HoverMapTool(QgsMapTool):
         """
         # Run the query for both schemas and store the results
         references: dict[str, dict[str, str | int | float]] = {}
-        for schema in ("editing_session", "road_graph"):
+        for schema in ("road_graph_editing", "road_graph"):
             result = ["NULL", None, None, None, None, None]
             try:
                 # print(f"Fetching references for schema: {schema}, coordinates: ({lon}, {lat})")
@@ -270,7 +270,7 @@ class HoverMapTool(QgsMapTool):
         emitted_references: dict[str, dict[str, str | int | float]] = {}
 
         # For each schema, check if there was an error or if the road_code is not NULL
-        for schema in ("editing_session", "road_graph"):
+        for schema in ("road_graph_editing", "road_graph"):
             emitted_references[schema] = {}
             if references[schema]["error"]:
                 iface.messageBar().pushMessage(

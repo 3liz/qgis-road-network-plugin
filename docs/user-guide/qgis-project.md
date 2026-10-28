@@ -11,7 +11,7 @@ The project contains the following groups of layers:
 
 * `editing_sessions`: the areas of the editing sessions (created, cloned, edited),
   see [Road graph editing](graph-editing.md),
-* `Editing`: the layers of the editing session schema,
+* `Editing`: the layers of the editing session schema `road_graph_editing`,
 * `Data`: the production data
     * `managed_objects`: the list of business tables based on the road network,
       see [Managed objects](managed-objects.md),

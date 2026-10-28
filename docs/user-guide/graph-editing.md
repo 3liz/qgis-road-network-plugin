@@ -3,7 +3,7 @@
 ## Editing rules
 
 The road graph data are **not edited directly** in the production schema `road_graph`,
-but in a **dedicated editing session schema** `editing_session`, which acts as a sandbox:
+but in a **dedicated editing session schema** `road_graph_editing`, which acts as a sandbox:
 
 1. The user **draws a polygon** in the `editing_sessions` layer around the area to edit.
    The new editing session has the status `created`.

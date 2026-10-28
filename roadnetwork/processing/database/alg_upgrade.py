@@ -1,3 +1,5 @@
+import re
+
 from psycopg2 import connect
 from psycopg2 import sql as pg_sql
 from qgis.core import (
@@ -65,7 +67,6 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
                 defaultValue=False,
             )
         )
-
 
         # OUTPUTS
         # Add output for status (integer) and message (string)
@@ -237,6 +238,11 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
                     sql = sql.replace(f"{resources.schema_name()}.", f"{schema}.")
                     sql = sql.replace(f" {resources.schema_name()};", f" {schema};")
 
+                # The editing schema editing_session has been renamed road_graph_editing
+                # by the migration 32: the previous migrations still use the old name
+                if schema == "road_graph_editing":
+                    sql = re.sub(r"(?<!\w)editing_session\.", f"{schema}.", sql)
+
                 if srid != plugin_srid:
                     sql = sql.replace(f", {plugin_srid})", f", {srid})")
 
@@ -308,11 +314,11 @@ class UpgradeDatabaseStructure(BaseDatabaseAlgorithm):
             feedback=feedback,
         )
 
-        # editing_session schema
-        feedback.pushInfo(tr('Upgrade schema "editing_session"'))
+        # road_graph_editing schema
+        feedback.pushInfo(tr('Upgrade schema "road_graph_editing"'))
         self.upgrade_database(
             connection_name,
-            "editing_session",
+            "road_graph_editing",
             run_migrations=run_migrations,
             feedback=feedback,
         )

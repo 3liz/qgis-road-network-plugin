@@ -61,7 +61,7 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
         # Find point based on given references
         find_buttons = {
             "road_graph": self.button_find_point_from_references,
-            "editing_session": self.button_find_point_from_references_sandbox,
+            "road_graph_editing": self.button_find_point_from_references_sandbox,
         }
         form_fields = (
             "road_code",

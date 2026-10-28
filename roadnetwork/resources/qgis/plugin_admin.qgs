@@ -53,14 +53,14 @@
             <Option name="wmsShortName" type="QString" value="Edited_data"></Option>
           </Option>
         </customproperties>
-        <layer-tree-layer checked="Qt::Unchecked" expanded="1" id="roads_888c78ae_d774_46de_810c_0ff6be4d29f8" legend_exp="" legend_split_behavior="0" name="roads copie" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;roads&quot;">
+        <layer-tree-layer checked="Qt::Unchecked" expanded="1" id="roads_888c78ae_d774_46de_810c_0ff6be4d29f8" legend_exp="" legend_split_behavior="0" name="roads copie" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;roads&quot;">
           <customproperties>
             <Option type="Map">
               <Option name="showFeatureCount" type="int" value="0"></Option>
             </Option>
           </customproperties>
         </layer-tree-layer>
-        <layer-tree-layer checked="Qt::Checked" expanded="0" id="markers_a7166a67_37f7_444b_a4d7_c14803e0667f" legend_exp="" legend_split_behavior="0" name="markers copie" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;markers&quot; (geom)">
+        <layer-tree-layer checked="Qt::Checked" expanded="0" id="markers_a7166a67_37f7_444b_a4d7_c14803e0667f" legend_exp="" legend_split_behavior="0" name="markers copie" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;markers&quot; (geom)">
           <customproperties>
             <Option type="Map">
               <Option name="showFeatureCount" type="int" value="0"></Option>
@@ -73,13 +73,13 @@
               <Option name="wmsShortName" type="QString" value="topology"></Option>
             </Option>
           </customproperties>
-          <layer-tree-layer checked="Qt::Checked" expanded="1" id="nodes_8c608387_7be6_4e58_818a_1593dce53f8e" legend_exp="" legend_split_behavior="0" name="nodes copie" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;nodes&quot; (geom)">
+          <layer-tree-layer checked="Qt::Checked" expanded="1" id="nodes_8c608387_7be6_4e58_818a_1593dce53f8e" legend_exp="" legend_split_behavior="0" name="nodes copie" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;nodes&quot; (geom)">
             <customproperties>
               <Option></Option>
             </customproperties>
           </layer-tree-layer>
         </layer-tree-group>
-        <layer-tree-layer checked="Qt::Checked" expanded="0" id="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" legend_exp="" legend_split_behavior="0" name="edges copie" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;edges&quot; (geom)">
+        <layer-tree-layer checked="Qt::Checked" expanded="0" id="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" legend_exp="" legend_split_behavior="0" name="edges copie" patch_size="-1,-1" providerKey="postgres" source="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;edges&quot; (geom)">
           <customproperties>
             <Option type="Map">
               <Option name="showFeatureCount" type="int" value="0"></Option>
@@ -1073,7 +1073,7 @@
         <ymax>49.38333336352440739</ymax>
       </wgs84extent>
       <id>edges_04f2ce69_def9_4ef8_a1f1_684d06eac806</id>
-      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table="editing_session"."edges" (geom)</datasource>
+      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table="road_graph_editing"."edges" (geom)</datasource>
       <shortname>edges_copie</shortname>
       <keywordList>
         <value></value>
@@ -3169,18 +3169,18 @@
       </geometryOptions>
       <legend showLabelLegend="0" type="default-vector"></legend>
       <referencedLayers>
-        <relation dataSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;edges&quot; (geom)" id="edges_04f2_next_edge_id_edges_04f2_id" layerId="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" layerName="edges copie" name="editing - next edges" providerKey="postgres" referencedLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" referencingLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" strength="Association">
+        <relation dataSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;edges&quot; (geom)" id="edges_04f2_next_edge_id_edges_04f2_id" layerId="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" layerName="edges copie" name="editing - next edges" providerKey="postgres" referencedLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" referencingLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" strength="Association">
           <fieldRef referencedField="id" referencingField="next_edge_id"></fieldRef>
         </relation>
-        <relation dataSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;edges&quot; (geom)" id="edges_04f2_previous_edge_id_edges_04f2_id" layerId="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" layerName="edges copie" name="editing - previous edges" providerKey="postgres" referencedLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" referencingLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" strength="Association">
+        <relation dataSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;edges&quot; (geom)" id="edges_04f2_previous_edge_id_edges_04f2_id" layerId="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" layerName="edges copie" name="editing - previous edges" providerKey="postgres" referencedLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" referencingLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" strength="Association">
           <fieldRef referencedField="id" referencingField="previous_edge_id"></fieldRef>
         </relation>
       </referencedLayers>
       <referencingLayers>
-        <relation dataSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;edges&quot; (geom)" id="edges_04f2_next_edge_id_edges_04f2_id" layerId="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" layerName="edges copie" name="editing - next edges" providerKey="postgres" referencedLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" referencingLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" strength="Association">
+        <relation dataSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;edges&quot; (geom)" id="edges_04f2_next_edge_id_edges_04f2_id" layerId="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" layerName="edges copie" name="editing - next edges" providerKey="postgres" referencedLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" referencingLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" strength="Association">
           <fieldRef referencedField="id" referencingField="next_edge_id"></fieldRef>
         </relation>
-        <relation dataSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;edges&quot; (geom)" id="edges_04f2_previous_edge_id_edges_04f2_id" layerId="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" layerName="edges copie" name="editing - previous edges" providerKey="postgres" referencedLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" referencingLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" strength="Association">
+        <relation dataSource="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;edges&quot; (geom)" id="edges_04f2_previous_edge_id_edges_04f2_id" layerId="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" layerName="edges copie" name="editing - previous edges" providerKey="postgres" referencedLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" referencingLayer="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806" strength="Association">
           <fieldRef referencedField="id" referencingField="previous_edge_id"></fieldRef>
         </relation>
       </referencingLayers>
@@ -3210,7 +3210,7 @@
                 <Option name="Layer" type="QString" value="roads_888c78ae_d774_46de_810c_0ff6be4d29f8"></Option>
                 <Option name="LayerName" type="QString" value="roads copie"></Option>
                 <Option name="LayerProviderName" type="QString" value="postgres"></Option>
-                <Option name="LayerSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;roads&quot;"></Option>
+                <Option name="LayerSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;roads&quot;"></Option>
                 <Option name="NofColumns" type="int" value="1"></Option>
                 <Option name="OrderByValue" type="bool" value="true"></Option>
                 <Option name="UseCompleter" type="bool" value="true"></Option>
@@ -3234,7 +3234,7 @@
                 <Option name="Layer" type="QString" value="nodes_8c608387_7be6_4e58_818a_1593dce53f8e"></Option>
                 <Option name="LayerName" type="QString" value="nodes copie"></Option>
                 <Option name="LayerProviderName" type="QString" value="postgres"></Option>
-                <Option name="LayerSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;nodes&quot; (geom)"></Option>
+                <Option name="LayerSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;nodes&quot; (geom)"></Option>
                 <Option name="NofColumns" type="int" value="1"></Option>
                 <Option name="OrderByValue" type="bool" value="true"></Option>
                 <Option name="UseCompleter" type="bool" value="false"></Option>
@@ -3258,7 +3258,7 @@
                 <Option name="Layer" type="QString" value="nodes_8c608387_7be6_4e58_818a_1593dce53f8e"></Option>
                 <Option name="LayerName" type="QString" value="nodes copie"></Option>
                 <Option name="LayerProviderName" type="QString" value="postgres"></Option>
-                <Option name="LayerSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;nodes&quot; (geom)"></Option>
+                <Option name="LayerSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;nodes&quot; (geom)"></Option>
                 <Option name="NofColumns" type="int" value="1"></Option>
                 <Option name="OrderByValue" type="bool" value="true"></Option>
                 <Option name="UseCompleter" type="bool" value="false"></Option>
@@ -3368,7 +3368,7 @@
                 <Option name="FilterFields" type="invalid"></Option>
                 <Option name="MapIdentification" type="bool" value="true"></Option>
                 <Option name="ReadOnly" type="bool" value="true"></Option>
-                <Option name="ReferencedLayerDataSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;edges&quot; (geom)"></Option>
+                <Option name="ReferencedLayerDataSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;edges&quot; (geom)"></Option>
                 <Option name="ReferencedLayerId" type="QString" value="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806"></Option>
                 <Option name="ReferencedLayerName" type="QString" value="edges copie"></Option>
                 <Option name="ReferencedLayerProviderKey" type="QString" value="postgres"></Option>
@@ -3392,7 +3392,7 @@
                 <Option name="FilterFields" type="invalid"></Option>
                 <Option name="MapIdentification" type="bool" value="true"></Option>
                 <Option name="ReadOnly" type="bool" value="true"></Option>
-                <Option name="ReferencedLayerDataSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;edges&quot; (geom)"></Option>
+                <Option name="ReferencedLayerDataSource" type="QString" value="service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=LineString checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;edges&quot; (geom)"></Option>
                 <Option name="ReferencedLayerId" type="QString" value="edges_04f2ce69_def9_4ef8_a1f1_684d06eac806"></Option>
                 <Option name="ReferencedLayerName" type="QString" value="edges copie"></Option>
                 <Option name="ReferencedLayerProviderKey" type="QString" value="postgres"></Option>
@@ -3681,7 +3681,7 @@
       <expressionfields></expressionfields>
       <attributeactions>
         <defaultAction key="Canvas" value="{00000000-0000-0000-0000-000000000000}"></defaultAction>
-        <actionsetting action="from qgis.utils import iface&#xA;&#xA;project = QgsProject.instance()&#xA;layer = QgsProject.instance().mapLayer('[% @layer_id %]')&#xA;keep_going = True&#xA;if not layer.isEditable():&#xA;    qgis.utils.iface.messageBar().pushMessage(&#xA;        'Cannot finalize the roundabout',&#xA;        f'You must first activate editable mode on layer {layer.name()}',&#xA;        level=Qgis.Warning,&#xA;        duration=5&#xA;    )&#xA;    keep_going = False&#xA;else:&#xA;    road_code = '[% road_code %]'&#xA;    road_type = '[% roads_road_type %]'&#xA;    if road_type != 'roundabout':&#xA;        qgis.utils.iface.messageBar().pushMessage(&#xA;            'The edge is not part a roundabout',&#xA;            f'its road_type is {road_type}. No action.',&#xA;            level=Qgis.Warning,&#xA;            duration=5&#xA;        )&#xA;        keep_going = False&#xA;&#xA;if keep_going:&#xA;    # Merge the top edges around the circle top node&#xA;    # generated by QGIS circle digitizing tool&#xA;    sql = &quot;SELECT editing_session.clean_digitized_roundabout(&quot;&#xA;    sql += f&quot;    '{road_code}'&quot;&#xA;    sql += &quot;) AS returned_result&quot;&#xA;    result = layer.dataProvider().transaction().executeSql(sql, True, '')&#xA;    if not result[0]:&#xA;        qgis.utils.iface.messageBar().pushMessage(&#xA;            'Error occurred while cleaning the roundabout',&#xA;            result[1],&#xA;            level=Qgis.Critical&#xA;        )&#xA;        keep_going = False&#xA;&#xA;if keep_going:&#xA;    qgis.utils.iface.messageBar().pushMessage(&#xA;        f'The roundabout {road_code} has been successfully finalized',&#xA;        'You may have to refresh map canvas to see the changes',&#xA;        level=Qgis.Success,&#xA;        duration=5&#xA;    )&#xA;    layer.triggerRepaint()" capture="1" icon="" id="{d99a0c18-74e3-4171-a80d-298a37b309af}" isEnabledOnlyWhenEditable="0" name="Finalize the roundabout : delete internal edges and merge top edges" notificationMessage="" shortTitle="Finalize the roundabout" type="1">
+        <actionsetting action="from qgis.utils import iface&#xA;&#xA;project = QgsProject.instance()&#xA;layer = QgsProject.instance().mapLayer('[% @layer_id %]')&#xA;keep_going = True&#xA;if not layer.isEditable():&#xA;    qgis.utils.iface.messageBar().pushMessage(&#xA;        'Cannot finalize the roundabout',&#xA;        f'You must first activate editable mode on layer {layer.name()}',&#xA;        level=Qgis.Warning,&#xA;        duration=5&#xA;    )&#xA;    keep_going = False&#xA;else:&#xA;    road_code = '[% road_code %]'&#xA;    road_type = '[% roads_road_type %]'&#xA;    if road_type != 'roundabout':&#xA;        qgis.utils.iface.messageBar().pushMessage(&#xA;            'The edge is not part a roundabout',&#xA;            f'its road_type is {road_type}. No action.',&#xA;            level=Qgis.Warning,&#xA;            duration=5&#xA;        )&#xA;        keep_going = False&#xA;&#xA;if keep_going:&#xA;    # Merge the top edges around the circle top node&#xA;    # generated by QGIS circle digitizing tool&#xA;    sql = &quot;SELECT road_graph_editing.clean_digitized_roundabout(&quot;&#xA;    sql += f&quot;    '{road_code}'&quot;&#xA;    sql += &quot;) AS returned_result&quot;&#xA;    result = layer.dataProvider().transaction().executeSql(sql, True, '')&#xA;    if not result[0]:&#xA;        qgis.utils.iface.messageBar().pushMessage(&#xA;            'Error occurred while cleaning the roundabout',&#xA;            result[1],&#xA;            level=Qgis.Critical&#xA;        )&#xA;        keep_going = False&#xA;&#xA;if keep_going:&#xA;    qgis.utils.iface.messageBar().pushMessage(&#xA;        f'The roundabout {road_code} has been successfully finalized',&#xA;        'You may have to refresh map canvas to see the changes',&#xA;        level=Qgis.Success,&#xA;        duration=5&#xA;    )&#xA;    layer.triggerRepaint()" capture="1" icon="" id="{d99a0c18-74e3-4171-a80d-298a37b309af}" isEnabledOnlyWhenEditable="0" name="Finalize the roundabout : delete internal edges and merge top edges" notificationMessage="" shortTitle="Finalize the roundabout" type="1">
           <actionScope id="Feature"></actionScope>
         </actionsetting>
       </attributeactions>
@@ -9252,7 +9252,7 @@ def my_form_open(dialog, layer, feature):
         <ymax>49.38324801808699505</ymax>
       </wgs84extent>
       <id>markers_a7166a67_37f7_444b_a4d7_c14803e0667f</id>
-      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table="editing_session"."markers" (geom)</datasource>
+      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table="road_graph_editing"."markers" (geom)</datasource>
       <shortname>markers_copie</shortname>
       <keywordList>
         <value></value>
@@ -10149,7 +10149,7 @@ def my_form_open(dialog, layer, feature):
         <ymax>49.38290663625799937</ymax>
       </wgs84extent>
       <id>nodes_8c608387_7be6_4e58_818a_1593dce53f8e</id>
-      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table="editing_session"."nodes" (geom)</datasource>
+      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true srid=2154 type=Point checkPrimaryKeyUnicity='0' table="road_graph_editing"."nodes" (geom)</datasource>
       <shortname>nodes_copie</shortname>
       <keywordList>
         <value></value>
@@ -12146,7 +12146,7 @@ def my_form_open(dialog, layer, feature):
     </maplayer>
     <maplayer autoRefreshMode="Disabled" autoRefreshTime="0" geometry="No geometry" hasScaleBasedVisibilityFlag="0" legendPlaceholderImage="" maxScale="0" minScale="1e+08" readOnly="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" styleCategories="AllStyleCategories" type="vector" wkbType="NoGeometry">
       <id>roads_888c78ae_d774_46de_810c_0ff6be4d29f8</id>
-      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table="editing_session"."roads"</datasource>
+      <datasource>service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table="road_graph_editing"."roads"</datasource>
       <shortname>roads_copie</shortname>
       <keywordList>
         <value></value>
@@ -13979,7 +13979,7 @@ def my_form_open(dialog, layer, feature):
       </spatialrefsys>
     </CoordinateCustomCrs>
   </ProjectDisplaySettings>
-  <ProjectGpsSettings autoAddTrackVertices="0" autoCommitFeatures="0" destinationFollowsActiveLayer="1" destinationLayer="roads_888c78ae_d774_46de_810c_0ff6be4d29f8" destinationLayerName="roads copie" destinationLayerProvider="postgres" destinationLayerSource="service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table=&quot;editing_session&quot;.&quot;roads&quot;">
+  <ProjectGpsSettings autoAddTrackVertices="0" autoCommitFeatures="0" destinationFollowsActiveLayer="1" destinationLayer="roads_888c78ae_d774_46de_810c_0ff6be4d29f8" destinationLayerName="roads copie" destinationLayerProvider="postgres" destinationLayerSource="service='pg_road_network_service' key='id' estimatedmetadata=true checkPrimaryKeyUnicity='0' table=&quot;road_graph_editing&quot;.&quot;roads&quot;">
     <timeStampFields></timeStampFields>
   </ProjectGpsSettings>
 </qgis>

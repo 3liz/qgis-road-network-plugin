@@ -197,7 +197,7 @@ class Plugin:
 
     def clone_data_to_editing_session(self):
         """
-        Run the alg which clone data from road_graph to editing_session
+        Run the alg which clone data from road_graph to road_graph_editing
         """
         # Run alg
         param = {}
@@ -206,7 +206,7 @@ class Plugin:
 
     def merge_editing_session_data(self):
         """
-        Run the alg which merges the data from editing_session to road_graph
+        Run the alg which merges the data from road_graph_editing to road_graph
         """
         # Run alg
         param = {}
@@ -217,12 +217,12 @@ class Plugin:
         """Receive the references from the hover tool and display them in the dock"""
         # Print the references in the tools dock
         # print("Received references from hover tool:", references)
-        for schema in ("editing_session", "road_graph"):
+        for schema in ("road_graph_editing", "road_graph"):
             refs = references[schema]
             for key in ("road_code", "marker", "abscissa", "offset", "side", "cumulative"):
                 value = str(refs[key]) if refs.get(key) else ""
                 line_edit = self.tools_dock.findChild(
-                    QgsFilterLineEdit, f"{key}_sandbox" if schema == "editing_session" else key
+                    QgsFilterLineEdit, f"{key}_sandbox" if schema == "road_graph_editing" else key
                 )
                 if not line_edit:
                     continue

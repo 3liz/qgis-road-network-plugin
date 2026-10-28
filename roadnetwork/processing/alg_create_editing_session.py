@@ -154,7 +154,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             pg_conn.close()
             return {}
 
-        # Copy the production data into the editing_session schema
+        # Copy the production data into the road_graph_editing schema
         status = "created"
         editing_session = self.getLastCreatedEditingSessionId(status, parameters, context)
         feedback.pushInfo(tr(f"Copy the production data for editing session '{editing_session[1]}'").upper())
@@ -178,7 +178,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
         if not result:
             pg_conn.close()
             error_message = tr(
-                "A problem occurred while copying the production data  into the 'editing_session' schema."
+                "A problem occurred while copying the production data  into the 'road_graph_editing' schema."
             )
             raise QgsProcessingException(error_message)
 
@@ -224,7 +224,7 @@ class CreateEditingSession(BaseProcessingAlgorithm):
             pg_conn.close()
             error_message = tr(
                 "A problem occurred while getting statistics on copied objects "
-                " from the 'editing_session' schema."
+                " from the 'road_graph_editing' schema."
             )
             raise QgsProcessingException(error_message)
 

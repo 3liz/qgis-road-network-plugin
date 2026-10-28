@@ -15,6 +15,11 @@
 
 * **Processing**: remove the `Schema name` parameter from the algorithms `Create database structure`
   and `Upgrade database structure`: the plugin schema is always `road_graph`
+* **SQL**: rename the editing schema `editing_session` to `road_graph_editing`
+  (migration `upgrade_to_32.sql`). The table `road_graph.editing_sessions` and the functions
+  `*_editing_session*` keep their names. The QGIS administration project and the plugin tools
+  use the new schema name: QGIS projects created before must be recreated
+  with the algorithm `Create database local interface`, or their data sources updated
 
 ### Fixed
 

@@ -234,14 +234,14 @@ def test_reset_test_data(processing_provider: Provider, data: Path):
     TRUNCATE road_graph.editing_sessions RESTART IDENTITY CASCADE;
     TRUNCATE road_graph.managed_objects RESTART IDENTITY CASCADE;
     TRUNCATE road_graph.glossary_road_class RESTART IDENTITY CASCADE;
-    -- schema editing_session
-    TRUNCATE editing_session.roads RESTART IDENTITY CASCADE;
-    TRUNCATE editing_session.nodes RESTART IDENTITY CASCADE;
-    TRUNCATE editing_session.edges RESTART IDENTITY CASCADE;
-    TRUNCATE editing_session.markers RESTART IDENTITY CASCADE;
-    TRUNCATE editing_session.editing_sessions RESTART IDENTITY CASCADE;
-    TRUNCATE editing_session.managed_objects RESTART IDENTITY CASCADE;
-    TRUNCATE editing_session.glossary_road_class RESTART IDENTITY CASCADE;
+    -- schema road_graph_editing
+    TRUNCATE road_graph_editing.roads RESTART IDENTITY CASCADE;
+    TRUNCATE road_graph_editing.nodes RESTART IDENTITY CASCADE;
+    TRUNCATE road_graph_editing.edges RESTART IDENTITY CASCADE;
+    TRUNCATE road_graph_editing.markers RESTART IDENTITY CASCADE;
+    TRUNCATE road_graph_editing.editing_sessions RESTART IDENTITY CASCADE;
+    TRUNCATE road_graph_editing.managed_objects RESTART IDENTITY CASCADE;
+    TRUNCATE road_graph_editing.glossary_road_class RESTART IDENTITY CASCADE;
     """
     try:
         connection.executeSql(sql)
@@ -259,7 +259,7 @@ def test_reset_test_data(processing_provider: Provider, data: Path):
 
 
 def test_create_editing_session(processing_provider: Provider):
-    """Test the creation of an editing session and the cloning of data into the editing_session schema."""
+    """Test the creation of an editing session and the cloning of data into the road_graph_editing schema."""
 
     # Get PostgreSQL connection
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
@@ -299,7 +299,7 @@ def test_create_editing_session(processing_provider: Provider):
     except QgsProviderConnectionException as e:
         raise QgsProcessingException(str(e))
 
-    # Clone data into the schema editing_session for the created editing session
+    # Clone data into the schema road_graph_editing for the created editing session
     params = {
         "CONNECTION_NAME": "test",
     }
@@ -308,7 +308,7 @@ def test_create_editing_session(processing_provider: Provider):
     processing_output = processing.run(alg, params, feedback=feedback)
     assert processing_output["OUTPUT_STATUS"] == 1
 
-    # Check the number of objects in the editing_session schema
+    # Check the number of objects in the road_graph_editing schema
     sql = """
         SELECT
             jsonb_array_length(cloned_ids['edges']),
@@ -340,11 +340,11 @@ def test_create_edge(processing_provider: Provider):
 
     # Create a new road and a new edges
     sql = """
-    INSERT INTO editing_session.roads (road_code, road_type, road_class) VALUES (
+    INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES (
         'T001', 'road', 'Départementale'
     )
     ;
-    INSERT INTO editing_session.edges (geom, road_code) VALUES (
+    INSERT INTO road_graph_editing.edges (geom, road_code) VALUES (
         ST_SetSRID(
             ST_GeomFromText(
                 'LineString (
@@ -362,7 +362,7 @@ def test_create_edge(processing_provider: Provider):
         e.start_node, e.end_node,
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE e.road_code = 'T001'
     ;
     """
@@ -395,7 +395,7 @@ def test_cut_edge_by_node(processing_provider: Provider):
     connection_name = "test"
     connection = metadata.findConnection(connection_name)
     sql = """
-        INSERT INTO editing_session.nodes (geom) VALUES (
+        INSERT INTO road_graph_editing.nodes (geom) VALUES (
             ST_SetSRID(
                 ST_GeomFromText(
                     'POINT (474818.54 6894961.66)'
@@ -409,7 +409,7 @@ def test_cut_edge_by_node(processing_provider: Provider):
             e.start_marker, e.start_abscissa, e.start_cumulative,
             e.end_marker, e.end_abscissa, e.end_cumulative,
             e.previous_edge_id, e.next_edge_id
-        FROM editing_session.edges AS e
+        FROM road_graph_editing.edges AS e
         WHERE e.road_code = 'T001'
             ORDER BY e.id
     """
@@ -462,7 +462,7 @@ def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
     # Insert a new edge at the end (touching) of the last edge
     # specifying the previous edge id
     sql = """
-    INSERT INTO editing_session.edges (
+    INSERT INTO road_graph_editing.edges (
         geom, road_code
     ) VALUES (
         ST_SetSRID(
@@ -482,7 +482,7 @@ def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative,
         e.previous_edge_id, e.next_edge_id
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE e.road_code = 'T001'
         ORDER BY e.id
     ;
@@ -529,11 +529,11 @@ def test_change_edge_road(processing_provider: Provider):
     # Create a new road TC002 and change the middle edge of the road T001
     # to be part of this new road
     sql = """
-    INSERT INTO editing_session.roads (road_code, road_type, road_class) VALUES (
+    INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES (
         'TC002', 'road', 'Communale'
     )
     ;
-    UPDATE editing_session.edges
+    UPDATE road_graph_editing.edges
     SET road_code = 'TC002'
     WHERE id = 7811
     ;
@@ -543,7 +543,7 @@ def test_change_edge_road(processing_provider: Provider):
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative,
         e.previous_edge_id, e.next_edge_id
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE e.road_code IN ('T001', 'TC002')
         ORDER BY e.id
     ;
@@ -590,7 +590,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
 
     # Update the last edge and cut the road D138 in two edges
     sql = """
-    UPDATE editing_session.edges
+    UPDATE road_graph_editing.edges
     SET geom = ST_SetSRID(
         ST_GeomFromText(
             'LineString (
@@ -607,7 +607,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative,
         e.previous_edge_id, e.next_edge_id
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE e.road_code = 'T001'
     AND e.id >= 7812
     ORDER BY e.id
@@ -643,10 +643,10 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
             e.end_marker, e.end_abscissa, e.end_cumulative,
             e.previous_edge_id, e.next_edge_id
 
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE
     road_code IN ('D138')
-    AND (SELECT a.end_node FROM editing_session.edges AS a WHERE a.id = 7812) IN (e.start_node, e.end_node)
+    AND (SELECT a.end_node FROM road_graph_editing.edges AS a WHERE a.id = 7812) IN (e.start_node, e.end_node)
     ORDER BY id
     ;
     """
@@ -683,7 +683,7 @@ def test_delete_road_edge(processing_provider: Provider):
 
     # Delete the edge 7812 which is in the middle of the road T001
     sql = """
-    DELETE FROM editing_session.edges
+    DELETE FROM road_graph_editing.edges
     WHERE id = 7812
     ;
     SELECT
@@ -692,7 +692,7 @@ def test_delete_road_edge(processing_provider: Provider):
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative,
         e.previous_edge_id, e.next_edge_id
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE e.road_code = 'T001'
     ORDER BY e.id
     ;
@@ -733,7 +733,7 @@ def test_create_roundabout(processing_provider: Provider):
 
     # Create road
     sql = """
-    INSERT INTO editing_session.roads (road_code, road_type, road_class) VALUES (
+    INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES (
         'R001', 'roundabout', 'Départementale'
     );
     """
@@ -750,7 +750,7 @@ def test_create_roundabout(processing_provider: Provider):
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative,
         e.previous_edge_id, e.next_edge_id
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE e.road_code IN ('D138', 'D152')
     -- Get the edges of the two roads which are crossing the roundabout
     -- They are around the marker code 8 of the road D138, abscissa 981
@@ -758,7 +758,7 @@ def test_create_roundabout(processing_provider: Provider):
         e.geom,
         (
             SELECT geom
-            FROM editing_session.markers
+            FROM road_graph_editing.markers
             WHERE road_code = 'D138' AND code = 8 AND abscissa BETWEEN 970 AND 990
         ),
         1
@@ -796,7 +796,7 @@ def test_create_roundabout(processing_provider: Provider):
     # as created by the QGIS tool "Add circular feature by center and other point"
     # The run the method finalizing the roundabout creation
     sql = """
-    INSERT INTO editing_session.edges (road_code, geom) VALUES (
+    INSERT INTO road_graph_editing.edges (road_code, geom) VALUES (
         'R001',
         ST_SetSRID(
             ST_GeomFromText(
@@ -806,7 +806,7 @@ def test_create_roundabout(processing_provider: Provider):
         )
     )
     ;
-    SELECT editing_session.clean_digitized_roundabout('R001') AS returned_result
+    SELECT road_graph_editing.clean_digitized_roundabout('R001') AS returned_result
     ;
     SELECT
         e.id, e.road_code,
@@ -814,11 +814,11 @@ def test_create_roundabout(processing_provider: Provider):
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative,
         e.previous_edge_id, e.next_edge_id
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE e.road_code IN ('D138', 'D152')
     AND ST_Intersects(
         e.geom,
-        (SELECT ST_Collect(geom) FROM editing_session.edges WHERE road_code = 'R001')
+        (SELECT ST_Collect(geom) FROM road_graph_editing.edges WHERE road_code = 'R001')
     )
     ORDER BY e.road_code, e.start_cumulative
     ;
@@ -866,7 +866,7 @@ def test_create_roundabout(processing_provider: Provider):
         id, road_code, code, abscissa,
         Round(ST_X(geom)::numeric, 1),
         Round(ST_Y(geom)::numeric, 1)
-    FROM editing_session.markers
+    FROM road_graph_editing.markers
     WHERE road_code  = 'R001'
     AND code = 0
     ;
@@ -896,7 +896,7 @@ def test_create_roundabout(processing_provider: Provider):
         start_marker, start_abscissa, start_cumulative,
         end_marker, end_abscissa, end_cumulative,
         previous_edge_id, next_edge_id
-    FROM editing_session.edges
+    FROM road_graph_editing.edges
     WHERE road_code = 'R001'
     ORDER BY start_cumulative
     ;
@@ -948,7 +948,7 @@ def test_move_road_marker():
         e.id,
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE road_code IN ('D138')
     AND start_cumulative > 7930
     ORDER BY start_cumulative
@@ -978,7 +978,7 @@ def test_move_road_marker():
 
     # Move the marker 8 of the road D138 by 60 meters southwards
     sql_update = """
-    UPDATE editing_session.markers
+    UPDATE road_graph_editing.markers
     SET geom = ST_Translate(geom, 0, -60)
     WHERE road_code = 'D138' AND code = 8 AND abscissa = 0.0
     ;
@@ -1024,7 +1024,7 @@ def test_delete_road_marker():
 
     # Delete markers 8, 16 and 19 of the road D138
     sql_delete = """
-    DELETE FROM editing_session.markers
+    DELETE FROM road_graph_editing.markers
     WHERE road_code = 'D138' AND code IN (8, 16, 19)
     ;
     """
@@ -1039,7 +1039,7 @@ def test_delete_road_marker():
         e.id,
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE road_code IN ('D138')
     AND start_cumulative > 7930
     ORDER BY start_cumulative
@@ -1086,7 +1086,7 @@ def test_add_road_marker():
         e.id,
         e.start_marker, e.start_abscissa, e.start_cumulative,
         e.end_marker, e.end_abscissa, e.end_cumulative
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE road_code IN ('D138')
     AND start_cumulative > 7930
     ORDER BY start_cumulative
@@ -1113,7 +1113,7 @@ def test_add_road_marker():
 
     # Add the marker 8 for the road D138
     sql_insert = """
-    INSERT INTO editing_session.markers (geom, road_code, code, abscissa) VALUES (
+    INSERT INTO road_graph_editing.markers (geom, road_code, code, abscissa) VALUES (
         ST_SetSRID(
             ST_GeomFromText(
                 'POINT (473524 6895644)'
@@ -1166,7 +1166,7 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
             e.id,
             e.start_marker, e.start_abscissa, e.start_cumulative,
             e.end_marker, e.end_abscissa, e.end_cumulative
-    FROM editing_session.edges AS e
+    FROM road_graph_editing.edges AS e
     WHERE road_code IN ('R001')
     ORDER BY start_cumulative
     ;
@@ -1193,13 +1193,13 @@ def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider:
 
     # Delete the edge of the road D138 which ends on the marker 0 of the roundabout R001
     sql_delete = """
-    DELETE FROM editing_session.edges AS e
+    DELETE FROM road_graph_editing.edges AS e
     WHERE e.road_code = 'D138'
     AND ST_DWithin(
         ST_EndPoint(geom),
         (
             SELECT geom
-            FROM editing_session.markers
+            FROM road_graph_editing.markers
             WHERE road_code = 'R001' AND code = 0
         ),
         0.10
@@ -1243,7 +1243,7 @@ def test_no_cutting_of_edges_with_field_no_intersection_cutting():
     sql_count_nodes = """
     SELECT
         count(*) AS nb
-    FROM editing_session.nodes
+    FROM road_graph_editing.nodes
     ;
     """
     try:
@@ -1261,11 +1261,11 @@ def test_no_cutting_of_edges_with_field_no_intersection_cutting():
     # Insert a new road and edge which crosses the existing edge
     # but with no_intersection_cutting set to True
     sql_insert = """
-    INSERT INTO editing_session.roads (road_code, road_type, road_class) VALUES (
+    INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES (
         'T003', 'road', 'Départementale'
     ) ON CONFLICT DO NOTHING
     ;
-    INSERT INTO editing_session.edges (geom, road_code, no_intersection_cutting) VALUES (
+    INSERT INTO road_graph_editing.edges (geom, road_code, no_intersection_cutting) VALUES (
         ST_SetSRID(
             ST_GeomFromText(
                 'LineString(
@@ -1424,7 +1424,7 @@ def test_get_road_substring_from_references():
     sql = """
     SELECT
         ST_AsText(
-            (editing_session.get_road_substring_from_references(
+            (road_graph_editing.get_road_substring_from_references(
                 'R001',
                 0,
                 10,
@@ -1493,15 +1493,15 @@ def test_get_road_substring_from_references():
     sql = """
     SELECT
     -- check start point
-    editing_session.get_road_substring_from_references('R001', 0,  0.0, 0,  30.00, 0, 'right')->>'geom',
-    editing_session.get_road_substring_from_references('R001', 0,  0.9, 0,  30.00, 0, 'right')->>'geom',
-    editing_session.get_road_substring_from_references('R001', 0,  0.0, 0,  30.00, 0, 'right')->>'geom',
-    editing_session.get_road_substring_from_references('R001', 0, 56.0, 0,  30.00, 0, 'right')->>'geom',
+    road_graph_editing.get_road_substring_from_references('R001', 0,  0.0, 0,  30.00, 0, 'right')->>'geom',
+    road_graph_editing.get_road_substring_from_references('R001', 0,  0.9, 0,  30.00, 0, 'right')->>'geom',
+    road_graph_editing.get_road_substring_from_references('R001', 0,  0.0, 0,  30.00, 0, 'right')->>'geom',
+    road_graph_editing.get_road_substring_from_references('R001', 0, 56.0, 0,  30.00, 0, 'right')->>'geom',
     -- check end point
-    editing_session.get_road_substring_from_references('R001', 0,  5.0, 0,    0.5, 0, 'right')->>'geom',
-    editing_session.get_road_substring_from_references('R001', 0,  5.0, 0,  56.46, 0, 'right')->>'geom',
-    editing_session.get_road_substring_from_references('R001', 0,  0.0, 0,  56.00, 0, 'right')->>'geom',
-    editing_session.get_road_substring_from_references('R001', 0,  0.9, 0,  56.46, 0, 'right')->>'geom'
+    road_graph_editing.get_road_substring_from_references('R001', 0,  5.0, 0,    0.5, 0, 'right')->>'geom',
+    road_graph_editing.get_road_substring_from_references('R001', 0,  5.0, 0,  56.46, 0, 'right')->>'geom',
+    road_graph_editing.get_road_substring_from_references('R001', 0,  0.0, 0,  56.00, 0, 'right')->>'geom',
+    road_graph_editing.get_road_substring_from_references('R001', 0,  0.9, 0,  56.46, 0, 'right')->>'geom'
     ;
     """
     try:
@@ -1955,12 +1955,12 @@ def test_changes_on_marker_and_edge_geometry():
 
     # Move the marker 9 of the road D138B northward
     sql_update = """
-    UPDATE editing_session.markers
+    UPDATE road_graph_editing.markers
     SET geom = ST_GeomFromText('POINT(473354 6895185)', 2154)
     WHERE road_code = 'D138B' AND code = 9
     ;
 
-    UPDATE editing_session.edges
+    UPDATE road_graph_editing.edges
     SET geom = ST_GeomFromText(
     """
     sql_update += "'LINESTRING(473695.4 6895584,473658.3 6895577.2,473644.3 6895574.3,473634.3 6895569.4,473631.2 6895565.4,473629.2 6895558.4,473626 6895534.5,473623.9 6895521.5,473621.9 6895515.5,473616.8 6895509.5,473604.8 6895503.6,473592.7 6895494.7,473573.6 6895475.8,473537.3 6895440.1,473497 6895391.3,473419.2 6895279.8,473353.5 6895185.3,473336.3 6895157.4,473318.1 6895121.5,473303.9 6895089.6,473296.7 6895065.6,473288.5 6895031.7,473281.3 6895009.7,473274.2 6894994.8,473252.9 6894954.9,473249.9 6894950.9,473234.7 6894923,473204.4 6894876.2,473104.4 6894871.7,473084.2 6894836.8,473067.9 6894798.9,473050.6 6894763,473103.1 6894690.9,473055.6 6894624.2,473025.3 6894577.4,473015.2 6894558.5,472998.9 6894519.6,472988.8 6894501.7,472980.7 6894491.7,472971.6 6894480.8,472943.4 6894457,472856.9 6894383.6,472810.6 6894343.9,472799.5 6894331.9,472775.3 6894297.1,472726.7 6894211.4,472699.4 6894164.6,472689.2 6894146.7,472679.1 6894126.7,472673.9 6894103.8,472668.7 6894070.8,472660.1 6893987.8,472654.6 6893913.9,472650.3 6893859.9,472650.1 6893839.9,472653.9 6893808.8,472661.5 6893755.8,472674.1 6893686.7,472681.8 6893642.6,472683.6 6893621.6,472684.4 6893590.6,472677 6893524.6,472667.6 6893476.7,472655.4 6893440.8,472644.1 6893406.8,472642 6893386.8,472641.8 6893364.8,472640.8 6893357.9,472625.5 6893323,472595 6893246.1,472584.8 6893222.2,472564.6 6893189.3,472542.4 6893155.5,472504.1 6893109.8,472477.9 6893084.9,472443.6 6893049.2,472340.9 6892948.8,472240.2 6892848.5,472149.6 6892761.1,472117.3 6892727.4,472104.3 6892714.4,472087.4 6892691.8,472073.1 6892670.9,472065.3 6892659.6,472059.9 6892651.4,472055.8 6892643.7,472050.4 6892632.5,472046.1 6892622.8,472042 6892610.9,472039.5 6892600.8,472037.8 6892592.2,472036.6 6892583.7,472036.2 6892575.5,472036.2 6892568.6,472036.8 6892561,472038 6892554.2,472040 6892544.6,472042.2 6892535.9,472045.4 6892526.5,472060.1 6892494.9,472064.7 6892485,472068.4 6892476.5,472072 6892465.9,472074.2 6892454.7,472076.9 6892439.4,472078.2 6892431.1,472078.8 6892422.5,472078 6892414.6,472076.6 6892403.3,472074.4 6892392.8,472068.5 6892361.7,472067.2 6892352.2,472065.1 6892344.9,472062.8 6892338.1,472059.8 6892331.2,472055.9 6892322.2,472051.3 6892313.5,472042.2 6892297.9,472037.8 6892289.8,472035.7 6892284.6,472033.8 6892278.8,472031 6892268.1,472029.2 6892260.1,472027.09 6892255.9)'"  # noqa: E501
@@ -1993,7 +1993,7 @@ def test_merge_editing_session_data():
     connection_name = "test"
     connection = metadata.findConnection(connection_name)
 
-    # Get the hash of all the edges of the editing_session schema
+    # Get the hash of all the edges of the road_graph_editing schema
     # We control only the edges
     sql = """
         WITH
@@ -2017,7 +2017,7 @@ def test_merge_editing_session_data():
             )
             AS hash,
             json_agg(i.id ORDER BY i.id) AS ids
-        FROM editing_session.edges AS e
+        FROM road_graph_editing.edges AS e
         JOIN ids AS i
         ON i.id = e.id
         ;

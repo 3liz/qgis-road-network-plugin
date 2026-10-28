@@ -1374,7 +1374,7 @@ $$;
 
 
 -- FUNCTION before_editing_sessions_update()
-COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the editing_session schema';
+COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the road_graph_editing schema';
 
 
 -- before_node_delete()
@@ -1873,15 +1873,15 @@ BEGIN
     INTO _set_config;
 
     -- Truncate tables
-    TRUNCATE editing_session.roads CASCADE;
-    TRUNCATE editing_session.markers CASCADE;
-    TRUNCATE editing_session.edges CASCADE;
-    TRUNCATE editing_session.nodes CASCADE;
-    TRUNCATE editing_session.editing_sessions CASCADE;
-    TRUNCATE editing_session.glossary_road_class CASCADE;
+    TRUNCATE road_graph_editing.roads CASCADE;
+    TRUNCATE road_graph_editing.markers CASCADE;
+    TRUNCATE road_graph_editing.edges CASCADE;
+    TRUNCATE road_graph_editing.nodes CASCADE;
+    TRUNCATE road_graph_editing.editing_sessions CASCADE;
+    TRUNCATE road_graph_editing.glossary_road_class CASCADE;
 
     -- Re-insert glossary
-    INSERT INTO editing_session.glossary_road_class
+    INSERT INTO road_graph_editing.glossary_road_class
     SELECT *
     FROM road_graph.glossary_road_class
     ;
@@ -1901,7 +1901,7 @@ BEGIN
         JOIN edges_roads AS e
             ON r.road_code = e.road_code
     )
-    INSERT INTO editing_session.roads
+    INSERT INTO road_graph_editing.roads
     SELECT *
     FROM roads
     ;
@@ -1927,7 +1927,7 @@ BEGIN
         JOIN edges AS e
             ON n.id IN (e.start_node, e.end_node)
     )
-    INSERT INTO editing_session.nodes
+    INSERT INTO road_graph_editing.nodes
     SELECT *
     FROM nodes
     ;
@@ -1947,7 +1947,7 @@ BEGIN
         JOIN edges_roads AS er
             ON e.road_code = er.road_code
     )
-    INSERT INTO editing_session.edges
+    INSERT INTO road_graph_editing.edges
     SELECT *
     FROM edges
     ;
@@ -1967,71 +1967,71 @@ BEGIN
         JOIN edges_roads AS er
             ON m.road_code = er.road_code
     )
-    INSERT INTO editing_session.markers
+    INSERT INTO road_graph_editing.markers
     SELECT *
     FROM markers
     ;
 
     -- Replace identities by road_schema sequences to get correct ids
     BEGIN
-        ALTER TABLE editing_session.roads ALTER COLUMN id DROP IDENTITY;
-        ALTER TABLE editing_session.nodes ALTER COLUMN id DROP IDENTITY;
-        ALTER TABLE editing_session.markers ALTER COLUMN id DROP IDENTITY;
-        ALTER TABLE editing_session.edges ALTER COLUMN id DROP IDENTITY;
+        ALTER TABLE road_graph_editing.roads ALTER COLUMN id DROP IDENTITY;
+        ALTER TABLE road_graph_editing.nodes ALTER COLUMN id DROP IDENTITY;
+        ALTER TABLE road_graph_editing.markers ALTER COLUMN id DROP IDENTITY;
+        ALTER TABLE road_graph_editing.edges ALTER COLUMN id DROP IDENTITY;
     EXCEPTION WHEN OTHERS THEN
-        RAISE NOTICE 'Cannot drop identity in editing_session tables';
+        RAISE NOTICE 'Cannot drop identity in road_graph_editing tables';
     END;
     -- roads
-    ALTER TABLE editing_session.roads
+    ALTER TABLE road_graph_editing.roads
         ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.roads', 'id'));
     -- nodes
-    ALTER TABLE editing_session.nodes
+    ALTER TABLE road_graph_editing.nodes
         ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.nodes', 'id'));
     -- markers
-    ALTER TABLE editing_session.markers
+    ALTER TABLE road_graph_editing.markers
         ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.markers', 'id'));
     -- edges
-    ALTER TABLE editing_session.edges
+    ALTER TABLE road_graph_editing.edges
         ALTER COLUMN id SET DEFAULT nextval(pg_get_serial_sequence('road_graph.edges', 'id'));
 
     -- Set ids in the editing_sessions
     UPDATE road_graph.editing_sessions
     SET cloned_ids = jsonb_build_object(
-        'roads', (SELECT jsonb_agg(id::text) FROM editing_session.roads),
-        'nodes', (SELECT jsonb_agg(id::text) FROM editing_session.nodes),
-        'markers', (SELECT jsonb_agg(id::text) FROM editing_session.markers),
-        'edges', (SELECT jsonb_agg(id::text) FROM editing_session.edges)
+        'roads', (SELECT jsonb_agg(id::text) FROM road_graph_editing.roads),
+        'nodes', (SELECT jsonb_agg(id::text) FROM road_graph_editing.nodes),
+        'markers', (SELECT jsonb_agg(id::text) FROM road_graph_editing.markers),
+        'edges', (SELECT jsonb_agg(id::text) FROM road_graph_editing.edges)
     ),
     "status" = 'cloned'
     WHERE id = _editing_session_id
     ;
 
-    -- In the table editing_session.editing_sessions
+    -- In the table road_graph_editing.editing_sessions
     -- keep only the current editing session
     -- This table will be used by the trigger editing_survey
     -- to collect changes in the editing_sessions tables
-    TRUNCATE editing_session.editing_sessions RESTART IDENTITY;
-    INSERT INTO editing_session.editing_sessions
+    TRUNCATE road_graph_editing.editing_sessions RESTART IDENTITY;
+    INSERT INTO road_graph_editing.editing_sessions
     SELECT * FROM road_graph.editing_sessions
     WHERE id = _editing_session_id
     ;
 
-    -- Audit trigger on editing_session tables
-    DROP TRIGGER IF EXISTS trg_editing_survey ON editing_session.roads;
+    -- Audit trigger on road_graph_editing tables
+    DROP TRIGGER IF EXISTS trg_editing_survey ON road_graph_editing.roads;
     CREATE TRIGGER trg_editing_survey
-    AFTER INSERT OR UPDATE OR DELETE ON editing_session.roads
+    AFTER INSERT OR UPDATE OR DELETE ON road_graph_editing.roads
     FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
-    DROP TRIGGER IF EXISTS trg_editing_survey ON editing_session.nodes;
+    DROP TRIGGER IF EXISTS trg_editing_survey ON road_graph_editing.nodes;
     CREATE TRIGGER trg_editing_survey
-    AFTER INSERT OR UPDATE OR DELETE ON editing_session.nodes
+    AFTER INSERT OR UPDATE OR DELETE ON road_graph_editing.nodes
     FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
-    DROP TRIGGER IF EXISTS trg_editing_survey ON editing_session.markers;
+    DROP TRIGGER IF EXISTS trg_editing_survey ON road_graph_editing.markers;
     CREATE TRIGGER trg_editing_survey
-    AFTER INSERT OR UPDATE OR DELETE ON editing_session.markers
+    AFTER INSERT OR UPDATE OR DELETE ON road_graph_editing.markers
     FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
-    DROP TRIGGER IF EXISTS trg_editing_survey ON editing_session.edges;
+    DROP TRIGGER IF EXISTS trg_editing_survey ON road_graph_editing.edges;
     CREATE TRIGGER trg_editing_survey
-    AFTER INSERT OR UPDATE OR DELETE ON editing_session.edges
+    AFTER INSERT OR UPDATE OR DELETE ON road_graph_editing.edges
     FOR EACH ROW EXECUTE PROCEDURE road_graph.editing_survey();
 
     -- Re-enable triggers
@@ -2044,7 +2044,7 @@ $$;
 
 
 -- FUNCTION copy_data_to_editing_session(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) IS 'Copy production data from the road_graph shema to the editing_session schema corresponding to the given editing session ID.';
+COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) IS 'Copy production data from the road_graph shema to the road_graph_editing schema corresponding to the given editing session ID.';
 
 
 -- create_queries_from_editing_session(integer)
@@ -2085,11 +2085,11 @@ BEGIN
         END, ' ',
         '"road_graph".', q.item, ' AS t ',
         CASE
-            WHEN op = 'I' THEN 'SELECT * FROM editing_session.' || q.item || ' AS s '
+            WHEN op = 'I' THEN 'SELECT * FROM road_graph_editing.' || q.item || ' AS s '
             WHEN op = 'U' THEN concat(
                 ' SET (', c.cols, ') = (',
                 's.', replace(c.cols, ', ', ', s.'),
-                ') FROM editing_session.',  q.item, ' AS s '
+                ') FROM road_graph_editing.',  q.item, ' AS s '
             )
             WHEN op = 'D' THEN ''
         END, ' ',
@@ -2142,12 +2142,12 @@ BEGIN
         RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
     END IF;
 
-    -- Truncate editing_session tables
-    TRUNCATE editing_session.roads CASCADE;
-    TRUNCATE editing_session.markers CASCADE;
-    TRUNCATE editing_session.edges CASCADE;
-    TRUNCATE editing_session.nodes CASCADE;
-    TRUNCATE editing_session.editing_sessions CASCADE;
+    -- Truncate road_graph_editing tables
+    TRUNCATE road_graph_editing.roads CASCADE;
+    TRUNCATE road_graph_editing.markers CASCADE;
+    TRUNCATE road_graph_editing.edges CASCADE;
+    TRUNCATE road_graph_editing.nodes CASCADE;
+    TRUNCATE road_graph_editing.editing_sessions CASCADE;
 
     -- Set the sequences back to the maximum id in the main tables
     SELECT INTO _set_val
@@ -2177,7 +2177,7 @@ $$;
 
 
 -- FUNCTION drop_editing_session(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.drop_editing_session(_editing_session_id integer) IS 'Delete the given editing session and truncate all the table of the editing_session schema';
+COMMENT ON FUNCTION road_graph.drop_editing_session(_editing_session_id integer) IS 'Delete the given editing session and truncate all the table of the road_graph_editing schema';
 
 
 -- editing_survey()
@@ -2207,7 +2207,7 @@ BEGIN
     END IF;
 
     -- Do nothing if data are the same as the road_graph data
-    -- Since UPDATEs can occur on newly created object in the editing_session schema
+    -- Since UPDATEs can occur on newly created object in the road_graph_editing schema
     -- we must check if a corresponding object exists in the road_graph schema
     -- before checking if they are equal
     IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'edges' THEN
@@ -2239,7 +2239,7 @@ BEGIN
     IF to_jsonb(NEW) ? 'geom' THEN
         SELECT INTO editing_session_geom
             geom
-        FROM editing_session.editing_sessions
+        FROM road_graph_editing.editing_sessions
         LIMIT 1
         ;
 
@@ -2298,7 +2298,7 @@ BEGIN
         END IF;
     END IF;
 
-    -- 2/ Log editing inside the editing_session table*
+    -- 2/ Log editing inside the road_graph_editing table*
     -- edited object id
     object_id := CASE
         WHEN TG_OP = 'DELETE' THEN OLD.id
@@ -2316,7 +2316,7 @@ BEGIN
     FROM editing_sessions
     WHERE unique_code = (
         SELECT unique_code
-        FROM editing_session.editing_sessions
+        FROM road_graph_editing.editing_sessions
         LIMIT 1
     )
     ;
@@ -2361,7 +2361,7 @@ BEGIN
         "status" = 'edited'
     WHERE unique_code = (
         SELECT unique_code
-        FROM editing_session.editing_sessions
+        FROM road_graph_editing.editing_sessions
         LIMIT 1
     )
     ;
@@ -3911,14 +3911,14 @@ BEGIN
         SELECT
             DISTINCT e.road_code
         FROM
-            editing_session.edges AS e,
+            road_graph_editing.edges AS e,
             objects_ids AS o
         WHERE o.item = 'edges' AND e.id = ANY(o.o_ids)
         UNION
         SELECT
             DISTINCT m.road_code
         FROM
-            editing_session.markers AS m,
+            road_graph_editing.markers AS m,
             objects_ids AS o
         WHERE o.item = 'markers' AND m.id = ANY(o.o_ids)
     )
@@ -4545,12 +4545,12 @@ BEGIN
 
     END IF;
 
-    -- Truncate editing_session tables
-    TRUNCATE editing_session.roads CASCADE;
-    TRUNCATE editing_session.markers CASCADE;
-    TRUNCATE editing_session.edges CASCADE;
-    TRUNCATE editing_session.nodes CASCADE;
-    TRUNCATE editing_session.editing_sessions CASCADE;
+    -- Truncate road_graph_editing tables
+    TRUNCATE road_graph_editing.roads CASCADE;
+    TRUNCATE road_graph_editing.markers CASCADE;
+    TRUNCATE road_graph_editing.edges CASCADE;
+    TRUNCATE road_graph_editing.nodes CASCADE;
+    TRUNCATE road_graph_editing.editing_sessions CASCADE;
 
     -- Delete merged editing session
     SET search_path TO road_graph, public;
@@ -5387,7 +5387,7 @@ $$;
 
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
 COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate or reactivate the foreign key constraints to ease
-the merging editing_session data into road_graph schema.
+the merging road_graph_editing data into road_graph schema.
 It is also used when importing data from templates.
 
 Under the hood, it drops or drops & creates the constraint

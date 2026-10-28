@@ -10,14 +10,14 @@ TRUNCATE road_graph.edges RESTART IDENTITY CASCADE;
 TRUNCATE road_graph.markers RESTART IDENTITY CASCADE;
 TRUNCATE road_graph.editing_sessions RESTART IDENTITY CASCADE;
 TRUNCATE road_graph.managed_objects RESTART IDENTITY CASCADE;
--- schema editing_session
-TRUNCATE editing_session.glossary_road_class RESTART IDENTITY CASCADE;
-TRUNCATE editing_session.roads RESTART IDENTITY CASCADE;
-TRUNCATE editing_session.nodes RESTART IDENTITY CASCADE;
-TRUNCATE editing_session.edges RESTART IDENTITY CASCADE;
-TRUNCATE editing_session.markers RESTART IDENTITY CASCADE;
-TRUNCATE editing_session.editing_sessions RESTART IDENTITY CASCADE;
-TRUNCATE editing_session.managed_objects RESTART IDENTITY CASCADE;
+-- schema road_graph_editing
+TRUNCATE road_graph_editing.glossary_road_class RESTART IDENTITY CASCADE;
+TRUNCATE road_graph_editing.roads RESTART IDENTITY CASCADE;
+TRUNCATE road_graph_editing.nodes RESTART IDENTITY CASCADE;
+TRUNCATE road_graph_editing.edges RESTART IDENTITY CASCADE;
+TRUNCATE road_graph_editing.markers RESTART IDENTITY CASCADE;
+TRUNCATE road_graph_editing.editing_sessions RESTART IDENTITY CASCADE;
+TRUNCATE road_graph_editing.managed_objects RESTART IDENTITY CASCADE;
 
 -- Disable complex triggers
 ALTER TABLE road_graph.edges DISABLE TRIGGER trg_aa_before_geometry_insert_or_update ;

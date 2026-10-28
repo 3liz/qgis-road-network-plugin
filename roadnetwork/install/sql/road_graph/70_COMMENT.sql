@@ -89,7 +89,7 @@ based on its geometry and position on the road.
 
 
 -- FUNCTION before_editing_sessions_update()
-COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the editing_session schema';
+COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the road_graph_editing schema';
 
 
 -- FUNCTION before_node_delete()
@@ -120,7 +120,7 @@ COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'C
 
 
 -- FUNCTION copy_data_to_editing_session(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) IS 'Copy production data from the road_graph shema to the editing_session schema corresponding to the given editing session ID.';
+COMMENT ON FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) IS 'Copy production data from the road_graph shema to the road_graph_editing schema corresponding to the given editing session ID.';
 
 
 -- FUNCTION create_queries_from_editing_session(_editing_session_id integer)
@@ -128,7 +128,7 @@ COMMENT ON FUNCTION road_graph.create_queries_from_editing_session(_editing_sess
 
 
 -- FUNCTION drop_editing_session(_editing_session_id integer)
-COMMENT ON FUNCTION road_graph.drop_editing_session(_editing_session_id integer) IS 'Delete the given editing session and truncate all the table of the editing_session schema';
+COMMENT ON FUNCTION road_graph.drop_editing_session(_editing_session_id integer) IS 'Delete the given editing session and truncate all the table of the road_graph_editing schema';
 
 
 -- FUNCTION editing_survey()
@@ -249,7 +249,7 @@ COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_n
 
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
 COMMENT ON FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean) IS 'Deactivate or reactivate the foreign key constraints to ease
-the merging editing_session data into road_graph schema.
+the merging road_graph_editing data into road_graph schema.
 It is also used when importing data from templates.
 
 Under the hood, it drops or drops & creates the constraint
