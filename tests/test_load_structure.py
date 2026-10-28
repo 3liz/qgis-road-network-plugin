@@ -2423,6 +2423,75 @@ def test_update_managed_objects():
     ]
 
 
+def test_split_table_linestring_feature_by_point(db_connection: psycopg.Connection):
+    """Split a managed object linestring by a point, like the Lizmap action split_line_by_point.
+    The safety barrier 3 (D72, 2+100 -> 3+10) has no trigger calculating the references:
+    the function must set the references of the cut point.
+    The changes are rolled back at the end of the test."""
+    cursor = db_connection.cursor()
+
+    # The sequence is not reset by the rollback: store its value to restore it afterwards
+    cursor.execute("SELECT pg_get_serial_sequence('managed.demo_safety_barriers', 'id')")
+    row = cursor.fetchone()
+    assert row is not None
+    sequence_name = row[0]
+    cursor.execute(f"SELECT last_value, is_called FROM {sequence_name}")
+    row = cursor.fetchone()
+    assert row is not None
+    last_value, is_called = row
+    db_connection.commit()
+
+    try:
+        # Cut point at 40% of the line, and its references
+        cursor.execute("""
+            SELECT
+                ST_AsText(ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4)),
+                road_graph.get_reference_from_point(
+                    ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4), road_code
+                )
+            FROM managed.demo_safety_barriers
+            WHERE id = 3
+        """)
+        row = cursor.fetchone()
+        assert row is not None
+        point, point_references = row
+        cut_marker = point_references["marker_code"]
+        cut_abscissa = round(float(point_references["abscissa"]), 2)
+
+        cursor.execute(
+            """
+            SELECT road_graph.split_table_linestring_feature_by_point(
+                'managed', 'demo_safety_barriers', 3, ST_GeomFromText(%s, 2154)
+            )->>'status'
+            """,
+            (point,),
+        )
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == "success"
+
+        # The feature keeps its start references, and ends at the cut point.
+        # The new feature starts at the cut point, and keeps the end references
+        cursor.execute("""
+            SELECT
+                start_marker_code, round(start_abscissa::numeric, 2)::float,
+                end_marker_code, round(end_abscissa::numeric, 2)::float,
+                "offset", side
+            FROM managed.demo_safety_barriers
+            WHERE road_code = 'D72'
+            ORDER BY id
+        """)
+        rows = cursor.fetchall()
+        assert len(rows) == 2
+        assert list(rows[0]) == [2, 100.0, cut_marker, cut_abscissa, 0.0, "right"]
+        assert list(rows[1]) == [cut_marker, cut_abscissa, 3, 10.0, 0.0, "right"]
+    finally:
+        db_connection.rollback()
+        cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
+        db_connection.commit()
+        db_connection.close()
+
+
 def test_changes_on_marker_and_edge_geometry():
     """Update a marker a road_edge geometry to prepare the test merge"""
 

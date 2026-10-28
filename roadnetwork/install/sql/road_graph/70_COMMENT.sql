@@ -270,7 +270,10 @@ The function returns the id of the new created edge or null if the edge has not 
 
 
 -- FUNCTION split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)
-COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.';
+COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.
+The feature keeps the first part, and a new feature is created with the second part.
+If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa,
+the references of the cut point become the end references of the feature and the start references of the new feature.';
 
 
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)

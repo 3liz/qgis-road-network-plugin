@@ -5709,6 +5709,11 @@ DECLARE
     sql_text text;
     update_result record;
     insert_result record;
+    table_cols text[];
+    has_references boolean;
+    update_references_sql text;
+    insert_references_fields text;
+    insert_references_values text;
     v_sqlstate text;
     v_message text;
     v_context text;
@@ -5754,6 +5759,24 @@ BEGIN
             'message', format('The table %I.%I does not have a geometry column !', _schema_name, _table_name)
         );
     END IF;
+
+    -- Check if the table has the references fields of the managed objects
+    sql_text = format(
+        $SQL$
+        SELECT array_agg(column_name::text) AS cols
+        FROM information_schema.columns
+        WHERE table_schema = '%1$s' AND table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO table_cols
+    ;
+    has_references = Coalesce(
+        table_cols @> ARRAY['start_marker_code', 'start_abscissa', 'end_marker_code', 'end_abscissa']::text[],
+        False
+    );
 
     -- Get feature
     sql_text = format(
@@ -5875,6 +5898,29 @@ BEGIN
         geom_2 = ST_Multi(geom_2);
     END IF;
 
+    -- References of the cut point:
+    -- they become the end references of the feature and the start references of the new feature.
+    -- The start references of the feature are kept, and the new feature gets the original end references.
+    -- The new feature is created from the updated feature: its end references are set explicitly
+    update_references_sql = '';
+    insert_references_fields = '';
+    insert_references_values = '';
+    IF has_references THEN
+        update_references_sql = format(
+            ', end_marker_code = %1$L::integer, end_abscissa = %2$L::real',
+            closest_point_references->>'marker_code',
+            closest_point_references->>'abscissa'
+        );
+        insert_references_fields = ', start_marker_code, start_abscissa, end_marker_code, end_abscissa';
+        insert_references_values = format(
+            ', %1$L::integer, %2$L::real, %3$L::integer, %4$L::real',
+            closest_point_references->>'marker_code',
+            closest_point_references->>'abscissa',
+            to_jsonb(feature)->>'end_marker_code',
+            to_jsonb(feature)->>'end_abscissa'
+        );
+    END IF;
+
     -- Update the feature and insert the new one
     -- Use a try/catch to avoid doing half the job
     BEGIN
@@ -5883,7 +5929,7 @@ BEGIN
             $SQL$
                 WITH up AS (
                     UPDATE %1$I.%2$I
-                    SET %3$I = ST_GeomFromGeoJSON('%4$s')
+                    SET %3$I = ST_GeomFromGeoJSON('%4$s')%7$s
                     WHERE True
                     AND %5$I = %6$s
                     RETURNING *
@@ -5896,13 +5942,15 @@ BEGIN
             geometry_column_data.geom_name,
             ST_AsGeoJSON(geom_1),
             primary_key_field,
-            (to_jsonb(feature))->>primary_key_field
+            (to_jsonb(feature))->>primary_key_field,
+            update_references_sql
         );
         EXECUTE sql_text
         INTO update_result
         ;
 
         -- Get the object fields minus the PK, geometry column, start_cumulative
+        -- and the references, set explicitly
         WITH fields AS (
             SELECT json_object_keys(to_json(feature.*)) AS field
         )
@@ -5915,6 +5963,7 @@ BEGIN
             'start_marker', 'start_abscissa', 'start_cumulative',
             'uid', 'longueur'
         )
+        AND NOT (has_references AND field IN ('start_marker_code', 'end_marker_code', 'end_abscissa'))
         ;
 
         -- Create the new feature
@@ -5925,6 +5974,8 @@ BEGIN
                         %3$I,
                         -- fields
                         %4$s
+                        -- start references
+                        %8$s
                 )
                 WITH source AS (
                     SELECT s.*
@@ -5937,6 +5988,8 @@ BEGIN
                     ST_GeomFromGeoJSON('%5$s'),
                     -- fields
                     %4$s
+                    -- start references
+                    %9$s
                 FROM source
                 RETURNING *
             $SQL$,
@@ -5946,7 +5999,9 @@ BEGIN
             source_fields,
             ST_AsGeoJSON(geom_2),
             primary_key_field,
-            (to_jsonb(feature))->>primary_key_field
+            (to_jsonb(feature))->>primary_key_field,
+            insert_references_fields,
+            insert_references_values
         );
         EXECUTE sql_text
         INTO insert_result
@@ -5974,7 +6029,10 @@ $_$;
 
 
 -- FUNCTION split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)
-COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.';
+COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.
+The feature keeps the first part, and a new feature is created with the second part.
+If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa,
+the references of the cut point become the end references of the feature and the start references of the new feature.';
 
 
 -- toggle_foreign_key_constraints(boolean)
