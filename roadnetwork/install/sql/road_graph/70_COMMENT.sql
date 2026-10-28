@@ -89,7 +89,7 @@ based on its geometry and position on the road.
 
 
 -- FUNCTION before_editing_sessions_update()
-COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if there is data inside the road_graph_editing schema';
+COMMENT ON FUNCTION road_graph.before_editing_sessions_update() IS 'Prevent from updating an editing session geometry if its status is not created, which means that data has been cloned into the road_graph_editing schema';
 
 
 -- FUNCTION before_node_delete()

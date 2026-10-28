@@ -34,6 +34,8 @@
 
 ### Fixed
 
+* **SQL**: the geometry of an editing session which status is not `created` could still be modified
+  by setting its status back to `created` in the same query, or by removing it (migration `upgrade_to_38.sql`)
 * **Lizmap**: in the references form of the road network panel, the button `Road` of the start references
   went to the end of the road instead of its start
 * **SQL**: split of a managed object linestring by a point (Lizmap action `split_line_by_point`):

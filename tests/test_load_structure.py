@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 import psycopg
+import pytest
 
 from qgis import processing
 from qgis.core import (
@@ -328,6 +329,55 @@ def test_create_editing_session(processing_provider: Provider):
     assert stats is not None
     # Check the number of edges, nodes, markers and roads
     assert (stats[0], stats[1], stats[2], stats[3]) == (165, 206, 326, 5)
+
+
+def test_editing_session_geometry_cannot_be_updated_after_cloning(rollback_db_connection: psycopg.Connection):
+    """The geometry of an editing session cannot be modified if its status is not 'created'.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+    # The editing sessions of the tests are created with a given id: the sequence is not used
+    session_id = 99
+    cursor.execute(
+        """
+        INSERT INTO road_graph.editing_sessions (id, label, author, status, geom)
+        VALUES (
+            %s, 'test geometry update', 'test', 'cloned',
+            ST_Buffer(ST_SetSRID(ST_MakePoint(474000, 6895500), 2154), 100)
+        )
+        """,
+        (session_id,),
+    )
+
+    # Forbidden changes, each one run in a savepoint
+    forbidden_updates = (
+        # geometry modified
+        "UPDATE road_graph.editing_sessions SET geom = ST_Buffer(geom, 10) WHERE id = %s",
+        # geometry modified and status set back to created in the same query
+        "UPDATE road_graph.editing_sessions SET geom = ST_Buffer(geom, 10), status = 'created' WHERE id = %s",
+        # geometry removed
+        "UPDATE road_graph.editing_sessions SET geom = NULL WHERE id = %s",
+    )
+    for sql in forbidden_updates:
+        with (
+            pytest.raises(
+                psycopg.errors.RaiseException, match="cannot be updated after data has been cloned"
+            ),
+            rollback_db_connection.transaction(),
+        ):
+            cursor.execute(sql, (session_id,))
+
+    # Allowed change: other fields, with the same geometry
+    cursor.execute(
+        "UPDATE road_graph.editing_sessions SET geom = geom, label = 'new label' WHERE id = %s",
+        (session_id,),
+    )
+
+    # Allowed change: geometry of an editing session with the status created
+    cursor.execute("UPDATE road_graph.editing_sessions SET status = 'created' WHERE id = %s", (session_id,))
+    cursor.execute(
+        "UPDATE road_graph.editing_sessions SET geom = ST_Buffer(geom, 10) WHERE id = %s",
+        (session_id,),
+    )
 
 
 def test_no_orphan_node_when_crossing_several_edges(rollback_db_connection: psycopg.Connection):
