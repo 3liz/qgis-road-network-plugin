@@ -357,6 +357,26 @@
   
 
       
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../appendix/training-plan/" class="md-tabs__link">
+          
+  
+  
+  Appendix
+
+        </a>
+      </li>
+    
+  
+
+      
     </ul>
   </div>
 </nav>
@@ -638,6 +658,34 @@
     
   
     QGIS project and tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing algorithms
   
 
     
@@ -1798,6 +1846,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../database-guide/tables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tables and fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../database-guide/structure/" class="md-nav__link">
         
   
@@ -1849,6 +1925,91 @@
   
 
       </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Appendix
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/training-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training plan (French)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2828,10 +2989,20 @@ On your local, make a symlink with ln -s
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>QGIS project</strong>: the Python code of the layer actions has been moved into the plugin
+<li>
+<p><strong>Docs</strong>: reorganization and new content of the documentation:
+  new pages <code>Processing algorithms</code> and <code>Tables and fields</code>,
+  description of the toolbar and panels of the plugin, examples of the linear referencing functions,
+  creation of a demo database, example of the impacts of a graph modification on the business data,
+  the preparation of the business tables moved to the page <code>Managed objects</code>,
+  and a training plan in appendix</p>
+</li>
+<li>
+<p><strong>QGIS project</strong>: the Python code of the layer actions has been moved into the plugin
   (module <code>roadnetwork/actions</code>). The actions of the administration project now only call
   <code>plugins['roadnetwork'].run_action(...)</code>: <code>finalize_roundabout</code> (layer <code>edges copie</code>),
-  <code>display_edited_data</code>, <code>create_editing_session</code> and <code>drop_editing_session</code> (layer <code>editing_sessions</code>)</li>
+  <code>display_edited_data</code>, <code>create_editing_session</code> and <code>drop_editing_session</code> (layer <code>editing_sessions</code>)</p>
+</li>
 <li><strong>Processing</strong>: remove the <code>Schema name</code> parameter from the algorithms <code>Create database structure</code>
   and <code>Upgrade database structure</code>: the plugin schema is always <code>road_graph</code></li>
 <li><strong>SQL</strong>: rename the editing schema <code>editing_session</code> to <code>road_graph_editing</code>
@@ -2842,8 +3013,15 @@ On your local, make a symlink with ln -s
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>
-<li><strong>SQL</strong>: the geometry of an editing session which status is not <code>created</code> could still be modified
-  by setting its status back to <code>created</code> in the same query, or by removing it (migration <code>upgrade_to_38.sql</code>)</li>
+<li><strong>QGIS</strong>: in the panel <code>RoadNetwork tools</code>, pressing <code>Enter</code> in a field did not run the search <code>Find</code></li>
+<li><strong>QGIS</strong>: the error message of the tool <code>Get references under the cursor</code> raised an error itself</li>
+<li>
+<p><strong>Processing</strong>: the help of the algorithm <code>Merge editing session data</code> was the help of the algorithm cloning the data</p>
+</li>
+<li>
+<p><strong>SQL</strong>: the geometry of an editing session which status is not <code>created</code> could still be modified
+  by setting its status back to <code>created</code> in the same query, or by removing it (migration <code>upgrade_to_38.sql</code>)</p>
+</li>
 <li><strong>Lizmap</strong>: in the references form of the road network panel, the button <code>Road</code> of the start references
   went to the end of the road instead of its start</li>
 <li><strong>SQL</strong>: split of a managed object linestring by a point (Lizmap action <code>split_line_by_point</code>):

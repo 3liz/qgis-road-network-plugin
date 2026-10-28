@@ -357,6 +357,26 @@
   
 
       
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../appendix/training-plan/" class="md-tabs__link">
+          
+  
+  
+  Appendix
+
+        </a>
+      </li>
+    
+  
+
+      
     </ul>
   </div>
 </nav>
@@ -730,6 +750,34 @@
   
   
     <li class="md-nav__item">
+      <a href="processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processing algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="graph-editing/" class="md-nav__link">
         
   
@@ -925,6 +973,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../database-guide/tables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tables and fields
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../database-guide/structure/" class="md-nav__link">
         
   
@@ -976,6 +1052,91 @@
   
 
       </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Appendix
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/training-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training plan (French)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1052,16 +1213,17 @@
 <p>The RoadNetwork plugin stores all the business logic <strong>inside a PostgreSQL database</strong>.
 The QGIS plugin helps to create and upgrade this database, to visualize the road network,
 to edit it safely and to keep the business data up to date.</p>
-<p>This guide is split in four parts:</p>
+<p>This guide is split in five parts:</p>
 <ul>
-<li><a href="import/">Import data</a>: how to import the road graph (edges and markers)
-  and the managed objects into the database.</li>
-<li><a href="qgis-project/">QGIS project and tools</a>: the administration project, the map layers
+<li><a href="import/">Import data</a>: how to import the road graph (edges and markers) into the database,
+  and how to create a demo database.</li>
+<li><a href="qgis-project/">QGIS project and tools</a>: the administration project, the toolbar and panels of the plugin,
   and the tools available to search and get references.</li>
+<li><a href="processing/">Processing algorithms</a>: the algorithms provided by the plugin.</li>
 <li><a href="graph-editing/">Road graph editing</a>: how to edit the roads, edges and markers
   in a dedicated editing session.</li>
-<li><a href="managed-objects/">Managed objects</a>: how the business data based on the road network
-  are kept up to date when the graph changes.</li>
+<li><a href="managed-objects/">Managed objects</a>: how to prepare the business data based on the road network,
+  and how they are kept up to date when the graph changes.</li>
 </ul>
 <h2 id="database-model">Database model<a class="headerlink" href="#database-model" title="Permanent link">#</a></h2>
 <p>All the logic is stored inside a <strong>PostgreSQL database</strong>:</p>
@@ -1079,7 +1241,8 @@ to edit it safely and to keep the business data up to date.</p>
   automatic node creation, split of intersected edges, etc.</li>
 </ul>
 <p><img alt="Database model" src="../media/user-guide/database_model.png" /></p>
-<p>See the <a href="../database-guide/structure/">Database structure</a> documentation for a complete description of the tables and functions.</p>
+<p>See <a href="../database-guide/tables/">Tables and fields</a> for the description of the fields of the tables,
+and the <a href="../database-guide/structure/">Database structure</a> documentation for a complete description of the tables and functions.</p>
 <h2 id="administration-tools">Administration tools<a class="headerlink" href="#administration-tools" title="Permanent link">#</a></h2>
 <p>The plugin provides <strong>QGIS Processing algorithms</strong> which allow to:</p>
 <ul>
@@ -1089,7 +1252,8 @@ to edit it safely and to keep the business data up to date.</p>
   <code>Create database local interface</code>,</li>
 <li><strong>import data</strong> from template <strong>edges</strong> and <strong>markers</strong> tables: <code>Import data from template</code>.</li>
 </ul>
-<p>These algorithms are available in the QGIS Processing toolbox and in the <strong>RoadNetwork administration panel</strong>,
+<p>These algorithms, described in <a href="processing/">Processing algorithms</a>,
+are available in the QGIS Processing toolbox and in the <strong>RoadNetwork administration panel</strong>,
 which also shows the database connection used by the project and checks
 that the plugin and database versions match.</p>
 <p><img alt="RoadNetwork administration panel" src="../media/user-guide/qgis_administration_panel.png" /></p>
