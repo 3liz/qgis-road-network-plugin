@@ -330,28 +330,14 @@ def test_create_editing_session(processing_provider: Provider):
     assert (stats[0], stats[1], stats[2], stats[3]) == (165, 206, 326, 5)
 
 
-def test_no_orphan_node_when_crossing_several_edges(db_connection: psycopg.Connection):
+def test_no_orphan_node_when_crossing_several_edges(rollback_db_connection: psycopg.Connection):
     """Draw a new edge crossing several edges: no orphan node must be created.
     The creation of the first crossing node splits the new edge,
     and its parts create the other crossing nodes.
     With this edge, the remaining crossing point of the first loop was 10 cm away from the node created
     by the parts (rounding of the coordinates), and a second node, not linked to any edge, was created.
     The changes are rolled back at the end of the test."""
-    cursor = db_connection.cursor()
-
-    # The sequences are not reset by the rollback: store their values to restore them afterwards,
-    # since the following tests check the ids of the created objects.
-    # During an editing session, the road_graph_editing tables use the road_graph sequences
-    sequences: dict[str, tuple[int, bool]] = {}
-    for table in ("edges", "nodes", "markers", "roads"):
-        cursor.execute(f"SELECT pg_get_serial_sequence('road_graph.{table}', 'id')")
-        sequence = cursor.fetchone()
-        assert sequence is not None
-        cursor.execute(f"SELECT last_value, is_called FROM {sequence[0]}")
-        values = cursor.fetchone()
-        assert values is not None
-        sequences[sequence[0]] = (values[0], values[1])
-    db_connection.commit()
+    cursor = rollback_db_connection.cursor()
 
     sql_count_orphan_nodes = """
         SELECT count(*)
@@ -363,168 +349,140 @@ def test_no_orphan_node_when_crossing_several_edges(db_connection: psycopg.Conne
         )
     """
 
-    try:
-        cursor.execute(sql_count_orphan_nodes)
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 0
+    cursor.execute(sql_count_orphan_nodes)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 0
 
-        cursor.execute("""
-            INSERT INTO road_graph_editing.roads (road_code, road_type, road_class)
-            VALUES ('T999', 'road', 'Communale')
-        """)
-        cursor.execute("""
-            INSERT INTO road_graph_editing.edges (road_code, geom)
-            VALUES (
-                'T999',
-                ST_GeomFromText('LINESTRING(474107 6895707.3, 474686.5 6895862.6)', 2154)
-            )
-        """)
+    cursor.execute("""
+        INSERT INTO road_graph_editing.roads (road_code, road_type, road_class)
+        VALUES ('T999', 'road', 'Communale')
+    """)
+    cursor.execute("""
+        INSERT INTO road_graph_editing.edges (road_code, geom)
+        VALUES (
+            'T999',
+            ST_GeomFromText('LINESTRING(474107 6895707.3, 474686.5 6895862.6)', 2154)
+        )
+    """)
 
-        # The new edge is split by the 2 crossing edges
-        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'T999'")
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 3
+    # The new edge is split by the 2 crossing edges
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'T999'")
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 3
 
-        # No orphan node
-        cursor.execute(sql_count_orphan_nodes)
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 0
-    finally:
-        db_connection.rollback()
-        for sequence_name, (last_value, is_called) in sequences.items():
-            cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
-        db_connection.commit()
-        db_connection.close()
+    # No orphan node
+    cursor.execute(sql_count_orphan_nodes)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 0
 
 
-def test_split_edge_does_not_cut_existing_bridges(db_connection: psycopg.Connection):
+def test_split_edge_does_not_cut_existing_bridges(rollback_db_connection: psycopg.Connection):
     """A new edge arriving in the middle of an edge which crosses another edge without node (a bridge):
     the edge is split by the end point of the new edge, but its parts must not create a node at the bridge.
     Before, the parts of the split edges created the nodes at all their intersections,
     which were propagated to the edges crossing them, and so on (e.g. a whole highway interchange).
     The changes are rolled back at the end of the test."""
-    cursor = db_connection.cursor()
+    cursor = rollback_db_connection.cursor()
 
-    # The sequences are not reset by the rollback: store their values to restore them afterwards,
-    # since the following tests check the ids of the created objects.
-    # During an editing session, the road_graph_editing tables use the road_graph sequences
-    sequences: dict[str, tuple[int, bool]] = {}
-    for table in ("edges", "nodes", "markers", "roads"):
-        cursor.execute(f"SELECT pg_get_serial_sequence('road_graph.{table}', 'id')")
-        sequence = cursor.fetchone()
-        assert sequence is not None
-        cursor.execute(f"SELECT last_value, is_called FROM {sequence[0]}")
-        values = cursor.fetchone()
-        assert values is not None
-        sequences[sequence[0]] = (values[0], values[1])
-    db_connection.commit()
+    # A long edge inside the editing session
+    cursor.execute("""
+        SELECT e.id, e.road_code
+        FROM road_graph_editing.edges AS e
+        WHERE ST_Length(e.geom) > 400
+        AND ST_Within(
+            e.geom,
+            (SELECT es.geom FROM road_graph.editing_sessions AS es WHERE es.id = 1)
+        )
+        ORDER BY e.id
+        LIMIT 1
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    edge_id, road_code = row
 
-    try:
-        # A long edge inside the editing session
-        cursor.execute("""
-            SELECT e.id, e.road_code
-            FROM road_graph_editing.edges AS e
-            WHERE ST_Length(e.geom) > 400
-            AND ST_Within(
-                e.geom,
-                (SELECT es.geom FROM road_graph.editing_sessions AS es WHERE es.id = 1)
+    cursor.execute("""
+        INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES
+        ('T997', 'road', 'Communale'),
+        ('T998', 'road', 'Communale')
+    """)
+
+    # The bridge: an edge crossing this edge at 30% of its length, without node,
+    # inserted with the triggers disabled like imported data
+    cursor.execute("SELECT set_config('road.graph.disable.trigger', '1', true)")
+    cursor.execute(
+        """
+        INSERT INTO road_graph_editing.edges (road_code, geom)
+        SELECT
+            'T997',
+            ST_MakeLine(
+                ST_Translate(ST_LineInterpolatePoint(geom, 0.3), -30, -30),
+                ST_Translate(ST_LineInterpolatePoint(geom, 0.3), 30, 30)
             )
-            ORDER BY e.id
-            LIMIT 1
-        """)
-        row = cursor.fetchone()
-        assert row is not None
-        edge_id, road_code = row
+        FROM road_graph_editing.edges
+        WHERE id = %s
+        """,
+        (edge_id,),
+    )
+    cursor.execute("SELECT set_config('road.graph.disable.trigger', '0', true)")
 
-        cursor.execute("""
-            INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES
-            ('T997', 'road', 'Communale'),
-            ('T998', 'road', 'Communale')
-        """)
-
-        # The bridge: an edge crossing this edge at 30% of its length, without node,
-        # inserted with the triggers disabled like imported data
-        cursor.execute("SELECT set_config('road.graph.disable.trigger', '1', true)")
-        cursor.execute(
-            """
-            INSERT INTO road_graph_editing.edges (road_code, geom)
-            SELECT
-                'T997',
-                ST_MakeLine(
-                    ST_Translate(ST_LineInterpolatePoint(geom, 0.3), -30, -30),
-                    ST_Translate(ST_LineInterpolatePoint(geom, 0.3), 30, 30)
-                )
-            FROM road_graph_editing.edges
-            WHERE id = %s
-            """,
-            (edge_id,),
-        )
-        cursor.execute("SELECT set_config('road.graph.disable.trigger', '0', true)")
-
-        cursor.execute(
-            """
-            SELECT ST_AsText(
-                ST_Intersection(
-                    (SELECT geom FROM road_graph_editing.edges WHERE road_code = 'T997'),
-                    (SELECT geom FROM road_graph_editing.edges WHERE id = %s)
-                )
+    cursor.execute(
+        """
+        SELECT ST_AsText(
+            ST_Intersection(
+                (SELECT geom FROM road_graph_editing.edges WHERE road_code = 'T997'),
+                (SELECT geom FROM road_graph_editing.edges WHERE id = %s)
             )
-            """,
-            (edge_id,),
         )
-        row = cursor.fetchone()
-        assert row is not None
-        bridge = row[0]
-        assert bridge.startswith("POINT")
+        """,
+        (edge_id,),
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    bridge = row[0]
+    assert bridge.startswith("POINT")
 
-        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s", (road_code,))
-        row = cursor.fetchone()
-        assert row is not None
-        edges_before = row[0]
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s", (road_code,))
+    row = cursor.fetchone()
+    assert row is not None
+    edges_before = row[0]
 
-        # A new edge arriving in the middle of the edge, at 70% of its length
-        cursor.execute(
-            """
-            INSERT INTO road_graph_editing.edges (road_code, geom)
-            SELECT
-                'T998',
-                ST_MakeLine(
-                    ST_Translate(ST_LineInterpolatePoint(geom, 0.7), 40, -40),
-                    ST_LineInterpolatePoint(geom, 0.7)
-                )
-            FROM road_graph_editing.edges
-            WHERE id = %s
-            """,
-            (edge_id,),
-        )
+    # A new edge arriving in the middle of the edge, at 70% of its length
+    cursor.execute(
+        """
+        INSERT INTO road_graph_editing.edges (road_code, geom)
+        SELECT
+            'T998',
+            ST_MakeLine(
+                ST_Translate(ST_LineInterpolatePoint(geom, 0.7), 40, -40),
+                ST_LineInterpolatePoint(geom, 0.7)
+            )
+        FROM road_graph_editing.edges
+        WHERE id = %s
+        """,
+        (edge_id,),
+    )
 
-        # The edge has been split by the end point of the new edge
-        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s", (road_code,))
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == edges_before + 1
+    # The edge has been split by the end point of the new edge
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s", (road_code,))
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == edges_before + 1
 
-        # But no node has been created at the bridge
-        cursor.execute(
-            """
-            SELECT count(*)
-            FROM road_graph_editing.nodes
-            WHERE ST_DWithin(geom, ST_GeomFromText(%s, 2154), 0.5)
-            """,
-            (bridge,),
-        )
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 0
-    finally:
-        db_connection.rollback()
-        for sequence_name, (last_value, is_called) in sequences.items():
-            cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
-        db_connection.commit()
-        db_connection.close()
+    # But no node has been created at the bridge
+    cursor.execute(
+        """
+        SELECT count(*)
+        FROM road_graph_editing.nodes
+        WHERE ST_DWithin(geom, ST_GeomFromText(%s, 2154), 0.5)
+        """,
+        (bridge,),
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 0
 
 
 def test_create_edge(processing_provider: Provider):
@@ -647,78 +605,58 @@ def test_cut_edge_by_node(processing_provider: Provider):
     assert [edges[1][10], edges[1][11]] == [7810, None]
 
 
-def test_cut_first_edge_of_road_without_marker_0(db_connection: psycopg.Connection):
+def test_cut_first_edge_of_road_without_marker_0(rollback_db_connection: psycopg.Connection):
     """Cut the first edge of a road which does not start with the marker 0
     The road D138B starts at the marker 8 + 243: no marker 0 must be created.
     The changes are rolled back at the end of the test."""
-    cursor = db_connection.cursor()
+    cursor = rollback_db_connection.cursor()
 
-    # The sequences are not reset by the rollback: store their values to restore them afterwards,
-    # since the following tests check the ids of the created objects
-    sequences: dict[str, tuple[int, bool]] = {}
-    for table in ("edges", "nodes", "markers"):
-        cursor.execute(f"SELECT pg_get_serial_sequence('road_graph.{table}', 'id')")
-        sequence = cursor.fetchone()
-        assert sequence is not None
-        cursor.execute(f"SELECT last_value, is_called FROM {sequence[0]}")
-        values = cursor.fetchone()
-        assert values is not None
-        sequences[sequence[0]] = (values[0], values[1])
-    db_connection.commit()
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'D138B'")
+    row = cursor.fetchone()
+    assert row is not None
+    edges_before = row[0]
 
-    try:
-        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'D138B'")
-        row = cursor.fetchone()
-        assert row is not None
-        edges_before = row[0]
-
-        # Add a node on the first edge of the road, 100 meters from its start
-        cursor.execute("""
-            WITH first_edge AS (
-                SELECT geom
-                FROM road_graph_editing.edges
-                WHERE road_code = 'D138B'
-                AND previous_edge_id IS NULL
-            )
-            INSERT INTO road_graph_editing.nodes (geom)
-            SELECT ST_LineInterpolatePoint(geom, 100 / ST_Length(geom))
-            FROM first_edge
-        """)
-
-        # The edge has been cut
-        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'D138B'")
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == edges_before + 1
-
-        # No marker 0 has been created
-        cursor.execute("""
-            SELECT count(*)
-            FROM road_graph_editing.markers
-            WHERE road_code = 'D138B' AND code = 0
-        """)
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 0
-
-        # The references of the first edge still start at the marker 8 + 243
-        cursor.execute("""
-            SELECT
-                start_marker, round(start_abscissa::numeric, 2)::float,
-                end_marker, round(end_abscissa::numeric, 2)::float
+    # Add a node on the first edge of the road, 100 meters from its start
+    cursor.execute("""
+        WITH first_edge AS (
+            SELECT geom
             FROM road_graph_editing.edges
             WHERE road_code = 'D138B'
             AND previous_edge_id IS NULL
-        """)
-        row = cursor.fetchone()
-        assert row is not None
-        assert list(row) == [8, 243, 8, 343.02]
-    finally:
-        db_connection.rollback()
-        for sequence_name, (last_value, is_called) in sequences.items():
-            cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
-        db_connection.commit()
-        db_connection.close()
+        )
+        INSERT INTO road_graph_editing.nodes (geom)
+        SELECT ST_LineInterpolatePoint(geom, 100 / ST_Length(geom))
+        FROM first_edge
+    """)
+
+    # The edge has been cut
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'D138B'")
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == edges_before + 1
+
+    # No marker 0 has been created
+    cursor.execute("""
+        SELECT count(*)
+        FROM road_graph_editing.markers
+        WHERE road_code = 'D138B' AND code = 0
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 0
+
+    # The references of the first edge still start at the marker 8 + 243
+    cursor.execute("""
+        SELECT
+            start_marker, round(start_abscissa::numeric, 2)::float,
+            end_marker, round(end_abscissa::numeric, 2)::float
+        FROM road_graph_editing.edges
+        WHERE road_code = 'D138B'
+        AND previous_edge_id IS NULL
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert list(row) == [8, 243, 8, 343.02]
 
 
 def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
@@ -1560,122 +1498,103 @@ def test_no_cutting_of_edges_with_field_no_intersection_cutting():
     assert stats[0][0] == 215
 
 
-def test_no_cutting_of_edges_with_field_no_intersection_cutting_by_nodes(db_connection: psycopg.Connection):
+def test_no_cutting_of_edges_with_field_no_intersection_cutting_by_nodes(
+    rollback_db_connection: psycopg.Connection,
+):
     """Test the nodes located on edges having no_intersection_cutting set to True:
     * an existing node under a new edge with no_intersection_cutting does not cut it,
     * a new edge crossing the edge T003 (no_intersection_cutting) does not cut it,
     * a new edge arriving in the middle of the edge T003 cuts it (e.g. a new access road on a highway).
     The changes are rolled back at the end of the test."""
-    cursor = db_connection.cursor()
-
-    # The sequences are not reset by the rollback: store their values to restore them afterwards,
-    # since the following tests check the ids of the created objects.
-    # During an editing session, the road_graph_editing tables use the road_graph sequences
-    sequences: dict[str, tuple[int, bool]] = {}
-    for table in ("edges", "nodes", "markers", "roads"):
-        cursor.execute(f"SELECT pg_get_serial_sequence('road_graph.{table}', 'id')")
-        sequence = cursor.fetchone()
-        assert sequence is not None
-        cursor.execute(f"SELECT last_value, is_called FROM {sequence[0]}")
-        values = cursor.fetchone()
-        assert values is not None
-        sequences[sequence[0]] = (values[0], values[1])
-    db_connection.commit()
+    cursor = rollback_db_connection.cursor()
 
     sql_count_edges = "SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s"
 
-    try:
-        cursor.execute("""
-            INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES
-            ('T004', 'road', 'Départementale'),
-            ('T005', 'road', 'Départementale'),
-            ('T006', 'road', 'Départementale')
-        """)
+    cursor.execute("""
+        INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES
+        ('T004', 'road', 'Départementale'),
+        ('T005', 'road', 'Départementale'),
+        ('T006', 'road', 'Départementale')
+    """)
 
-        # A new edge with no_intersection_cutting passing over an existing node
-        # which joins at least 3 edges, inside the editing session: it is not cut
-        cursor.execute("""
-            WITH node AS (
-                SELECT n.geom
-                FROM road_graph_editing.nodes AS n
-                JOIN road_graph_editing.edges AS e
-                    ON n.id IN (e.start_node, e.end_node)
-                WHERE ST_Intersects(
-                    n.geom,
-                    (SELECT ST_Buffer(es.geom, -100) FROM road_graph.editing_sessions AS es WHERE es.id = 1)
-                )
-                GROUP BY n.id, n.geom
-                HAVING count(*) >= 3 AND bool_and(NOT e.no_intersection_cutting)
-                ORDER BY n.id
-                LIMIT 1
+    # A new edge with no_intersection_cutting passing over an existing node
+    # which joins at least 3 edges, inside the editing session: it is not cut
+    cursor.execute("""
+        WITH node AS (
+            SELECT n.geom
+            FROM road_graph_editing.nodes AS n
+            JOIN road_graph_editing.edges AS e
+                ON n.id IN (e.start_node, e.end_node)
+            WHERE ST_Intersects(
+                n.geom,
+                (SELECT ST_Buffer(es.geom, -100) FROM road_graph.editing_sessions AS es WHERE es.id = 1)
             )
-            INSERT INTO road_graph_editing.edges (geom, road_code, no_intersection_cutting)
-            SELECT ST_MakeLine(ST_Translate(geom, -100, -60), ST_Translate(geom, 100, 60)), 'T004', True
-            FROM node
-        """)
-        cursor.execute(sql_count_edges, ("T004",))
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 1
+            GROUP BY n.id, n.geom
+            HAVING count(*) >= 3 AND bool_and(NOT e.no_intersection_cutting)
+            ORDER BY n.id
+            LIMIT 1
+        )
+        INSERT INTO road_graph_editing.edges (geom, road_code, no_intersection_cutting)
+        SELECT ST_MakeLine(ST_Translate(geom, -100, -60), ST_Translate(geom, 100, 60)), 'T004', True
+        FROM node
+    """)
+    cursor.execute(sql_count_edges, ("T004",))
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 1
 
-        # A new edge crossing the edge T003, which has no_intersection_cutting set to True: T003 is not cut
-        cursor.execute(sql_count_edges, ("T003",))
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 1
-        cursor.execute("""
-            INSERT INTO road_graph_editing.edges (geom, road_code)
-            SELECT
-                ST_MakeLine(
-                    ST_Translate(ST_LineInterpolatePoint(geom, 0.25), -6, -19),
-                    ST_Translate(ST_LineInterpolatePoint(geom, 0.25), 6, 19)
-                ),
-                'T005'
-            FROM road_graph_editing.edges
-            WHERE road_code = 'T003'
-        """)
-        cursor.execute(sql_count_edges, ("T003",))
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 1
+    # A new edge crossing the edge T003, which has no_intersection_cutting set to True: T003 is not cut
+    cursor.execute(sql_count_edges, ("T003",))
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 1
+    cursor.execute("""
+        INSERT INTO road_graph_editing.edges (geom, road_code)
+        SELECT
+            ST_MakeLine(
+                ST_Translate(ST_LineInterpolatePoint(geom, 0.25), -6, -19),
+                ST_Translate(ST_LineInterpolatePoint(geom, 0.25), 6, 19)
+            ),
+            'T005'
+        FROM road_graph_editing.edges
+        WHERE road_code = 'T003'
+    """)
+    cursor.execute(sql_count_edges, ("T003",))
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 1
 
-        # A new edge arriving in the middle of the edge T003: T003 is cut
-        cursor.execute("""
-            INSERT INTO road_graph_editing.edges (geom, road_code)
-            SELECT
-                ST_MakeLine(
-                    ST_Translate(ST_LineInterpolatePoint(geom, 0.6), 18, 57),
-                    ST_LineInterpolatePoint(geom, 0.6)
-                ),
-                'T006'
-            FROM road_graph_editing.edges
-            WHERE road_code = 'T003'
-        """)
-        cursor.execute(sql_count_edges, ("T003",))
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 2
+    # A new edge arriving in the middle of the edge T003: T003 is cut
+    cursor.execute("""
+        INSERT INTO road_graph_editing.edges (geom, road_code)
+        SELECT
+            ST_MakeLine(
+                ST_Translate(ST_LineInterpolatePoint(geom, 0.6), 18, 57),
+                ST_LineInterpolatePoint(geom, 0.6)
+            ),
+            'T006'
+        FROM road_graph_editing.edges
+        WHERE road_code = 'T003'
+    """)
+    cursor.execute(sql_count_edges, ("T003",))
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 2
 
-        # The two parts of T003 and the edge T006 share the same node
-        cursor.execute("""
-            SELECT count(DISTINCT n.id)
-            FROM road_graph_editing.edges AS t006
-            JOIN road_graph_editing.nodes AS n
-                ON n.id = t006.end_node
-            JOIN road_graph_editing.edges AS t003
-                ON n.id IN (t003.start_node, t003.end_node)
-                AND t003.road_code = 'T003'
-            WHERE t006.road_code = 'T006'
-        """)
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == 1
-    finally:
-        db_connection.rollback()
-        for sequence_name, (last_value, is_called) in sequences.items():
-            cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
-        db_connection.commit()
-        db_connection.close()
+    # The two parts of T003 and the edge T006 share the same node
+    cursor.execute("""
+        SELECT count(DISTINCT n.id)
+        FROM road_graph_editing.edges AS t006
+        JOIN road_graph_editing.nodes AS n
+            ON n.id = t006.end_node
+        JOIN road_graph_editing.edges AS t003
+            ON n.id IN (t003.start_node, t003.end_node)
+            AND t003.road_code = 'T003'
+        WHERE t006.road_code = 'T006'
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == 1
 
 
 def test_get_reference_from_point():
@@ -2423,123 +2342,106 @@ def test_update_managed_objects():
     ]
 
 
-def test_split_table_linestring_feature_by_point(db_connection: psycopg.Connection):
+def test_split_table_linestring_feature_by_point(rollback_db_connection: psycopg.Connection):
     """Split a managed object linestring by a point, like the Lizmap action split_line_by_point.
     The safety barrier 3 (D72, 2+100 -> 3+10) has no trigger calculating the references:
     the function must set the references of the cut point.
     The changes are rolled back at the end of the test."""
-    cursor = db_connection.cursor()
+    cursor = rollback_db_connection.cursor()
 
-    # The sequence is not reset by the rollback: store its value to restore it afterwards
-    cursor.execute("SELECT pg_get_serial_sequence('managed.demo_safety_barriers', 'id')")
+    # Cut point at 40% of the line, and its references
+    cursor.execute("""
+        SELECT
+            ST_AsText(ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4)),
+            road_graph.get_reference_from_point(
+                ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4), road_code
+            )
+        FROM managed.demo_safety_barriers
+        WHERE id = 3
+    """)
     row = cursor.fetchone()
     assert row is not None
-    sequence_name = row[0]
-    cursor.execute(f"SELECT last_value, is_called FROM {sequence_name}")
+    point, point_references = row
+    cut_marker = point_references["marker_code"]
+    cut_abscissa = round(float(point_references["abscissa"]), 2)
+
+    cursor.execute(
+        """
+        SELECT road_graph.split_table_linestring_feature_by_point(
+            'managed', 'demo_safety_barriers', 3, ST_GeomFromText(%s, 2154)
+        )->>'status'
+        """,
+        (point,),
+    )
     row = cursor.fetchone()
     assert row is not None
-    last_value, is_called = row
-    db_connection.commit()
+    assert row[0] == "success"
 
-    try:
-        # Cut point at 40% of the line, and its references
-        cursor.execute("""
-            SELECT
-                ST_AsText(ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4)),
-                road_graph.get_reference_from_point(
-                    ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4), road_code
-                )
-            FROM managed.demo_safety_barriers
-            WHERE id = 3
-        """)
-        row = cursor.fetchone()
-        assert row is not None
-        point, point_references = row
-        cut_marker = point_references["marker_code"]
-        cut_abscissa = round(float(point_references["abscissa"]), 2)
+    # The feature keeps its start references, and ends at the cut point.
+    # The new feature starts at the cut point, and keeps the end references
+    cursor.execute("""
+        SELECT
+            start_marker_code, round(start_abscissa::numeric, 2)::float,
+            end_marker_code, round(end_abscissa::numeric, 2)::float,
+            "offset", side
+        FROM managed.demo_safety_barriers
+        WHERE road_code = 'D72'
+        ORDER BY id
+    """)
+    rows = cursor.fetchall()
+    assert len(rows) == 2
+    assert list(rows[0]) == [2, 100.0, cut_marker, cut_abscissa, 0.0, "right"]
+    assert list(rows[1]) == [cut_marker, cut_abscissa, 3, 10.0, 0.0, "right"]
 
-        cursor.execute(
-            """
-            SELECT road_graph.split_table_linestring_feature_by_point(
-                'managed', 'demo_safety_barriers', 3, ST_GeomFromText(%s, 2154)
-            )->>'status'
-            """,
-            (point,),
-        )
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == "success"
+    # Same split for a feature digitized in the opposite direction of the road (3+10 -> 2+100)
+    rollback_db_connection.rollback()
+    cursor.execute("""
+        UPDATE managed.demo_safety_barriers
+        SET
+            geom = ST_Reverse(geom),
+            start_marker_code = 3, start_abscissa = 10,
+            end_marker_code = 2, end_abscissa = 100
+        WHERE id = 3
+        RETURNING
+            ST_AsText(ST_StartPoint(ST_GeometryN(geom, 1))),
+            ST_AsText(ST_EndPoint(ST_GeometryN(geom, 1)))
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    start_point, end_point = row
+    cursor.execute(
+        """
+        SELECT road_graph.split_table_linestring_feature_by_point(
+            'managed', 'demo_safety_barriers', 3, ST_GeomFromText(%s, 2154)
+        )->>'status'
+        """,
+        (point,),
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "success"
 
-        # The feature keeps its start references, and ends at the cut point.
-        # The new feature starts at the cut point, and keeps the end references
-        cursor.execute("""
-            SELECT
-                start_marker_code, round(start_abscissa::numeric, 2)::float,
-                end_marker_code, round(end_abscissa::numeric, 2)::float,
-                "offset", side
-            FROM managed.demo_safety_barriers
-            WHERE road_code = 'D72'
-            ORDER BY id
-        """)
-        rows = cursor.fetchall()
-        assert len(rows) == 2
-        assert list(rows[0]) == [2, 100.0, cut_marker, cut_abscissa, 0.0, "right"]
-        assert list(rows[1]) == [cut_marker, cut_abscissa, 3, 10.0, 0.0, "right"]
-
-        # Same split for a feature digitized in the opposite direction of the road (3+10 -> 2+100)
-        db_connection.rollback()
-        cursor.execute("""
-            UPDATE managed.demo_safety_barriers
-            SET
-                geom = ST_Reverse(geom),
-                start_marker_code = 3, start_abscissa = 10,
-                end_marker_code = 2, end_abscissa = 100
-            WHERE id = 3
-            RETURNING
-                ST_AsText(ST_StartPoint(ST_GeometryN(geom, 1))),
-                ST_AsText(ST_EndPoint(ST_GeometryN(geom, 1)))
-        """)
-        row = cursor.fetchone()
-        assert row is not None
-        start_point, end_point = row
-        cursor.execute(
-            """
-            SELECT road_graph.split_table_linestring_feature_by_point(
-                'managed', 'demo_safety_barriers', 3, ST_GeomFromText(%s, 2154)
-            )->>'status'
-            """,
-            (point,),
-        )
-        row = cursor.fetchone()
-        assert row is not None
-        assert row[0] == "success"
-
-        # The two features keep the direction of the original feature
-        cursor.execute("""
-            SELECT
-                start_marker_code, round(start_abscissa::numeric, 2)::float,
-                end_marker_code, round(end_abscissa::numeric, 2)::float,
-                ST_AsText(ST_StartPoint(ST_GeometryN(geom, 1))),
-                ST_AsText(ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom))))
-            FROM managed.demo_safety_barriers
-            WHERE road_code = 'D72'
-            ORDER BY id
-        """)
-        rows = cursor.fetchall()
-        assert len(rows) == 2
-        assert list(rows[0][0:4]) == [3, 10.0, cut_marker, cut_abscissa]
-        assert list(rows[1][0:4]) == [cut_marker, cut_abscissa, 2, 100.0]
-        # The first feature starts at the original start point,
-        # the second feature ends at the original end point
-        assert rows[0][4] == start_point
-        assert rows[1][5] == end_point
-        # The first feature ends where the second feature starts
-        assert rows[0][5] == rows[1][4]
-    finally:
-        db_connection.rollback()
-        cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
-        db_connection.commit()
-        db_connection.close()
+    # The two features keep the direction of the original feature
+    cursor.execute("""
+        SELECT
+            start_marker_code, round(start_abscissa::numeric, 2)::float,
+            end_marker_code, round(end_abscissa::numeric, 2)::float,
+            ST_AsText(ST_StartPoint(ST_GeometryN(geom, 1))),
+            ST_AsText(ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom))))
+        FROM managed.demo_safety_barriers
+        WHERE road_code = 'D72'
+        ORDER BY id
+    """)
+    rows = cursor.fetchall()
+    assert len(rows) == 2
+    assert list(rows[0][0:4]) == [3, 10.0, cut_marker, cut_abscissa]
+    assert list(rows[1][0:4]) == [cut_marker, cut_abscissa, 2, 100.0]
+    # The first feature starts at the original start point,
+    # the second feature ends at the original end point
+    assert rows[0][4] == start_point
+    assert rows[1][5] == end_point
+    # The first feature ends where the second feature starts
+    assert rows[0][5] == rows[1][4]
 
 
 def test_changes_on_marker_and_edge_geometry():

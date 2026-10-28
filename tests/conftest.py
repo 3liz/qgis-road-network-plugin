@@ -15,6 +15,7 @@ from .conftest_database import (  # noqa F401
     db_install_version,
     db_schema,
     processing_provider,
+    rollback_db_connection,
 )
 from .qgis_testing import QGIS_VERSION_INT, install_logger_hook, load_plugin
 

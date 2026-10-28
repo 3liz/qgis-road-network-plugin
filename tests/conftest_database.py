@@ -2,6 +2,7 @@
 
 import os
 
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -73,3 +74,33 @@ def db_connection() -> psycopg.Connection:
         )
 
     return connection
+
+
+@pytest.fixture()
+def rollback_db_connection(db_connection: psycopg.Connection) -> Iterator[psycopg.Connection]:
+    """Return a db connection whose changes are rolled back at the end of the test.
+
+    The sequences are not reset by the rollback: their values are stored before the test
+    and restored afterwards, since the following tests check the ids of the created objects.
+    """
+    cursor = db_connection.cursor()
+    cursor.execute("""
+        SELECT format('%I.%I', schemaname, sequencename)
+        FROM pg_sequences
+        WHERE schemaname IN ('road_graph', 'road_graph_editing', 'managed')
+    """)
+    sequences: dict[str, tuple[int, bool]] = {}
+    for (sequence_name,) in cursor.fetchall():
+        cursor.execute(f"SELECT last_value, is_called FROM {sequence_name}")
+        row = cursor.fetchone()
+        assert row is not None
+        sequences[sequence_name] = (row[0], row[1])
+    db_connection.commit()
+
+    yield db_connection
+
+    db_connection.rollback()
+    for sequence_name, (last_value, is_called) in sequences.items():
+        cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
+    db_connection.commit()
+    db_connection.close()
