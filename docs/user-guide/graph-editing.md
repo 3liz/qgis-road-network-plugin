@@ -7,15 +7,20 @@ but in a **dedicated editing session schema** `road_graph_editing`, which acts a
 
 1. The user **draws a polygon** in the `editing_sessions` layer around the area to edit.
    The new editing session has the status `created`.
+   ![Draw a polygon](../media/user-guide/qgis_create_editing_sessions_polygon.gif)
 2. The algorithm `Clone data to a new editing session` (toolbar button `Clone data to the editing sandbox`,
    or layer action [Create editing session](#create-editing-session))
    **copies an extract of the production data** inside this polygon into the sandbox.
    The status becomes `cloned`.
+
+   ![Clone data to editing session](../media/user-guide/qgis_clone_data_to_editing_session.gif)
 3. The **editing** is made with the **QGIS tools**: forms, topological editing, etc.
    The status becomes `edited` after the first change.
     * QGIS **automatic transaction grouping** is activated in the project:
       the changes made by the database triggers (node creation, edge split, etc.) are visible **live**.
     * A layer action helps to **create roundabouts**, see [Create a roundabout](#create-a-roundabout).
+
+   ![Edit the data](../media/user-guide/qgis_add_a_road_and_an_edge.gif)
 4. The algorithm `Merge editing session data` (toolbar button `Merge editing sandbox data`)
    **merges the modifications back** into the `road_graph` schema
    and updates the [managed objects](managed-objects.md).
@@ -25,7 +30,6 @@ At any time, the modifications of the editing session can be highlighted with th
 [Display edited data](#display-edited-data), and the editing session can be cancelled
 with the action [Drop editing session](#drop-editing-session).
 
-![Editing in QGIS](../media/user-guide/qgis_editing.gif)
 
 ## Editing session actions
 
@@ -42,7 +46,6 @@ inside the last created editing session polygon into the editing schema, like th
 It is a **layer action**: it is available in the `Actions` menu of the `editing_sessions` attribute table toolbar,
 and does not need any selected feature.
 
-![Action Create editing session](../media/user-guide/qgis_action_create_editing_session.png)
 
 ### Display edited data
 
@@ -58,7 +61,7 @@ from the content of its `logged_ids` column of the layer `editing_sessions`. The
 The **edges**, **nodes** and **markers** are displayed. A message is displayed if the editing session
 does not contain any modification.
 
-![Action Display edited data](../media/user-guide/qgis_action_display_edited_data.png)
+![Action Display edited data](../media/user-guide/qgis_action_display_edited_data.gif)
 
 ### Drop editing session
 
@@ -74,14 +77,14 @@ The action is cancelled with a warning if:
 
 You may have to refresh the map canvas to see the changes.
 
-!!! None
+!!! Info
     Do not forget to save the state by clicking on the **Save** button of QGIS editing toolbar.
 
 ![Action Drop editing session](../media/user-guide/qgis_action_drop_editing_session.png)
 
 ## Create a roundabout
 
-Roundabouts have their own road code, e.g. `GIR_D40_D80`, and cut the other roads
+**Roundabouts** have their own road code, e.g. `GIR_D40_D80`, and cut the other roads
 (see [Concepts](../concepts/index.md#corner-cases)).
 The road of the roundabout must exist in the `roads` layer with the road type `roundabout`.
 
@@ -95,7 +98,7 @@ To create a roundabout in the editing session:
 4. Right-click on one of the edges of the roundabout circle with the `Identify Features` tool,
    and choose the action `Finalize the roundabout`.
 
-![Action Finalize the roundabout](../media/user-guide/qgis_action_finalize_roundabout.png)
+![Action Finalize the roundabout](../media/user-guide/qgis_create_roundabout.gif)
 
 This layer action of the `edges copie` layer runs the database function `clean_digitized_roundabout`, which:
 

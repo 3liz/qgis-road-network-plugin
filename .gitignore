@@ -65,3 +65,5 @@ docs/database
 
 .docker/road_graph/
 .test-migration-*
+
+docs/media/user-guide/*.mp4
