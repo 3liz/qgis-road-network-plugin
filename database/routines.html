@@ -400,7 +400,7 @@
                                         <td>false</td>
                                         <td>json</td>
                                         <td>INVOKER</td>
-                                        <td><p>Splits a table linestring feature by a given point.</p></td>
+                                        <td><p>Splits a table linestring feature by a given point. The feature keeps the first part, and a new feature is created with the second part. If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa, the references of the cut point become the end references of the feature and the start references of the new feature. The feature can be digitized in the direction of the road or in the opposite direction: the new geometries keep its direction.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/update_road_edges_neighbours__r_863ac281.html">update_road_edges_neighbours(_road_code text, _start_node integer)</a></td>

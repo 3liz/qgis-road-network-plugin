@@ -5750,7 +5750,11 @@ END;]]></definition>
          </parameters>
       </routine>
       <routine dataAccess="MODIFIES" deterministic="false" name="split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)" returnType="json" securityType="INVOKER" type="FUNCTION">
-         <comment><![CDATA[Splits a table linestring feature by a given point.]]></comment>
+         <comment><![CDATA[Splits a table linestring feature by a given point.
+The feature keeps the first part, and a new feature is created with the second part.
+If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa,
+the references of the cut point become the end references of the feature and the start references of the new feature.
+The feature can be digitized in the direction of the road or in the opposite direction: the new geometries keep its direction.]]></comment>
          <definition language="plpgsql"><![CDATA[DECLARE
     primary_key_field text;
     geometry_column_data record;
@@ -5768,6 +5772,12 @@ END;]]></definition>
     sql_text text;
     update_result record;
     insert_result record;
+    table_cols text[];
+    has_references boolean;
+    update_references_sql text;
+    insert_references_fields text;
+    insert_references_values text;
+    is_reversed boolean;
     v_sqlstate text;
     v_message text;
     v_context text;
@@ -5813,6 +5823,24 @@ BEGIN
             'message', format('The table %I.%I does not have a geometry column !', _schema_name, _table_name)
         );
     END IF;
+
+    -- Check if the table has the references fields of the managed objects
+    sql_text = format(
+        $SQL$
+        SELECT array_agg(column_name::text) AS cols
+        FROM information_schema.columns
+        WHERE table_schema = '%1$s' AND table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO table_cols
+    ;
+    has_references = Coalesce(
+        table_cols @> ARRAY['start_marker_code', 'start_abscissa', 'end_marker_code', 'end_abscissa']::text[],
+        False
+    );
 
     -- Get feature
     sql_text = format(
@@ -5915,23 +5943,76 @@ BEGIN
     );
 
     -- Build the new geometries
-    geom_1 = ((road_graph.get_road_substring_from_references(
-        to_jsonb(feature)->>'road_code',
-        (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
-        (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
-        (start_references->>'offset')::real, start_references->>'side'
-    ))->>'geom')::geometry(MultiLinestring, 2154);
-    geom_2 = ((road_graph.get_road_substring_from_references(
-        to_jsonb(feature)->>'road_code',
-        (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
-        (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
-        (start_references->>'offset')::real, start_references->>'side'
-    ))->>'geom')::geometry(MultiLinestring, 2154);
+    -- geom_1: from the feature start point to the cut point
+    -- geom_2: from the cut point to the feature end point
+    -- The feature can be digitized in the opposite direction of the road:
+    -- the road substrings must be calculated in the road direction,
+    -- then reversed to keep the direction of the feature
+    is_reversed = (start_references->>'cumulative')::real > (end_references->>'cumulative')::real;
+    IF NOT is_reversed THEN
+        geom_1 = ((road_graph.get_road_substring_from_references(
+            to_jsonb(feature)->>'road_code',
+            (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
+            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+            (start_references->>'offset')::real, start_references->>'side'
+        ))->>'geom')::geometry(MultiLinestring, 2154);
+        geom_2 = ((road_graph.get_road_substring_from_references(
+            to_jsonb(feature)->>'road_code',
+            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+            (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
+            (start_references->>'offset')::real, start_references->>'side'
+        ))->>'geom')::geometry(MultiLinestring, 2154);
+    ELSE
+        geom_1 = ((road_graph.get_road_substring_from_references(
+            to_jsonb(feature)->>'road_code',
+            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+            (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
+            (start_references->>'offset')::real, start_references->>'side'
+        ))->>'geom')::geometry(MultiLinestring, 2154);
+        geom_2 = ((road_graph.get_road_substring_from_references(
+            to_jsonb(feature)->>'road_code',
+            (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
+            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+            (start_references->>'offset')::real, start_references->>'side'
+        ))->>'geom')::geometry(MultiLinestring, 2154);
+        -- Reverse the parts and their order
+        geom_1 = (
+            SELECT ST_Multi(ST_Collect(ST_Reverse(d.geom) ORDER BY d.path DESC))
+            FROM ST_Dump(geom_1) AS d
+        );
+        geom_2 = (
+            SELECT ST_Multi(ST_Collect(ST_Reverse(d.geom) ORDER BY d.path DESC))
+            FROM ST_Dump(geom_2) AS d
+        );
+    END IF;
 
     -- Transform geometries into multigeometries if needed
     IF geometry_column_data.geom_type ILIKE 'multi%' THEN
         geom_1 = ST_Multi(geom_1);
         geom_2 = ST_Multi(geom_2);
+    END IF;
+
+    -- References of the cut point:
+    -- they become the end references of the feature and the start references of the new feature.
+    -- The start references of the feature are kept, and the new feature gets the original end references.
+    -- The new feature is created from the updated feature: its end references are set explicitly
+    update_references_sql = '';
+    insert_references_fields = '';
+    insert_references_values = '';
+    IF has_references THEN
+        update_references_sql = format(
+            ', end_marker_code = %1$L::integer, end_abscissa = %2$L::real',
+            closest_point_references->>'marker_code',
+            closest_point_references->>'abscissa'
+        );
+        insert_references_fields = ', start_marker_code, start_abscissa, end_marker_code, end_abscissa';
+        insert_references_values = format(
+            ', %1$L::integer, %2$L::real, %3$L::integer, %4$L::real',
+            closest_point_references->>'marker_code',
+            closest_point_references->>'abscissa',
+            to_jsonb(feature)->>'end_marker_code',
+            to_jsonb(feature)->>'end_abscissa'
+        );
     END IF;
 
     -- Update the feature and insert the new one
@@ -5942,7 +6023,7 @@ BEGIN
             $SQL$
                 WITH up AS (
                     UPDATE %1$I.%2$I
-                    SET %3$I = ST_GeomFromGeoJSON('%4$s')
+                    SET %3$I = ST_GeomFromGeoJSON('%4$s')%7$s
                     WHERE True
                     AND %5$I = %6$s
                     RETURNING *
@@ -5955,13 +6036,15 @@ BEGIN
             geometry_column_data.geom_name,
             ST_AsGeoJSON(geom_1),
             primary_key_field,
-            (to_jsonb(feature))->>primary_key_field
+            (to_jsonb(feature))->>primary_key_field,
+            update_references_sql
         );
         EXECUTE sql_text
         INTO update_result
         ;
 
         -- Get the object fields minus the PK, geometry column, start_cumulative
+        -- and the references, set explicitly
         WITH fields AS (
             SELECT json_object_keys(to_json(feature.*)) AS field
         )
@@ -5974,6 +6057,7 @@ BEGIN
             'start_marker', 'start_abscissa', 'start_cumulative',
             'uid', 'longueur'
         )
+        AND NOT (has_references AND field IN ('start_marker_code', 'end_marker_code', 'end_abscissa'))
         ;
 
         -- Create the new feature
@@ -5984,6 +6068,8 @@ BEGIN
                         %3$I,
                         -- fields
                         %4$s
+                        -- start references
+                        %8$s
                 )
                 WITH source AS (
                     SELECT s.*
@@ -5996,6 +6082,8 @@ BEGIN
                     ST_GeomFromGeoJSON('%5$s'),
                     -- fields
                     %4$s
+                    -- start references
+                    %9$s
                 FROM source
                 RETURNING *
             $SQL$,
@@ -6005,7 +6093,9 @@ BEGIN
             source_fields,
             ST_AsGeoJSON(geom_2),
             primary_key_field,
-            (to_jsonb(feature))->>primary_key_field
+            (to_jsonb(feature))->>primary_key_field,
+            insert_references_fields,
+            insert_references_values
         );
         EXECUTE sql_text
         INTO insert_result
