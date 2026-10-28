@@ -79,7 +79,7 @@ class ToolsDockWidget(QgsDockWidget, QtWidgets.QDockWidget, FORM_CLASS):  # type
             # Press return on any form key
             suffix = "" if schema == "road_graph" else "_sandbox"
             for key in form_fields:
-                input = self.findChild(QgsFilterLineEdit, f"key{suffix}")
+                input = self.findChild(QgsFilterLineEdit, f"{key}{suffix}")
                 if input:
                     input.returnPressed.connect(button.click)
 

@@ -275,7 +275,7 @@ class HoverMapTool(QgsMapTool):
             if references[schema]["error"]:
                 iface.messageBar().pushMessage(
                     "RoadNetwork",
-                    f"Error fetching references from {schema}: {references[schema]['²']}",
+                    f"Error fetching references from {schema}: {references[schema]['error']}",
                     Qgis.MessageLevel.Critical,
                 )
             if str(references[schema]["road_code"]) != "NULL":

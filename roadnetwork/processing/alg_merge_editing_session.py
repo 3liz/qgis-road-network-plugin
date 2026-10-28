@@ -41,8 +41,9 @@ class MergeEditingSession(BaseProcessingAlgorithm):
 
     def shortHelpString(self):
         return tr(
-            "This algorithm will allow to clone the data "
-            " related to the editing session area into the sandbox"
+            "This algorithm will merge the data of the editing session "
+            "from the sandbox into the production data, "
+            "and update the managed objects impacted by the changes"
             "\n"
         )
 
