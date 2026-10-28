@@ -400,6 +400,133 @@ def test_no_orphan_node_when_crossing_several_edges(db_connection: psycopg.Conne
         db_connection.close()
 
 
+def test_split_edge_does_not_cut_existing_bridges(db_connection: psycopg.Connection):
+    """A new edge arriving in the middle of an edge which crosses another edge without node (a bridge):
+    the edge is split by the end point of the new edge, but its parts must not create a node at the bridge.
+    Before, the parts of the split edges created the nodes at all their intersections,
+    which were propagated to the edges crossing them, and so on (e.g. a whole highway interchange).
+    The changes are rolled back at the end of the test."""
+    cursor = db_connection.cursor()
+
+    # The sequences are not reset by the rollback: store their values to restore them afterwards,
+    # since the following tests check the ids of the created objects.
+    # During an editing session, the road_graph_editing tables use the road_graph sequences
+    sequences: dict[str, tuple[int, bool]] = {}
+    for table in ("edges", "nodes", "markers", "roads"):
+        cursor.execute(f"SELECT pg_get_serial_sequence('road_graph.{table}', 'id')")
+        sequence = cursor.fetchone()
+        assert sequence is not None
+        cursor.execute(f"SELECT last_value, is_called FROM {sequence[0]}")
+        values = cursor.fetchone()
+        assert values is not None
+        sequences[sequence[0]] = (values[0], values[1])
+    db_connection.commit()
+
+    try:
+        # A long edge inside the editing session
+        cursor.execute("""
+            SELECT e.id, e.road_code
+            FROM road_graph_editing.edges AS e
+            WHERE ST_Length(e.geom) > 400
+            AND ST_Within(
+                e.geom,
+                (SELECT es.geom FROM road_graph.editing_sessions AS es WHERE es.id = 1)
+            )
+            ORDER BY e.id
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
+        assert row is not None
+        edge_id, road_code = row
+
+        cursor.execute("""
+            INSERT INTO road_graph_editing.roads (road_code, road_type, road_class) VALUES
+            ('T997', 'road', 'Communale'),
+            ('T998', 'road', 'Communale')
+        """)
+
+        # The bridge: an edge crossing this edge at 30% of its length, without node,
+        # inserted with the triggers disabled like imported data
+        cursor.execute("SELECT set_config('road.graph.disable.trigger', '1', true)")
+        cursor.execute(
+            """
+            INSERT INTO road_graph_editing.edges (road_code, geom)
+            SELECT
+                'T997',
+                ST_MakeLine(
+                    ST_Translate(ST_LineInterpolatePoint(geom, 0.3), -30, -30),
+                    ST_Translate(ST_LineInterpolatePoint(geom, 0.3), 30, 30)
+                )
+            FROM road_graph_editing.edges
+            WHERE id = %s
+            """,
+            (edge_id,),
+        )
+        cursor.execute("SELECT set_config('road.graph.disable.trigger', '0', true)")
+
+        cursor.execute(
+            """
+            SELECT ST_AsText(
+                ST_Intersection(
+                    (SELECT geom FROM road_graph_editing.edges WHERE road_code = 'T997'),
+                    (SELECT geom FROM road_graph_editing.edges WHERE id = %s)
+                )
+            )
+            """,
+            (edge_id,),
+        )
+        row = cursor.fetchone()
+        assert row is not None
+        bridge = row[0]
+        assert bridge.startswith("POINT")
+
+        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s", (road_code,))
+        row = cursor.fetchone()
+        assert row is not None
+        edges_before = row[0]
+
+        # A new edge arriving in the middle of the edge, at 70% of its length
+        cursor.execute(
+            """
+            INSERT INTO road_graph_editing.edges (road_code, geom)
+            SELECT
+                'T998',
+                ST_MakeLine(
+                    ST_Translate(ST_LineInterpolatePoint(geom, 0.7), 40, -40),
+                    ST_LineInterpolatePoint(geom, 0.7)
+                )
+            FROM road_graph_editing.edges
+            WHERE id = %s
+            """,
+            (edge_id,),
+        )
+
+        # The edge has been split by the end point of the new edge
+        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s", (road_code,))
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == edges_before + 1
+
+        # But no node has been created at the bridge
+        cursor.execute(
+            """
+            SELECT count(*)
+            FROM road_graph_editing.nodes
+            WHERE ST_DWithin(geom, ST_GeomFromText(%s, 2154), 0.5)
+            """,
+            (bridge,),
+        )
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 0
+    finally:
+        db_connection.rollback()
+        for sequence_name, (last_value, is_called) in sequences.items():
+            cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
+        db_connection.commit()
+        db_connection.close()
+
+
 def test_create_edge(processing_provider: Provider):
     """Test the creation of a new edge in the editing session and the calculation of its attributes"""
 
@@ -984,7 +1111,7 @@ def test_create_roundabout(processing_provider: Provider):
     assert edges[3] is not None
 
     # Check the ids
-    assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [3529, 7822, 862, 7816]
+    assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [3529, 7818, 862, 7816]
 
     # Check the references of the edges
     assert list(edges[0][4:10]) == [8, 243, 8257.66, 8, 971.93, 8986.59]
@@ -1047,7 +1174,7 @@ def test_create_roundabout(processing_provider: Provider):
     assert edges[3] is not None
 
     # Check the ids of the edges of the roundabout
-    assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [7819, 7820, 7817, 7815]
+    assert [edges[0][0], edges[1][0], edges[2][0], edges[3][0]] == [7820, 7821, 7817, 7815]
 
     # Check the references of the edges of the roundabout
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0, 0]
@@ -1060,9 +1187,9 @@ def test_create_roundabout(processing_provider: Provider):
     assert [edges[3][7], edges[3][8], edges[3][9]] == [0, 56.46, 56.46]
 
     # Check previous_edge_id and next_edge_id of the roundabout edges
-    assert [edges[0][10], edges[0][11]] == [None, 7820]
-    assert [edges[1][10], edges[1][11]] == [7819, 7817]
-    assert [edges[2][10], edges[2][11]] == [7820, 7815]
+    assert [edges[0][10], edges[0][11]] == [None, 7821]
+    assert [edges[1][10], edges[1][11]] == [7820, 7817]
+    assert [edges[2][10], edges[2][11]] == [7821, 7815]
     assert [edges[3][10], edges[3][11]] == [7817, None]
 
 
@@ -2050,8 +2177,8 @@ def test_editing_session_logged_objects():
         "7815": "I",
         "7816": "I",
         "7817": "I",
-        "7820": "I",
-        "7822": "I",
+        "7818": "I",
+        "7821": "I",
         "7823": "I",
     }
     assert json.loads(results[0][4]) == {

@@ -108,46 +108,56 @@ This layer action of the `edges copie` layer runs the database function `clean_d
 
 The action is cancelled with a warning if the layer is not in editing mode,
 or if the road type of the selected edge is not `roundabout`.
+You may have to refresh the map canvas to see the changes.
 
 ## Edges which must not be cut
 
 By default, the database **trigger functions** keep the graph topology up to date while you edit:
 
-* when a new or modified edge **crosses** other edges, a **node** is created at each intersection
-  and the crossing edges are **split** by this node,
-* when a **node** is created or moved on an edge, this edge is **split** by the node.
+* when an edge is **drawn** or its **geometry is modified**, a **node** is created at each **intersection**
+  of this edge with the other edges, and the crossing edges are **split** by this node.
+  If a node already exists less than 50 cm from the intersection, it is used instead.
+* when a **node** is created or moved on an edge, far enough from its start and end points, this edge is **split** by the node.
+  This is also the case of the start or end node of an edge being drawn,
+  for example a new road arriving in the middle of another road.
+
+Only the intersections of the **drawn or modified edge** are processed, and only **inside the editing session polygon**.
+The intersections between the other edges are kept as they are: two edges crossing each other without a node,
+for example at an existing bridge, stay without a node, even when one of them is split by the drawn edge.
 
 But two roads drawn on top of each other are **not always connected**: a highway crossing a road on a **bridge**,
 a road going through a **tunnel**, the **access roads** of a highway interchange, etc.
 For these edges, check the field **No intersection cutting** (`no_intersection_cutting`) in the edge form.
-It can be changed at any time, for example before drawing a new road across a highway interchange.
+It can be changed at any time, for example before drawing or modifying a road which crosses a bridge.
 
 An edge with `no_intersection_cutting` set to `True`:
 
-* is **not split** by the other edges **crossing** it, and does not split them:
-  no node is created at the intersection,
+* is **not split** at its **intersections** with the other edges, and does not split them:
+  no node is created at these intersections, whether the field is set on the drawn edge or on the crossed edge,
 * is **not split** by the **existing nodes** located under it,
   for example a crossroad of the roads located under a bridge,
-* **is split** when the **start or end point** of a new or moved edge is located on it,
+  even when such a node is moved,
+* **is split** when the **start or end point** of a drawn or moved edge is located on it,
   far enough from its own start and end points: for example a **new access road arriving in the middle of a highway edge**.
   This makes sense since the two roads are really connected at this point.
+
+The value of the field is kept when an edge is split: the new parts have the same value.
 
 The diagram below shows when an edge is split:
 
 ```mermaid
 graph TD
-    A[A node is created or moved on an edge,<br>or a new edge crosses it] --> B{Field No intersection cutting<br>of this edge or of the new edge}
-    B -->|False for both| C[The edge is split]
-    B -->|True for one of them| D{Is the node the start or end point<br>of the edge being drawn or moved?}
+    A[A node is created or moved on an edge,<br>or a drawn or modified edge crosses it] --> B{Field No intersection cutting<br>of this edge, or of the drawn edge}
+    B -->|False| C[The edge is split]
+    B -->|True| D{Is the node the start or end point<br>of the edge being drawn or moved?}
     D -->|Yes, e.g. a new access road<br>arriving on a highway| C
     D -->|No, e.g. a road crossing<br>under a bridge| E[The edge is not split]
 ```
 
 !!! Tip
-    In a **highway interchange**, set the field to `True` for the highway and access roads edges
-    **before drawing** a new road across the interchange: only the other roads will be split.
-    The value is kept when an edge is split, so the new parts are also protected.
-You may have to refresh the map canvas to see the changes.
+    Before drawing a new road which crosses a **highway interchange** without being connected to it,
+    set the field to `True` for the new edge, or for the crossed highway and access roads edges:
+    no node will be created at these intersections, and only the roads really connected will be split.
 
 ## How to edit the data in QGIS
 

@@ -16,6 +16,15 @@
 --   from the remaining points of the loop, which created a second node not linked to any edge.
 --   Check that no node exists closer than 50 cm before creating a crossing node.
 --
+-- Cascading splits of the edges crossing without node (bridges, highway interchanges):
+-- * after_edge_insert_or_update: the test of the variable road.graph.edge.crossing.node.creation.pending
+--   was not applied for INSERT, because of the precedence of AND over OR in the condition.
+-- * split_edge_by_node: the two parts of the split edge do not create nodes at their intersections
+--   with the other edges, nor are split by the existing nodes: these intersections existed before the split.
+-- Before, the parts of each split edge created nodes at all their intersections, which were propagated
+-- to the edges crossing them, and so on: drawing one edge across a highway interchange
+-- cut all its bridges and took several minutes.
+--
 -- This migration is idempotent: it only contains CREATE OR REPLACE FUNCTION and COMMENT.
 
 
@@ -312,7 +321,8 @@ $$;
 -- FUNCTION: road_graph.after_edge_insert_or_update
 -- Declare the move of the start and end nodes of the edge.
 -- Do not split the NEW edge by the existing nodes if no_intersection_cutting is True.
--- Do not create a crossing node if a node has been created since by the cascading changes
+-- Do not create a crossing node if a node has been created since by the cascading changes.
+-- Fix the test of the variable road.graph.edge.crossing.node.creation.pending, which was not applied for INSERT
 CREATE OR REPLACE FUNCTION road_graph.after_edge_insert_or_update() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -525,7 +535,9 @@ BEGIN
     -- DO IT ONLY FOR GEOMETRIES INSIDE THE EDITION AREA
     -- DO IT ONLY FOR EDGES WITH THE SAME LEVEL
     created_nodes_at_intersection = ARRAY[]::integer[];
-    IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NOT ST_Equals(OLD.geom, NEW.geom))
+    -- Beware of the parentheses: AND has a higher precedence than OR,
+    -- and the test on the variable must also be applied for INSERT
+    IF (TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NOT ST_Equals(OLD.geom, NEW.geom)))
         -- avoid infinite loop and self-crossing
         AND road_graph.get_current_setting('road.graph.edge.crossing.node.creation.pending', 'no') != 'yes'
 
@@ -908,6 +920,213 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+
+-- FUNCTION: road_graph.split_edge_by_node
+-- The parts of the split edge do not create nodes at their existing intersections
+CREATE OR REPLACE FUNCTION road_graph.split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real) RETURNS integer
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+    source_fields text;
+    start_geom geometry;
+    end_geom geometry;
+    id_new_object integer;
+    new_edge_record record;
+    sql_text text;
+    raise_notice text;
+    edge_road record;
+    is_roundabout boolean;
+    previous_crossing_node_creation_pending text;
+BEGIN
+    -- log level
+    raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
+
+    -- Get edge road
+    SELECT INTO edge_road
+        r.*
+    FROM road_graph.roads AS r
+    WHERE r.road_code = edge_record.road_code
+    ;
+    IF edge_road.id IS NULL THEN
+        RAISE EXCEPTION 'The road code given for this edge does not exist !';
+    END IF;
+    is_roundabout = (edge_road.road_type = 'roundabout');
+
+    -- Check point is close enough to the given edge
+    IF ST_Distance(node_record.geom, edge_record.geom) > minimum_distance_from_linestring THEN
+        RAISE NOTICE 'No edge found close enough to the node : Distance % m > % m ',
+            ST_Distance(node_record.geom, edge_record.geom), minimum_distance_from_linestring
+        ;
+        RETURN NULL;
+    END IF;
+
+    -- Check the edge is not already cut
+    IF node_record.id IN (edge_record.start_node, edge_record.end_node)
+        OR ST_DWithin(node_record.geom, ST_StartPoint(edge_record.geom), 0.50)
+        OR ST_DWithin(node_record.geom, ST_EndPoint(edge_record.geom), 0.50)
+    THEN
+        RAISE NOTICE 'Given edge is already cut for this node which corresponds to its start or end point'
+        ;
+        RETURN NULL;
+    END IF;
+
+    -- Create new geometries
+    start_geom := ST_LineSubstring(
+        edge_record.geom,
+        0,
+        ST_LineLocatePoint(edge_record.geom, node_record.geom)
+    );
+    end_geom := ST_LineSubstring(
+        edge_record.geom,
+        ST_LineLocatePoint(edge_record.geom, node_record.geom),
+        1
+    );
+
+    -- Check the cut point is not to close to the start or end point of the given linestring
+    IF ST_length(start_geom) < maximum_distance_from_start_end_points
+        OR ST_length(end_geom) < maximum_distance_from_start_end_points
+    THEN-- Set variable to avoid infinite loops
+        RAISE NOTICE 'Abort splitting the edge: given point too close from the edge end points ( < %m)', maximum_distance_from_start_end_points;
+        RETURN NULL;
+    END IF;
+
+    -- Modify the initial edge :
+    -- OA----------(O)----------OB becomes  OA----------(O)
+    -- we must get the new edge id beforehand to use it as next_edge_id
+    -- For roundabout, do not calculate previous and next edge id
+    -- To let the user decide
+    -- The quoted schema name "road_graph" is not replaced by the plugin:
+    -- the edges of the road_graph_editing schema also use the road_graph sequence
+    id_new_object = nextval(pg_get_serial_sequence('"road_graph".edges', 'id'));
+
+    -- The two parts of the split edge must not create nodes at their intersections with the other edges,
+    -- nor be split by the existing nodes located under them: these intersections existed before the split.
+    -- Without this, each split was propagated to the edges crossing the split edge, and so on,
+    -- for example to all the bridges of a highway interchange.
+    -- The intersections of the edge being drawn are managed by its own trigger (after_edge_insert_or_update).
+    previous_crossing_node_creation_pending = road_graph.get_current_setting(
+        'road.graph.edge.crossing.node.creation.pending', 'no'
+    );
+    PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'yes', true);
+
+    UPDATE road_graph.edges
+    SET
+        -- Set the geometry
+        geom = start_geom,
+        -- We must also set the downstream node id column
+        end_node = node_record.id,
+        -- next edge_id
+        next_edge_id = CASE WHEN is_roundabout THEN NULL ELSE id_new_object END,
+        -- end_cumulative
+        end_cumulative = (end_cumulative - ST_Length(end_geom))
+    WHERE id = edge_record.id
+    ;
+
+    -- Get the object fields minus the PK, upstream node & geometry column
+    WITH fields AS (
+        SELECT json_object_keys(to_json(edge_record.*)) AS field
+    )
+    SELECT concat ('"', string_agg(field, '", "'), '"')
+    INTO source_fields
+    FROM fields
+    WHERE field NOT IN (
+        'id', 'start_node', 'geom',
+        'previous_edge_id', 'next_edge_id',
+        'start_cumulative', 'uid'
+    )
+    ;
+
+    -- Check if the new edge geometry does not exists
+    -- This avoid to create 2 superimposed edges
+    -- especially for roundabouts.
+    SELECT INTO new_edge_record
+        e.id
+    FROM road_graph.edges AS e
+    WHERE
+        -- use ST_DWithin and not ST_Intersects to use spatial indexing
+        -- but keep a tolerance to avoid precision issues
+        ST_DWithin(e.geom, end_geom, 1)
+        AND (
+            ST_Equals(e.geom, end_geom)
+            OR ST_Equals(e.geom, ST_ReducePrecision(end_geom, 0.10))
+        )
+    LIMIT 1
+    ;
+
+    -- Create the new edge:
+    -- (O)----------OB
+    -- Get the values from the original linestring
+    -- Only if the geometry does not exists
+    IF new_edge_record.id IS NULL
+    THEN
+        sql_text = format(
+            $$
+                INSERT INTO road_graph.edges (
+                    id,
+                    %1$s,
+                    start_node,
+                    geom,
+                    previous_edge_id,
+                    next_edge_id,
+                    start_cumulative,
+                    uid
+                )
+                WITH source AS (
+                    SELECT e.*, r.road_type
+                    FROM road_graph.edges AS e
+                    JOIN road_graph.roads AS r
+                        ON r.road_code = e.road_code
+                    WHERE e.id = %2$s::integer
+                    LIMIT 1
+                )
+                SELECT
+                    %5$s::integer AS id,
+                    %1$s,
+                    %3$s::integer AS start_node,
+                    '%4$s'::geometry(LINESTRING) AS geom,
+                    CASE WHEN road_type = 'roundabout' THEN NULL ELSE %2$s::integer END AS previous_edge_id,
+                    CASE WHEN road_type = 'roundabout' THEN NULL ELSE(Nullif(%6$s, -1))::integer END AS next_edge_id,
+                    %7$s::real AS start_cumulative,
+                    uuid_generate_v4()::text
+                FROM source
+                LIMIT 1
+                RETURNING id
+            $$,
+            source_fields,
+            edge_record.id,
+            node_record.id,
+            end_geom,
+            id_new_object,
+            Coalesce(edge_record.next_edge_id, -1),
+            Coalesce(edge_record.end_cumulative, 0)
+        );
+
+        -- Set again the variable, in case it has been reset by the cascading changes
+        PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'yes', true);
+        EXECUTE sql_text
+        INTO id_new_object
+        ;
+
+        IF raise_notice IN ('info', 'debug') THEN
+            RAISE NOTICE '% split_edge_by_node - node n° % %- splitting edge n° % : created edge n° %',
+               repeat('    ', pg_trigger_depth()::integer), node_record.id, ST_AsText(node_record.geom), edge_record.id, id_new_object
+            ;
+        END IF;
+    ELSE
+        id_new_object = -1;
+    END IF;
+
+    -- Restore the variable
+    PERFORM set_config(
+        'road.graph.edge.crossing.node.creation.pending', previous_crossing_node_creation_pending, true
+    );
+
+    -- Return True
+    RETURN id_new_object;
+
+END;
+$_$;
 
 
 -- COLUMN: road_graph.edges.no_intersection_cutting

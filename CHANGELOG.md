@@ -34,6 +34,9 @@
 
 ### Fixed
 
+* **SQL**: drawing an edge across edges crossing without node (bridges, highway interchanges) never ended:
+  the parts of each split edge created nodes at all their intersections, which were propagated
+  to the edges crossing them, and so on. Only the intersections of the drawn edge are now cut
 * **SQL**: when a new edge crossed several edges, a second node, not linked to any edge,
   could be created 10 cm away from a crossing node (rounding of the coordinates of the split parts)
 * **SQL**: the edges with `no_intersection_cutting` set to `True` were still cut by the nodes located on them,

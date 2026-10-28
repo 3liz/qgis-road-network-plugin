@@ -568,7 +568,9 @@ BEGIN
     -- DO IT ONLY FOR GEOMETRIES INSIDE THE EDITION AREA
     -- DO IT ONLY FOR EDGES WITH THE SAME LEVEL
     created_nodes_at_intersection = ARRAY[]::integer[];
-    IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NOT ST_Equals(OLD.geom, NEW.geom))
+    -- Beware of the parentheses: AND has a higher precedence than OR,
+    -- and the test on the variable must also be applied for INSERT
+    IF (TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NOT ST_Equals(OLD.geom, NEW.geom)))
         -- avoid infinite loop and self-crossing
         AND road_graph.get_current_setting('road.graph.edge.crossing.node.creation.pending', 'no') != 'yes'
 
@@ -5489,6 +5491,7 @@ DECLARE
     raise_notice text;
     edge_road record;
     is_roundabout boolean;
+    previous_crossing_node_creation_pending text;
 BEGIN
     -- log level
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
@@ -5550,6 +5553,16 @@ BEGIN
     -- The quoted schema name "road_graph" is not replaced by the plugin:
     -- the edges of the road_graph_editing schema also use the road_graph sequence
     id_new_object = nextval(pg_get_serial_sequence('"road_graph".edges', 'id'));
+
+    -- The two parts of the split edge must not create nodes at their intersections with the other edges,
+    -- nor be split by the existing nodes located under them: these intersections existed before the split.
+    -- Without this, each split was propagated to the edges crossing the split edge, and so on,
+    -- for example to all the bridges of a highway interchange.
+    -- The intersections of the edge being drawn are managed by its own trigger (after_edge_insert_or_update).
+    previous_crossing_node_creation_pending = road_graph.get_current_setting(
+        'road.graph.edge.crossing.node.creation.pending', 'no'
+    );
+    PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'yes', true);
 
     UPDATE road_graph.edges
     SET
@@ -5643,6 +5656,8 @@ BEGIN
             Coalesce(edge_record.end_cumulative, 0)
         );
 
+        -- Set again the variable, in case it has been reset by the cascading changes
+        PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'yes', true);
         EXECUTE sql_text
         INTO id_new_object
         ;
@@ -5655,6 +5670,11 @@ BEGIN
     ELSE
         id_new_object = -1;
     END IF;
+
+    -- Restore the variable
+    PERFORM set_config(
+        'road.graph.edge.crossing.node.creation.pending', previous_crossing_node_creation_pending, true
+    );
 
     -- Return True
     RETURN id_new_object;
