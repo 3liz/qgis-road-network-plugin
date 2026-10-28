@@ -336,7 +336,10 @@ COMMENT ON COLUMN road_graph.edges.end_node IS 'The end node (also called target
 
 -- edges.no_intersection_cutting
 COMMENT ON COLUMN road_graph.edges.no_intersection_cutting IS 'Prevents the trigger functions from automatically cutting the edges having this value set to True.
-Useful for access roads, edges located under a bridge, etc.';
+Useful for access roads, edges located under a bridge, etc.
+No node is created at the intersection with other edges, and the existing nodes under the edge do not cut it.
+Exception: an edge is cut if the start or end point of a created or moved edge is located on it,
+for example a new access road arriving in the middle of a highway edge.';
 
 
 -- edges.id_source

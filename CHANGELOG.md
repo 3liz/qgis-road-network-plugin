@@ -33,6 +33,10 @@
 
 ### Fixed
 
+* **SQL**: the edges with `no_intersection_cutting` set to `True` were still cut by the nodes located on them,
+  for example a new edge with this value passing over an existing crossroad.
+  They are now only cut when the start or end point of a created or moved edge is located on them,
+  for example a new access road arriving in the middle of a highway edge (migration `upgrade_to_36.sql`)
 * **SQL**: performance of the references calculation: the recalculation of the edges references
   of all the roads (`update_edge_references`) is about 9 times faster, with the same results.
   With the road cache, the previous marker is only searched among the markers of the road

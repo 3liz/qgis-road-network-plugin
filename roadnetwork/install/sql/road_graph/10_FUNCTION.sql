@@ -406,22 +406,30 @@ BEGIN
             AND NOT (NEW.geom = ST_Reverse(OLD.geom))
         THEN
             -- Update upstream node if needed
+            -- Declare that the node is the extremity of the edge:
+            -- the edges under it will be split, even if their field no_intersection_cutting is True
+            SET LOCAL road.graph.node.edge.extremity = 'yes';
             UPDATE road_graph.nodes AS n
             SET geom = ST_StartPoint(NEW.geom)
             WHERE n.id = NEW.start_node
             AND NOT ST_Equals(n.geom, ST_StartPoint(NEW.geom))
             ;
+            SET LOCAL road.graph.node.edge.extremity = 'no';
         END IF;
         IF NOT ST_Equals(ST_EndPoint(OLD.geom), ST_EndPoint(NEW.geom))
             -- not just an inversion
             AND NOT (NEW.geom = ST_Reverse(OLD.geom))
         THEN
             -- Update downstream node if needed
+            -- Declare that the node is the extremity of the edge:
+            -- the edges under it will be split, even if their field no_intersection_cutting is True
+            SET LOCAL road.graph.node.edge.extremity = 'yes';
             UPDATE road_graph.nodes AS n
             SET geom = ST_EndPoint(NEW.geom)
             WHERE n.id = NEW.end_node
             AND NOT ST_Equals(n.geom, ST_EndPoint(NEW.geom))
             ;
+            SET LOCAL road.graph.node.edge.extremity = 'no';
         END IF;
 
         -- Check if old referenced nodes are still referenced by edges
@@ -660,6 +668,8 @@ BEGIN
                 n.*
             FROM road_graph.nodes AS n
             WHERE True
+            -- Do not split the NEW edge if it has the value True in no_intersection_cutting
+            AND NOT Coalesce(NEW.no_intersection_cutting, False)
             -- "intersecting" the NEW edge
             AND ST_DWithin(n.geom, NEW.geom, 0.50)
             AND n.id NOT IN (NEW.start_node, NEW.end_node)
@@ -934,6 +944,7 @@ DECLARE
     edge_under_node record;
     id_new_edge integer;
     raise_notice text;
+    is_edge_extremity boolean;
 BEGIN
     -- Trigger disabled by session variable
     IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
@@ -943,6 +954,12 @@ BEGIN
 
     -- Check if we must log
     raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
+
+    -- Check if the node is the start or end node of an edge being created or moved
+    -- (see before_edge_insert_or_update and after_edge_insert_or_update)
+    -- The variable is reset at once, so that it is not used by the cascading changes
+    is_edge_extremity = (road_graph.get_current_setting('road.graph.node.edge.extremity', 'no') = 'yes');
+    SET LOCAL road.graph.node.edge.extremity = 'no';
 
     -- Do nothing if geometry has not changed
     -- except road.graph.edge.update.touching.node equals yes
@@ -1006,6 +1023,13 @@ BEGIN
             t.*
         FROM road_graph.edges AS t
         WHERE True
+        -- Do not split the edges having the value True in no_intersection_cutting,
+        -- except if the node is the extremity of an edge being created or moved
+        -- (for example a new access road arriving in the middle of a highway edge)
+        AND (
+            NOT Coalesce(t.no_intersection_cutting, False)
+            OR is_edge_extremity
+        )
         -- edge is close to the node
         AND ST_DWithin(t.geom, NEW.geom, 0.50)
         -- but node is far enough from the start and end points
@@ -1179,6 +1203,10 @@ BEGIN
             -- only for INSERT
             -- or for UPDATE if the start_node value has been deleted
             IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.start_node IS NULL) THEN
+                -- Declare that the node is the extremity of the edge:
+                -- the edges under it will be split, even if their field no_intersection_cutting is True
+                -- (for example a new access road arriving in the middle of a highway edge)
+                SET LOCAL road.graph.node.edge.extremity = 'yes';
                 WITH new_node AS (
                     INSERT INTO road_graph.nodes
                     (geom)
@@ -1191,6 +1219,7 @@ BEGIN
                 FROM new_node
                 INTO NEW.start_node
                 ;
+                SET LOCAL road.graph.node.edge.extremity = 'no';
                 IF NEW.start_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
                     RAISE NOTICE '% BEFORE edge % n° %, upstream node created : % %',
                         repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.start_node,
@@ -1231,6 +1260,10 @@ BEGIN
             -- or for UPDATE if the end_node value has been deleted
             IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.end_node IS NULL) THEN
                 -- Create the missing node
+                -- Declare that the node is the extremity of the edge:
+                -- the edges under it will be split, even if their field no_intersection_cutting is True
+                -- (for example a new access road arriving in the middle of a highway edge)
+                SET LOCAL road.graph.node.edge.extremity = 'yes';
                 WITH new_node AS (
                     INSERT INTO road_graph.nodes
                     (geom)
@@ -1243,6 +1276,7 @@ BEGIN
                 FROM new_node
                 INTO NEW.end_node
                 ;
+                SET LOCAL road.graph.node.edge.extremity = 'no';
                 IF NEW.end_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
                     RAISE NOTICE '% BEFORE edge % n° %, downstream node created : % %',
                         repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.end_node,
