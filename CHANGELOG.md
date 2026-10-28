@@ -27,6 +27,11 @@
 
 ### Fixed
 
+* **SQL**: when the first edge of a road is updated, for example when it is split by a new node,
+  do not create a marker `0` if the road already has markers. Some roads do not start with the marker `0`
+  (e.g. a road starting at the marker `4 + 918`): a wrong marker `0` was created, or the editing failed
+  with the error `The object geometry must intersect the editing session polygon`
+  if the start of the road was outside the editing session (migration `upgrade_to_33.sql`)
 * **SQL**: the session variables `road.graph.*` used by the topology triggers are set with `SET LOCAL`,
   so that their value cannot leak outside of the current transaction (migration `upgrade_to_33.sql`)
 * **SQL**: remove the `SET search_path` / `RESET search_path` inside the functions

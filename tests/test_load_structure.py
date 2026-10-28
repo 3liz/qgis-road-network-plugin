@@ -450,6 +450,80 @@ def test_cut_edge_by_node(processing_provider: Provider):
     assert [edges[1][10], edges[1][11]] == [7810, None]
 
 
+def test_cut_first_edge_of_road_without_marker_0(db_connection: psycopg.Connection):
+    """Cut the first edge of a road which does not start with the marker 0
+    The road D138B starts at the marker 8 + 243: no marker 0 must be created.
+    The changes are rolled back at the end of the test."""
+    cursor = db_connection.cursor()
+
+    # The sequences are not reset by the rollback: store their values to restore them afterwards,
+    # since the following tests check the ids of the created objects
+    sequences: dict[str, tuple[int, bool]] = {}
+    for table in ("edges", "nodes", "markers"):
+        cursor.execute(f"SELECT pg_get_serial_sequence('road_graph.{table}', 'id')")
+        sequence = cursor.fetchone()
+        assert sequence is not None
+        cursor.execute(f"SELECT last_value, is_called FROM {sequence[0]}")
+        values = cursor.fetchone()
+        assert values is not None
+        sequences[sequence[0]] = (values[0], values[1])
+    db_connection.commit()
+
+    try:
+        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'D138B'")
+        row = cursor.fetchone()
+        assert row is not None
+        edges_before = row[0]
+
+        # Add a node on the first edge of the road, 100 meters from its start
+        cursor.execute("""
+            WITH first_edge AS (
+                SELECT geom
+                FROM road_graph_editing.edges
+                WHERE road_code = 'D138B'
+                AND previous_edge_id IS NULL
+            )
+            INSERT INTO road_graph_editing.nodes (geom)
+            SELECT ST_LineInterpolatePoint(geom, 100 / ST_Length(geom))
+            FROM first_edge
+        """)
+
+        # The edge has been cut
+        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'D138B'")
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == edges_before + 1
+
+        # No marker 0 has been created
+        cursor.execute("""
+            SELECT count(*)
+            FROM road_graph_editing.markers
+            WHERE road_code = 'D138B' AND code = 0
+        """)
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 0
+
+        # The references of the first edge still start at the marker 8 + 243
+        cursor.execute("""
+            SELECT
+                start_marker, round(start_abscissa::numeric, 2)::float,
+                end_marker, round(end_abscissa::numeric, 2)::float
+            FROM road_graph_editing.edges
+            WHERE road_code = 'D138B'
+            AND previous_edge_id IS NULL
+        """)
+        row = cursor.fetchone()
+        assert row is not None
+        assert list(row) == [8, 243, 8, 343.02]
+    finally:
+        db_connection.rollback()
+        for sequence_name, (last_value, is_called) in sequences.items():
+            cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
+        db_connection.commit()
+        db_connection.close()
+
+
 def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
     """Insert a new edge at the end of the road T001 and
     check the attributes of the new edge and the previous last edge

@@ -1,5 +1,6 @@
 -- Session variables and search_path
 --
+-- * after_edge_insert_or_update: only create the marker 0 of a road if the road does not have any marker
 -- * use SET LOCAL instead of SET for the road.graph.* session variables used by the topology triggers,
 --   so that their value cannot leak outside of the current transaction
 --   (for example with a connection pooler or a QGIS connection kept opened)
@@ -177,6 +178,9 @@ $$;
 
 -- FUNCTION: road_graph.after_edge_insert_or_update()
 -- Use SET LOCAL for the road.graph.* variables: their value is limited to the current transaction
+-- Only create the marker 0 for a new road, i.e. a road without any marker:
+-- the roads which do not start with the marker 0 (for example D147A starting at the marker 4 + 918)
+-- must not get a marker 0 when their first edge is updated, for example when it is split
 CREATE OR REPLACE FUNCTION road_graph.after_edge_insert_or_update() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -544,12 +548,12 @@ BEGIN
         AND NEW.road_code IS NOT NULL
         AND NOT is_roundabout
         AND Coalesce(edge_road.road_type, '') NOT IN ('roundabout')
-        -- the marker does not exists yet
+        -- the road does not have any marker yet (new road)
+        -- Do not test only the marker 0: some roads do not start with the marker 0
         AND NOT EXISTS (
             SELECT m.id
             FROM road_graph.markers AS m
             WHERE m.road_code = NEW.road_code
-            AND m.code = 0
         )
         -- There is no edge with the same road_code and without previous_edge_id (which means the first edge of the road)
         AND NOT EXISTS (

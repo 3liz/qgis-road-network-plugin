@@ -723,12 +723,12 @@ BEGIN
         AND NEW.road_code IS NOT NULL
         AND NOT is_roundabout
         AND Coalesce(edge_road.road_type, '') NOT IN ('roundabout')
-        -- the marker does not exists yet
+        -- the road does not have any marker yet (new road)
+        -- Do not test only the marker 0: some roads do not start with the marker 0
         AND NOT EXISTS (
             SELECT m.id
             FROM road_graph.markers AS m
             WHERE m.road_code = NEW.road_code
-            AND m.code = 0
         )
         -- There is no edge with the same road_code and without previous_edge_id (which means the first edge of the road)
         AND NOT EXISTS (
