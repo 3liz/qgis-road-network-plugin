@@ -28,6 +28,10 @@ with the update policy to apply to each of them:
   is created on this table by the function `road_graph.add_managed_objects_triggers()`
   (see [below](#automatic-calculation-of-the-references)). Default: `False`.
 
+Each table must have the **reference columns** corresponding to its geometry type.
+They can be added automatically with the function `road_graph.add_managed_object_reference_fields`,
+for one table or for all the tables of this layer (see [Add the reference fields](import.md#add-the-reference-fields)).
+
 ## Last updated objects
 
 The layer `vm_managed_objects` shows, for each managed table, the **objects updated by the last merge**

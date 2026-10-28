@@ -4,6 +4,8 @@
 
 ### Added
 
+* **SQL**: add the function `road_graph.add_managed_object_reference_fields` which adds to a managed object table
+  the reference fields corresponding to its geometry type (migration `upgrade_to_39.sql`)
 * **SQL**: add the function `road_graph.add_managed_objects_triggers()` which creates the trigger
   `trg_calculate_managed_object_references` on every table listed in `road_graph.managed_objects`
   with the new column `add_trigger_on_geom_change` set to `True`, if it does not already exist

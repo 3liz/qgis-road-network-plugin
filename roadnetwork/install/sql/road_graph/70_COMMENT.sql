@@ -31,6 +31,20 @@ car l''ordre alphabétique compte.
 COMMENT ON FUNCTION road_graph.aa_before_record_insert_or_update() IS 'Set the created_at and updated_at fields';
 
 
+-- FUNCTION add_managed_object_reference_fields(_schema_name text, _table_name text, _add_optional_fields boolean)
+COMMENT ON FUNCTION road_graph.add_managed_object_reference_fields(_schema_name text, _table_name text, _add_optional_fields boolean) IS 'Add the reference fields needed by the managed objects functions to the given table, depending on its geometry type.
+The geometry type is read from the table road_graph.managed_objects if the table is registered, or else from its geometry column geom.
+* all the geometry types: road_code (text), and the optional fields offset (real) and side (text),
+* point: marker_code (integer), abscissa (real), and the optional field cumulative (real),
+* linestring and multilinestring: start_marker_code, end_marker_code (integer), start_abscissa, end_abscissa (real),
+  and the optional fields start_cumulative, end_cumulative (real).
+The optional fields are added only if the parameter _add_optional_fields is True (default).
+The existing fields are not modified. The function returns one line per field with its name, type and status:
+added, already exists, or already exists with the type of the existing field.
+If the fields cannot be added, it returns one line with the status: table not found, geom column not found,
+or geometry type not supported.';
+
+
 -- FUNCTION add_managed_objects_triggers()
 COMMENT ON FUNCTION road_graph.add_managed_objects_triggers() IS 'Create the trigger trg_calculate_managed_object_references for each table listed in road_graph.managed_objects
 with the column add_trigger_on_geom_change set to True, if it does not already exist.
