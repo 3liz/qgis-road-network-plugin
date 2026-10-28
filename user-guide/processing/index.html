@@ -1589,7 +1589,15 @@ The layer can be a PostgreSQL table of the database, or any other vector layer, 
 <li><code>Update geometries</code>: the geometry of each feature is calculated from its references,</li>
 </ul>
 </li>
-<li><code>Update geometries - Preserve start &amp; end points when updating line geometries</code>: <code>No</code> or <code>Yes</code>,</li>
+<li><code>Update geometries - Preserve start &amp; end points when updating line geometries</code>: <code>No</code> or <code>Yes</code>.
+  Used only to update the geometries of a line layer:<ul>
+<li><code>No</code>: the geometry is calculated from the <strong>stored references</strong>,</li>
+<li><code>Yes</code>: the references are first calculated from the <strong>start and end points</strong> of the line,
+  then the geometry is calculated from them. The line keeps its start and end points,
+  and follows the road between them. Use it when the start and end points are right
+  but the references are outdated or the line does not follow the road,</li>
+</ul>
+</li>
 <li><code>Output layer</code>: the layer created with the updated features.</li>
 </ul>
 <p><img alt="Update managed objects from the road graph" src="../../media/user-guide/processing_update_managed_objects.png" /></p>
