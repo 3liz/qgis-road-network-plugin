@@ -323,17 +323,18 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../database/" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item">
+        <a href="../../database-guide/functions/" class="md-tabs__link">
+          
+  
   
   Database
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -934,9 +935,23 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../database/" class="md-nav__link">
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -950,7 +965,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database-guide/functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Useful functions
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database-guide/structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1341,7 +1428,7 @@ They are stored in your own PostgreSQL tables.</p>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <p>Then import your data into this table, for example with the QGIS tools
-(drag and drop in the <code>Browser</code> panel, <code>Database / DB Manager</code>, or the Processing algorithm
+(drag and drop in the <code>Browser</code> panel, or the Processing algorithm
 <code>Export to PostgreSQL</code>), or with SQL.</p>
 <h3 id="register-the-table">Register the table<a class="headerlink" href="#register-the-table" title="Permanent link">#</a></h3>
 <p>Add the table in the <code>managed_objects</code> layer (table <code>road_graph.managed_objects</code>),

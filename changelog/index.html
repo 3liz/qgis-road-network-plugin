@@ -323,17 +323,18 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../database/" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item">
+        <a href="../database-guide/functions/" class="md-tabs__link">
+          
+  
   
   Database
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -1718,9 +1719,23 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../database/" class="md-nav__link">
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -1734,7 +1749,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-guide/functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Useful functions
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-guide/structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2729,6 +2816,12 @@ On your local, make a symlink with ln -s
 <li><strong>SQL</strong>: add the materialized view <code>road_graph.vm_managed_objects</code>, based on the view <code>v_managed_objects</code>
   and refreshed at the end of the function <code>merge_editing_session_data</code>.
   The QGIS administration project uses it instead of the view <code>v_managed_objects</code></li>
+<li><strong>SQL</strong>: add the functions <code>road_graph.get_snapped_line_from_track</code> which snaps an imprecise GPS track
+  (for example from a GPX file) on the road graph edges, without zigzags between close roads,
+  and <code>road_graph.get_road_sections_from_snapped_line</code> which returns the ordered list of the roads
+  followed by the snapped line, with their start and end references (migration <code>upgrade_to_34.sql</code>)</li>
+<li><strong>Docs</strong>: the <code>Database</code> menu now contains the pages <code>Useful functions</code>,
+  which explains how to use these functions, and <code>Database structure</code>, which embeds the SchemaSpy documentation</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
 <ul>
