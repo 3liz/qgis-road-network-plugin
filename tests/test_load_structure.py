@@ -330,6 +330,76 @@ def test_create_editing_session(processing_provider: Provider):
     assert (stats[0], stats[1], stats[2], stats[3]) == (165, 206, 326, 5)
 
 
+def test_no_orphan_node_when_crossing_several_edges(db_connection: psycopg.Connection):
+    """Draw a new edge crossing several edges: no orphan node must be created.
+    The creation of the first crossing node splits the new edge,
+    and its parts create the other crossing nodes.
+    With this edge, the remaining crossing point of the first loop was 10 cm away from the node created
+    by the parts (rounding of the coordinates), and a second node, not linked to any edge, was created.
+    The changes are rolled back at the end of the test."""
+    cursor = db_connection.cursor()
+
+    # The sequences are not reset by the rollback: store their values to restore them afterwards,
+    # since the following tests check the ids of the created objects.
+    # During an editing session, the road_graph_editing tables use the road_graph sequences
+    sequences: dict[str, tuple[int, bool]] = {}
+    for table in ("edges", "nodes", "markers", "roads"):
+        cursor.execute(f"SELECT pg_get_serial_sequence('road_graph.{table}', 'id')")
+        sequence = cursor.fetchone()
+        assert sequence is not None
+        cursor.execute(f"SELECT last_value, is_called FROM {sequence[0]}")
+        values = cursor.fetchone()
+        assert values is not None
+        sequences[sequence[0]] = (values[0], values[1])
+    db_connection.commit()
+
+    sql_count_orphan_nodes = """
+        SELECT count(*)
+        FROM road_graph_editing.nodes AS n
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM road_graph_editing.edges AS e
+            WHERE n.id IN (e.start_node, e.end_node)
+        )
+    """
+
+    try:
+        cursor.execute(sql_count_orphan_nodes)
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 0
+
+        cursor.execute("""
+            INSERT INTO road_graph_editing.roads (road_code, road_type, road_class)
+            VALUES ('T999', 'road', 'Communale')
+        """)
+        cursor.execute("""
+            INSERT INTO road_graph_editing.edges (road_code, geom)
+            VALUES (
+                'T999',
+                ST_GeomFromText('LINESTRING(474107 6895707.3, 474686.5 6895862.6)', 2154)
+            )
+        """)
+
+        # The new edge is split by the 2 crossing edges
+        cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = 'T999'")
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 3
+
+        # No orphan node
+        cursor.execute(sql_count_orphan_nodes)
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 0
+    finally:
+        db_connection.rollback()
+        for sequence_name, (last_value, is_called) in sequences.items():
+            cursor.execute("SELECT setval(%s, %s, %s)", (sequence_name, last_value, is_called))
+        db_connection.commit()
+        db_connection.close()
+
+
 def test_create_edge(processing_provider: Provider):
     """Test the creation of a new edge in the editing session and the calculation of its attributes"""
 
@@ -1952,8 +2022,8 @@ def test_editing_session_logged_objects():
         "5725": "I",
         "5726": "I",
         "5728": "I",
-        "5732": "I",
-        "5733": "I",
+        "5729": "I",
+        "5730": "I",
     }
     assert json.loads(results[0][2]) == {
         "2276": "I",

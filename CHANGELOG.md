@@ -34,6 +34,8 @@
 
 ### Fixed
 
+* **SQL**: when a new edge crossed several edges, a second node, not linked to any edge,
+  could be created 10 cm away from a crossing node (rounding of the coordinates of the split parts)
 * **SQL**: the edges with `no_intersection_cutting` set to `True` were still cut by the nodes located on them,
   for example a new edge with this value passing over an existing crossroad.
   They are now only cut when the start or end point of a created or moved edge is located on them,

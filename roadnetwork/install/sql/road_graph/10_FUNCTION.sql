@@ -621,6 +621,17 @@ BEGIN
         LOOP
             IF crossing_node.geom IS NOT NULL
                 AND ST_GeometryType(crossing_node.geom) = 'ST_Point'
+                -- The crossing points are calculated once, before the loop.
+                -- Since then, the node could have been created by the cascading changes:
+                -- the creation of the previous node has split this edge, and the new parts
+                -- have created the nodes at their own intersections.
+                -- These nodes are calculated from the rounded coordinates of the parts,
+                -- and can be a few centimeters away from this point: check with the same tolerance
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM road_graph.nodes AS n
+                    WHERE ST_DWithin(n.geom, crossing_node.geom, 0.50)
+                )
             THEN
                 -- Create the missing node, which will trigger the split of the edge
                 -- (see the trigger after_node_insert_or_update)

@@ -9,6 +9,13 @@
 -- * after_edge_insert_or_update: do not split a NEW edge with no_intersection_cutting = True
 --   by the existing nodes located under it
 --
+-- Orphan nodes created when a new edge crosses several edges:
+-- * after_edge_insert_or_update: the crossing points are calculated before the loop creating the nodes,
+--   but the creation of the first node splits the new edge, and its parts create the other crossing nodes.
+--   These nodes, calculated from the rounded coordinates of the parts, could be 10 cm away
+--   from the remaining points of the loop, which created a second node not linked to any edge.
+--   Check that no node exists closer than 50 cm before creating a crossing node.
+--
 -- This migration is idempotent: it only contains CREATE OR REPLACE FUNCTION and COMMENT.
 
 
@@ -304,7 +311,8 @@ $$;
 
 -- FUNCTION: road_graph.after_edge_insert_or_update
 -- Declare the move of the start and end nodes of the edge.
--- Do not split the NEW edge by the existing nodes if no_intersection_cutting is True
+-- Do not split the NEW edge by the existing nodes if no_intersection_cutting is True.
+-- Do not create a crossing node if a node has been created since by the cascading changes
 CREATE OR REPLACE FUNCTION road_graph.after_edge_insert_or_update() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -570,6 +578,17 @@ BEGIN
         LOOP
             IF crossing_node.geom IS NOT NULL
                 AND ST_GeometryType(crossing_node.geom) = 'ST_Point'
+                -- The crossing points are calculated once, before the loop.
+                -- Since then, the node could have been created by the cascading changes:
+                -- the creation of the previous node has split this edge, and the new parts
+                -- have created the nodes at their own intersections.
+                -- These nodes are calculated from the rounded coordinates of the parts,
+                -- and can be a few centimeters away from this point: check with the same tolerance
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM road_graph.nodes AS n
+                    WHERE ST_DWithin(n.geom, crossing_node.geom, 0.50)
+                )
             THEN
                 -- Create the missing node, which will trigger the split of the edge
                 -- (see the trigger after_node_insert_or_update)
