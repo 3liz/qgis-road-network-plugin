@@ -222,15 +222,6 @@
                                         <td><p>Get the roundabout node at the top of the circle. It only exists because QGIS creates a circle with a point at the top. We need to delete this node and merge edges around it. This function does nothing if no node is found at the exact top position of the circle.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/aa_before_geometry_insert_or_up_4c6d4a8c.html">aa_before_geometry_insert_or_update()</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>trigger</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Fonction qui arrondit la précision des coordonnées à 0.1 soit 10cm si ce n&rsquo;est pas déjà fait lors d&rsquo;une création ou d&rsquo;une modification de géométrie. Elle est préfixée par aa_ pour être lancée avant les autres trigger, car l&rsquo;ordre alphabétique compte.</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/split_edge_by_node_edge_record__d434b826.html">split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -238,6 +229,15 @@
                                         <td>integer</td>
                                         <td>INVOKER</td>
                                         <td><p>Split an edge by a node. The node must be close enough to the edge and not too close from the edge start or end point. The function returns the id of the new created edge or null if the edge has not been split.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/aa_before_geometry_insert_or_up_4c6d4a8c.html">aa_before_geometry_insert_or_update()</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>trigger</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Fonction qui arrondit la précision des coordonnées à 0.1 soit 10cm si ce n&rsquo;est pas déjà fait lors d&rsquo;une création ou d&rsquo;une modification de géométrie. Elle est préfixée par aa_ pour être lancée avant les autres trigger, car l&rsquo;ordre alphabétique compte.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/add_managed_objects_triggers___4f979f05.html">add_managed_objects_triggers()</a></td>
@@ -484,16 +484,6 @@
                                         <td><p>Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid. The function is used to have a single point of maintenance for getting settings.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/build_road_cached_objects__road_72cadd0c.html">build_road_cached_objects(_road_code text)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>boolean</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Calculate the given road geometries used in linear referencing tools &amp; the road marker locations: * the simple linestring (no gaps) made by merging all edges linestrings after connecting edges * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)</p>
-<p>Cached data is store in a temporary table living only until COMMIT</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/toggle_foreign_key_constraints__12b5438f.html">toggle_foreign_key_constraints(_toggle boolean DEFAULT true)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -502,6 +492,16 @@
                                         <td>DEFINER</td>
                                         <td><p>Deactivate or reactivate the foreign key constraints to ease the merging road_graph_editing data into road_graph schema. It is also used when importing data from templates.</p>
 <p>Under the hood, it drops or drops &amp; creates the constraint depending on the value of the _toggle parameter</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/build_road_cached_objects__road_72cadd0c.html">build_road_cached_objects(_road_code text)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>boolean</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Calculate the given road geometries used in linear referencing tools &amp; the road marker locations: * the simple linestring (no gaps) made by merging all edges linestrings after connecting edges * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps) * the order of the edges, used by get_reference_from_point to avoid calculating it again for each point</p>
+<p>Cached data is store in a temporary table living only until COMMIT</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/get_road_previous_marker_from_p_f5bf9fb7.html">get_road_previous_marker_from_point(_road_code text, _point geometry, _use_cache boolean DEFAULT false)</a></td>

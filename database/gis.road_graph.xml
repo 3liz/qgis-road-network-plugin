@@ -1607,11 +1607,16 @@ END;]]></definition>
          <comment><![CDATA[Calculate the given road geometries used in linear referencing tools & the road marker locations:
 * the simple linestring (no gaps) made by merging all edges linestrings after connecting edges
 * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
+* the order of the edges, used by get_reference_from_point to avoid calculating it again for each point
 
 Cached data is store in a temporary table living only until COMMIT]]></comment>
          <definition language="plpgsql"><![CDATA[BEGIN
 
-    DROP TABLE IF EXISTS road_cache;
+    -- Drop the cache of the previous road
+    -- Test before to avoid the notice raised by DROP TABLE IF EXISTS
+    IF to_regclass('road_cache') IS NOT NULL THEN
+        DROP TABLE road_cache;
+    END IF;
     CREATE TEMPORARY TABLE IF NOT EXISTS road_cache
     ON COMMIT DROP AS (
         WITH
@@ -1676,7 +1681,16 @@ Cached data is store in a temporary table living only until COMMIT]]></comment>
             jsonb_object_agg(
                 m.id,
                 ST_LineLocatePoint(l.geom, m.geom)
-            ) AS marker_locations
+            ) AS marker_locations,
+            -- Order of the edges, used to choose between two edges at the same distance from a point
+            (
+                SELECT jsonb_object_agg(eo.id, eo.edge_order)
+                FROM (
+                    SELECT o.id, min(o.edge_order) AS edge_order
+                    FROM ordered_edges AS o
+                    GROUP BY o.id
+                ) AS eo
+            ) AS edge_orders
         FROM
             road_line as l,
             road_graph.markers AS m
@@ -2868,6 +2882,8 @@ BEGIN
         FROM road_graph.edges AS e
         WHERE e.road_code = _road_code
         ;
+        -- RETURN QUERY does not exit the function
+        RETURN;
     END IF;
 
     -- Get initial edge. If not given, get the first road edge
@@ -2900,12 +2916,7 @@ BEGIN
             -- Do not raise any exception
             -- To allow wrong road_code in managed data
             -- to be silently used
-            RETURN QUERY
-            SELECT
-                e.id, 1 AS edge_order, e.road_code, e.geom
-            FROM road_graph.edges AS e
-            LIMIT 0
-            ;
+            RETURN;
         END IF;
     ELSE
         SELECT INTO initial_edge
@@ -3030,6 +3041,7 @@ Since this method is heavily used and the calculation is costly, we can pass a t
     found_offset real;
     found_side text;
     found_cumulative real;
+    cached_edge_orders jsonb;
     raise_notice text;
 BEGIN
     raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
@@ -3041,12 +3053,25 @@ BEGIN
         ;
     END IF;
 
-    -- Get the splitted closest road depending on given road_code
-    -- we keep only the edge part between start point and given _point
+    -- Get the edge order of the road from the cache, if it has been built beforehand
+    -- (see build_road_cached_objects)
+    IF _use_cache AND _road_code IS NOT NULL AND to_regclass('road_cache') IS NOT NULL THEN
+        SELECT INTO cached_edge_orders r.edge_orders
+        FROM road_cache AS r
+        WHERE r.road_code = _road_code
+        ;
+    END IF;
+
+    -- Get the closest edge depending on given road_code
     IF _road_code IS NOT NULL THEN
         WITH ordered_ids AS (
-            SELECT *
-            FROM road_graph.get_ordered_edges(_road_code, -1, 'downstream')
+            -- Edge order calculated only if not found in the cache
+            SELECT o.id, o.edge_order
+            FROM road_graph.get_ordered_edges(_road_code, -1, 'downstream') AS o
+            WHERE cached_edge_orders IS NULL
+            UNION ALL
+            SELECT j.key::integer AS id, j.value::integer AS edge_order
+            FROM jsonb_each_text(cached_edge_orders) AS j
         )
         SELECT INTO closest_edge
             e.*,
@@ -3054,17 +3079,7 @@ BEGIN
             -- Do not use e.geom <-> _point AS distance
             -- since it can lead to some PostGIS errors if used in the ORDER BY
             -- such as "ERROR:  index returned tuples in wrong order"
-            ST_Distance(e.geom, _point) AS distance,
-            -- create the line portion from edge start point to the given point
-            -- BEWARE: it can be a point e.g if the _point is edge start point
-            -- it why we do not cast with ::geometry(LINESTRING, 2154)
-            ST_LineSubstring(
-                e.geom,
-                0,
-                ST_LineLocatePoint(e.geom, _point)
-            ) AS sub_geom,
-            -- calculate the measure for the point on this edge
-            ST_LineLocatePoint(e.geom, _point) AS point_measure
+            ST_Distance(e.geom, _point) AS distance
         FROM
             road_graph.edges AS e
         INNER JOIN ordered_ids AS o ON e.id = o.id
@@ -3074,7 +3089,7 @@ BEGIN
         AND ST_DWithin(e.geom, _point, 50)
         -- we must also order by edge_order, start_cumulative
         -- in case the point catches multiple edges (start and end points)
-        ORDER BY distance, o.edge_order, e.start_cumulative --, ST_X(ST_Centroid(e.geom)), ST_Y(ST_Centroid(e.geom))
+        ORDER BY distance, o.edge_order, e.start_cumulative
         -- Get only the closest edge, with the least edge_order -- start cumulative
         LIMIT 1
         ;
@@ -3085,25 +3100,13 @@ BEGIN
             -- Do not use e.geom <-> _point AS distance
             -- since it can lead to some PostGIS errors if used in the ORDER BY
             -- such as "ERROR:  index returned tuples in wrong order"
-            ST_Distance(e.geom, _point) AS distance,
-            -- create the line portion from edge start point to the given point
-            -- BEWARE: it can be a point e.g if the _point is edge start point
-            -- it why we do not cast with ::geometry(LINESTRING, 2154)
-            ST_LineSubstring(
-                e.geom,
-                0,
-                ST_LineLocatePoint(e.geom, _point)
-            ) AS sub_geom,
-            -- calculate the measure for the point on this edge
-            ST_LineLocatePoint(e.geom, _point) AS point_measure
+            ST_Distance(e.geom, _point) AS distance
         FROM
             road_graph.edges AS e
             -- LIMIT search without road_code TO 50m
         WHERE ST_DWithin(e.geom, _point, 50)
-        -- we must also order by edge_order, start_cumulative
-        -- in case the point catches multiple edges (start and end points)
-        ORDER BY distance --, ST_X(ST_Centroid(e.geom)), ST_Y(ST_Centroid(e.geom))
-        -- Get only the closest edge, with the least edge_order, start cumulative
+        ORDER BY distance
+        -- Get only the closest edge
         LIMIT 1
         ;
     END IF;
@@ -3115,7 +3118,6 @@ BEGIN
     END IF;
     IF raise_notice = 'debug' THEN
         RAISE NOTICE 'CLOSEST_EDGE %', to_json(closest_edge);
-        RAISE NOTICE 'CLOSEST_EDGE subgeom %', ST_AsText(closest_edge.sub_geom);
     END IF;
 
     -- Get road_code
@@ -3405,6 +3407,8 @@ BEGIN
         FROM
             road_graph.markers AS m
         WHERE True
+        -- Only the markers of the road
+        AND m.road_code = _road_code
         AND (_road_info.marker_locations->>(m.id::text))::float8 <= _road_info.point_location
         ORDER BY (_road_info.marker_locations->>(m.id::text))::float8 DESC
         LIMIT 1
@@ -3575,7 +3579,7 @@ BEGIN
             _previous_marker.geom := _closest_edge_at_5m.geom;
             -- Linestring (with no gaps) between the marker and the point
             -- In this case, we adapt and return the same geometry as the one between the start and the point
-            _previous_marker.road_linestring_from_marker_to_point := road_linestring_from_start_to_point;
+            _previous_marker.road_linestring_from_marker_to_point := _previous_marker.road_linestring_from_start_to_point;
             -- Declare we have not taken the previous marker, but the start marker of the first next edge
             _previous_marker.is_next_edge_start_marker = True;
             -- we also need the start_cumulative
@@ -6004,7 +6008,7 @@ BEGIN
             ELSE True
         END
     ;
-    IF raise_notice IN ('info', 'debug') IS NOT NULL THEN
+    IF raise_notice IN ('info', 'debug') THEN
         RAISE NOTICE '% update_edge_references road n° % - Use cache %',
             repeat('    ', pg_trigger_depth()::integer), _road_code, _use_cache
         ;

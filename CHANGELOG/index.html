@@ -1877,6 +1877,12 @@
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>
+<li><strong>SQL</strong>: performance of the references calculation: the recalculation of the edges references
+  of all the roads (<code>update_edge_references</code>) is about 9 times faster, with the same results.
+  With the road cache, the previous marker is only searched among the markers of the road
+  (all the markers of the database were read), and the edge order is stored in the cache
+  instead of being calculated again for each point</li>
+<li><strong>SQL</strong>: <code>get_ordered_edges</code> returned twice the edge of the roads having only one edge</li>
 <li><strong>SQL</strong>: when the first edge of a road is updated, for example when it is split by a new node,
   do not create a marker <code>0</code> if the road already has markers. Some roads do not start with the marker <code>0</code>
   (e.g. a road starting at the marker <code>4 + 918</code>): a wrong marker <code>0</code> was created, or the editing failed
