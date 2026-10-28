@@ -307,7 +307,7 @@ BEGIN
     THEN
         -- First update previous and next edges
         -- previous
-        SET road.graph.edge.ref.calc.disabled = 'yes';
+        SET LOCAL road.graph.edge.ref.calc.disabled = 'yes';
 
         UPDATE road_graph.edges AS e
         SET next_edge_id = (
@@ -328,7 +328,7 @@ BEGIN
         ;
 
         -- Set back the value
-        SET road.graph.edge.ref.calc.disabled = 'no';
+        SET LOCAL road.graph.edge.ref.calc.disabled = 'no';
 
         -- Calculate references
         IF raise_notice IN ('info', 'debug') THEN
@@ -617,7 +617,7 @@ BEGIN
                 -- Create the missing node, which will trigger the split of the edge
                 -- (see the trigger after_node_insert_or_update)
                 -- Set variable to avoid infinite loop & self-crossing detection
-                SET road.graph.edge.crossing.node.creation.pending = 'yes';
+                SET LOCAL road.graph.edge.crossing.node.creation.pending = 'yes';
                 WITH new_node AS (
                     INSERT INTO road_graph.nodes
                     (geom)
@@ -631,7 +631,7 @@ BEGIN
                 INTO new_node_id
                 ;
                 -- revert variable back to no
-                SET road.graph.edge.crossing.node.creation.pending = 'no';
+                SET LOCAL road.graph.edge.crossing.node.creation.pending = 'no';
 
                 IF new_node_id IS NOT NULL THEN
                     created_nodes_at_intersection = created_nodes_at_intersection || new_node_id;
@@ -693,7 +693,7 @@ BEGIN
 
             IF road_graph.get_current_setting('road.graph.edge.update.touching.node', 'no') != 'yes'
             THEN
-                SET road.graph.edge.update.touching.node = 'yes';
+                SET LOCAL road.graph.edge.update.touching.node = 'yes';
                 -- We do not create a new node (constraint on same geometry)
                 -- but juste move a little bit the existing node to run
                 -- the trigger after_node_insert_or_update which will run the split function
@@ -706,7 +706,7 @@ BEGIN
                 SELECT id INTO new_node_id
                 FROM up
                 ;
-                SET road.graph.edge.update.touching.node = 'no';
+                SET LOCAL road.graph.edge.update.touching.node = 'no';
                 IF raise_notice IN ('info', 'debug') THEN
                     RAISE NOTICE '% AFTER EDGE % N° %, NEW node created in same node place: %',
                         REPEAT('    ', pg_trigger_depth()::INTEGER), TG_OP, NEW.id, new_node_id
@@ -976,26 +976,26 @@ BEGIN
     -- Update geometry of all upstream edges linked to the node
     -- We replace the first edge node by the node NEW geometry
     -- We deactivate the creation of crossing nodes for these updated edges
-    SET road.graph.edge.crossing.node.creation.pending = 'yes';
+    SET LOCAL road.graph.edge.crossing.node.creation.pending = 'yes';
     UPDATE road_graph.edges AS t
     SET geom = ST_SetPoint(geom, 0, NEW.geom)
     WHERE TRUE
     AND start_node = NEW.id
     AND NOT ST_Intersects(ST_StartPoint(geom), NEW.geom)
     ;
-    SET road.graph.edge.crossing.node.creation.pending = 'no';
+    SET LOCAL road.graph.edge.crossing.node.creation.pending = 'no';
 
     -- Update geometry of all downstream edges linked to the node
     -- We replace the last edge node but the node NEW geometry
     -- We deactivate the creation of crossing nodes for these updated edges
-    SET road.graph.edge.crossing.node.creation.pending = 'yes';
+    SET LOCAL road.graph.edge.crossing.node.creation.pending = 'yes';
     UPDATE road_graph.edges AS t
     SET geom = ST_SetPoint(geom, ST_NPoints(geom) - 1, NEW.geom)
     WHERE True
     AND end_node = NEW.id
     AND NOT ST_Intersects(ST_EndPoint(geom), NEW.geom)
     ;
-    SET road.graph.edge.crossing.node.creation.pending = 'no';
+    SET LOCAL road.graph.edge.crossing.node.creation.pending = 'no';
 
     -- Split edges under the node if needed
     FOR edge_under_node IN
@@ -1293,14 +1293,14 @@ BEGIN
         -- Do not run the function update_edge_references
         -- on the road triggered inside the after_marker_insert_or_update_or_delete
         -- trigger since it will already been triggered with the edge geometry change
-        SET road.graph.edge.ref.calc.disabled = 'yes';
+        SET LOCAL road.graph.edge.ref.calc.disabled = 'yes';
         UPDATE road_graph.markers AS m
         SET geom = ST_StartPoint(NEW.geom)
         WHERE m.road_code = NEW.road_code
         AND m.code = 0
         AND ST_Equals(m.geom, ST_StartPoint(OLD.geom))
         ;
-        SET road.graph.edge.ref.calc.disabled = 'no';
+        SET LOCAL road.graph.edge.ref.calc.disabled = 'no';
     END IF;
 
     -- Calculate references
@@ -2126,19 +2126,17 @@ DECLARE
     _set_val bigint;
 BEGIN
     -- Get editing session record
-    -- We set the search path to avoid using the schema in the request
+    -- The quoted schema name "road_graph" is not replaced by the plugin
     -- since we need to get information from the road_graph schema,
     -- not the copy
-    SET search_path TO road_graph, public;
     SELECT INTO editing_session_record
         *
-    FROM editing_sessions
+    FROM "road_graph".editing_sessions
     WHERE id = _editing_session_id
     ;
 
     -- Raise exception if no record found
     IF editing_session_record.id IS NULL THEN
-        RESET search_path;
         RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
     END IF;
 
@@ -2151,25 +2149,22 @@ BEGIN
 
     -- Set the sequences back to the maximum id in the main tables
     SELECT INTO _set_val
-        setval(pg_get_serial_sequence('roads', 'id'), (SELECT max(id) FROM roads))
+        setval(pg_get_serial_sequence('"road_graph".roads', 'id'), (SELECT max(id) FROM "road_graph".roads))
     ;
     SELECT INTO _set_val
-        setval(pg_get_serial_sequence('markers', 'id'), (SELECT max(id) FROM markers))
+        setval(pg_get_serial_sequence('"road_graph".markers', 'id'), (SELECT max(id) FROM "road_graph".markers))
     ;
     SELECT INTO _set_val
-        setval(pg_get_serial_sequence('edges', 'id'), (SELECT max(id) FROM edges))
+        setval(pg_get_serial_sequence('"road_graph".edges', 'id'), (SELECT max(id) FROM "road_graph".edges))
     ;
     SELECT INTO _set_val
-        setval(pg_get_serial_sequence('nodes', 'id'), (SELECT max(id) FROM nodes))
+        setval(pg_get_serial_sequence('"road_graph".nodes', 'id'), (SELECT max(id) FROM "road_graph".nodes))
     ;
 
     -- Delete merged editing session
-    DELETE FROM editing_sessions
+    DELETE FROM "road_graph".editing_sessions
     WHERE id = _editing_session_id
     ;
-
-    -- Reset the search path
-    RESET search_path;
 
     RETURN True;
 END;
@@ -2211,27 +2206,22 @@ BEGIN
     -- we must check if a corresponding object exists in the road_graph schema
     -- before checking if they are equal
     IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'edges' THEN
-        -- We need to defined the search_path to avoid using syntax
+        -- We use the quoted schema name "road_graph" to avoid using syntax
         -- such as road_graph.xxxxx as it can be replaced by QGIS plugin
-        -- when creating an editing_session_xxx schema
-        SET search_path TO road_graph, public;
+        -- when creating the road_graph_editing schema
 
         -- Get original edge
         SELECT INTO original_edge_object
             *
-        FROM edges
+        FROM "road_graph".edges
         WHERE id = NEW.id
         ;
         IF
             original_edge_object IS NOT NULL
             AND md5(to_json(NEW.*)::text) = md5(to_json(original_edge_object.*)::text)
         THEN
-            -- Reset the search path
-            RESET search_path;
             RETURN NEW;
         END IF;
-        -- Reset the search path
-        RESET search_path;
     END IF;
 
     -- 1/ Check if geometry is inside the editing session geometry
@@ -2307,13 +2297,12 @@ BEGIN
     ;
 
     -- Update log in the editing session
-    -- We need to defined the search_path to avoid using syntax
+    -- We use the quoted schema name "road_graph" to avoid using syntax
     -- such as road_graph.xxxxx as it can be replaced by QGIS plugin
-    -- when creating an editing_session_xxx schema
-    SET search_path TO road_graph, public;
+    -- when creating the road_graph_editing schema
     SELECT INTO new_logged_ids
         logged_ids
-    FROM editing_sessions
+    FROM "road_graph".editing_sessions
     WHERE unique_code = (
         SELECT unique_code
         FROM road_graph_editing.editing_sessions
@@ -2354,7 +2343,7 @@ BEGIN
         END IF;
     END IF;
 
-    UPDATE editing_sessions
+    UPDATE "road_graph".editing_sessions
     SET
         -- Add the id of the object
         logged_ids = new_logged_ids,
@@ -2365,8 +2354,6 @@ BEGIN
         LIMIT 1
     )
     ;
-    -- Reset the search path
-    RESET search_path;
 
     -- Return object
     IF TG_OP = 'DELETE' THEN
@@ -4458,6 +4445,7 @@ in the session variable ''road.graph.merge.edges.useless.node'' for further use 
 -- merge_editing_session_data(integer)
 CREATE FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'road_graph', 'public'
     AS $$
 DECLARE
     editing_session_record record;
@@ -4469,13 +4457,11 @@ DECLARE
     _toggle_triggers boolean;
 BEGIN
     -- Get editing session record
-    SET search_path TO road_graph, public;
     SELECT INTO editing_session_record
     *
     FROM editing_sessions
     WHERE id = _editing_session_id
     ;
-    RESET search_path;
 
     IF editing_session_record.id IS NULL THEN
         RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
@@ -4492,14 +4478,13 @@ BEGIN
         INTO _toggle_triggers;
 
     -- Get the road codes concerned by the editing session
-    -- no need to prefix the function by the schema name because we set it in the search path
-    SET search_path TO road_graph, public;
+    -- no need to prefix the function by the schema name because the search_path is set in the function definition
     SELECT INTO road_codes
         get_updated_roads_from_editing_session(_editing_session_id)
     ;
 
     -- Create SQL to run for each edited data
-    -- no need to prefix the function by the schema name because we set it in the search path
+    -- no need to prefix the function by the schema name because the search_path is set in the function definition
     FOR sql_record IN
         SELECT
             sql_text
@@ -4508,7 +4493,6 @@ BEGIN
        -- RAISE NOTICE 'SQL = %', sql_record.sql_text;
        EXECUTE sql_record.sql_text;
     END LOOP;
-    RESET search_path;
 
     -- Re-enable triggers
     SELECT set_config('road.graph.disable.trigger', '0'::text, true)
@@ -4553,11 +4537,9 @@ BEGIN
     TRUNCATE road_graph_editing.editing_sessions CASCADE;
 
     -- Delete merged editing session
-    SET search_path TO road_graph, public;
     DELETE FROM editing_sessions
     WHERE id = _editing_session_id
     ;
-    RESET search_path;
 
     -- Refresh the materialized view of the last updated managed objects
     REFRESH MATERIALIZED VIEW CONCURRENTLY road_graph.vm_managed_objects;
@@ -4933,9 +4915,9 @@ BEGIN
     -- we must get the new edge id beforehand to use it as next_edge_id
     -- For roundabout, do not calculate previous and next edge id
     -- To let the user decide
-    SET search_path TO road_graph, public;
-    id_new_object = nextval(pg_get_serial_sequence('edges', 'id'));
-    RESET search_path;
+    -- The quoted schema name "road_graph" is not replaced by the plugin:
+    -- the edges of the road_graph_editing schema also use the road_graph sequence
+    id_new_object = nextval(pg_get_serial_sequence('"road_graph".edges', 'id'));
 
     UPDATE road_graph.edges
     SET

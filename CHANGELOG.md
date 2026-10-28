@@ -23,6 +23,11 @@
 
 ### Fixed
 
+* **SQL**: the session variables `road.graph.*` used by the topology triggers are set with `SET LOCAL`,
+  so that their value cannot leak outside of the current transaction (migration `upgrade_to_33.sql`)
+* **SQL**: remove the `SET search_path` / `RESET search_path` inside the functions
+  `drop_editing_session`, `editing_survey` and `split_edge_by_node`, which now use the quoted schema name
+  `"road_graph"`. The function `merge_editing_session_data` has its `search_path` set in its definition
 * **Locator**: remove the prefix `rr`, which was ignored by QGIS
   (plugin prefixes must have at least 3 characters).
   The search is run without typing any prefix.
