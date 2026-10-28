@@ -36,8 +36,8 @@
 
 * **SQL**: split of a managed object linestring by a point (Lizmap action `split_line_by_point`):
   the references were not updated when the table has no trigger calculating them.
-  The first part now ends, and the second part starts, at the references of the cut point
-  (migration `upgrade_to_37.sql`)
+  The first part now ends, and the second part starts, at the references of the cut point.
+  A feature digitized in the opposite direction of the road can now also be split (migration `upgrade_to_37.sql`)
 * **SQL**: drawing an edge across edges crossing without node (bridges, highway interchanges) never ended:
   the parts of each split edge created nodes at all their intersections, which were propagated
   to the edges crossing them, and so on. Only the intersections of the drawn edge are now cut

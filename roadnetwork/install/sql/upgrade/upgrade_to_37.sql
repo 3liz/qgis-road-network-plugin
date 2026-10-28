@@ -6,6 +6,9 @@
 --   The references of the cut point now become the end references of the feature
 --   and the start references of the new feature,
 --   if the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa.
+-- * split_table_linestring_feature_by_point: a feature digitized in the opposite direction of the road
+--   could not be split (error raised by get_road_substring_from_references).
+--   The road substrings are calculated in the road direction, then reversed to keep the feature direction.
 --
 -- This migration is idempotent: it only contains CREATE OR REPLACE FUNCTION and COMMENT.
 
@@ -36,6 +39,7 @@ DECLARE
     update_references_sql text;
     insert_references_fields text;
     insert_references_values text;
+    is_reversed boolean;
     v_sqlstate text;
     v_message text;
     v_context text;
@@ -201,18 +205,48 @@ BEGIN
     );
 
     -- Build the new geometries
-    geom_1 = ((road_graph.get_road_substring_from_references(
-        to_jsonb(feature)->>'road_code',
-        (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
-        (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
-        (start_references->>'offset')::real, start_references->>'side'
-    ))->>'geom')::geometry(MultiLinestring, 2154);
-    geom_2 = ((road_graph.get_road_substring_from_references(
-        to_jsonb(feature)->>'road_code',
-        (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
-        (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
-        (start_references->>'offset')::real, start_references->>'side'
-    ))->>'geom')::geometry(MultiLinestring, 2154);
+    -- geom_1: from the feature start point to the cut point
+    -- geom_2: from the cut point to the feature end point
+    -- The feature can be digitized in the opposite direction of the road:
+    -- the road substrings must be calculated in the road direction,
+    -- then reversed to keep the direction of the feature
+    is_reversed = (start_references->>'cumulative')::real > (end_references->>'cumulative')::real;
+    IF NOT is_reversed THEN
+        geom_1 = ((road_graph.get_road_substring_from_references(
+            to_jsonb(feature)->>'road_code',
+            (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
+            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+            (start_references->>'offset')::real, start_references->>'side'
+        ))->>'geom')::geometry(MultiLinestring, 2154);
+        geom_2 = ((road_graph.get_road_substring_from_references(
+            to_jsonb(feature)->>'road_code',
+            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+            (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
+            (start_references->>'offset')::real, start_references->>'side'
+        ))->>'geom')::geometry(MultiLinestring, 2154);
+    ELSE
+        geom_1 = ((road_graph.get_road_substring_from_references(
+            to_jsonb(feature)->>'road_code',
+            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+            (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
+            (start_references->>'offset')::real, start_references->>'side'
+        ))->>'geom')::geometry(MultiLinestring, 2154);
+        geom_2 = ((road_graph.get_road_substring_from_references(
+            to_jsonb(feature)->>'road_code',
+            (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
+            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+            (start_references->>'offset')::real, start_references->>'side'
+        ))->>'geom')::geometry(MultiLinestring, 2154);
+        -- Reverse the parts and their order
+        geom_1 = (
+            SELECT ST_Multi(ST_Collect(ST_Reverse(d.geom) ORDER BY d.path DESC))
+            FROM ST_Dump(geom_1) AS d
+        );
+        geom_2 = (
+            SELECT ST_Multi(ST_Collect(ST_Reverse(d.geom) ORDER BY d.path DESC))
+            FROM ST_Dump(geom_2) AS d
+        );
+    END IF;
 
     -- Transform geometries into multigeometries if needed
     IF geometry_column_data.geom_type ILIKE 'multi%' THEN
@@ -352,4 +386,5 @@ $_$;
 COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.
 The feature keeps the first part, and a new feature is created with the second part.
 If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa,
-the references of the cut point become the end references of the feature and the start references of the new feature.';
+the references of the cut point become the end references of the feature and the start references of the new feature.
+The feature can be digitized in the direction of the road or in the opposite direction: the new geometries keep its direction.';
