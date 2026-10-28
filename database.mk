@@ -60,6 +60,8 @@ reformat-sql:
 
 schemaspy:
 	@rm -rf docs/database/ && mkdir docs/database/
+	@# The schemaspy container runs with its own user (java, uid 1000): the output directory must be writable
+	@chmod 777 docs/database/
 	{ \
 		cd .docker; \
 		export DB_COMMAND="./install_db_and_wait.sh"; \
@@ -67,7 +69,9 @@ schemaspy:
 			--quiet-pull \
 			--abort-on-container-exit \
 			--exit-code-from schemaspy; \
+		status=$$?; \
 		docker compose --profile=schemaspy down -v; \
+		exit $$status; \
 	}
 
 pull:
