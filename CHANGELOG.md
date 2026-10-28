@@ -16,6 +16,7 @@
   followed by the snapped line, with their start and end references (migration `upgrade_to_34.sql`)
 * **Docs**: the `Database` menu now contains the pages `Useful functions`,
   which explains how to use these functions, and `Database structure`, which embeds the SchemaSpy documentation
+* **Docs**: explain the use of the field `no_intersection_cutting` in the page `Road graph editing`
 
 ### Changed
 
