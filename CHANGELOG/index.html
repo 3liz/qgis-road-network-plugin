@@ -1860,6 +1860,7 @@
   followed by the snapped line, with their start and end references (migration <code>upgrade_to_34.sql</code>)</li>
 <li><strong>Docs</strong>: the <code>Database</code> menu now contains the pages <code>Useful functions</code>,
   which explains how to use these functions, and <code>Database structure</code>, which embeds the SchemaSpy documentation</li>
+<li><strong>Docs</strong>: explain the use of the field <code>no_intersection_cutting</code> in the page <code>Road graph editing</code></li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">#</a></h3>
 <ul>
@@ -1877,6 +1878,10 @@
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>
+<li><strong>SQL</strong>: the edges with <code>no_intersection_cutting</code> set to <code>True</code> were still cut by the nodes located on them,
+  for example a new edge with this value passing over an existing crossroad.
+  They are now only cut when the start or end point of a created or moved edge is located on them,
+  for example a new access road arriving in the middle of a highway edge (migration <code>upgrade_to_36.sql</code>)</li>
 <li><strong>SQL</strong>: performance of the references calculation: the recalculation of the edges references
   of all the roads (<code>update_edge_references</code>) is about 9 times faster, with the same results.
   With the road cache, the previous marker is only searched among the markers of the road

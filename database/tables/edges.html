@@ -423,7 +423,7 @@
                                         <table border='0' cellspacing='0' cellpadding='0'>
                                         </table>
                                     </td>
-                                    <td><p>Prevents the trigger functions from automatically cutting the edges having this value set to True. Useful for access roads, edges located under a bridge, etc.</p></td>
+                                    <td><p>Prevents the trigger functions from automatically cutting the edges having this value set to True. Useful for access roads, edges located under a bridge, etc. No node is created at the intersection with other edges, and the existing nodes under the edge do not cut it. Exception: an edge is cut if the start or end point of a created or moved edge is located on it, for example a new access road arriving in the middle of a highway edge.</p></td>
                                 </tr>
                                 <tr>
                                     <td><span id="id_source">id_source</span></td>

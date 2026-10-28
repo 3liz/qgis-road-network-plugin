@@ -793,6 +793,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#edges-which-must-not-be-cut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edges which must not be cut
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-to-edit-the-data-in-qgis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1140,6 +1151,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#edges-which-must-not-be-cut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edges which must not be cut
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-to-edit-the-data-in-qgis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1278,8 +1300,42 @@ The road of the roundabout must exist in the <code>roads</code> layer with the r
 <li><strong>adds a marker <code>0</code></strong> for this roundabout, on its westernmost node, if it does not already exist.</li>
 </ul>
 <p>The action is cancelled with a warning if the layer is not in editing mode,
-or if the road type of the selected edge is not <code>roundabout</code>.
-You may have to refresh the map canvas to see the changes.</p>
+or if the road type of the selected edge is not <code>roundabout</code>.</p>
+<h2 id="edges-which-must-not-be-cut">Edges which must not be cut<a class="headerlink" href="#edges-which-must-not-be-cut" title="Permanent link">#</a></h2>
+<p>By default, the database <strong>trigger functions</strong> keep the graph topology up to date while you edit:</p>
+<ul>
+<li>when a new or modified edge <strong>crosses</strong> other edges, a <strong>node</strong> is created at each intersection
+  and the crossing edges are <strong>split</strong> by this node,</li>
+<li>when a <strong>node</strong> is created or moved on an edge, this edge is <strong>split</strong> by the node.</li>
+</ul>
+<p>But two roads drawn on top of each other are <strong>not always connected</strong>: a highway crossing a road on a <strong>bridge</strong>,
+a road going through a <strong>tunnel</strong>, the <strong>access roads</strong> of a highway interchange, etc.
+For these edges, check the field <strong>No intersection cutting</strong> (<code>no_intersection_cutting</code>) in the edge form.
+It can be changed at any time, for example before drawing a new road across a highway interchange.</p>
+<p>An edge with <code>no_intersection_cutting</code> set to <code>True</code>:</p>
+<ul>
+<li>is <strong>not split</strong> by the other edges <strong>crossing</strong> it, and does not split them:
+  no node is created at the intersection,</li>
+<li>is <strong>not split</strong> by the <strong>existing nodes</strong> located under it,
+  for example a crossroad of the roads located under a bridge,</li>
+<li><strong>is split</strong> when the <strong>start or end point</strong> of a new or moved edge is located on it,
+  far enough from its own start and end points: for example a <strong>new access road arriving in the middle of a highway edge</strong>.
+  This makes sense since the two roads are really connected at this point.</li>
+</ul>
+<p>The diagram below shows when an edge is split:</p>
+<div class="mermaid">graph TD
+    A[A node is created or moved on an edge,&lt;br&gt;or a new edge crosses it] --&gt; B{Field No intersection cutting&lt;br&gt;of this edge or of the new edge}
+    B --&gt;|False for both| C[The edge is split]
+    B --&gt;|True for one of them| D{Is the node the start or end point&lt;br&gt;of the edge being drawn or moved?}
+    D --&gt;|Yes, e.g. a new access road&lt;br&gt;arriving on a highway| C
+    D --&gt;|No, e.g. a road crossing&lt;br&gt;under a bridge| E[The edge is not split]</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>In a <strong>highway interchange</strong>, set the field to <code>True</code> for the highway and access roads edges
+<strong>before drawing</strong> a new road across the interchange: only the other roads will be split.
+The value is kept when an edge is split, so the new parts are also protected.</p>
+</div>
+<p>You may have to refresh the map canvas to see the changes.</p>
 <h2 id="how-to-edit-the-data-in-qgis">How to edit the data in QGIS<a class="headerlink" href="#how-to-edit-the-data-in-qgis" title="Permanent link">#</a></h2>
 <p>In QGIS, you can edit the layer data by toggling the <strong>editing mode</strong> for each layer:</p>
 <ul>
