@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>get_road_sections_from_snapped_line(_line geometry, _tolerance real DEFAULT 1)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Return the ordered list of the roads followed by the given line, with the start and end references (marker, abscissa and cumulative) for each road, the direction (downstream or upstream) and the line portion on this road. The line must follow the road graph edges, for example the result of the function get_snapped_line_from_track. The parameter _tolerance (default 1m) is the maximum distance between the line and the edges. A line without SRID is considered to be in the road graph projection, and other lines are reprojected. Example of output (the geom column is not shown): road_order | road_code     | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative | direction  | length &mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&mdash;&mdash;&ndash;+&mdash;&mdash;&mdash;&mdash;&mdash;-+&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&mdash;&mdash;&ndash;+&mdash;&mdash;&mdash;&mdash;&mdash;-+&mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&ndash; 1 | D40           |           14 |         905.27 |          16361.8 |         15 |       396.15 |        16761.4 | downstream |  399.6 2 | GIR_D40_D16-1 |            0 |              0 |                0 |          0 |        39.17 |          39.17 | downstream |  39.17 3 | D16           |            0 |         716.82 |           716.82 |          0 |         1.62 |           1.62 | upstream   | 715.19</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_line</td>
+                                    <td>geometry</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_tolerance</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>road_order</td>
+                                    <td>integer</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>road_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>start_marker</td>
+                                    <td>integer</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>start_abscissa</td>
+                                    <td>real</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>start_cumulative</td>
+                                    <td>real</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>end_marker</td>
+                                    <td>integer</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>end_abscissa</td>
+                                    <td>real</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>end_cumulative</td>
+                                    <td>real</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>direction</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>length</td>
+                                    <td>real</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    line geometry;&#10;BEGIN&#10;    IF _line IS NULL OR ST_IsEmpty(_line) THEN&#10;        RETURN;&#10;    END IF;&#10;&#10;    -- Use the road graph projection&#10;    line &#61; ST_Force2D(_line);&#10;    IF ST_SRID(line) &#61; 0 THEN&#10;        line &#61; ST_SetSRID(line, 2154);&#10;    ELSIF ST_SRID(line) !&#61; 2154 THEN&#10;        line &#61; ST_Transform(line, 2154);&#10;    END IF;&#10;&#10;    RETURN QUERY&#10;    WITH&#10;    -- Points of each part of the line, densified&#10;    -- to avoid long segments if the line has not been snapped on the edges&#10;    line_points AS (&#10;        SELECT&#10;            coalesce(d.path[1], 1) AS part,&#10;            coalesce(d.path[array_length(d.path, 1)], 1) AS point_index,&#10;            d.geom&#10;        FROM ST_DumpPoints(ST_Segmentize(ST_Multi(line), 5)) AS d&#10;    ),&#10;    segments AS (&#10;        SELECT&#10;            lp.part,&#10;            row_number() OVER (ORDER BY lp.part, lp.point_index) AS segment_index,&#10;            ST_MakeLine(lp.geom, lead(lp.geom) OVER (PARTITION BY lp.part ORDER BY lp.point_index)) AS geom&#10;        FROM line_points AS lp&#10;    ),&#10;    -- Find the road of each segment, with its middle point&#10;    -- which avoids the ambiguity of the points located on the intersection nodes&#10;    segment_roads AS (&#10;        SELECT&#10;            sg.part, sg.segment_index, sg.geom, r.road_code&#10;        FROM segments AS sg&#10;        CROSS JOIN LATERAL (&#10;            SELECT e.road_code&#10;            FROM road_graph.edges AS e&#10;            WHERE ST_DWithin(e.geom, ST_LineInterpolatePoint(sg.geom, 0.5), _tolerance)&#10;            ORDER BY ST_Distance(e.geom, ST_LineInterpolatePoint(sg.geom, 0.5)), e.road_code&#10;            LIMIT 1&#10;        ) AS r&#10;        WHERE sg.geom IS NOT NULL&#10;        AND ST_Length(sg.geom) &gt; 0&#10;    ),&#10;    -- Group the consecutive segments on the same road&#10;    groups AS (&#10;        SELECT&#10;            sr.*,&#10;            sr.segment_index - row_number() OVER (PARTITION BY sr.part, sr.road_code ORDER BY sr.segment_index) AS group_id&#10;        FROM segment_roads AS sr&#10;    ),&#10;    road_lines AS (&#10;        SELECT&#10;            row_number() OVER (ORDER BY min(g.segment_index))::integer AS road_order,&#10;            g.road_code,&#10;            ST_LineMerge(ST_MakeLine(g.geom ORDER BY g.segment_index)) AS geom&#10;        FROM groups AS g&#10;        GROUP BY g.part, g.road_code, g.group_id&#10;    ),&#10;    road_references AS (&#10;        SELECT&#10;            rl.*,&#10;            -- For roundabouts, the start and end points of the closed road are the same:&#10;            -- use points 1cm inside the line to avoid any ambiguity&#10;            -- and correct the references afterwards with this shift&#10;            CASE&#10;                WHEN ro.road_type &#61; &#39;roundabout&#39; AND ST_Length(rl.geom) &gt; 0.1 THEN 0.01&#10;                ELSE 0&#10;            END AS shift,&#10;            road_graph.get_reference_from_point(&#10;                CASE&#10;                    WHEN ro.road_type &#61; &#39;roundabout&#39; AND ST_Length(rl.geom) &gt; 0.1&#10;                        THEN ST_LineInterpolatePoint(rl.geom, 0.01 / ST_Length(rl.geom))&#10;                    ELSE ST_StartPoint(rl.geom)&#10;                END,&#10;                rl.road_code,&#10;                False&#10;            ) AS start_ref,&#10;            road_graph.get_reference_from_point(&#10;                CASE&#10;                    WHEN ro.road_type &#61; &#39;roundabout&#39; AND ST_Length(rl.geom) &gt; 0.1&#10;                        THEN ST_LineInterpolatePoint(rl.geom, 1 - 0.01 / ST_Length(rl.geom))&#10;                    ELSE ST_EndPoint(rl.geom)&#10;                END,&#10;                rl.road_code,&#10;                False&#10;            ) AS end_ref&#10;        FROM road_lines AS rl&#10;        LEFT JOIN road_graph.roads AS ro&#10;            ON ro.road_code &#61; rl.road_code&#10;    ),&#10;    road_directions AS (&#10;        SELECT&#10;            rr.*,&#10;            CASE&#10;                WHEN (rr.end_ref-&gt;&gt;&#39;cumulative&#39;)::numeric &gt;&#61; (rr.start_ref-&gt;&gt;&#39;cumulative&#39;)::numeric THEN 1&#10;                ELSE -1&#10;            END AS sign&#10;        FROM road_references AS rr&#10;    )&#10;    SELECT&#10;        rd.road_order,&#10;        rd.road_code,&#10;        (rd.start_ref-&gt;&gt;&#39;marker_code&#39;)::integer,&#10;        ((rd.start_ref-&gt;&gt;&#39;abscissa&#39;)::numeric - rd.sign * rd.shift)::real,&#10;        ((rd.start_ref-&gt;&gt;&#39;cumulative&#39;)::numeric - rd.sign * rd.shift)::real,&#10;        (rd.end_ref-&gt;&gt;&#39;marker_code&#39;)::integer,&#10;        ((rd.end_ref-&gt;&gt;&#39;abscissa&#39;)::numeric + rd.sign * rd.shift)::real,&#10;        ((rd.end_ref-&gt;&gt;&#39;cumulative&#39;)::numeric + rd.sign * rd.shift)::real,&#10;        CASE WHEN rd.sign &#61; 1 THEN &#39;downstream&#39; ELSE &#39;upstream&#39; END,&#10;        round(ST_Length(rd.geom)::numeric, 2)::real,&#10;        rd.geom::geometry(LineString, 2154)&#10;    FROM road_directions AS rd&#10;    ORDER BY rd.road_order&#10;    ;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

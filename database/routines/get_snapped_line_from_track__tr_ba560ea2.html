@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>get_snapped_line_from_track(_track geometry, _densify_distance real DEFAULT 2, _max_distance real DEFAULT 25, _road_change_penalty real DEFAULT 100)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Build a multilinestring snapped on the road graph edges from a GPS track (for example from a GPX file) which can be imprecise. The track is densified with a point every _densify_distance meters (default 2m), and each point is assigned to one of the roads closer than _max_distance (default 25m). To avoid zigzags between two close roads, the chosen sequence of roads minimizes the sum of the distances between the points and their roads, plus a penalty _road_change_penalty (default 100, expressed as a surface in m² between the track and the roads) each time the road changes. The returned geometry follows the edges geometries, in the direction of the track. Gaps between two unconnected edges are filled with the shortest path of maximum 5 edges. If no path is found, a new part is created in the multilinestring. A track without SRID is considered to be in the road graph projection, and other tracks are reprojected. The result is returned in the road graph projection. The result can be passed to the function get_road_sections_from_snapped_line to get the references of the crossed roads.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_track</td>
+                                    <td>geometry</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_densify_distance</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_max_distance</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_road_change_penalty</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    track geometry;&#10;    points geometry[];&#10;    point_record record;&#10;    raise_notice text;&#10;    -- Choice of the road for each point&#10;    previous_roads text[];&#10;    previous_costs double precision[];&#10;    current_costs double precision[];&#10;    candidate_cost double precision;&#10;    best_cost double precision;&#10;    best_previous_road text;&#10;    current_road text;&#10;    point_ids integer[] :&#61; &#39;{}&#39;;&#10;    point_offsets integer[] :&#61; &#39;{}&#39;;&#10;    flat_roads text[] :&#61; &#39;{}&#39;;&#10;    flat_previous_roads text[] :&#61; &#39;{}&#39;;&#10;    chosen_roads text[];&#10;    block_end integer;&#10;    -- Runs of consecutive points snapped on the same edge&#10;    s integer :&#61; 0;&#10;    run_edges integer[] :&#61; &#39;{}&#39;;&#10;    run_start_nodes integer[] :&#61; &#39;{}&#39;;&#10;    run_end_nodes integer[] :&#61; &#39;{}&#39;;&#10;    run_lengths double precision[] :&#61; &#39;{}&#39;;&#10;    run_first_m double precision[] :&#61; &#39;{}&#39;;&#10;    run_last_m double precision[] :&#61; &#39;{}&#39;;&#10;    run_min_m double precision[] :&#61; &#39;{}&#39;;&#10;    run_max_m double precision[] :&#61; &#39;{}&#39;;&#10;    node_in integer;&#10;    node_out integer;&#10;    node_m double precision;&#10;    -- Final list of edges, with the edges added to fill the gaps&#10;    f integer :&#61; 0;&#10;    final_edges integer[] :&#61; &#39;{}&#39;;&#10;    final_start_nodes integer[] :&#61; &#39;{}&#39;;&#10;    final_end_nodes integer[] :&#61; &#39;{}&#39;;&#10;    final_first_m double precision[] :&#61; &#39;{}&#39;;&#10;    final_last_m double precision[] :&#61; &#39;{}&#39;;&#10;    bridge record;&#10;    bridge_edge record;&#10;    -- Geometry building&#10;    edge_geom geometry;&#10;    entry_m double precision;&#10;    exit_m double precision;&#10;    pieces geometry[] :&#61; &#39;{}&#39;;&#10;    parts geometry[] :&#61; &#39;{}&#39;;&#10;    i integer;&#10;    j integer;&#10;    k integer;&#10;    p integer;&#10;BEGIN&#10;    raise_notice &#61; road_graph.get_current_setting(&#39;road.graph.raise.notice&#39;, &#39;no&#39;);&#10;&#10;    IF _track IS NULL OR ST_IsEmpty(_track) THEN&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Use the road graph projection&#10;    -- A geometry without SRID is considered to be in the road graph projection&#10;    track &#61; ST_Force2D(_track);&#10;    IF ST_SRID(track) &#61; 0 THEN&#10;        track &#61; ST_SetSRID(track, 2154);&#10;    ELSIF ST_SRID(track) !&#61; 2154 THEN&#10;        track &#61; ST_Transform(track, 2154);&#10;    END IF;&#10;&#10;    -- Build a single linestring from the track (a GPX track can contain multiple segments)&#10;    track &#61; ST_LineMerge(track);&#10;    IF GeometryType(track) !&#61; &#39;LINESTRING&#39; THEN&#10;        track &#61; ST_MakeLine(ARRAY(&#10;            SELECT d.geom&#10;            FROM ST_Dump(track) AS d&#10;            ORDER BY d.path&#10;        ));&#10;    END IF;&#10;&#10;    -- Densify the track and get its points&#10;    points &#61; ARRAY(&#10;        SELECT d.geom&#10;        FROM ST_DumpPoints(ST_Segmentize(track, _densify_distance)) AS d&#10;        ORDER BY d.path&#10;    );&#10;    IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;        RAISE NOTICE &#39;get_snapped_line_from_track - % points&#39;, array_length(points, 1);&#10;    END IF;&#10;&#10;    -- 1/ Choose the road for each point&#10;    -- We do not simply take the closest road, which would lead to zigzags&#10;    -- between two roads when the track is not precise.&#10;    -- We search the sequence of roads which minimizes the sum of:&#10;    -- * the distances between the points and their roads,&#10;    --   multiplied by the densify distance (~ the surface between the track and the roads)&#10;    -- * a penalty each time the road changes between two consecutive points (Viterbi algorithm)&#10;    -- Points further than _max_distance from any road are ignored&#10;    FOR point_record IN&#10;        SELECT&#10;            c.idx,&#10;            array_agg(c.road_code ORDER BY c.road_code) AS roads,&#10;            array_agg(c.distance ORDER BY c.road_code) AS distances&#10;        FROM (&#10;            SELECT pt.idx, e.road_code, min(ST_Distance(e.geom, points[pt.idx])) AS distance&#10;            FROM generate_subscripts(points, 1) AS pt(idx)&#10;            INNER JOIN road_graph.edges AS e&#10;                ON ST_DWithin(e.geom, points[pt.idx], _max_distance)&#10;            GROUP BY pt.idx, e.road_code&#10;        ) AS c&#10;        GROUP BY c.idx&#10;        ORDER BY c.idx&#10;    LOOP&#10;        current_costs &#61; &#39;{}&#39;;&#10;        FOR j IN 1..array_length(point_record.roads, 1) LOOP&#10;            best_cost &#61; NULL;&#10;            best_previous_road &#61; NULL;&#10;            FOR k IN 1..coalesce(array_length(previous_roads, 1), 0) LOOP&#10;                candidate_cost &#61; previous_costs[k]&#10;                    + CASE WHEN previous_roads[k] &#61; point_record.roads[j] THEN 0 ELSE _road_change_penalty END&#10;                ;&#10;                -- In case of equality, keep the same road&#10;                IF best_cost IS NULL OR candidate_cost &lt; best_cost&#10;                    OR (candidate_cost &#61; best_cost AND previous_roads[k] &#61; point_record.roads[j])&#10;                THEN&#10;                    best_cost &#61; candidate_cost;&#10;                    best_previous_road &#61; previous_roads[k];&#10;                END IF;&#10;            END LOOP;&#10;            current_costs &#61; current_costs || (coalesce(best_cost, 0) + point_record.distances[j] * _densify_distance);&#10;            flat_roads &#61; flat_roads || point_record.roads[j];&#10;            flat_previous_roads &#61; flat_previous_roads || best_previous_road;&#10;        END LOOP;&#10;        point_ids &#61; point_ids || point_record.idx;&#10;        point_offsets &#61; point_offsets || (array_length(flat_roads, 1) - array_length(point_record.roads, 1) + 1);&#10;        previous_roads &#61; point_record.roads;&#10;        previous_costs &#61; current_costs;&#10;    END LOOP;&#10;&#10;    IF array_length(point_ids, 1) IS NULL THEN&#10;        IF raise_notice IN (&#39;info&#39;, &#39;debug&#39;) THEN&#10;            RAISE NOTICE &#39;get_snapped_line_from_track - no road found closer than % m&#39;, _max_distance;&#10;        END IF;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Get back the best sequence of roads, from the last point to the first one&#10;    best_cost &#61; NULL;&#10;    FOR k IN 1..array_length(previous_roads, 1) LOOP&#10;        IF best_cost IS NULL OR previous_costs[k] &lt; best_cost THEN&#10;            best_cost &#61; previous_costs[k];&#10;            current_road &#61; previous_roads[k];&#10;        END IF;&#10;    END LOOP;&#10;    chosen_roads &#61; array_fill(NULL::text, ARRAY[array_length(point_ids, 1)]);&#10;    FOR i IN REVERSE array_length(point_ids, 1)..1 LOOP&#10;        chosen_roads[i] &#61; current_road;&#10;        block_end &#61; CASE&#10;            WHEN i &lt; array_length(point_ids, 1) THEN point_offsets[i + 1] - 1&#10;            ELSE array_length(flat_roads, 1)&#10;        END;&#10;        FOR p IN point_offsets[i]..block_end LOOP&#10;            IF flat_roads[p] &#61; current_road THEN&#10;                current_road &#61; flat_previous_roads[p];&#10;                EXIT;&#10;            END IF;&#10;        END LOOP;&#10;    END LOOP;&#10;&#10;    -- 2/ Snap each point on the closest edge of its road&#10;    -- and group consecutive points snapped on the same edge.&#10;    -- When the road changes, the points located just before or after the intersection&#10;    -- can be snapped beyond the intersection node, which creates a spur:&#10;    -- an edge entered and left by the same node.&#10;    -- We remove these spurs if they are shorter than _max_distance.&#10;    FOR point_record IN&#10;        SELECT&#10;            c.ord,&#10;            e.id, e.start_node, e.end_node,&#10;            ST_Length(e.geom) AS edge_length,&#10;            ST_LineLocatePoint(e.geom, points[c.idx]) AS measure&#10;        FROM unnest(point_ids, chosen_roads) WITH ORDINALITY AS c(idx, road_code, ord)&#10;        CROSS JOIN LATERAL (&#10;            SELECT ee.id, ee.start_node, ee.end_node, ee.geom&#10;            FROM road_graph.edges AS ee&#10;            WHERE ee.road_code &#61; c.road_code&#10;            AND ST_DWithin(ee.geom, points[c.idx], _max_distance)&#10;            ORDER BY ST_Distance(ee.geom, points[c.idx]), ee.id&#10;            LIMIT 1&#10;        ) AS e&#10;        ORDER BY c.ord&#10;    LOOP&#10;        LOOP&#10;            -- Same edge as the previous run: merge&#10;            IF s &gt; 0 AND run_edges[s] &#61; point_record.id THEN&#10;                run_last_m[s] &#61; point_record.measure;&#10;                run_min_m[s] &#61; least(run_min_m[s], point_record.measure);&#10;                run_max_m[s] &#61; greatest(run_max_m[s], point_record.measure);&#10;                EXIT;&#10;            END IF;&#10;&#10;            -- Remove the previous run if it is a spur&#10;            IF s &gt; 1 AND run_start_nodes[s] !&#61; run_end_nodes[s] THEN&#10;                node_in &#61; CASE&#10;                    WHEN run_end_nodes[s - 1] IN (run_start_nodes[s], run_end_nodes[s]) THEN run_end_nodes[s - 1]&#10;                    WHEN run_start_nodes[s - 1] IN (run_start_nodes[s], run_end_nodes[s]) THEN run_start_nodes[s - 1]&#10;                END;&#10;                node_out &#61; CASE&#10;                    WHEN point_record.start_node IN (run_start_nodes[s], run_end_nodes[s]) THEN point_record.start_node&#10;                    WHEN point_record.end_node IN (run_start_nodes[s], run_end_nodes[s]) THEN point_record.end_node&#10;                END;&#10;                IF node_in &#61; node_out THEN&#10;                    node_m &#61; CASE WHEN node_in &#61; run_start_nodes[s] THEN 0 ELSE 1 END;&#10;                    IF greatest(abs(run_min_m[s] - node_m), abs(run_max_m[s] - node_m)) * run_lengths[s] &lt;&#61; _max_distance THEN&#10;                        s &#61; s - 1;&#10;                        -- Test again with the new previous run&#10;                        CONTINUE;&#10;                    END IF;&#10;                END IF;&#10;            END IF;&#10;&#10;            -- New run&#10;            s &#61; s + 1;&#10;            run_edges[s] &#61; point_record.id;&#10;            run_start_nodes[s] &#61; point_record.start_node;&#10;            run_end_nodes[s] &#61; point_record.end_node;&#10;            run_lengths[s] &#61; point_record.edge_length;&#10;            run_first_m[s] &#61; point_record.measure;&#10;            run_last_m[s] &#61; point_record.measure;&#10;            run_min_m[s] &#61; point_record.measure;&#10;            run_max_m[s] &#61; point_record.measure;&#10;            EXIT;&#10;        END LOOP;&#10;    END LOOP;&#10;&#10;    -- 3/ Fill the gaps between two consecutive edges which are not connected,&#10;    -- for example when a short road (roundabout) has been skipped.&#10;    -- We search the shortest path of maximum 5 edges between the two edges&#10;    FOR i IN 1..s LOOP&#10;        f &#61; f + 1;&#10;        final_edges[f] &#61; run_edges[i];&#10;        final_start_nodes[f] &#61; run_start_nodes[i];&#10;        final_end_nodes[f] &#61; run_end_nodes[i];&#10;        final_first_m[f] &#61; run_first_m[i];&#10;        final_last_m[f] &#61; run_last_m[i];&#10;&#10;        CONTINUE WHEN i &#61; s;&#10;        CONTINUE WHEN run_start_nodes[i] IN (run_start_nodes[i + 1], run_end_nodes[i + 1])&#10;            OR run_end_nodes[i] IN (run_start_nodes[i + 1], run_end_nodes[i + 1])&#10;        ;&#10;&#10;        WITH RECURSIVE&#10;        edge_a AS (&#10;            SELECT e.*, ST_LineInterpolatePoint(e.geom, run_last_m[i]) AS point&#10;            FROM road_graph.edges AS e&#10;            WHERE e.id &#61; run_edges[i]&#10;        ),&#10;        edge_b AS (&#10;            SELECT e.*, ST_LineInterpolatePoint(e.geom, run_first_m[i + 1]) AS point&#10;            FROM road_graph.edges AS e&#10;            WHERE e.id &#61; run_edges[i + 1]&#10;        ),&#10;        local_edges AS (&#10;            SELECT e.id, e.start_node, e.end_node, ST_Length(e.geom) AS edge_length&#10;            FROM road_graph.edges AS e, edge_a AS a, edge_b AS b&#10;            WHERE ST_DWithin(e.geom, ST_MakeLine(a.point, b.point), 2 * _max_distance)&#10;            AND e.id NOT IN (a.id, b.id)&#10;        ),&#10;        start_nodes AS (&#10;            SELECT a.start_node AS node, run_last_m[i] * ST_Length(a.geom) AS cost FROM edge_a AS a&#10;            UNION ALL&#10;            SELECT a.end_node, (1 - run_last_m[i]) * ST_Length(a.geom) FROM edge_a AS a&#10;        ),&#10;        end_nodes AS (&#10;            SELECT b.start_node AS node, run_first_m[i + 1] * ST_Length(b.geom) AS cost FROM edge_b AS b&#10;            UNION ALL&#10;            SELECT b.end_node, (1 - run_first_m[i + 1]) * ST_Length(b.geom) FROM edge_b AS b&#10;        ),&#10;        paths AS (&#10;            SELECT&#10;                sn.node, ARRAY[]::integer[] AS edges, ARRAY[sn.node] AS nodes,&#10;                sn.cost, 0 AS depth&#10;            FROM start_nodes AS sn&#10;            UNION ALL&#10;            SELECT&#10;                CASE WHEN l.start_node &#61; pa.node THEN l.end_node ELSE l.start_node END,&#10;                pa.edges || l.id,&#10;                pa.nodes || CASE WHEN l.start_node &#61; pa.node THEN l.end_node ELSE l.start_node END,&#10;                pa.cost + l.edge_length,&#10;                pa.depth + 1&#10;            FROM paths AS pa&#10;            INNER JOIN local_edges AS l&#10;                ON pa.node IN (l.start_node, l.end_node)&#10;            WHERE pa.depth &lt; 5&#10;            AND NOT l.id &#61; ANY(pa.edges)&#10;        )&#10;        SELECT INTO bridge&#10;            pa.edges, pa.nodes&#10;        FROM paths AS pa&#10;        INNER JOIN end_nodes AS en&#10;            ON en.node &#61; pa.node&#10;        WHERE pa.depth &gt; 0&#10;        ORDER BY pa.cost + en.cost, pa.depth&#10;        LIMIT 1&#10;        ;&#10;        CONTINUE WHEN bridge.edges IS NULL;&#10;&#10;        IF raise_notice &#61; &#39;debug&#39; THEN&#10;            RAISE NOTICE &#39;get_snapped_line_from_track - gap between edges % and % filled with edges %&#39;,&#10;                run_edges[i], run_edges[i + 1], bridge.edges&#10;            ;&#10;        END IF;&#10;        FOR j IN 1..array_length(bridge.edges, 1) LOOP&#10;            SELECT INTO bridge_edge e.id, e.start_node, e.end_node&#10;            FROM road_graph.edges AS e&#10;            WHERE e.id &#61; bridge.edges[j]&#10;            ;&#10;            f &#61; f + 1;&#10;            final_edges[f] &#61; bridge_edge.id;&#10;            final_start_nodes[f] &#61; bridge_edge.start_node;&#10;            final_end_nodes[f] &#61; bridge_edge.end_node;&#10;            final_first_m[f] &#61; CASE&#10;                WHEN bridge_edge.start_node &#61; bridge_edge.end_node THEN 0&#10;                WHEN bridge.nodes[j] &#61; bridge_edge.start_node THEN 0&#10;                ELSE 1&#10;            END;&#10;            final_last_m[f] &#61; 1 - final_first_m[f];&#10;        END LOOP;&#10;    END LOOP;&#10;&#10;    -- 4/ Build the line from the edges geometries&#10;    -- Each edge is used from the node connecting it to the previous edge&#10;    -- (or from the first snapped point) to the node connecting it to the next edge&#10;    -- (or to the last snapped point).&#10;    -- If two consecutive edges are not connected, a new part is created.&#10;    FOR i IN 1..f LOOP&#10;        node_in &#61; NULL;&#10;        node_out &#61; NULL;&#10;        IF i &gt; 1 THEN&#10;            node_in &#61; CASE&#10;                WHEN final_start_nodes[i] IN (final_start_nodes[i - 1], final_end_nodes[i - 1]) THEN final_start_nodes[i]&#10;                WHEN final_end_nodes[i] IN (final_start_nodes[i - 1], final_end_nodes[i - 1]) THEN final_end_nodes[i]&#10;            END;&#10;        END IF;&#10;        IF i &lt; f THEN&#10;            node_out &#61; CASE&#10;                WHEN final_end_nodes[i] IN (final_start_nodes[i + 1], final_end_nodes[i + 1]) THEN final_end_nodes[i]&#10;                WHEN final_start_nodes[i] IN (final_start_nodes[i + 1], final_end_nodes[i + 1]) THEN final_start_nodes[i]&#10;            END;&#10;        END IF;&#10;&#10;        -- A closed edge (roundabout) is entered by its start and left by its end&#10;        entry_m &#61; CASE&#10;            WHEN node_in IS NULL THEN final_first_m[i]&#10;            WHEN final_start_nodes[i] &#61; final_end_nodes[i] THEN 0&#10;            WHEN node_in &#61; final_start_nodes[i] THEN 0&#10;            ELSE 1&#10;        END;&#10;        exit_m &#61; CASE&#10;            WHEN node_out IS NULL THEN final_last_m[i]&#10;            WHEN final_start_nodes[i] &#61; final_end_nodes[i] THEN 1&#10;            WHEN node_out &#61; final_start_nodes[i] THEN 0&#10;            ELSE 1&#10;        END;&#10;&#10;        -- New part if the edge is not connected to the previous one&#10;        IF i &gt; 1 AND node_in IS NULL AND array_length(pieces, 1) &gt; 0 THEN&#10;            parts &#61; parts || ST_MakeLine(pieces);&#10;            pieces &#61; &#39;{}&#39;;&#10;        END IF;&#10;&#10;        CONTINUE WHEN entry_m &#61; exit_m;&#10;        SELECT INTO edge_geom e.geom&#10;        FROM road_graph.edges AS e&#10;        WHERE e.id &#61; final_edges[i]&#10;        ;&#10;        pieces &#61; pieces || CASE&#10;            WHEN entry_m &lt; exit_m THEN ST_LineSubstring(edge_geom, entry_m, exit_m)&#10;            ELSE ST_Reverse(ST_LineSubstring(edge_geom, exit_m, entry_m))&#10;        END;&#10;    END LOOP;&#10;    IF array_length(pieces, 1) &gt; 0 THEN&#10;        parts &#61; parts || ST_MakeLine(pieces);&#10;    END IF;&#10;&#10;    IF array_length(parts, 1) IS NULL THEN&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    RETURN ST_Multi(ST_RemoveRepeatedPoints(ST_Collect(parts), 0.001));&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>
