@@ -33,6 +33,12 @@
 
 ### Fixed
 
+* **SQL**: performance of the references calculation: the recalculation of the edges references
+  of all the roads (`update_edge_references`) is about 9 times faster, with the same results.
+  With the road cache, the previous marker is only searched among the markers of the road
+  (all the markers of the database were read), and the edge order is stored in the cache
+  instead of being calculated again for each point
+* **SQL**: `get_ordered_edges` returned twice the edge of the roads having only one edge
 * **SQL**: when the first edge of a road is updated, for example when it is split by a new node,
   do not create a marker `0` if the road already has markers. Some roads do not start with the marker `0`
   (e.g. a road starting at the marker `4 + 918`): a wrong marker `0` was created, or the editing failed

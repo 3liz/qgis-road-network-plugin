@@ -102,6 +102,7 @@ We also merge edges if the deleted node was between two edges.
 COMMENT ON FUNCTION road_graph.build_road_cached_objects(_road_code text) IS 'Calculate the given road geometries used in linear referencing tools & the road marker locations:
 * the simple linestring (no gaps) made by merging all edges linestrings after connecting edges
 * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps)
+* the order of the edges, used by get_reference_from_point to avoid calculating it again for each point
 
 Cached data is store in a temporary table living only until COMMIT
 ';
