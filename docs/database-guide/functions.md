@@ -4,6 +4,130 @@ The `road_graph` schema provides SQL functions which can be used directly in you
 for example in the QGIS **Browser** panel (right-click on the PostgreSQL connection or schema, then `Execute SQL…`),
 in `psql` or in a **virtual layer** built on a PostgreSQL query.
 
+The examples below use the coordinate reference system `EPSG:2154` and the road `D613`
+of the test data of the plugin: the values can be slightly different in your database.
+
+## Linear referencing functions
+
+| Function | Usage |
+|----------|-------|
+| [get_reference_from_point](#get-the-references-of-a-point) | References of a point |
+| [get_road_point_from_reference](#get-a-point-from-references) | Point corresponding to references |
+| [get_road_substring_from_references](#get-a-line-between-two-references) | Line between two references |
+| [get_spatial_road](#get-the-geometry-of-a-road-with-measures) | Geometry of a whole road, with the cumulative distances as measures |
+
+### Get the references of a point
+
+`road_graph.get_reference_from_point(_point, _road_code, _use_cache)` returns the **references** of a point,
+as a JSON object:
+
+```sql
+SELECT road_graph.get_reference_from_point(
+    ST_SetSRID(ST_MakePoint(473136.24, 6895774.58), 2154)
+);
+```
+
+```json
+{
+    "road_code": "D613", "marker_code": 44, "abscissa": 154.50,
+    "cumulative": 43063.50, "offset": 15.00, "side": "left"
+}
+```
+
+* `_point`: the point, in the coordinate reference system of the road graph,
+* `_road_code` (optional): the code of the road to use. If it is not given, the **closest road** is used.
+  Give it to choose the road of a point located near an intersection,
+* `_use_cache` (optional, `False` by default): used internally to speed up the calculation for many points of the same road.
+
+The function returns `NULL` if no road is closer than **50 m** from the point.
+
+Example: get the references of all the features of a point layer, without storing them:
+
+```sql
+SELECT
+    t.id,
+    r.ref->>'road_code' AS road_code,
+    (r.ref->>'marker_code')::integer AS marker_code,
+    (r.ref->>'abscissa')::real AS abscissa
+FROM managed.demo_trees AS t,
+LATERAL (SELECT road_graph.get_reference_from_point(t.geom, t.road_code) AS ref) AS r;
+```
+
+### Get a point from references
+
+`road_graph.get_road_point_from_reference(_road_code, _marker_code, _abscissa, _offset, _side)` returns the **point**
+corresponding to the given references, in the key `geom` of a JSON object (GeoJSON geometry):
+
+```sql
+SELECT road_graph.get_road_point_from_reference('D613', 44, 154.5, 15, 'left');
+```
+
+```json
+{
+    "road_code": "D613", "marker_code": 44, "abscissa": 154.5, "offset": 15, "side": "left",
+    "closest_marker_abscissa": 0,
+    "geom": {"type": "Point", "coordinates": [473136.24, 6895774.58], "crs": {...}}
+}
+```
+
+* `_offset`: distance in meters from the road axis. Use `0` for a point on the road,
+* `_side`: `left` or `right`, in the direction of the road.
+
+To get a PostGIS geometry:
+
+```sql
+SELECT ST_GeomFromGeoJSON(
+    road_graph.get_road_point_from_reference('D613', 44, 154.5, 15, 'left')->>'geom'
+) AS geom;
+```
+
+### Get a line between two references
+
+`road_graph.get_road_substring_from_references(_road_code, _start_marker_code, _start_marker_abscissa,
+_end_marker_code, _end_marker_abscissa, _offset, _side, _from_first_edge_start, _to_last_edge_end)`
+returns the **line** of the road between two references, in the key `geom` of a JSON object:
+
+```sql
+-- Line of the road D613 between the references 44 + 100 m and 44 + 600 m
+SELECT ST_Length(
+    (road_graph.get_road_substring_from_references('D613', 44, 100, 44, 600, 0, 'right')->>'geom')::geometry
+);
+-- 500.00
+```
+
+* the result is a **MultiLineString**: the road can be made of several parts, for example on both sides
+  of a roundabout, which has its own road code,
+* `_offset` and `_side`: to shift the line from the road axis, e.g. `3` and `left` for a painting on the left side,
+* `_from_first_edge_start` and `_to_last_edge_end` (optional, `False` by default): extend the line
+  to the start of the edge of the start references, and to the end of the edge of the end references,
+* the start references must be **before** the end references along the road, else an error is raised.
+  If the start marker is before the first marker of the road, the line starts at the start of the road,
+  and if the end marker is after the last marker, the line ends at the end of the road.
+
+### Get the geometry of a road with measures
+
+`road_graph.get_spatial_road(_road_code)` returns the geometry of the **whole road**, as a MultiLineString
+with **measures (M)**: the measure of each vertex is its cumulative distance from the start of the road.
+It can be used with the PostGIS functions of linear referencing, for example `ST_LocateAlong`:
+
+```sql
+-- Point located 5000 m after the start of the road D613
+SELECT ST_AsText(ST_LocateAlong(road_graph.get_spatial_road('D613'), 5000));
+-- MULTIPOINT M ((507254.37 6896996.74 5000))
+```
+
+## Business data functions
+
+These functions update the business tables listed in the `managed_objects` layer.
+They are described in the page [Managed objects](../user-guide/managed-objects.md):
+
+| Function | Usage |
+|----------|-------|
+| `update_table_references_from_geometries` | [Calculate the references of the features of a table from their geometries](../user-guide/managed-objects.md#calculate-the-references) |
+| `update_table_geometries_from_references` | Calculate the geometries of the features of a table from their references (same page) |
+| `add_managed_object_reference_fields` | [Add the reference fields to a table](../user-guide/managed-objects.md#add-the-reference-fields) |
+| `add_managed_objects_triggers` | [Create the triggers calculating the references automatically](../user-guide/managed-objects.md#automatic-calculation-of-the-references) |
+
 ## GPS tracks: from a GPX file to the road references
 
 A GPS track recorded on the road, for example with a smartphone and exported as a **GPX file**,

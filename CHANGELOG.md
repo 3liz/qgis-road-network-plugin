@@ -22,6 +22,13 @@
 
 ### Changed
 
+* **Docs**: reorganization and new content of the documentation:
+  new pages `Processing algorithms` and `Tables and fields`,
+  description of the toolbar and panels of the plugin, examples of the linear referencing functions,
+  creation of a demo database, example of the impacts of a graph modification on the business data,
+  the preparation of the business tables moved to the page `Managed objects`,
+  and a training plan in appendix
+
 * **QGIS project**: the Python code of the layer actions has been moved into the plugin
   (module `roadnetwork/actions`). The actions of the administration project now only call
   `plugins['roadnetwork'].run_action(...)`: `finalize_roundabout` (layer `edges copie`),
@@ -35,6 +42,10 @@
   with the algorithm `Create database local interface`, or their data sources updated
 
 ### Fixed
+
+* **QGIS**: in the panel `RoadNetwork tools`, pressing `Enter` in a field did not run the search `Find`
+* **QGIS**: the error message of the tool `Get references under the cursor` raised an error itself
+* **Processing**: the help of the algorithm `Merge editing session data` was the help of the algorithm cloning the data
 
 * **SQL**: the geometry of an editing session which status is not `created` could still be modified
   by setting its status back to `created` in the same query, or by removing it (migration `upgrade_to_38.sql`)

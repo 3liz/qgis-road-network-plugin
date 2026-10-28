@@ -38,6 +38,9 @@ ALGORITHMS = {
     "upgrade_database_structure": "installation/upgrade_database_structure.png",
     "create_database_local_interface": "installation/create_database_local_interface.png",
     "import_data": "user-guide/import_data.png",
+    "create_editing_session": "user-guide/processing_create_editing_session.png",
+    "merge_editing_session": "user-guide/processing_merge_editing_session.png",
+    "update_managed_objects": "user-guide/processing_update_managed_objects.png",
 }
 
 # Template layers loaded in the project, to be selected in the layer parameters

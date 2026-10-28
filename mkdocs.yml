@@ -17,14 +17,18 @@ nav:
       - Introduction: user-guide/index.md
       - Import data: user-guide/import.md
       - QGIS project and tools: user-guide/qgis-project.md
+      - Processing algorithms: user-guide/processing.md
       - Road graph editing: user-guide/graph-editing.md
       - Managed objects: user-guide/managed-objects.md
     - Changelog: changelog.md
     - Contribution: contributing.md
     - Database:
       - Useful functions: database-guide/functions.md
+      - Tables and fields: database-guide/tables.md
       - Database structure: database-guide/structure.md
     - Lizmap Web Client: lizmap-web-client/index.md
+    - Appendix:
+      - Training plan (French): appendix/training-plan.md
 
 plugins:
   - search
