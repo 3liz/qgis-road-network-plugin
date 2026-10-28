@@ -2840,6 +2840,11 @@ On your local, make a symlink with ln -s
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>
+<li><strong>SQL</strong>: drawing an edge across edges crossing without node (bridges, highway interchanges) never ended:
+  the parts of each split edge created nodes at all their intersections, which were propagated
+  to the edges crossing them, and so on. Only the intersections of the drawn edge are now cut</li>
+<li><strong>SQL</strong>: when a new edge crossed several edges, a second node, not linked to any edge,
+  could be created 10 cm away from a crossing node (rounding of the coordinates of the split parts)</li>
 <li><strong>SQL</strong>: the edges with <code>no_intersection_cutting</code> set to <code>True</code> were still cut by the nodes located on them,
   for example a new edge with this value passing over an existing crossroad.
   They are now only cut when the start or end point of a created or moved edge is located on them,
