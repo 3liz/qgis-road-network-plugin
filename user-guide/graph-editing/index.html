@@ -1089,27 +1089,27 @@
 but in a <strong>dedicated editing session schema</strong> <code>road_graph_editing</code>, which acts as a sandbox:</p>
 <ol>
 <li>The user <strong>draws a polygon</strong> in the <code>editing_sessions</code> layer around the area to edit.
-   The new editing session has the status <code>created</code>.</li>
+   The new editing session has the status <code>created</code>.
+   <img alt="Draw a polygon" src="../../media/user-guide/qgis_create_editing_sessions_polygon.gif" /></li>
 <li>The algorithm <code>Clone data to a new editing session</code> (toolbar button <code>Clone data to the editing sandbox</code>,
    or layer action <a href="#create-editing-session">Create editing session</a>)
    <strong>copies an extract of the production data</strong> inside this polygon into the sandbox.
    The status becomes <code>cloned</code>.</li>
-<li>The <strong>editing</strong> is made with the <strong>QGIS tools</strong>: forms, topological editing, etc.
-   The status becomes <code>edited</code> after the first change.<ul>
-<li>QGIS <strong>automatic transaction grouping</strong> is activated in the project:
-  the changes made by the database triggers (node creation, edge split, etc.) are visible <strong>live</strong>.</li>
-<li>A layer action helps to <strong>create roundabouts</strong>, see <a href="#create-a-roundabout">Create a roundabout</a>.</li>
-</ul>
-</li>
-<li>The algorithm <code>Merge editing session data</code> (toolbar button <code>Merge editing sandbox data</code>)
+</ol>
+<p><img alt="Clone data to editing session" src="../../media/user-guide/qgis_clone_data_to_editing_session.gif" />
+3. The <strong>editing</strong> is made with the <strong>QGIS tools</strong>: forms, topological editing, etc.
+   The status becomes <code>edited</code> after the first change.
+    * QGIS <strong>automatic transaction grouping</strong> is activated in the project:
+      the changes made by the database triggers (node creation, edge split, etc.) are visible <strong>live</strong>.
+    * A layer action helps to <strong>create roundabouts</strong>, see <a href="#create-a-roundabout">Create a roundabout</a>.</p>
+<p><img alt="Edit the data" src="../../media/user-guide/qgis_add_a_road_and_an_edge.gif" />
+4. The algorithm <code>Merge editing session data</code> (toolbar button <code>Merge editing sandbox data</code>)
    <strong>merges the modifications back</strong> into the <code>road_graph</code> schema
    and updates the <a href="../managed-objects/">managed objects</a>.
-   The sandbox data and the merged editing session are then deleted.</li>
-</ol>
+   The sandbox data and the merged editing session are then deleted.</p>
 <p>At any time, the modifications of the editing session can be highlighted with the action
 <a href="#display-edited-data">Display edited data</a>, and the editing session can be cancelled
 with the action <a href="#drop-editing-session">Drop editing session</a>.</p>
-<p><img alt="Editing in QGIS" src="../../media/user-guide/qgis_editing.gif" /></p>
 <h2 id="editing-session-actions">Editing session actions<a class="headerlink" href="#editing-session-actions" title="Permanent link">#</a></h2>
 <p>The <code>editing_sessions</code> layer has three <strong>layer actions</strong>.
 To run an action on an editing session, use the <code>Identify Features</code> tool and <strong>right-click</strong>
@@ -1121,7 +1121,6 @@ inside the last created editing session polygon into the editing schema, like th
 <code>Clone data to the editing sandbox</code>.
 It is a <strong>layer action</strong>: it is available in the <code>Actions</code> menu of the <code>editing_sessions</code> attribute table toolbar,
 and does not need any selected feature.</p>
-<p><img alt="Action Create editing session" src="../../media/user-guide/qgis_action_create_editing_session.png" /></p>
 <h3 id="display-edited-data">Display edited data<a class="headerlink" href="#display-edited-data" title="Permanent link">#</a></h3>
 <p>This action <strong>highlights in the map</strong> the objects modified in the editing session,
 from the content of its <code>logged_ids</code> column of the layer <code>editing_sessions</code>. The objects <strong>flash with a color</strong> depending on the modification:</p>
@@ -1153,7 +1152,7 @@ from the content of its <code>logged_ids</code> column of the layer <code>editin
 </table>
 <p>The <strong>edges</strong>, <strong>nodes</strong> and <strong>markers</strong> are displayed. A message is displayed if the editing session
 does not contain any modification.</p>
-<p><img alt="Action Display edited data" src="../../media/user-guide/qgis_action_display_edited_data.png" /></p>
+<p><img alt="Action Display edited data" src="../../media/user-guide/qgis_action_display_edited_data.gif" /></p>
 <h3 id="drop-editing-session">Drop editing session<a class="headerlink" href="#drop-editing-session" title="Permanent link">#</a></h3>
 <p>This action <strong>deletes the editing session</strong> and <strong>all the data of the editing schema</strong> <code>road_graph_editing</code>,
 with the database function <code>road_graph.drop_editing_session</code>.
@@ -1165,13 +1164,13 @@ The modifications which have not been merged are <strong>lost</strong>: a confir
   in the <code>Road network tools</code> panel before.</li>
 </ul>
 <p>You may have to refresh the map canvas to see the changes.</p>
-<div class="admonition none">
-<p class="admonition-title">None</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
 <p>Do not forget to save the state by clicking on the <strong>Save</strong> button of QGIS editing toolbar.</p>
 </div>
 <p><img alt="Action Drop editing session" src="../../media/user-guide/qgis_action_drop_editing_session.png" /></p>
 <h2 id="create-a-roundabout">Create a roundabout<a class="headerlink" href="#create-a-roundabout" title="Permanent link">#</a></h2>
-<p>Roundabouts have their own road code, e.g. <code>GIR_D40_D80</code>, and cut the other roads
+<p><strong>Roundabouts</strong> have their own road code, e.g. <code>GIR_D40_D80</code>, and cut the other roads
 (see <a href="../../concepts/#corner-cases">Concepts</a>).
 The road of the roundabout must exist in the <code>roads</code> layer with the road type <code>roundabout</code>.</p>
 <p>To create a roundabout in the editing session:</p>
@@ -1184,7 +1183,7 @@ The road of the roundabout must exist in the <code>roads</code> layer with the r
 <li>Right-click on one of the edges of the roundabout circle with the <code>Identify Features</code> tool,
    and choose the action <code>Finalize the roundabout</code>.</li>
 </ol>
-<p><img alt="Action Finalize the roundabout" src="../../media/user-guide/qgis_action_finalize_roundabout.png" /></p>
+<p><img alt="Action Finalize the roundabout" src="../../media/user-guide/qgis_create_roundabout.gif" /></p>
 <p>This layer action of the <code>edges copie</code> layer runs the database function <code>clean_digitized_roundabout</code>, which:</p>
 <ul>
 <li><strong>deletes the pieces of edges inside the roundabout</strong>, and updates the previous and next edges of the remaining roads,</li>
