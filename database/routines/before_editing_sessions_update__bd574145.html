@@ -85,7 +85,7 @@
                         </div>
                         <!-- /.box-header -->
                         <div class="box-body clearfix">
-                            <p><p>Prevent from updating an editing session geometry if there is data inside the road_graph_editing schema</p></p>
+                            <p><p>Prevent from updating an editing session geometry if its status is not created, which means that data has been cloned into the road_graph_editing schema</p></p>
                         </div>
                         <!-- /.box-body -->
                     </div>
@@ -130,7 +130,7 @@
                             </div>
                         </div>
                         <div class="box-body">
-                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">BEGIN&#10;&#10;    -- Geometry must not be updated if the status is not created&#10;    IF NOT ST_Equals(OLD.geom, NEW.geom) AND NEW.&quot;status&quot; !&#61; &#39;created&#39; THEN&#10;        RAISE EXCEPTION &#39;The geometry of the editing session cannot be updated after data has been cloned or edited !&#39;;&#10;    END IF;&#10;&#10;    RETURN NEW;&#10;END;</textarea>
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">BEGIN&#10;&#10;    -- Geometry must not be updated if the status is not created&#10;    -- Test the status before the update: it could be set back to created in the same query.&#10;    -- ST_Equals returns NULL if one of the geometries is NULL: test them before&#10;    IF OLD.&quot;status&quot; !&#61; &#39;created&#39;&#10;        AND (&#10;            (OLD.geom IS NULL) !&#61; (NEW.geom IS NULL)&#10;            OR NOT ST_Equals(OLD.geom, NEW.geom)&#10;        )&#10;    THEN&#10;        RAISE EXCEPTION &#39;The geometry of the editing session cannot be updated after data has been cloned or edited !&#39;;&#10;    END IF;&#10;&#10;    RETURN NEW;&#10;END;</textarea>
                         </div>
                     </div>
                 </section>
