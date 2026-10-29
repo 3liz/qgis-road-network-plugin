@@ -87,7 +87,11 @@ make docker-test [QGIS_VERSION=<version>]
 Once the data has been successfully imported, you can use the `pg_dump` command to create the [SQL test data file](data/sql/test_data.sql):
 
 ```bash
-pg_dump -d road_network --data-only --disable-triggers --no-owner --inserts -n road_graph -Fp | grep -v "restrict" > tests/data/sql/test_data.sql
+pg_dump -d road_network --data-only --disable-triggers --no-owner --inserts -n road_graph -Fp \
+  | grep -v "restrict" | grep -v "^SET \|set_config" > tests/data/sql/test_data.sql
 ```
+
+The `SET` and `set_config` lines of the dump are removed: the file is run by the tests with the QGIS connection,
+and `set_config('search_path', '', false)` would empty the search path of this connection.
 
 **NB**: we suppose the test data has been imported in a local database called `road_network`
