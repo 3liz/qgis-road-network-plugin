@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.6.1 - 2026-10-29
+
+### Summary
+
+**Highlights**
+
+* **GPS tracks**: new Processing algorithm to get the road sections followed by the lines of a layer,
+  for example GPS tracks, with their start and end references
+* **Performance**: modifying a field of the edges is much faster
+
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 40)
+
 ### Added
 
 * **Processing**: new algorithm `Get road sections from a line (GPS track)` in the group `Linear referencing`,
