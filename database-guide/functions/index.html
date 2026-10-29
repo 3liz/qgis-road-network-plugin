@@ -1624,6 +1624,11 @@ is never exactly on the road graph edges: the GPS precision is usually between <
 <li><code>road_graph.get_road_sections_from_snapped_line</code> returns the <strong>ordered list of the roads</strong> followed by this line,
    with the <strong>start and end references</strong> (marker and abscissa) for each road.</li>
 </ol>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Both steps can also be run on a whole layer of tracks in QGIS, without writing SQL, with the Processing algorithm
+<a href="../../user-guide/processing/#get-road-sections-from-a-line-gps-track">Get road sections from a line (GPS track)</a>.</p>
+</div>
 <h3 id="import-the-gpx-file-in-postgresql">Import the GPX file in PostgreSQL<a class="headerlink" href="#import-the-gpx-file-in-postgresql" title="Permanent link">#</a></h3>
 <p>A GPX file can be opened in QGIS with a drag &amp; drop: choose the <code>tracks</code> layer.
 Then import it in the PostgreSQL database with the QGIS <strong>Browser</strong> panel: drag &amp; drop the layer

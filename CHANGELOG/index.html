@@ -1096,6 +1096,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1122,7 +1139,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1172,7 +1189,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1300,7 +1317,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#added_2" class="md-nav__link">
+  <a href="#added_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1423,7 +1440,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_3" class="md-nav__link">
+  <a href="#added_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1563,7 +1580,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_4" class="md-nav__link">
+  <a href="#added_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1814,7 +1831,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_5" class="md-nav__link">
+  <a href="#added_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1909,7 +1926,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_6" class="md-nav__link">
+  <a href="#added_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1948,7 +1965,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_7" class="md-nav__link">
+  <a href="#added_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -2029,6 +2046,12 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Processing</strong>: new algorithm <code>Get road sections from a line (GPS track)</code> in the group <code>Linear referencing</code>,
+  which snaps the lines of a layer, for example GPS tracks, on the road graph,
+  and creates a layer with the sections of the roads they follow, with their start and end references</li>
+</ul>
 <h2 id="060-2026-10-28">0.6.0 - 2026-10-28<a class="headerlink" href="#060-2026-10-28" title="Permanent link">#</a></h2>
 <h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
@@ -2052,7 +2075,7 @@
 <li>The Python code of the layer actions is now stored in the plugin: the plugin must be installed and activated
   to use the actions of the administration project</li>
 </ul>
-<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">#</a></h3>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>SQL</strong>: add the function <code>road_graph.add_managed_object_reference_fields</code> which adds to a managed object table
   the reference fields corresponding to its geometry type (migration <code>upgrade_to_39.sql</code>)</li>
@@ -2138,7 +2161,7 @@
   The search is run without typing any prefix.</li>
 </ul>
 <h2 id="057-2026-10-22">0.5.7 - 2026-10-22<a class="headerlink" href="#057-2026-10-22" title="Permanent link">#</a></h2>
-<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">#</a></h3>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>SQL</strong></li>
 <li>Add a <strong>trigger function</strong> to update a <strong>managed object table references</strong> on insert or update
@@ -2203,7 +2226,7 @@
   located between two unconnected edges of the same road</li>
 <li><strong>Tests</strong> - Add a make pull command to pull docker images</li>
 </ul>
-<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">#</a></h3>
+<h3 id="added_3">Added<a class="headerlink" href="#added_3" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>SQL</strong> - <code>road_graph.get_road_substring_from_references</code>: add new parameters
   to prepend and/or expand the closest edge geometry at the start and/or the end
@@ -2241,7 +2264,7 @@
   linestring (formed by the edge end point doubled)</li>
 </ul>
 <h2 id="050-2026-07-27">0.5.0 - 2026-07-27<a class="headerlink" href="#050-2026-07-27" title="Permanent link">#</a></h2>
-<h3 id="added_3">Added<a class="headerlink" href="#added_3" title="Permanent link">#</a></h3>
+<h3 id="added_4">Added<a class="headerlink" href="#added_4" title="Permanent link">#</a></h3>
 <ul>
 <li>Add the support for other Coordinate References System (CRS) than <code>EPSG:2154</code></li>
 <li>Default CRS is still <code>EPSG:2154</code></li>
@@ -2300,7 +2323,7 @@
   (This will allow the plugin to be pushed to QGIS official repository)</li>
 </ul>
 <h2 id="047-2026-07-06">0.4.7 - 2026-07-06<a class="headerlink" href="#047-2026-07-06" title="Permanent link">#</a></h2>
-<h3 id="added_4">Added<a class="headerlink" href="#added_4" title="Permanent link">#</a></h3>
+<h3 id="added_5">Added<a class="headerlink" href="#added_5" title="Permanent link">#</a></h3>
 <ul>
 <li>Lizmap Web Client : add Javascript &amp; CSS files to use with a RoadNetwork published project</li>
 </ul>
@@ -2396,7 +2419,7 @@
   and the impact on the managed object geometries or references</li>
 </ul>
 <h2 id="040-2026-05-22">0.4.0 - 2026-05-22<a class="headerlink" href="#040-2026-05-22" title="Permanent link">#</a></h2>
-<h3 id="added_5">Added<a class="headerlink" href="#added_5" title="Permanent link">#</a></h3>
+<h3 id="added_6">Added<a class="headerlink" href="#added_6" title="Permanent link">#</a></h3>
 <ul>
 <li>Import - Add SQL function &amp; a new algorithm to import data from edges &amp; markers template files
   (See example files <code>source_edges.fgb</code> &amp; <code>source_markers.fgb</code> in plugin folder <code>/resources/import/</code>)</li>
@@ -2423,7 +2446,7 @@
 <li>Fix error when deleting a node (wrong merge edges attempt)</li>
 </ul>
 <h2 id="031-2026-04-11">0.3.1 - 2026-04-11<a class="headerlink" href="#031-2026-04-11" title="Permanent link">#</a></h2>
-<h3 id="added_6">Added<a class="headerlink" href="#added_6" title="Permanent link">#</a></h3>
+<h3 id="added_7">Added<a class="headerlink" href="#added_7" title="Permanent link">#</a></h3>
 <ul>
 <li>Locator : allow to use QGIS Locator bar (CTRL+K) with prefix <code>rr</code>
   Usage :<ul>
@@ -2438,7 +2461,7 @@
 <li>Improve CI and packaging</li>
 </ul>
 <h2 id="030-2026-04-10">0.3.0 - 2026-04-10<a class="headerlink" href="#030-2026-04-10" title="Permanent link">#</a></h2>
-<h3 id="added_7">Added<a class="headerlink" href="#added_7" title="Permanent link">#</a></h3>
+<h3 id="added_8">Added<a class="headerlink" href="#added_8" title="Permanent link">#</a></h3>
 <ul>
 <li>Processing</li>
 <li>Add algorithm allowing to update a layer references or geometries from the road graph</li>

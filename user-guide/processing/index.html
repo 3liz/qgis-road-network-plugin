@@ -896,6 +896,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#linear-referencing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linear referencing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Linear referencing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-road-sections-from-a-line-gps-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get road sections from a line (GPS track)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1457,6 +1485,34 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#linear-referencing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linear referencing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Linear referencing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-road-sections-from-a-line-gps-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get road sections from a line (GPS track)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1528,6 +1584,11 @@ Most of the algorithms are also available with the buttons of the <a href="../qg
 <td>Editing</td>
 <td><a href="#update-managed-objects-from-the-road-graph">Update managed objects from the road graph</a></td>
 <td>Calculate the references from the geometries, or the geometries from the references, of a layer</td>
+</tr>
+<tr>
+<td>Linear referencing</td>
+<td><a href="#get-road-sections-from-a-line-gps-track">Get road sections from a line (GPS track)</a></td>
+<td>Get the sections of the roads followed by lines, for example GPS tracks</td>
 </tr>
 </tbody>
 </table>
@@ -1613,6 +1674,84 @@ The features are then updated directly in the layer, and the changes can be chec
 <p>For the tables registered in the <code>managed_objects</code> layer, the same updates can be done with SQL,
 see <a href="../managed-objects/#calculate-the-references">Calculate the references</a>.
 They are also done automatically when an editing session is merged, see <a href="../managed-objects/#update-rules">Update rules</a>.</p>
+<h2 id="linear-referencing">Linear referencing<a class="headerlink" href="#linear-referencing" title="Permanent link">#</a></h2>
+<h3 id="get-road-sections-from-a-line-gps-track">Get road sections from a line (GPS track)<a class="headerlink" href="#get-road-sections-from-a-line-gps-track" title="Permanent link">#</a></h3>
+<p>Get the <strong>sections of the roads</strong> followed by each line of a layer, for example <strong>GPS tracks</strong> imported
+from GPX files, with the <strong>start and end references</strong> of each road.</p>
+<p>For each line, the algorithm:</p>
+<ol>
+<li><strong>snaps the line on the road graph edges</strong>, without zigzags between close roads,
+   with the database function <code>road_graph.get_snapped_line_from_track</code>,</li>
+<li>gets the <strong>ordered list of the roads</strong> followed by the snapped line, with the database function
+   <code>road_graph.get_road_sections_from_snapped_line</code>.</li>
+</ol>
+<p>See <a href="../../database-guide/functions/#gps-tracks-from-a-gpx-file-to-the-road-references">GPS tracks</a>
+for the details of these functions.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>Input line layer (GPS tracks)</code>: a line or multiline layer, in any coordinate reference system.
+  For a GPX file, open its layer <code>tracks</code>,</li>
+<li><code>Snap the lines on the road graph</code>: checked by default. Uncheck it only if the lines already follow
+  the road graph edges, for example the result of a previous snapping,</li>
+<li>advanced parameters, used to snap the lines:<ul>
+<li><code>Distance between the points added to the line (m)</code>: <code>2</code> by default,</li>
+<li><code>Maximum distance between the line and the roads (m)</code>: <code>25</code> by default.
+  The points of the line further from any road are ignored,</li>
+<li><code>Penalty applied each time the road changes</code>: <code>100</code> by default.
+  Increase it if the result still has zigzags between close roads,</li>
+</ul>
+</li>
+<li>advanced parameter <code>Maximum distance between the snapped line and the edges (m)</code>: <code>1</code> by default,</li>
+<li><code>Road sections</code>: the output layer.</li>
+</ul>
+<p><img alt="Get road sections from a line" src="../../media/user-guide/processing_get_road_sections_from_line.png" /></p>
+<p>The output layer contains <strong>one feature per road section</strong>, in the coordinate reference system of the road graph.
+Its geometry is the part of the snapped line on this road, and its fields are the <strong>fields of the input line</strong>,
+followed by:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>road_order</code></td>
+<td>Order of the section along the line, from <code>1</code></td>
+</tr>
+<tr>
+<td><code>road_code</code></td>
+<td>Code of the road</td>
+</tr>
+<tr>
+<td><code>start_marker</code>, <code>start_abscissa</code></td>
+<td>References of the start of the section, e.g. <code>14</code> and <code>905.27</code> for <code>PR 14 + 905.27 m</code></td>
+</tr>
+<tr>
+<td><code>start_cumulative</code></td>
+<td>Cumulative distance from the start of the road to the start of the section</td>
+</tr>
+<tr>
+<td><code>end_marker</code>, <code>end_abscissa</code></td>
+<td>References of the end of the section</td>
+</tr>
+<tr>
+<td><code>end_cumulative</code></td>
+<td>Cumulative distance from the start of the road to the end of the section</td>
+</tr>
+<tr>
+<td><code>direction</code></td>
+<td><code>downstream</code> if the line follows the road direction, <code>upstream</code> otherwise</td>
+</tr>
+<tr>
+<td><code>length</code></td>
+<td>Length of the section in meters</td>
+</tr>
+</tbody>
+</table>
+<p>If a field of the input layer has the same name as one of these fields, for example <code>road_code</code>,
+the field of the section is renamed with a suffix, e.g. <code>road_code_2</code>.</p>
 
 
 
