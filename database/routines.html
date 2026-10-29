@@ -367,6 +367,15 @@
                                         <td><p>Return the references of the given edge start and end point. Could be used to UPDATE the edges of a road. By default does not use road object cache store in a temporary table. This behaviour can be overriden by setting _use_cache TO True;</p></td>
                                     </tr>
                                     <tr>
+                                        <td><a href="routines/get_or_create_edge_node__point__c0a07fc7.html">get_or_create_edge_node(_point geometry, _create boolean)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(node_id integer, node_geom geometry, is_created boolean)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Get the node of the given start or end point of an edge: the first node closer than 0.5 m. If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place). Used by the trigger function before_edge_insert_or_update.</p></td>
+                                    </tr>
+                                    <tr>
                                         <td><a href="routines/before_edge_insert_or_update___b2f68ae2.html">before_edge_insert_or_update()</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
