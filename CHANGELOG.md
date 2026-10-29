@@ -8,6 +8,19 @@
   which snaps the lines of a layer, for example GPS tracks, on the road graph,
   and creates a layer with the sections of the roads they follow, with their start and end references
 
+### Changed
+
+* **SQL**: performance of the edges updates: the references of an updated edge are not calculated anymore
+  by the trigger `before_edge_insert_or_update` when they are calculated again just after
+  for the whole road, or when only another field of the edge has been modified.
+  For example, modifying a field of all the edges of a road is a few hundred times faster (migration `upgrade_to_40.sql`)
+* **SQL**: new function `road_graph.get_or_create_edge_node`, used by the trigger `before_edge_insert_or_update`
+  to get or create the start and end nodes of an edge, instead of duplicated code
+
+### Fixed
+
+* **SQL**: the search of the next edge of an edge could fail if two edges of the same road started at the same node
+
 ## 0.6.0 - 2026-10-28
 
 ### Summary

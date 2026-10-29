@@ -1226,8 +1226,9 @@ CREATE FUNCTION road_graph.before_edge_insert_or_update() RETURNS trigger
 DECLARE
     start_point geometry(point);
     end_point geometry(point);
-    upstream_node record;
-    downstream_node record;
+    extremity_node record;
+    references_calculated_after boolean;
+    references_unchanged boolean;
     distance real;
     start_references jsonb;
     end_references jsonb;
@@ -1301,119 +1302,59 @@ BEGIN
     OR (TG_OP = 'UPDATE' AND NOT ST_Equals(NEW.geom, OLD.geom) AND NEW.geom IS NOT NULL)
     THEN
 
-        -- Get first nodes < 0.5 m - If found, edit NEW geom
-        -- upstream
-        SELECT INTO upstream_node
-            n.id, n.geom
-        FROM road_graph.nodes AS n
-        WHERE ST_DWithin(n.geom, start_point, 0.50)
-        ORDER BY n.id, n.geom <-> start_point
-        LIMIT 1
-        ;
+        -- Get the nodes closer than 0.5 m from the start and end points, and use them.
+        -- If not found, create them: only for INSERT,
+        -- or for UPDATE if the start_node or end_node value has been deleted
 
-        -- upstream - create node or just update value
-        IF upstream_node IS NOT NULL THEN
+        -- upstream node
+        SELECT INTO extremity_node *
+        FROM road_graph.get_or_create_edge_node(
+            start_point,
+            TG_OP = 'INSERT' OR NEW.start_node IS NULL
+        );
+        IF extremity_node.node_id IS NOT NULL AND NOT extremity_node.is_created THEN
             IF raise_notice IN ('info', 'debug') THEN
                 RAISE NOTICE '% BEFORE edge % n° %, upstream_node NOT NULL : % -> use it',
-                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, upstream_node.id
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, extremity_node.node_id
                 ;
             END IF;
-
             -- Update the geometry
-            NEW.geom = ST_SetPoint(NEW.geom, 0, upstream_node.geom);
+            NEW.geom = ST_SetPoint(NEW.geom, 0, extremity_node.node_geom);
             -- Update the node ID in upstream attribute
-            NEW.start_node = upstream_node.id;
-        ELSE
-            IF raise_notice IN ('info', 'debug') THEN
-                RAISE NOTICE '% BEFORE edge % n° %, upstream node IS NULL -> create it',
-                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
+            NEW.start_node = extremity_node.node_id;
+        ELSIF extremity_node.is_created THEN
+            NEW.start_node = extremity_node.node_id;
+            IF NEW.start_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, upstream node created : % %',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.start_node,
+                    ST_AsText(extremity_node.node_geom)
                 ;
-            END IF;
-
-            -- Create the missing node
-            -- only for INSERT
-            -- or for UPDATE if the start_node value has been deleted
-            IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.start_node IS NULL) THEN
-                -- Declare that the node is the extremity of the edge:
-                -- the edges under it will be split, even if their field no_intersection_cutting is True
-                -- (for example a new access road arriving in the middle of a highway edge)
-                SET LOCAL road.graph.node.edge.extremity = 'yes';
-                WITH new_node AS (
-                    INSERT INTO road_graph.nodes
-                    (geom)
-                    VALUES
-                    (start_point)
-                    ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING
-                    RETURNING id
-                )
-                SELECT new_node.id
-                FROM new_node
-                INTO NEW.start_node
-                ;
-                SET LOCAL road.graph.node.edge.extremity = 'no';
-                IF NEW.start_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
-                    RAISE NOTICE '% BEFORE edge % n° %, upstream node created : % %',
-                        repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.start_node,
-                        (SELECT ST_AsText(geom) FROM road_graph.nodes WHERE id = NEW.start_node)
-                    ;
-                END IF;
             END IF;
         END IF;
 
-        -- get downstream node
-        SELECT INTO downstream_node
-            n.id, n.geom
-        FROM road_graph.nodes AS n
-        WHERE ST_DWithin(n.geom, end_point, 0.50)
-        ORDER BY n.id, n.geom <-> end_point
-        LIMIT 1
-        ;
-        -- downstream node - create or update value
-        IF downstream_node IS NOT NULL THEN
+        -- downstream node
+        SELECT INTO extremity_node *
+        FROM road_graph.get_or_create_edge_node(
+            end_point,
+            TG_OP = 'INSERT' OR NEW.end_node IS NULL
+        );
+        IF extremity_node.node_id IS NOT NULL AND NOT extremity_node.is_created THEN
             IF raise_notice IN ('info', 'debug') THEN
                 RAISE NOTICE '% BEFORE edge % n° %, downstream node NOT NULL : % -> use it',
-                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, downstream_node.id
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, extremity_node.node_id
                 ;
             END IF;
             -- Update the geometry
-            NEW.geom = ST_SetPoint(NEW.geom, ST_NPoints(NEW.geom) - 1, downstream_node.geom);
+            NEW.geom = ST_SetPoint(NEW.geom, ST_NPoints(NEW.geom) - 1, extremity_node.node_geom);
             -- Update the node ID in downstream attribute
-            NEW.end_node = downstream_node.id;
-        ELSE
-            IF raise_notice IN ('info', 'debug') THEN
-                RAISE NOTICE '% BEFORE edge % n° %, downstream node IS NULL -> create it',
-                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
+            NEW.end_node = extremity_node.node_id;
+        ELSIF extremity_node.is_created THEN
+            NEW.end_node = extremity_node.node_id;
+            IF NEW.end_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% BEFORE edge % n° %, downstream node created : % %',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.end_node,
+                    ST_AsText(extremity_node.node_geom)
                 ;
-            END IF;
-
-            -- Create the missing node
-            -- only for INSERT
-            -- or for UPDATE if the end_node value has been deleted
-            IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.end_node IS NULL) THEN
-                -- Create the missing node
-                -- Declare that the node is the extremity of the edge:
-                -- the edges under it will be split, even if their field no_intersection_cutting is True
-                -- (for example a new access road arriving in the middle of a highway edge)
-                SET LOCAL road.graph.node.edge.extremity = 'yes';
-                WITH new_node AS (
-                    INSERT INTO road_graph.nodes
-                    (geom)
-                    VALUES
-                    (end_point)
-                    ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING
-                    RETURNING id
-                )
-                SELECT new_node.id
-                FROM new_node
-                INTO NEW.end_node
-                ;
-                SET LOCAL road.graph.node.edge.extremity = 'no';
-                IF NEW.end_node IS NOT NULL AND raise_notice IN ('info', 'debug') THEN
-                    RAISE NOTICE '% BEFORE edge % n° %, downstream node created : % %',
-                        repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, NEW.end_node,
-                        (SELECT ST_AsText(geom) FROM road_graph.nodes WHERE id = NEW.end_node)
-                    ;
-                END IF;
             END IF;
         END IF;
     END IF;
@@ -1439,6 +1380,7 @@ BEGIN
                 FROM road_graph.edges AS e
                 WHERE e.road_code = NEW.road_code
                 AND e.start_node = NEW.end_node
+                LIMIT 1
             );
         END IF;
     END IF;
@@ -1469,7 +1411,40 @@ BEGIN
     END IF;
 
     -- Calculate references
+    -- They are not calculated for an UPDATE:
+    -- * if the trigger after_edge_insert_or_update will calculate again the references
+    --   of all the edges of the road (same condition as in this trigger function):
+    --   the references calculated here would be overwritten,
+    -- * or if the geometry, the road and the references have not been changed, for example
+    --   when only another field has been modified: the references are still right.
+    -- They are always calculated for an INSERT: the start cumulative is used to order
+    -- the edges of the road (see get_ordered_edges)
+    references_calculated_after = False;
+    references_unchanged = False;
+    IF TG_OP = 'UPDATE' THEN
+        references_calculated_after = (
+            (
+                NOT ST_Equals(OLD.geom, NEW.geom)
+                OR Coalesce(OLD.previous_edge_id, -1) != NEW.previous_edge_id
+                OR Coalesce(OLD.next_edge_id, -1) != NEW.next_edge_id
+            ) IS TRUE
+            AND road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
+        );
+        references_unchanged = (
+            ST_Equals(OLD.geom, NEW.geom) IS TRUE
+            AND OLD.road_code = NEW.road_code
+            AND (
+                NEW.start_marker, NEW.start_abscissa, NEW.start_cumulative,
+                NEW.end_marker, NEW.end_abscissa, NEW.end_cumulative
+            ) IS NOT DISTINCT FROM (
+                OLD.start_marker, OLD.start_abscissa, OLD.start_cumulative,
+                OLD.end_marker, OLD.end_abscissa, OLD.end_cumulative
+            )
+        );
+    END IF;
     IF NOT is_roundabout
+        AND NOT references_calculated_after
+        AND NOT references_unchanged
     THEN
         BEGIN
             -- start point
@@ -2964,6 +2939,61 @@ $_$;
 
 -- FUNCTION get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[])
 COMMENT ON FUNCTION road_graph.get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[]) IS 'Compute the union geometry of all the features from a table and given feature ids';
+
+
+-- get_or_create_edge_node(geometry, boolean)
+CREATE FUNCTION road_graph.get_or_create_edge_node(_point geometry, _create boolean) RETURNS TABLE(node_id integer, node_geom geometry, is_created boolean)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Get the first node closer than 0.5 m from the given start or end point of an edge
+    SELECT n.id, n.geom
+    INTO node_id, node_geom
+    FROM road_graph.nodes AS n
+    WHERE ST_DWithin(n.geom, _point, 0.50)
+    ORDER BY n.id, n.geom <-> _point
+    LIMIT 1
+    ;
+    is_created = False;
+    IF node_id IS NOT NULL THEN
+        RETURN NEXT;
+        RETURN;
+    END IF;
+
+    -- Create the missing node if asked
+    IF _create THEN
+        -- Declare that the node is the extremity of an edge:
+        -- the edges under it will be split, even if their field no_intersection_cutting is True
+        -- (for example a new access road arriving in the middle of a highway edge)
+        -- The variable is used by the trigger function after_node_insert_or_update
+        SET LOCAL road.graph.node.edge.extremity = 'yes';
+        WITH new_node AS (
+            INSERT INTO road_graph.nodes
+            (geom)
+            VALUES
+            (_point)
+            ON CONFLICT ON CONSTRAINT nodes_geom_key DO NOTHING
+            RETURNING id
+        )
+        SELECT new_node.id
+        FROM new_node
+        INTO node_id
+        ;
+        SET LOCAL road.graph.node.edge.extremity = 'no';
+        node_geom = _point;
+        is_created = True;
+    END IF;
+
+    RETURN NEXT;
+    RETURN;
+END;
+$$;
+
+
+-- FUNCTION get_or_create_edge_node(_point geometry, _create boolean)
+COMMENT ON FUNCTION road_graph.get_or_create_edge_node(_point geometry, _create boolean) IS 'Get the node of the given start or end point of an edge: the first node closer than 0.5 m.
+If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place).
+Used by the trigger function before_edge_insert_or_update.';
 
 
 -- get_ordered_edges(text, integer, text)

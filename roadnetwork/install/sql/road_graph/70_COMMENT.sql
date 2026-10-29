@@ -175,6 +175,12 @@ This behaviour can be overriden by setting _use_cache TO True;
 COMMENT ON FUNCTION road_graph.get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[]) IS 'Compute the union geometry of all the features from a table and given feature ids';
 
 
+-- FUNCTION get_or_create_edge_node(_point geometry, _create boolean)
+COMMENT ON FUNCTION road_graph.get_or_create_edge_node(_point geometry, _create boolean) IS 'Get the node of the given start or end point of an edge: the first node closer than 0.5 m.
+If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place).
+Used by the trigger function before_edge_insert_or_update.';
+
+
 -- FUNCTION get_ordered_edges(_road_code text, _initial_id integer, _direction text)
 COMMENT ON FUNCTION road_graph.get_ordered_edges(_road_code text, _initial_id integer, _direction text) IS 'Get the list of edge id with order for a given road, edge and the direction (downtream or upstream). It always includes the given edge';
 
