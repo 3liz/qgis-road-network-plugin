@@ -2050,6 +2050,100 @@ def test_get_road_sections_from_snapped_line():
     ]
 
 
+def test_get_road_sections_from_line_algorithm(processing_provider: Provider):
+    """Test the Processing algorithm Get road sections from a line (GPS track),
+    with the GPS track in EPSG:4326 used by the tests of the database functions."""
+    layer = QgsVectorLayer("LineString?crs=EPSG:4326&field=name:string", "tracks", "memory")
+    assert layer.isValid()
+    feature = QgsFeature(layer.fields())
+    feature.setAttributes(["track 1"])
+    feature.setGeometry(QgsGeometry.fromWkt(GPS_TRACK_WKT))
+    assert layer.dataProvider().addFeatures([feature])[0]
+
+    output = processing.run(
+        f"{processing_provider.id()}:get_road_sections_from_line",
+        {
+            "CONNECTION_NAME": "test",
+            "INPUT": layer,
+            "SNAP_LINE": True,
+            "OUTPUT": "TEMPORARY_OUTPUT",
+        },
+        feedback=LoggerProcessingFeedBack(),
+    )
+    output_layer = output["OUTPUT"]
+
+    # The road sections are created in the coordinate reference system of the road graph
+    assert output_layer.crs().authid() == "EPSG:2154"
+    assert output_layer.fields().names() == [
+        "name",
+        "road_order",
+        "road_code",
+        "start_marker",
+        "start_abscissa",
+        "start_cumulative",
+        "end_marker",
+        "end_abscissa",
+        "end_cumulative",
+        "direction",
+        "length",
+    ]
+
+    # Same sections as the database function road_graph.get_road_sections_from_snapped_line
+    # The real values are rounded to 2 decimals
+    sections = [
+        [
+            f["name"],
+            f["road_order"],
+            f["road_code"],
+            f["start_marker"],
+            f["start_abscissa"],
+            f["end_marker"],
+            f["end_abscissa"],
+            f["direction"],
+            f["length"],
+        ]
+        for f in output_layer.getFeatures()
+    ]
+    assert sections == [
+        ["track 1", 1, "D40", 14, 905.27, 15, 396.15, "downstream", 399.6],
+        ["track 1", 2, "GIR_D40_D16-1", 0, 0.0, 0, 39.17, "downstream", 39.17],
+        ["track 1", 3, "D16", 0, 716.82, 0, 1.62, "upstream", 715.19],
+    ]
+
+    for f in output_layer.getFeatures():
+        for field in ("start_abscissa", "start_cumulative", "end_abscissa", "end_cumulative", "length"):
+            assert f[field] == round(f[field], 2)
+        # The geometries are the parts of the snapped line on each road
+        assert abs(f.geometry().length() - f["length"]) < 0.01
+
+    # Without snapping: the line made of the sections already follows the road graph edges,
+    # and gives the same sections
+    snapped_layer = QgsVectorLayer("MultiLineString?crs=EPSG:2154&field=name:string", "snapped", "memory")
+    snapped_feature = QgsFeature(snapped_layer.fields())
+    snapped_feature.setAttributes(["snapped track"])
+    snapped_feature.setGeometry(
+        QgsGeometry.collectGeometry([f.geometry() for f in output_layer.getFeatures()])
+    )
+    assert snapped_layer.dataProvider().addFeatures([snapped_feature])[0]
+    output = processing.run(
+        f"{processing_provider.id()}:get_road_sections_from_line",
+        {
+            "CONNECTION_NAME": "test",
+            "INPUT": snapped_layer,
+            "SNAP_LINE": False,
+            "OUTPUT": "TEMPORARY_OUTPUT",
+        },
+        feedback=LoggerProcessingFeedBack(),
+    )
+    assert [
+        [f["name"], f["road_order"], f["road_code"], f["direction"]] for f in output["OUTPUT"].getFeatures()
+    ] == [
+        ["snapped track", 1, "D40", "downstream"],
+        ["snapped track", 2, "GIR_D40_D16-1", "downstream"],
+        ["snapped track", 3, "D16", "upstream"],
+    ]
+
+
 def test_get_updated_roads_from_editing_session():
     """Test the function get_updated_roads_from_editing_session
     which returns an array of a distinct road codes for the edited objects."""

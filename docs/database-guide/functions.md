@@ -140,6 +140,10 @@ Two functions allow to transform such a track into **road references**:
 2. `road_graph.get_road_sections_from_snapped_line` returns the **ordered list of the roads** followed by this line,
    with the **start and end references** (marker and abscissa) for each road.
 
+!!! tip
+    Both steps can also be run on a whole layer of tracks in QGIS, without writing SQL, with the Processing algorithm
+    [Get road sections from a line (GPS track)](../user-guide/processing.md#get-road-sections-from-a-line-gps-track).
+
 ### Import the GPX file in PostgreSQL
 
 A GPX file can be opened in QGIS with a drag & drop: choose the `tracks` layer.

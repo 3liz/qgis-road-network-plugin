@@ -13,6 +13,7 @@ Most of the algorithms are also available with the buttons of the [toolbar and p
 | Editing | [Clone data to a new editing session](#clone-data-to-a-new-editing-session) | Copy the data of an editing session area into the sandbox |
 | Editing | [Merge editing session data](#merge-editing-session-data) | Merge the sandbox data into the production data |
 | Editing | [Update managed objects from the road graph](#update-managed-objects-from-the-road-graph) | Calculate the references from the geometries, or the geometries from the references, of a layer |
+| Linear referencing | [Get road sections from a line (GPS track)](#get-road-sections-from-a-line-gps-track) | Get the sections of the roads followed by lines, for example GPS tracks |
 
 All the algorithms have a parameter `PostgreSQL connection to the database`:
 by default, the connection chosen with the algorithm `Configure plugin`.
@@ -122,3 +123,55 @@ The features are then updated directly in the layer, and the changes can be chec
 For the tables registered in the `managed_objects` layer, the same updates can be done with SQL,
 see [Calculate the references](managed-objects.md#calculate-the-references).
 They are also done automatically when an editing session is merged, see [Update rules](managed-objects.md#update-rules).
+
+## Linear referencing
+
+### Get road sections from a line (GPS track)
+
+Get the **sections of the roads** followed by each line of a layer, for example **GPS tracks** imported
+from GPX files, with the **start and end references** of each road.
+
+For each line, the algorithm:
+
+1. **snaps the line on the road graph edges**, without zigzags between close roads,
+   with the database function `road_graph.get_snapped_line_from_track`,
+2. gets the **ordered list of the roads** followed by the snapped line, with the database function
+   `road_graph.get_road_sections_from_snapped_line`.
+
+See [GPS tracks](../database-guide/functions.md#gps-tracks-from-a-gpx-file-to-the-road-references)
+for the details of these functions.
+
+Parameters:
+
+* `Input line layer (GPS tracks)`: a line or multiline layer, in any coordinate reference system.
+  For a GPX file, open its layer `tracks`,
+* `Snap the lines on the road graph`: checked by default. Uncheck it only if the lines already follow
+  the road graph edges, for example the result of a previous snapping,
+* advanced parameters, used to snap the lines:
+    * `Distance between the points added to the line (m)`: `2` by default,
+    * `Maximum distance between the line and the roads (m)`: `25` by default.
+      The points of the line further from any road are ignored,
+    * `Penalty applied each time the road changes`: `100` by default.
+      Increase it if the result still has zigzags between close roads,
+* advanced parameter `Maximum distance between the snapped line and the edges (m)`: `1` by default,
+* `Road sections`: the output layer.
+
+![Get road sections from a line](../media/user-guide/processing_get_road_sections_from_line.png)
+
+The output layer contains **one feature per road section**, in the coordinate reference system of the road graph.
+Its geometry is the part of the snapped line on this road, and its fields are the **fields of the input line**,
+followed by:
+
+| Field | Description |
+|-------|-------------|
+| `road_order` | Order of the section along the line, from `1` |
+| `road_code` | Code of the road |
+| `start_marker`, `start_abscissa` | References of the start of the section, e.g. `14` and `905.27` for `PR 14 + 905.27 m` |
+| `start_cumulative` | Cumulative distance from the start of the road to the start of the section |
+| `end_marker`, `end_abscissa` | References of the end of the section |
+| `end_cumulative` | Cumulative distance from the start of the road to the end of the section |
+| `direction` | `downstream` if the line follows the road direction, `upstream` otherwise |
+| `length` | Length of the section in meters |
+
+If a field of the input layer has the same name as one of these fields, for example `road_code`,
+the field of the section is renamed with a suffix, e.g. `road_code_2`.

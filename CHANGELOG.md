@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+* **Processing**: new algorithm `Get road sections from a line (GPS track)` in the group `Linear referencing`,
+  which snaps the lines of a layer, for example GPS tracks, on the road graph,
+  and creates a layer with the sections of the roads they follow, with their start and end references
+
 ## 0.6.0 - 2026-10-28
 
 ### Summary

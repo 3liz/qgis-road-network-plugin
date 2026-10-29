@@ -41,6 +41,7 @@ ALGORITHMS = {
     "create_editing_session": "user-guide/processing_create_editing_session.png",
     "merge_editing_session": "user-guide/processing_merge_editing_session.png",
     "update_managed_objects": "user-guide/processing_update_managed_objects.png",
+    "get_road_sections_from_line": "user-guide/processing_get_road_sections_from_line.png",
 }
 
 # Template layers loaded in the project, to be selected in the layer parameters
