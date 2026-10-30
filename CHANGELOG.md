@@ -4,6 +4,10 @@
 
 ### Changed
 
+* **SQL**: performance of the edges editing: the references of a road were calculated several times
+  for one modification. Splitting an edge by a node now calculates them once instead of three times,
+  and adding an edge to a road once instead of twice. For example, drawing an edge crossing twice
+  a long road calculates about 3 times fewer references (migration `upgrade_to_41.sql`)
 * **Docs**: in the page `Road graph editing`, warn against editing directly the production schema `road_graph`,
   and explain how to correct the whole road graph after a first import with an editing session covering all the data
 

@@ -102,7 +102,7 @@ COMMENT ON FUNCTION road_graph.aa_before_record_insert_or_update() IS 'Set the c
 -- add_managed_object_reference_fields(text, text, boolean)
 CREATE FUNCTION road_graph.add_managed_object_reference_fields(_schema_name text, _table_name text, _add_optional_fields boolean DEFAULT true) RETURNS TABLE(field_name text, field_type text, field_status text)
     LANGUAGE plpgsql
-    AS $_$
+    AS $$
 DECLARE
     table_regclass regclass;
     _geometry_type text;
@@ -200,7 +200,7 @@ BEGIN
 
     RETURN;
 END;
-$_$;
+$$;
 
 
 -- FUNCTION add_managed_object_reference_fields(_schema_name text, _table_name text, _add_optional_fields boolean)
@@ -491,6 +491,7 @@ DECLARE
     cascade_edge_id integer;
     edge_road record;
     is_roundabout boolean;
+    previous_ref_calc_disabled text;
 BEGIN
     -- Trigger disabled by session variable
     IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
@@ -607,6 +608,11 @@ BEGIN
     -- Cascade changes made on previous_edge_id and next_edge_id
     -- For roundabout, do not do it
     -- (this is a choice, to let the user choose the first road and position manually the marker 0)
+    -- The cascading changes are only made when the edge is inserted or its previous or next edge has changed:
+    -- the references of the road are then calculated at the end of this function.
+    -- Do not calculate them for each updated neighbour edge
+    previous_ref_calc_disabled = road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no');
+    PERFORM set_config('road.graph.edge.ref.calc.disabled', 'yes', true);
     -- previous edge id
     IF (TG_OP = 'INSERT' AND NEW.previous_edge_id IS NOT NULL AND NOT is_roundabout)
         OR (TG_OP = 'UPDATE' AND NEW.previous_edge_id != Coalesce(OLD.previous_edge_id, -1) AND NOT is_roundabout)
@@ -650,6 +656,8 @@ BEGIN
             ;
         END IF;
     END IF;
+    -- Set back the value
+    PERFORM set_config('road.graph.edge.ref.calc.disabled', previous_ref_calc_disabled, true);
 
     -- For UPDATE, if the edge road_code has changed,
     -- we must also edit the previous and next edge ids of the old road edges
@@ -5647,6 +5655,7 @@ DECLARE
     edge_road record;
     is_roundabout boolean;
     previous_crossing_node_creation_pending text;
+    previous_ref_calc_disabled text;
 BEGIN
     -- log level
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
@@ -5718,6 +5727,12 @@ BEGIN
         'road.graph.edge.crossing.node.creation.pending', 'no'
     );
     PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'yes', true);
+
+    -- The references of the road are calculated once at the end of this function,
+    -- and not after the update of the edge, then after the insertion of the new edge,
+    -- and after the update of the next edge by the cascading changes
+    previous_ref_calc_disabled = road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no');
+    PERFORM set_config('road.graph.edge.ref.calc.disabled', 'yes', true);
 
     UPDATE road_graph.edges
     SET
@@ -5811,8 +5826,9 @@ BEGIN
             Coalesce(edge_record.end_cumulative, 0)
         );
 
-        -- Set again the variable, in case it has been reset by the cascading changes
+        -- Set again the variables, in case they have been reset by the cascading changes
         PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'yes', true);
+        PERFORM set_config('road.graph.edge.ref.calc.disabled', 'yes', true);
         EXECUTE sql_text
         INTO id_new_object
         ;
@@ -5826,10 +5842,17 @@ BEGIN
         id_new_object = -1;
     END IF;
 
-    -- Restore the variable
+    -- Restore the variables
     PERFORM set_config(
         'road.graph.edge.crossing.node.creation.pending', previous_crossing_node_creation_pending, true
     );
+    PERFORM set_config('road.graph.edge.ref.calc.disabled', previous_ref_calc_disabled, true);
+
+    -- Calculate the references of the road, once for the two parts of the split edge.
+    -- Not for the roundabouts, like in the trigger function after_edge_insert_or_update
+    IF previous_ref_calc_disabled = 'no' AND NOT is_roundabout THEN
+        PERFORM road_graph.update_edge_references(edge_record.road_code, NULL);
+    END IF;
 
     -- Return True
     RETURN id_new_object;

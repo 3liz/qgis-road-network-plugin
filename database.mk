@@ -33,7 +33,7 @@ patch-install-files:
 	current_version=$$DB_CURRENT_VERSION; \
 	db_version=$${DB_INSTALL_VERSION:-$$((current_version-1))}; \
 	patch_file=tests/.test-migration-$$db_version-to-$$current_version/sql.patch; \
-	echo "== Patch install files to version $current_version"; \
+	echo "== Patch install files to version $$current_version"; \
 	patch -u -p0 < $$patch_file; \
 
 

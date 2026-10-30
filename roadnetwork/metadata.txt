@@ -26,5 +26,5 @@ deprecated=False
 hasProcessingProvider=True
 
 [roadnetwork]
-schemaVersion=40
+schemaVersion=41
 schemaName=road_graph
