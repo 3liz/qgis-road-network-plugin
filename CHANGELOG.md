@@ -39,6 +39,8 @@
   it is not updated, and a warning is displayed
 * **SQL**: the list of the last updated managed objects (`last_updated_objects_ids`) is emptied
   when a merge does not update any object: it still contained the objects of the previous merge
+* **Tools panel**: the references displayed on click or on hover now show the marker `0`, and the abscissa,
+  offset or cumulative distance `0`, instead of an empty field
 
 ## 0.6.2 - 2026-10-30
 

@@ -6,6 +6,7 @@ from typing import Any
 import processing
 
 from qgis.core import (
+    NULL,
     QgsApplication,
     QgsSettings,
 )
@@ -236,7 +237,9 @@ class Plugin:
         for schema in ("road_graph_editing", "road_graph"):
             refs = references[schema]
             for key in ("road_code", "marker", "abscissa", "offset", "side", "cumulative"):
-                value = str(refs[key]) if refs.get(key) else ""
+                # Do not test the value itself: 0 must be displayed, e.g. for the marker 0
+                value = refs.get(key)
+                value = "" if value is None or value == NULL else str(value)
                 line_edit = self.tools_dock.findChild(
                     QgsFilterLineEdit, f"{key}_sandbox" if schema == "road_graph_editing" else key
                 )
