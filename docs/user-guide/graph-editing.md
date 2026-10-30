@@ -3,32 +3,71 @@
 ## Editing rules
 
 The road graph data are **not edited directly** in the production schema `road_graph`,
-but in a **dedicated editing session schema** `road_graph_editing`, which acts as a sandbox:
-
-1. The user **draws a polygon** in the `editing_sessions` layer around the area to edit.
-   The new editing session has the status `created`.
-   ![Draw a polygon](../media/user-guide/qgis_create_editing_sessions_polygon.gif)
-2. The algorithm `Clone data to a new editing session` (toolbar button `Clone data to the editing sandbox`,
-   or layer action [Create editing session](#create-editing-session))
-   **copies an extract of the production data** inside this polygon into the sandbox.
-   The status becomes `cloned`.
-
-   ![Clone data to editing session](../media/user-guide/qgis_clone_data_to_editing_session.gif)
-3. The **editing** is made with the **QGIS tools**: forms, topological editing, etc.
-   The status becomes `edited` after the first change.
-    * QGIS **automatic transaction grouping** is activated in the project:
-      the changes made by the database triggers (node creation, edge split, etc.) are visible **live**.
-    * A layer action helps to **create roundabouts**, see [Create a roundabout](#create-a-roundabout).
-
-   ![Edit the data](../media/user-guide/qgis_add_a_road_and_an_edge.gif)
-4. The algorithm `Merge editing session data` (toolbar button `Merge editing sandbox data`)
-   **merges the modifications back** into the `road_graph` schema
-   and updates the [managed objects](managed-objects.md).
-   The sandbox data and the merged editing session are then deleted.
+but in a **dedicated editing session schema** `road_graph_editing`, which acts as a sandbox.
+The editing is made in four steps, described below.
 
 At any time, the modifications of the editing session can be highlighted with the action
 [Display edited data](#display-edited-data), and the editing session can be cancelled
 with the action [Drop editing session](#drop-editing-session).
+
+### Draw the editing session polygon
+
+The user **draws a polygon** in the `editing_sessions` layer around the area to edit.
+The new editing session has the status `created`.
+
+![Draw a polygon](../media/user-guide/qgis_create_editing_sessions_polygon.gif)
+
+### Clone the data into the sandbox
+
+The algorithm `Clone data to a new editing session` (toolbar button `Clone data to the editing sandbox`,
+or layer action [Create editing session](#create-editing-session))
+**copies an extract of the production data** inside this polygon into the sandbox.
+The status becomes `cloned`.
+
+![Clone data to editing session](../media/user-guide/qgis_clone_data_to_editing_session.gif)
+
+### Edit the data
+
+The **editing** is made with the **QGIS tools**: forms, topological editing, etc.
+The status becomes `edited` after the first change.
+
+* QGIS **automatic transaction grouping** is activated in the project:
+  the changes made by the database triggers (node creation, edge split, etc.) are visible **live**.
+* A layer action helps to **create roundabouts**, see [Create a roundabout](#create-a-roundabout).
+
+![Edit the data](../media/user-guide/qgis_add_a_road_and_an_edge.gif)
+
+### Merge the editing session
+
+The algorithm `Merge editing session data` (toolbar button `Merge editing sandbox data`)
+**merges the modifications back** into the `road_graph` schema
+and updates the [managed objects](managed-objects.md).
+The sandbox data and the merged editing session are then deleted.
+
+### Do not edit the production schema directly
+
+!!! warning "Do not edit the production schema `road_graph` directly"
+    The layers of the production schema `road_graph` can technically be edited,
+    but some automatic processes **only work with an editing session**:
+
+    * the **intersections** between edges are only cut **inside the editing session polygon**.
+      Without an editing session, a new edge crossing a road is **not connected** to it,
+      without any error message, and the road graph becomes wrong,
+    * the **managed objects** (business data) are only updated when an editing session is **merged**:
+      their references or geometries are no longer right after a direct modification of the road graph,
+    * the modifications are **not logged**: they cannot be displayed with the action `Display edited data`,
+      nor cancelled with the action `Drop editing session`,
+    * the modifications are immediately visible by all the users, for example in Lizmap.
+
+    Always edit the road graph in an editing session.
+
+!!! tip "Correct the whole road graph after a first import"
+    The editing session polygon can cover **all the data**, for example a rectangle around the whole road graph,
+    to correct the data after a first [import](import.md#import-the-road-graph-edges-and-markers).
+    The performance is the same as with a small editing session: with the [demo data](import.md#create-a-demo-database)
+    (7,809 edges), the data are cloned in about 1 second, and the edits and the merge take the same time.
+    But only one editing session can be edited at a time: the other users must wait for the merge
+    to edit the road graph.
 
 
 ## Editing session actions

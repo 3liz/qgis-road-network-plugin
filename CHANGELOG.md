@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+* **Docs**: in the page `Road graph editing`, warn against editing directly the production schema `road_graph`,
+  and explain how to correct the whole road graph after a first import with an editing session covering all the data
+
 ## 0.6.1 - 2026-10-29
 
 ### Summary
