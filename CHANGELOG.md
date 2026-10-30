@@ -5,9 +5,17 @@
 ### Changed
 
 * **SQL**: performance of the edges editing: the references of a road were calculated several times
-  for one modification. Splitting an edge by a node now calculates them once instead of three times,
-  and adding an edge to a road once instead of twice. For example, drawing an edge crossing twice
-  a long road calculates about 3 times fewer references (migration `upgrade_to_41.sql`)
+  for one modification. Adding an edge to a road now calculates them once instead of twice.
+  Splitting an edge by a node, for example at a crossroad, now only calculates the references
+  of the two parts of the split edge, instead of three times the references of the whole road.
+  For example on a road of 135 edges: 0.08 s instead of 3 times about 1.8 s (migration `upgrade_to_41.sql`).
+  Measured gains when editing this road in an editing session, with or without virtual markers:
+    * drawing an edge crossing the road twice: about 0.5 to 0.65 s instead of 8 to 13 s,
+    * adding a node on the road: about 0.25 to 0.3 s instead of 4.3 to 6.7 s.
+  If the two parts of the split edge are not as long as the split edge, for example because of the rounding
+  of the geometries, the references of the whole road are calculated
+* **Docs**: in the page `Road graph editing`, explain the impacts of the modifications of the edges and markers
+  on the references, upstream and downstream, with a diagram
 * **Docs**: in the page `Road graph editing`, warn against editing directly the production schema `road_graph`,
   and explain how to correct the whole road graph after a first import with an editing session covering all the data
 

@@ -198,6 +198,40 @@ graph TD
     set the field to `True` for the new edge, or for the crossed highway and access roads edges:
     no node will be created at these intersections, and only the roads really connected will be split.
 
+## Impacts of the modifications on the references
+
+The **references** of each edge, at its start and end points, are calculated automatically
+by the database trigger functions (see [Tables and fields](../database-guide/tables.md#edges)):
+
+* the **marker** and the **abscissa**: the last marker before the point, and the distance from this marker,
+* the **cumulative distance**: the distance from the start of the road.
+
+They only depend on what is located **before** the point, in the direction of the road.
+A modification of the road graph therefore only impacts the references **downstream** of it:
+
+![Impacts of the modifications on the references](../media/user-guide/references_impacts.svg)
+
+1. **The geometry of an edge is modified**, for example when a vertex is moved: the road becomes longer or shorter.
+    * the references of the edges **upstream** of the modified edge do not change,
+    * the **markers and abscissas** change from the modified edge **up to the next marker**, real or virtual.
+      After it, the abscissas are measured from this marker, which has not moved,
+    * the **cumulative distances** change for **all the edges downstream**, up to the end of the road.
+2. **An edge is split by a node**, for example at a new crossroad: the geometry of the road does not change.
+   Only the two parts of the split edge get their new references: the references of all the other edges
+   do not change. This is the fastest modification, even on a long road.
+3. **A marker is moved, added or deleted**: the **markers and abscissas** change between the old or new position
+   of the marker and the next marker. The cumulative distances do not change.
+
+When the editing session is merged, the [managed objects](managed-objects.md#update-rules) of the modified roads
+are updated with the same logic: for example, an object located downstream of a lengthened edge gets a greater
+cumulative distance, and a greater abscissa if it is located before the next marker.
+See [Example: impacts of a graph modification](managed-objects.md#example-impacts-of-a-graph-modification).
+
+!!! note
+    The references of the edges are recalculated for the **whole road** after a modification of its geometry
+    or of its markers: on a long road, for example a road of 100 km with more than 100 edges,
+    each modification can take a few seconds.
+
 ## How to edit the data in QGIS
 
 In QGIS, you can edit the layer data by toggling the **editing mode** for each layer:

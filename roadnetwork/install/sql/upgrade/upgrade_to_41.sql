@@ -3,7 +3,8 @@
 -- The references of a whole road were calculated several times for one modification:
 -- * split_edge_by_node: after the update of the split edge, after the insertion of the new edge,
 --   and after the update of the next edge by the cascading changes.
---   They are now calculated once, at the end of the function
+--   They are now calculated once, at the end of the function, and only for the two parts of the split edge:
+--   the geometry of the road has not changed, so the references of its other edges are still right
 -- * after_edge_insert_or_update: after the update of the previous or next edge by the cascading changes,
 --   then for the edge itself. They are now calculated only for the edge itself
 --
@@ -495,6 +496,7 @@ DECLARE
     is_roundabout boolean;
     previous_crossing_node_creation_pending text;
     previous_ref_calc_disabled text;
+    split_length_difference float8;
 BEGIN
     -- log level
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
@@ -687,10 +689,26 @@ BEGIN
     );
     PERFORM set_config('road.graph.edge.ref.calc.disabled', previous_ref_calc_disabled, true);
 
-    -- Calculate the references of the road, once for the two parts of the split edge.
+    -- Calculate the references of the two parts of the split edge only.
+    -- The geometry of the road has not changed: the references of its other edges are still right.
+    -- The stored geometries are rounded to 10 cm by the trigger function aa_before_geometry_insert_or_update:
+    -- the length of the road only changes by less than a millimeter, which is negligible.
+    -- If the two parts are not as long as the split edge, the references of the whole road are calculated.
     -- Not for the roundabouts, like in the trigger function after_edge_insert_or_update
     IF previous_ref_calc_disabled = 'no' AND NOT is_roundabout THEN
-        PERFORM road_graph.update_edge_references(edge_record.road_code, NULL);
+        SELECT sum(ST_Length(e.geom)) - ST_Length(edge_record.geom)
+        INTO split_length_difference
+        FROM road_graph.edges AS e
+        WHERE e.id IN (edge_record.id, id_new_object)
+        ;
+        IF id_new_object > 0 AND abs(split_length_difference) < 0.005 THEN
+            PERFORM road_graph.update_edge_references(
+                edge_record.road_code,
+                ARRAY[edge_record.id, id_new_object]
+            );
+        ELSE
+            PERFORM road_graph.update_edge_references(edge_record.road_code);
+        END IF;
     END IF;
 
     -- Return True
