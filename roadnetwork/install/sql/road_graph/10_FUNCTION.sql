@@ -2869,6 +2869,275 @@ This behaviour can be overriden by setting _use_cache TO True;
 ';
 
 
+-- get_editing_session_impacts(integer)
+CREATE FUNCTION road_graph.get_editing_session_impacts(_editing_session_id integer) RETURNS jsonb
+    LANGUAGE sql
+    AS $$
+    WITH
+    logged AS (
+        SELECT i.item, l.key::integer AS id, l.value AS op
+        FROM
+            "road_graph".editing_sessions AS es,
+            unnest(ARRAY['edges', 'markers']) AS i(item),
+            jsonb_each_text(Coalesce(es.logged_ids->i.item, '{}'::jsonb)) AS l
+        WHERE es.id = _editing_session_id
+    ),
+    -- Only the edges whose geometry or road has changed.
+    -- The edges only updated by the calculation of their references are not taken into account
+    modified_edges AS (
+        SELECT l.id
+        FROM logged AS l
+        LEFT JOIN "road_graph".edges AS o
+            ON o.id = l.id
+        LEFT JOIN road_graph_editing.edges AS n
+            ON n.id = l.id AND l.op != 'D'
+        WHERE l.item = 'edges'
+        AND (
+            o.id IS NULL OR n.id IS NULL
+            OR o.road_code != n.road_code
+            OR NOT ST_Equals(o.geom, n.geom)
+        )
+    ),
+    -- The modified edges before (production schema) and after (editing schema) the modifications
+    all_edges AS (
+        SELECT 'old' AS version, e.road_code, e.geom,
+            e.start_marker, e.start_abscissa, e.end_marker
+        FROM "road_graph".edges AS e
+        JOIN modified_edges AS m ON m.id = e.id
+        UNION ALL
+        SELECT 'new' AS version, e.road_code, e.geom,
+            e.start_marker, e.start_abscissa, e.end_marker
+        FROM road_graph_editing.edges AS e
+        JOIN modified_edges AS m ON m.id = e.id
+    ),
+    -- The modified markers before and after the modifications
+    all_markers AS (
+        SELECT m.road_code, m.code
+        FROM "road_graph".markers AS m
+        JOIN logged AS l ON l.item = 'markers' AND l.id = m.id
+        UNION
+        SELECT m.road_code, m.code
+        FROM road_graph_editing.markers AS m
+        JOIN logged AS l ON l.item = 'markers' AND l.id = m.id AND l.op != 'D'
+    ),
+    roads AS (
+        SELECT DISTINCT a.road_code FROM all_edges AS a
+        UNION
+        SELECT DISTINCT m.road_code FROM all_markers AS m
+    ),
+    edges_impacts AS (
+        SELECT
+            r.road_code,
+            (
+                SELECT ST_Union(a.geom) FROM all_edges AS a
+                WHERE a.road_code = r.road_code AND a.version = 'old'
+            ) AS old_geom,
+            (
+                SELECT ST_Union(a.geom) FROM all_edges AS a
+                WHERE a.road_code = r.road_code AND a.version = 'new'
+            ) AS new_geom,
+            (
+                SELECT Coalesce(sum(ST_Length(a.geom)), 0) FROM all_edges AS a
+                WHERE a.road_code = r.road_code AND a.version = 'old'
+            ) AS old_length,
+            (
+                SELECT Coalesce(sum(ST_Length(a.geom)), 0) FROM all_edges AS a
+                WHERE a.road_code = r.road_code AND a.version = 'new'
+            ) AS new_length,
+            -- First modified point: the least start references of the modified edges
+            (
+                SELECT jsonb_build_array(a.start_marker, a.start_abscissa) FROM all_edges AS a
+                WHERE a.road_code = r.road_code
+                ORDER BY a.start_marker, a.start_abscissa
+                LIMIT 1
+            ) AS start_reference,
+            (
+                SELECT max(a.end_marker) FROM all_edges AS a
+                WHERE a.road_code = r.road_code
+            ) AS end_marker_code,
+            -- The references are not calculated for some edges, for example the roundabouts
+            (
+                SELECT bool_or(a.start_marker IS NULL OR a.start_abscissa IS NULL OR a.end_marker IS NULL)
+                FROM all_edges AS a
+                WHERE a.road_code = r.road_code
+            ) AS null_references
+        FROM roads AS r
+    ),
+    markers_impacts AS (
+        -- For each modified marker: its code and the code of the previous marker
+        SELECT
+            m.road_code,
+            jsonb_agg(
+                jsonb_build_array(
+                    Coalesce(
+                        (
+                            SELECT max(p.code) FROM (
+                                SELECT x.code FROM "road_graph".markers AS x
+                                WHERE x.road_code = m.road_code AND x.code < m.code
+                                UNION ALL
+                                SELECT x.code FROM road_graph_editing.markers AS x
+                                WHERE x.road_code = m.road_code AND x.code < m.code
+                            ) AS p
+                        ),
+                        -1
+                    ),
+                    m.code
+                )
+            ) AS marker_ranges
+        FROM all_markers AS m
+        GROUP BY m.road_code
+    )
+    SELECT
+        jsonb_agg(
+            jsonb_build_object(
+                'road_code', e.road_code,
+                'whole_road', Coalesce(e.null_references, false),
+                -- The geometry of the road has not changed when the edges have only been split
+                'geometry_changed', (
+                    (e.old_geom IS NOT NULL OR e.new_geom IS NOT NULL)
+                    AND NOT Coalesce(
+                        abs(e.old_length - e.new_length) < 0.01
+                        AND ST_HausdorffDistance(e.old_geom, e.new_geom) < 0.1,
+                        false
+                    )
+                ),
+                'start_marker_code', e.start_reference->0,
+                'start_abscissa', e.start_reference->1,
+                'end_marker_code', e.end_marker_code,
+                'near_geom', encode(ST_AsEWKB(ST_Collect(ARRAY[e.old_geom, e.new_geom])), 'hex'),
+                'marker_ranges', Coalesce(m.marker_ranges, '[]'::jsonb)
+            )
+        )
+    FROM edges_impacts AS e
+    LEFT JOIN markers_impacts AS m
+        ON m.road_code = e.road_code
+    ;
+$$;
+
+
+-- FUNCTION get_editing_session_impacts(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.get_editing_session_impacts(_editing_session_id integer) IS 'Get the impacts of the given editing session on the roads, to update only the managed objects which may be impacted.
+It must be run before the merge of the editing session, since it compares the production and editing data.
+It returns a JSON array with one object per impacted road:
+* road_code,
+* whole_road: true if all the objects of the road must be updated (references not calculated for the modified edges, for example for the roundabouts),
+* geometry_changed: false if the edges have only been split, or if only their attributes have changed,
+* start_marker_code & start_abscissa: the references of the first modified point,
+* end_marker_code: the last marker of the modified edges,
+* near_geom: the modified edges geometries, before and after the modifications, as hexadecimal EWKB,
+* marker_ranges: for each modified marker, the code of the previous marker and its code.
+The function get_managed_objects_impacts_filter uses this JSON to filter the managed objects to update.';
+
+
+-- get_managed_object_geometry_from_references(text, integer, real, integer, real, real, text)
+CREATE FUNCTION road_graph.get_managed_object_geometry_from_references(_road_code text, _start_marker_code integer, _start_abscissa real, _end_marker_code integer, _end_abscissa real, _offset real, _side text) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    -- Point
+    IF _end_marker_code IS NULL THEN
+        RETURN road_graph.get_road_point_from_reference(
+            _road_code, _start_marker_code, _start_abscissa, _offset, _side
+        );
+    END IF;
+
+    -- Line
+    RETURN road_graph.get_road_substring_from_references(
+        _road_code, _start_marker_code, _start_abscissa, _end_marker_code, _end_abscissa, _offset, _side
+    );
+
+EXCEPTION WHEN OTHERS THEN
+    -- Do not cancel the update of all the objects because of one object
+    RAISE WARNING 'The geometry of the object of the road % with the references % + % -> % + % cannot be calculated: %',
+        _road_code, _start_marker_code, _start_abscissa, _end_marker_code, _end_abscissa, SQLERRM
+    ;
+    RETURN NULL;
+END;
+$$;
+
+
+-- FUNCTION get_managed_object_geometry_from_references(_road_code text, _start_marker_code integer, _start_abscissa real, _end_marker_code integer, _end_abscissa real, _offset real, _side text)
+COMMENT ON FUNCTION road_graph.get_managed_object_geometry_from_references(_road_code text, _start_marker_code integer, _start_abscissa real, _end_marker_code integer, _end_abscissa real, _offset real, _side text) IS 'Get the geometry of a managed object from its references, with the functions get_road_point_from_reference for a point (_end_marker_code is NULL)
+or get_road_substring_from_references for a line.
+It returns NULL with a warning instead of raising an exception if the geometry cannot be calculated,
+for example if the end references are before the start references.';
+
+
+-- get_managed_objects_impacts_filter(text, text[], text)
+CREATE FUNCTION road_graph.get_managed_objects_impacts_filter(_geometry_type text, _table_cols text[], _geometry_column text) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    AS $_$
+DECLARE
+    start_marker_field text;
+    start_abscissa_field text;
+    end_marker_field text;
+    end_abscissa_field text;
+    has_cumulative boolean;
+BEGIN
+    IF lower(_geometry_type) = 'point' THEN
+        start_marker_field = 'mo.marker_code';
+        start_abscissa_field = 'mo.abscissa';
+        end_marker_field = 'mo.marker_code';
+        end_abscissa_field = 'mo.abscissa';
+        has_cumulative = 'cumulative' = ANY(_table_cols);
+    ELSE
+        start_marker_field = 'mo.start_marker_code';
+        start_abscissa_field = 'mo.start_abscissa';
+        end_marker_field = 'mo.end_marker_code';
+        end_abscissa_field = 'mo.end_abscissa';
+        has_cumulative = _table_cols && ARRAY['start_cumulative', 'end_cumulative']::text[];
+    END IF;
+
+    -- The objects which may be impacted are:
+    -- * the objects without references,
+    -- * the objects located near the modified edges,
+    -- * if the geometry of the road has changed, the objects located downstream of the first modified point:
+    --   up to the end of the road if the table has a cumulative field,
+    --   or else up to the last marker of the modified edges, since the abscissas are measured from the markers
+    -- * the objects between the previous marker and a modified marker
+    RETURN format(
+        $SQL$
+        EXISTS (
+            SELECT 1
+            FROM jsonb_to_recordset($1) AS i (
+                road_code text, whole_road boolean, geometry_changed boolean,
+                start_marker_code integer, start_abscissa real, end_marker_code integer,
+                near_geom text, marker_ranges jsonb
+            )
+            WHERE i.road_code = trim(mo.road_code)::text
+            AND (
+                i.whole_road
+                OR %1$s IS NULL OR %2$s IS NULL OR %3$s IS NULL OR %4$s IS NULL
+                OR ST_DWithin(mo.%5$I, ST_GeomFromEWKB(decode(i.near_geom, 'hex')), 50)
+                OR (
+                    i.geometry_changed
+                    AND (%3$s, %4$s) >= (i.start_marker_code, i.start_abscissa)
+                    AND (%6$s OR %1$s <= i.end_marker_code)
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM jsonb_array_elements(i.marker_ranges) AS r
+                    WHERE %1$s <= (r->>1)::integer AND %3$s >= (r->>0)::integer
+                )
+            )
+        )
+        $SQL$,
+        start_marker_field,
+        start_abscissa_field,
+        end_marker_field,
+        end_abscissa_field,
+        _geometry_column,
+        CASE WHEN has_cumulative THEN 'TRUE' ELSE 'FALSE' END
+    );
+END;
+$_$;
+
+
+-- FUNCTION get_managed_objects_impacts_filter(_geometry_type text, _table_cols text[], _geometry_column text)
+COMMENT ON FUNCTION road_graph.get_managed_objects_impacts_filter(_geometry_type text, _table_cols text[], _geometry_column text) IS 'Build the SQL filter of the managed objects which may be impacted by the modifications of the road graph.
+The managed table must have the alias mo, and the impacts returned by the function get_editing_session_impacts must be given as the first parameter $1 of the query.';
+
+
 -- get_merged_geom_from_table_and_ids(text, text, integer[])
 CREATE FUNCTION road_graph.get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[]) RETURNS geometry
     LANGUAGE plpgsql
@@ -3180,10 +3449,12 @@ DECLARE
     upstream_road_from_start record;
     found_road_code text;
     found_marker_code integer;
-    found_abscissa real;
-    found_offset real;
+    -- double precision and not real: a real converted to numeric only keeps 6 significant digits
+    -- for example a cumulative distance of 50955.53 m was rounded to 50955.5 m
+    found_abscissa double precision;
+    found_offset double precision;
     found_side text;
-    found_cumulative real;
+    found_cumulative double precision;
     cached_edge_orders jsonb;
     raise_notice text;
 BEGIN
@@ -5248,6 +5519,7 @@ DECLARE
     editing_session_record record;
     sql_record record;
     road_codes text[];
+    impacts jsonb;
     managed_object record;
     updated_objects_number integer;
     _set_config text;
@@ -5278,6 +5550,19 @@ BEGIN
     -- no need to prefix the function by the schema name because the search_path is set in the function definition
     SELECT INTO road_codes
         get_updated_roads_from_editing_session(_editing_session_id)
+    ;
+
+    -- Get the impacts of the editing session on the roads, to update only the managed objects
+    -- which may be impacted by the modifications.
+    -- It must be calculated before the merge, since it compares the production and editing data.
+    -- Only the roads whose edges geometries or markers have changed are impacted:
+    -- the other edges have only been updated by the calculation of their references
+    SELECT INTO impacts
+        get_editing_session_impacts(_editing_session_id)
+    ;
+    SELECT INTO road_codes
+        array_agg(i->>'road_code')
+    FROM jsonb_array_elements(Coalesce(impacts, '[]'::jsonb)) AS i
     ;
 
     -- Create SQL to run for each edited data
@@ -5311,7 +5596,8 @@ BEGIN
                 road_graph.update_managed_objects_on_graph_change(
                     managed_object.schema_name,
                     managed_object.table_name,
-                    road_codes
+                    road_codes,
+                    impacts
                 )
             ;
             RAISE NOTICE 'Number of updated managed objects for "%"."%": %',
@@ -5323,6 +5609,17 @@ BEGIN
         -- Re-enable triggers
         SELECT set_config('road.graph.disable.trigger', '0'::text, true)
         INTO _set_config;
+
+    ELSE
+        -- No object has been updated: empty the list of the objects updated by the previous merge
+        UPDATE "road_graph".managed_objects
+        SET (
+            last_updated_objects_ids,
+            last_update
+        ) = (
+            ARRAY[]::integer[],
+            now()::timestamp(0)
+        );
 
     END IF;
 
@@ -6404,8 +6701,8 @@ for big roads with many edges
 ';
 
 
--- update_managed_objects_on_graph_change(text, text, text[])
-CREATE FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[]) RETURNS integer
+-- update_managed_objects_on_graph_change(text, text, text[], jsonb)
+CREATE FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb) RETURNS integer
     LANGUAGE plpgsql
     AS $_$
 DECLARE
@@ -6475,7 +6772,8 @@ BEGIN
             WHEN managed_object.update_policy_on_graph_change = 'geometry'
                 THEN False
             ELSE True
-        END
+        END,
+        _impacts
     )
     INTO updated_stats_references
     ;
@@ -6492,7 +6790,8 @@ BEGIN
         SELECT road_graph.update_table_geometries_from_references(
             _schema_name,
             _table_name,
-            _road_codes
+            _road_codes,
+            _impacts
         )
         INTO updated_stats_geometry
         ;
@@ -6542,15 +6841,16 @@ BEGIN
     END IF;
 
     -- Check results
-    IF updated_stats IS NULL THEN
+    IF updated_stats IS NULL OR Coalesce((updated_stats->>'nb')::integer, 0) = 0 THEN
         RAISE NOTICE 'No object updated for %.%', _schema_name, _table_name;
-        RETURN NULL;
-    END IF;
-    IF (updated_stats->>'nb')::integer = 0 THEN
-        RAISE NOTICE 'No object updated for %.%', _schema_name, _table_name;
-        RETURN NULL;
+        updated_stats = jsonb_build_object(
+            'nb', 0,
+            'last_updated_objects_ids', '[]'::jsonb
+        );
     END IF;
     -- Update the managed_objects table
+    -- The list of the updated objects is emptied if no object has been updated:
+    -- it must only contain the objects updated by the last change of the road graph
     EXECUTE format(
         $SQL$
             UPDATE road_graph.managed_objects AS o
@@ -6579,16 +6879,18 @@ BEGIN
         )
     );
 
-    -- Return the number of updated features
-    RETURN (updated_stats->>'nb')::integer;
+    -- Return the number of updated features, or NULL if no object has been updated
+    RETURN Nullif((updated_stats->>'nb')::integer, 0);
 
 END;
 $_$;
 
 
--- FUNCTION update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[])
-COMMENT ON FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[]) IS 'Updates managed objects geometries or references when the road graph changes.
-It uses the information stored in the road_graph.managed_objects table';
+-- FUNCTION update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb)
+COMMENT ON FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb) IS 'Updates managed objects geometries or references when the road graph changes.
+It uses the information stored in the road_graph.managed_objects table.
+The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects
+which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.';
 
 
 -- update_road_edges_neighbours(text, integer)
@@ -6642,8 +6944,8 @@ and an initial node given
 ';
 
 
--- update_table_geometries_from_references(text, text, text[])
-CREATE FUNCTION road_graph.update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[]) RETURNS jsonb
+-- update_table_geometries_from_references(text, text, text[], jsonb)
+CREATE FUNCTION road_graph.update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb) RETURNS jsonb
     LANGUAGE plpgsql
     AS $_$
 DECLARE
@@ -6755,7 +7057,7 @@ BEGIN
             WITH get_geom AS (
                 SELECT
                     mo.%1$I AS id,
-                    road_graph.%8$s(
+                    road_graph.get_managed_object_geometry_from_references(
                         mo.road_code::text,
                         %9$s,
                         %6$s,
@@ -6767,6 +7069,7 @@ BEGIN
                     mo.road_code = ANY(string_to_array('%4$s', ',')::text[])
                     OR '%4$s' = ''
                 )
+                AND (%8$s)
             ),
             updated_objects AS (
                 SELECT
@@ -6813,25 +7116,25 @@ BEGIN
         -- 6
         CASE WHEN 'offset' = ANY(table_cols) THEN 'Coalesce(mo."offset"::real, 0.0::real)' ELSE '0.0::real' END,
         -- 7
-        CASE WHEN 'side' = ANY(table_cols) THEN 'Coalesce(mo.side::text, ''right''::text) ' ELSE 'right::text' END,
-        -- used function
-        -- 8
+        CASE WHEN 'side' = ANY(table_cols) THEN 'Coalesce(mo.side::text, ''right''::text) ' ELSE '''right''::text' END,
+        -- 8 : filter of the impacted objects
         CASE
-            WHEN lower(managed_object.geometry_type) = 'point'
-            THEN 'get_road_point_from_reference'
-            ELSE 'get_road_substring_from_references'
+            WHEN _impacts IS NULL THEN 'TRUE'
+            ELSE road_graph.get_managed_objects_impacts_filter(managed_object.geometry_type, table_cols, 'geom')
         END,
         -- used fields: we need to cast the values taken from the managed table
+        -- The end references are NULL for the points
         -- 9
         CASE
             WHEN lower(managed_object.geometry_type) = 'point'
-            THEN 'mo.marker_code::integer, mo.abscissa::real'
+            THEN 'mo.marker_code::integer, mo.abscissa::real, NULL::integer, NULL::real'
             ELSE 'mo.start_marker_code::integer, mo.start_abscissa::real, mo.end_marker_code::integer, mo.end_abscissa::real'
         END
     );
     RAISE NOTICE 'sql = %', sql_text;
     EXECUTE sql_text
-    INTO updated_stats;
+    INTO updated_stats
+    USING _impacts;
 
     RETURN to_jsonb(updated_stats);
 
@@ -6839,8 +7142,15 @@ END;
 $_$;
 
 
--- update_table_references_from_geometries(text, text, text[], boolean)
-CREATE FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean DEFAULT true) RETURNS jsonb
+-- FUNCTION update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb)
+COMMENT ON FUNCTION road_graph.update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb) IS 'Update the given table geometries based on the references. This function needs the table to be listed in the table road_graph.managed_objects.
+The objects whose geometry cannot be calculated are not updated, and a warning is raised.
+The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects
+which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.';
+
+
+-- update_table_references_from_geometries(text, text, text[], boolean, jsonb)
+CREATE FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean DEFAULT true, _impacts jsonb DEFAULT NULL::jsonb) RETURNS jsonb
     LANGUAGE plpgsql
     AS $_$
 DECLARE
@@ -6856,6 +7166,7 @@ DECLARE
     updated_stats record;
     cached_road_codes text[];
     cached_road_code text;
+    impacts_filter text;
 BEGIN
 
     -- Get info on the managed object table
@@ -6964,6 +7275,12 @@ BEGIN
             RETURN NULL;
     END IF;
 
+    -- Filter the objects which may be impacted by the modifications of the road graph, if given
+    impacts_filter = CASE
+        WHEN _impacts IS NULL THEN 'TRUE'
+        ELSE road_graph.get_managed_objects_impacts_filter(managed_object.geometry_type, table_cols, geometry_column)
+    END;
+
     -- Build the road cache for the roads of the objects to update
     -- It is always built again here, even if it already exists for a road,
     -- since the road graph could have been modified since its last build in the same transaction
@@ -7009,6 +7326,7 @@ BEGIN
                         mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
                         OR '%4$s' = ''
                     )
+                    AND (%10$s)
                 ),
                 refs AS (
                     SELECT
@@ -7074,6 +7392,9 @@ BEGIN
                 ELSE ''
             END,
             -- 8 / Detect if we need to update or not
+            -- A difference of 1 cm of the abscissa or cumulative is ignored: calculating the geometry from the references,
+            -- then the references from this geometry rounded to 1 cm, can give a difference of 1 cm.
+            -- Without this tolerance, the lines of the update policy geometry were shortened by 1 cm at each update
             concat(
                 $STR$
                 (
@@ -7082,10 +7403,10 @@ BEGIN
                     ( Coalesce(mo.road_code, '') = '' AND coalesce((r.ref->>'road_code'), '') != '' )
                 )
                 OR (r.ref->>'marker_code')::integer != Coalesce(mo.marker_code, -1)::integer
-                OR (r.ref->>'abscissa')::real != Coalesce(mo.abscissa, -1)::real
+                OR abs((r.ref->>'abscissa')::real - Coalesce(mo.abscissa, -1)::real) > 0.015
                 $STR$,
                 CASE WHEN 'cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.ref->>'cumulative')::real != Coalesce(mo.cumulative, -1)::real $STR$ ELSE ''
+                    THEN $STR$ OR abs((r.ref->>'cumulative')::real - Coalesce(mo.cumulative, -1)::real) > 0.015 $STR$ ELSE ''
                 END,
                 CASE
                     WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
@@ -7099,7 +7420,9 @@ BEGIN
                 END
             ),
             -- 9 / geometry_column
-            geometry_column
+            geometry_column,
+            -- 10 / filter of the impacted objects
+            impacts_filter
         );
 
     ELSIF lower(managed_object.geometry_type) IN ('linestring', 'multilinestring') THEN
@@ -7117,6 +7440,7 @@ BEGIN
                         mo.road_code::text = ANY(string_to_array('%4$s', ',')::text[])
                         OR '%4$s' = ''
                     )
+                    AND (%11$s)
                 ),
                 road_info AS (
                     SELECT r.road_code, r.road_type,
@@ -7278,6 +7602,9 @@ BEGIN
             -- 8 / add update for cumulative if the columns exists in the target table
             CASE WHEN 'end_cumulative' = ANY(table_cols) THEN $STR$"end_cumulative" = (r.end_ref->>'cumulative')::real, $STR$ ELSE '' END,
             -- 9 / Detect if we need to update or not
+            -- A difference of 1 cm of the abscissa or cumulative is ignored: calculating the geometry from the references,
+            -- then the references from this geometry rounded to 1 cm, can give a difference of 1 cm.
+            -- Without this tolerance, the lines of the update policy geometry were shortened by 1 cm at each update
             concat(
                 $STR$
                 (
@@ -7286,12 +7613,12 @@ BEGIN
                     ( Coalesce(mo.road_code, '') = '' AND coalesce((r.start_ref->>'road_code'), '') != '' )
                 )
                 OR (r.start_ref->>'marker_code')::integer != Coalesce(mo.start_marker_code, -1)::integer
-                OR (r.start_ref->>'abscissa')::real != Coalesce(mo.start_abscissa, -1)::real
+                OR abs((r.start_ref->>'abscissa')::real - Coalesce(mo.start_abscissa, -1)::real) > 0.015
                 OR (r.end_ref->>'marker_code')::integer != Coalesce(mo.end_marker_code, -1)::integer
-                OR (r.end_ref->>'abscissa')::real != Coalesce(mo.end_abscissa, -1)::real
+                OR abs((r.end_ref->>'abscissa')::real - Coalesce(mo.end_abscissa, -1)::real) > 0.015
                 $STR$,
                 CASE WHEN 'start_cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.start_ref->>'cumulative')::real != Coalesce(mo.start_cumulative, -1)::real $STR$ ELSE ''
+                    THEN $STR$ OR abs((r.start_ref->>'cumulative')::real - Coalesce(mo.start_cumulative, -1)::real) > 0.015 $STR$ ELSE ''
                 END,
                 CASE
                     WHEN 'offset' = ANY(table_cols) AND _update_offset_and_side IS True
@@ -7304,17 +7631,20 @@ BEGIN
                     ELSE ''
                 END,
                 CASE WHEN 'end_cumulative' = ANY(table_cols)
-                    THEN $STR$ OR (r.end_ref->>'cumulative')::real != Coalesce(mo.end_cumulative, -1)::real $STR$ ELSE ''
+                    THEN $STR$ OR abs((r.end_ref->>'cumulative')::real - Coalesce(mo.end_cumulative, -1)::real) > 0.015 $STR$ ELSE ''
                 END
             ),
             -- 10 / geometry_column
-            geometry_column
+            geometry_column,
+            -- 11 / filter of the impacted objects
+            impacts_filter
         );
     END IF;
 
     RAISE NOTICE 'sql = %', sql_text;
     EXECUTE sql_text
-    INTO updated_stats;
+    INTO updated_stats
+    USING _impacts;
 
     RETURN to_jsonb(updated_stats);
 
@@ -7322,8 +7652,8 @@ END;
 $_$;
 
 
--- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean)
-COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
+-- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean, _impacts jsonb)
+COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean, _impacts jsonb) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
 The given columns must exists:
 * for points: road_code, marker_code, abscissa. Optional columns: offset & side,
 * road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset & side
@@ -7331,6 +7661,9 @@ The given columns must exists:
 The parameter _update_offset_and_side allows to not update the offset and side columns of the target table.
 It is useful when used before updating the table geometries from the references
 (to keep the object in the same start and end places but adapt the geometry)
+
+The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects
+which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.
 ';
 
 

@@ -642,7 +642,7 @@ def test_cut_edge_by_node(processing_provider: Provider):
     assert [edges[0][2], edges[0][3]] == [5720, 5722]
     # Check the references have been calculated for this edge
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
-    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.67, 622.67]
+    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.66, 622.66]
     # Check the previous and next edges ids
     assert [edges[0][10], edges[0][11]] == [None, 7811]
 
@@ -653,7 +653,7 @@ def test_cut_edge_by_node(processing_provider: Provider):
     # Check the start and end nodes
     assert [edges[1][2], edges[1][3]] == [5722, 5721]
     # Check the references have been calculated for this edge
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 622.67, 622.67]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 622.66, 622.66]
     assert [edges[1][7], edges[1][8], edges[1][9]] == [0, 870.88, 870.88]
     # Check the previous and next edges ids
     assert [edges[1][10], edges[1][11]] == [7810, None]
@@ -770,8 +770,8 @@ def test_insert_edge_at_the_end_of_a_road(processing_provider: Provider):
 
     # Check the references have been calculated for all the edges of the road
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
-    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.67, 622.67]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 622.67, 622.67]
+    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.66, 622.66]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 622.66, 622.66]
     assert [edges[1][7], edges[1][8], edges[1][9]] == [0, 870.88, 870.88]
     assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 870.88, 870.88]
     assert [edges[2][7], edges[2][8], edges[2][9]] == [0, 919.28, 919.28]
@@ -834,10 +834,10 @@ def test_change_edge_road(processing_provider: Provider):
 
     # Check the references have been calculated for all the edges of the road
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
-    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.67, 622.67]
+    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.66, 622.66]
     assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 0.0, 0.0]
     assert [edges[1][7], edges[1][8], edges[1][9]] == [0, 248.21, 248.21]
-    assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 622.67, 622.67]
+    assert [edges[2][4], edges[2][5], edges[2][6]] == [0, 622.66, 622.66]
     assert [edges[2][7], edges[2][8], edges[2][9]] == [0, 671.07, 671.07]
 
 
@@ -892,7 +892,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
     assert [edges[0][10], edges[0][11]] == [7810, 7814]
 
     # Check the references have been calculated for all the edges of the road
-    assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 622.67, 622.67]
+    assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 622.66, 622.66]
     assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 705.01, 705.01]
     assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 705.01, 705.01]
     assert [edges[1][7], edges[1][8], edges[1][9]] == [0, 845.11, 845.11]
@@ -933,7 +933,7 @@ def test_update_edge_and_cross_other_edge(processing_provider: Provider):
     assert [edges[0][4], edges[0][5], edges[0][6]] == [8, 981.0, 8995.61]  # not changed
     assert [edges[0][7], edges[0][8], edges[0][9]] == [9, 740.81, 9762.14]  # changed
     assert [edges[1][4], edges[1][5], edges[1][6]] == [9, 740.81, 9762.14]  # new edge
-    assert [edges[1][7], edges[1][8], edges[1][9]] == [14, 490.62, 14564.0]  # like previous edge
+    assert [edges[1][7], edges[1][8], edges[1][9]] == [14, 490.62, 14563.99]  # like previous edge
 
 
 def test_delete_road_edge(processing_provider: Provider):
@@ -981,8 +981,8 @@ def test_delete_road_edge(processing_provider: Provider):
     assert [edges[1][2], edges[1][3]] == [5724, 5723]
     # Check the references have been calculated for all the edges of the road
     assert [edges[0][4], edges[0][5], edges[0][6]] == [0, 0.0, 0.0]
-    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.67, 622.67]
-    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 622.67, 622.67]
+    assert [edges[0][7], edges[0][8], edges[0][9]] == [0, 622.66, 622.66]
+    assert [edges[1][4], edges[1][5], edges[1][6]] == [0, 622.66, 622.66]
     assert [edges[1][7], edges[1][8], edges[1][9]] == [0, 762.77, 762.77]
 
 
@@ -1225,7 +1225,7 @@ def test_move_road_marker():
     assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 8, 243.0, 8257.66]
     assert list(edges[1][1:7]) == [8, 243.0, 8257.66, 8, 971.93, 8986.59]
     assert list(edges[2][1:7]) == [8, 981.0, 8986.59, 9, 740.81, 9744.13]
-    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14545.98]
 
     # Move the marker 8 of the road D138 by 60 meters southwards
     sql_update = """
@@ -1262,7 +1262,7 @@ def test_move_road_marker():
     assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 8, 243.0, 8257.66]
     assert list(edges[1][1:7]) == [8, 243.0, 8257.66, 8, 971.93, 8986.59]
     assert list(edges[2][1:7]) == [8, 981.0, 8986.59, 9, 740.81, 9744.13]
-    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14545.98]
 
 
 def test_delete_road_marker():
@@ -1315,10 +1315,10 @@ def test_delete_road_marker():
     assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 7, 1163.69, 8257.66]
     assert list(edges[1][1:7]) == [7, 1163.69, 8257.66, 7, 1892.62, 8986.59]
     assert list(edges[2][1:7]) == [7, 1892.62, 8986.59, 9, 740.81, 9744.13]
-    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
-    assert list(edges[4][1:7]) == [14, 491.0, 14546.0, 15, 1806.29, 16856.8]
-    assert list(edges[5][1:7]) == [15, 1806.29, 16856.8, 15, 1840.55, 16891.1]
-    assert list(edges[6][1:7]) == [15, 1840.55, 16891.1, 18, 1341.55, 19428.5]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14545.98]
+    assert list(edges[4][1:7]) == [14, 491.0, 14545.98, 15, 1806.29, 16856.83]
+    assert list(edges[5][1:7]) == [15, 1806.29, 16856.83, 15, 1840.55, 16891.09]
+    assert list(edges[6][1:7]) == [15, 1840.55, 16891.09, 18, 1341.55, 19428.55]
 
 
 def test_add_road_marker():
@@ -1360,7 +1360,7 @@ def test_add_road_marker():
     assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 7, 1163.69, 8257.66]
     assert list(edges[1][1:7]) == [7, 1163.69, 8257.66, 7, 1892.62, 8986.59]
     assert list(edges[2][1:7]) == [7, 1892.62, 8986.59, 9, 740.81, 9744.13]
-    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14545.98]
 
     # Add the marker 8 for the road D138
     sql_insert = """
@@ -1400,7 +1400,7 @@ def test_add_road_marker():
     assert list(edges[0][1:7]) == [7, 837.0, 7930.97, 8, 202.8, 8257.66]
     assert list(edges[1][1:7]) == [8, 202.8, 8257.66, 8, 931.73, 8986.59]
     assert list(edges[2][1:7]) == [8, 931.73, 8986.59, 9, 740.81, 9744.13]
-    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14546.0]
+    assert list(edges[3][1:7]) == [9, 740.81, 9744.13, 14, 490.62, 14545.98]
 
 
 def test_delete_road_edge_which_ends_on_roundabout_marker_0(processing_provider: Provider):
@@ -2407,10 +2407,10 @@ def test_update_managed_objects():
     assert trees[6] is not None
     assert trees[0:7] == [
         [1, "oak", "D152", 9, 483.16, "left", 8.19, 9607.04],
-        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11381.4],
+        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11381.35],
         [3, "Oak", "D138B", 8, 612.09, "right", 11.4, 369.09],
         [4, "Palm", "D138", 8, 587.48, "right", 16.32, 8602.14],
-        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.3],
+        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.26],
         [6, "Oak", "D138", 8, 69.01, "left", 4.63, 8084.04],
         [7, "Pine", "D138", 8, 971.62, "left", 0.9, 8986.28],
     ]
@@ -2886,10 +2886,10 @@ def test_merge_editing_session_data():
     assert trees[6] is not None
     assert trees[0:7] == [
         [1, "oak", "D152", 9, 493.16, "left", 8.19, 9607.04],
-        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11381.4],
+        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11381.35],
         [3, "Oak", "D138B", 8, 612.09, "right", 11.4, 369.09],
         [4, "Palm", "D138", 8, 587.48, "right", 16.32, 8602.14],
-        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.3],
+        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.26],
         [6, "Oak", "D138", 8, 69.01, "left", 4.63, 8084.04],
         [7, "Pine", "D138", 8, 971.62, "left", 0.9, 8986.28],
     ]
@@ -2970,10 +2970,10 @@ def test_merge_editing_session_data():
     # But the road_code is always kept
     assert trees[0:7] == [
         [1, "oak", "D152", 9, 493.15, "left", 8.19, 9599.02],
-        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11363.3],
+        [2, "Pine", "D152", 11, 254.87, "right", 9.36, 11363.35],
         [3, "Oak", "D138B", 8, 612.09, "right", 11.4, 369.09],
         [4, "Palm", "D138", None, None, "right", 0.0, None],
-        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.3],
+        [5, "Palm", "D613", 43, 450.53, "left", 6.83, 42395.26],
         [6, "Oak", "D138", 8, 29.18, "left", 4.63, 8084.04],
         [7, "Pine", "D138", 8, 202.8, "right", 18.09, 8257.66],
     ]
@@ -3056,3 +3056,145 @@ def test_merge_editing_session_data():
     assert result[0] == 1
     assert result[1] == "1,2,4,6,7"
     assert result[2] == "ST_MultiPolygon"
+
+
+def test_merge_editing_session_updates_only_impacted_managed_objects(
+    rollback_db_connection: psycopg.Connection,
+):
+    """When an editing session is merged, only the managed objects which may be impacted
+    by the modifications are updated (function get_editing_session_impacts).
+    The edge 912 of the road D152 is located upstream of the trees 1 and 2, far from them.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    sql_trees = """
+        SELECT id, road_code, marker_code, abscissa, cumulative
+        FROM managed.demo_trees
+        ORDER BY id
+    """
+    cursor.execute(sql_trees)
+    trees_before = cursor.fetchall()
+    assert len(trees_before) == 7
+
+    def create_editing_session() -> int:
+        cursor.execute("""
+            INSERT INTO road_graph.editing_sessions (label, author, geom)
+            SELECT 'test impacts', 'test', ST_Buffer(e.geom, 100)
+            FROM road_graph.edges AS e
+            WHERE e.id = 912
+            RETURNING id
+        """)
+        row = cursor.fetchone()
+        assert row is not None
+        cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+        return row[0]
+
+    def get_impacts(session_id: int) -> list:
+        cursor.execute("SELECT road_graph.get_editing_session_impacts(%s)", (session_id,))
+        row = cursor.fetchone()
+        assert row is not None
+        return row[0]
+
+    # 1. The edge is split by a node: the geometry of the road does not change
+    session_id = create_editing_session()
+    cursor.execute("""
+        INSERT INTO road_graph_editing.nodes (geom)
+        SELECT ST_LineInterpolatePoint(e.geom, 0.5)
+        FROM road_graph_editing.edges AS e
+        WHERE e.id = 912
+    """)
+    impacts = get_impacts(session_id)
+    assert len(impacts) == 1
+    assert impacts[0]["road_code"] == "D152"
+    assert impacts[0]["whole_road"] is False
+    assert impacts[0]["geometry_changed"] is False
+    assert impacts[0]["start_marker_code"] == 2
+    assert impacts[0]["marker_ranges"] == []
+
+    cursor.execute("SELECT road_graph.merge_editing_session_data(%s)", (session_id,))
+    cursor.execute(sql_trees)
+    assert cursor.fetchall() == trees_before
+
+    # No tree has been updated: the list of the trees updated by the previous merge is emptied
+    sql_last_updated = """
+        SELECT last_updated_objects_ids
+        FROM road_graph.managed_objects
+        WHERE schema_name = 'managed' AND table_name = 'demo_trees'
+    """
+    cursor.execute(sql_last_updated)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == []
+
+    # 2. A vertex of the edge is moved: the road is longer.
+    # The cumulative distances of the trees 1 and 2 located downstream change,
+    # but not their markers and abscissas, measured from markers located downstream of the edge
+    session_id = create_editing_session()
+    cursor.execute("""
+        UPDATE road_graph_editing.edges
+        SET geom = ST_SetPoint(
+            geom, ST_NPoints(geom) / 2,
+            ST_Translate(ST_PointN(geom, ST_NPoints(geom) / 2 + 1), 20, 20)
+        )
+        WHERE id = 912
+    """)
+    impacts = get_impacts(session_id)
+    assert len(impacts) == 1
+    assert impacts[0]["road_code"] == "D152"
+    assert impacts[0]["geometry_changed"] is True
+
+    cursor.execute("SELECT road_graph.merge_editing_session_data(%s)", (session_id,))
+    cursor.execute(sql_trees)
+    trees_after = cursor.fetchall()
+    for before, after in zip(trees_before, trees_after):
+        if before[0] in (1, 2):
+            # Same marker and abscissa, greater cumulative distance
+            assert after[0:4] == before[0:4]
+            assert after[4] > before[4]
+        else:
+            assert after == before
+
+    cursor.execute(sql_last_updated)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == [1, 2]
+
+
+def test_get_managed_object_geometry_from_references(rollback_db_connection: psycopg.Connection):
+    """The geometry of a managed object which cannot be calculated from its references
+    returns NULL with a warning, instead of cancelling the update of all the objects"""
+    cursor = rollback_db_connection.cursor()
+
+    # Line: the end references are before the start references
+    cursor.execute("""
+        SELECT road_graph.get_managed_object_geometry_from_references(
+            'D152', 9, 500::real, 9, 100::real, 0::real, 'right'
+        )
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] is None
+
+    # Line with valid references
+    cursor.execute("""
+        SELECT ST_GeometryType(ST_GeomFromGeoJSON(
+            road_graph.get_managed_object_geometry_from_references(
+                'D152', 9, 100::real, 9, 500::real, 0::real, 'right'
+            )->'geom'
+        ))
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "ST_MultiLineString"
+
+    # Point: no end references
+    cursor.execute("""
+        SELECT ST_GeometryType(ST_GeomFromGeoJSON(
+            road_graph.get_managed_object_geometry_from_references(
+                'D152', 9, 100::real, NULL, NULL, 0::real, 'right'
+            )->'geom'
+        ))
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "ST_Point"

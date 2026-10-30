@@ -127,6 +127,7 @@ They are described in the page [Managed objects](../user-guide/managed-objects.m
 | `update_table_geometries_from_references` | Calculate the geometries of the features of a table from their references (same page) |
 | `add_managed_object_reference_fields` | [Add the reference fields to a table](../user-guide/managed-objects.md#add-the-reference-fields) |
 | `add_managed_objects_triggers` | [Create the triggers calculating the references automatically](../user-guide/managed-objects.md#automatic-calculation-of-the-references) |
+| `get_editing_session_impacts` | Get the impacts of an editing session on the roads, used by the merge to [update only the impacted objects](../user-guide/managed-objects.md#update-rules) |
 
 ## GPS tracks: from a GPX file to the road references
 

@@ -171,6 +171,32 @@ This behaviour can be overriden by setting _use_cache TO True;
 ';
 
 
+-- FUNCTION get_editing_session_impacts(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.get_editing_session_impacts(_editing_session_id integer) IS 'Get the impacts of the given editing session on the roads, to update only the managed objects which may be impacted.
+It must be run before the merge of the editing session, since it compares the production and editing data.
+It returns a JSON array with one object per impacted road:
+* road_code,
+* whole_road: true if all the objects of the road must be updated (references not calculated for the modified edges, for example for the roundabouts),
+* geometry_changed: false if the edges have only been split, or if only their attributes have changed,
+* start_marker_code & start_abscissa: the references of the first modified point,
+* end_marker_code: the last marker of the modified edges,
+* near_geom: the modified edges geometries, before and after the modifications, as hexadecimal EWKB,
+* marker_ranges: for each modified marker, the code of the previous marker and its code.
+The function get_managed_objects_impacts_filter uses this JSON to filter the managed objects to update.';
+
+
+-- FUNCTION get_managed_object_geometry_from_references(_road_code text, _start_marker_code integer, _start_abscissa real, _end_marker_code integer, _end_abscissa real, _offset real, _side text)
+COMMENT ON FUNCTION road_graph.get_managed_object_geometry_from_references(_road_code text, _start_marker_code integer, _start_abscissa real, _end_marker_code integer, _end_abscissa real, _offset real, _side text) IS 'Get the geometry of a managed object from its references, with the functions get_road_point_from_reference for a point (_end_marker_code is NULL)
+or get_road_substring_from_references for a line.
+It returns NULL with a warning instead of raising an exception if the geometry cannot be calculated,
+for example if the end references are before the start references.';
+
+
+-- FUNCTION get_managed_objects_impacts_filter(_geometry_type text, _table_cols text[], _geometry_column text)
+COMMENT ON FUNCTION road_graph.get_managed_objects_impacts_filter(_geometry_type text, _table_cols text[], _geometry_column text) IS 'Build the SQL filter of the managed objects which may be impacted by the modifications of the road graph.
+The managed table must have the alias mo, and the impacts returned by the function get_editing_session_impacts must be given as the first parameter $1 of the query.';
+
+
 -- FUNCTION get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[])
 COMMENT ON FUNCTION road_graph.get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[]) IS 'Compute the union geometry of all the features from a table and given feature ids';
 
@@ -315,9 +341,11 @@ for big roads with many edges
 ';
 
 
--- FUNCTION update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[])
-COMMENT ON FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[]) IS 'Updates managed objects geometries or references when the road graph changes.
-It uses the information stored in the road_graph.managed_objects table';
+-- FUNCTION update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb)
+COMMENT ON FUNCTION road_graph.update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb) IS 'Updates managed objects geometries or references when the road graph changes.
+It uses the information stored in the road_graph.managed_objects table.
+The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects
+which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.';
 
 
 -- FUNCTION update_road_edges_neighbours(_road_code text, _start_node integer)
@@ -326,8 +354,15 @@ and an initial node given
 ';
 
 
--- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean)
-COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
+-- FUNCTION update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb)
+COMMENT ON FUNCTION road_graph.update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb) IS 'Update the given table geometries based on the references. This function needs the table to be listed in the table road_graph.managed_objects.
+The objects whose geometry cannot be calculated are not updated, and a warning is raised.
+The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects
+which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.';
+
+
+-- FUNCTION update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean, _impacts jsonb)
+COMMENT ON FUNCTION road_graph.update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean, _impacts jsonb) IS 'Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects.
 The given columns must exists:
 * for points: road_code, marker_code, abscissa. Optional columns: offset & side,
 * road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset & side
@@ -335,6 +370,9 @@ The given columns must exists:
 The parameter _update_offset_and_side allows to not update the offset and side columns of the target table.
 It is useful when used before updating the table geometries from the references
 (to keep the object in the same start and end places but adapt the geometry)
+
+The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects
+which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.
 ';
 
 

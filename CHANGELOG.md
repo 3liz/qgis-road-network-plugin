@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Changed
+
+* **SQL**: faster merge of the editing sessions: only the managed objects which may be impacted
+  by the modifications are updated (near the modified edges, downstream of them if the road geometry has changed,
+  or near a modified marker), instead of all the objects of the modified roads.
+  For example on a road of 118 km with 1,250 objects: 0.4 s instead of 13 s for a new crossroad,
+  and 5 s instead of 13 s for a realigned edge (migration `upgrade_to_42.sql`)
+
+### Fixed
+
+* **SQL**: the cumulative distances greater than 10 km were rounded to 10 cm (1 m above 100 km),
+  for the edges and the managed objects. The migration calculates again the references of all the edges
+  (about 17 s for the 7,809 edges of the demo data). The managed objects are corrected when they are updated,
+  or with the algorithm `Update managed objects from the road graph`
+* **SQL**: the managed lines with the update policy `geometry` were shortened by 1 cm at each merge
+* **SQL**: a managed object whose geometry cannot be calculated from its references no longer cancels the merge:
+  it is not updated, and a warning is displayed
+* **SQL**: the list of the last updated managed objects (`last_updated_objects_ids`) is emptied
+  when a merge does not update any object: it still contained the objects of the previous merge
+
 ## 0.6.2 - 2026-10-30
 
 ### Summary

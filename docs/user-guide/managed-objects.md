@@ -222,6 +222,20 @@ When the user **merges the data from the editing session**, every impacted objec
 * **(Multi)linestring objects** must often follow the changes: the start and end points are kept
   and only the nodes in between are edited, e.g. a painting roadwork.
 
+To keep the merge fast on long roads, only the objects which **may be impacted** by the modifications
+are updated (see [Impacts of the modifications on the references](graph-editing.md#impacts-of-the-modifications-on-the-references)):
+
+* the objects located **less than 50 m** from the modified edges,
+* if the **geometry of the road has changed**, the objects located **downstream** of the first modified edge:
+  up to the end of the road if the table has a `cumulative` field, or else up to the last marker of the modified edges,
+* the objects located between a **modified marker** and the previous marker.
+
+An edge only split by a node, for example at a new crossroad, or whose attributes only have changed,
+does not change the geometry of the road. The other objects keep their references and geometries.
+
+If the geometry of an object cannot be calculated from its references, for example when its end references
+are before its start references, the object is not updated and a warning is displayed, but the merge is not cancelled.
+
 The algorithm `Update managed objects from the road graph` can also be run manually on a given layer,
 with the following parameters:
 
