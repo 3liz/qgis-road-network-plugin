@@ -777,6 +777,67 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Editing rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#draw-the-editing-session-polygon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Draw the editing session polygon
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clone-the-data-into-the-sandbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clone the data into the sandbox
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edit-the-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edit the data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#merge-the-editing-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge the editing session
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-not-edit-the-production-schema-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Do not edit the production schema directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -845,6 +906,17 @@
     <span class="md-ellipsis">
       
         Edges which must not be cut
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impacts-of-the-modifications-on-the-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impacts of the modifications on the references
       
     </span>
   </a>
@@ -1248,6 +1320,67 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Editing rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#draw-the-editing-session-polygon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Draw the editing session polygon
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clone-the-data-into-the-sandbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clone the data into the sandbox
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edit-the-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Edit the data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#merge-the-editing-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge the editing session
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-not-edit-the-production-schema-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Do not edit the production schema directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1323,6 +1456,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#impacts-of-the-modifications-on-the-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impacts of the modifications on the references
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-to-edit-the-data-in-qgis" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1356,30 +1500,61 @@
 <h1 id="road-graph-editing">Road graph editing<a class="headerlink" href="#road-graph-editing" title="Permanent link">#</a></h1>
 <h2 id="editing-rules">Editing rules<a class="headerlink" href="#editing-rules" title="Permanent link">#</a></h2>
 <p>The road graph data are <strong>not edited directly</strong> in the production schema <code>road_graph</code>,
-but in a <strong>dedicated editing session schema</strong> <code>road_graph_editing</code>, which acts as a sandbox:</p>
-<ol>
-<li>The user <strong>draws a polygon</strong> in the <code>editing_sessions</code> layer around the area to edit.
-   The new editing session has the status <code>created</code>.
-   <img alt="Draw a polygon" src="../../media/user-guide/qgis_create_editing_sessions_polygon.gif" /></li>
-<li>The algorithm <code>Clone data to a new editing session</code> (toolbar button <code>Clone data to the editing sandbox</code>,
-   or layer action <a href="#create-editing-session">Create editing session</a>)
-   <strong>copies an extract of the production data</strong> inside this polygon into the sandbox.
-   The status becomes <code>cloned</code>.</li>
-</ol>
-<p><img alt="Clone data to editing session" src="../../media/user-guide/qgis_clone_data_to_editing_session.gif" />
-3. The <strong>editing</strong> is made with the <strong>QGIS tools</strong>: forms, topological editing, etc.
-   The status becomes <code>edited</code> after the first change.
-    * QGIS <strong>automatic transaction grouping</strong> is activated in the project:
-      the changes made by the database triggers (node creation, edge split, etc.) are visible <strong>live</strong>.
-    * A layer action helps to <strong>create roundabouts</strong>, see <a href="#create-a-roundabout">Create a roundabout</a>.</p>
-<p><img alt="Edit the data" src="../../media/user-guide/qgis_add_a_road_and_an_edge.gif" />
-4. The algorithm <code>Merge editing session data</code> (toolbar button <code>Merge editing sandbox data</code>)
-   <strong>merges the modifications back</strong> into the <code>road_graph</code> schema
-   and updates the <a href="../managed-objects/">managed objects</a>.
-   The sandbox data and the merged editing session are then deleted.</p>
+but in a <strong>dedicated editing session schema</strong> <code>road_graph_editing</code>, which acts as a sandbox.
+The editing is made in four steps, described below.</p>
 <p>At any time, the modifications of the editing session can be highlighted with the action
 <a href="#display-edited-data">Display edited data</a>, and the editing session can be cancelled
 with the action <a href="#drop-editing-session">Drop editing session</a>.</p>
+<h3 id="draw-the-editing-session-polygon">Draw the editing session polygon<a class="headerlink" href="#draw-the-editing-session-polygon" title="Permanent link">#</a></h3>
+<p>The user <strong>draws a polygon</strong> in the <code>editing_sessions</code> layer around the area to edit.
+The new editing session has the status <code>created</code>.</p>
+<p><img alt="Draw a polygon" src="../../media/user-guide/qgis_create_editing_sessions_polygon.gif" /></p>
+<h3 id="clone-the-data-into-the-sandbox">Clone the data into the sandbox<a class="headerlink" href="#clone-the-data-into-the-sandbox" title="Permanent link">#</a></h3>
+<p>The algorithm <code>Clone data to a new editing session</code> (toolbar button <code>Clone data to the editing sandbox</code>,
+or layer action <a href="#create-editing-session">Create editing session</a>)
+<strong>copies an extract of the production data</strong> inside this polygon into the sandbox.
+The status becomes <code>cloned</code>.</p>
+<p><img alt="Clone data to editing session" src="../../media/user-guide/qgis_clone_data_to_editing_session.gif" /></p>
+<h3 id="edit-the-data">Edit the data<a class="headerlink" href="#edit-the-data" title="Permanent link">#</a></h3>
+<p>The <strong>editing</strong> is made with the <strong>QGIS tools</strong>: forms, topological editing, etc.
+The status becomes <code>edited</code> after the first change.</p>
+<ul>
+<li>QGIS <strong>automatic transaction grouping</strong> is activated in the project:
+  the changes made by the database triggers (node creation, edge split, etc.) are visible <strong>live</strong>.</li>
+<li>A layer action helps to <strong>create roundabouts</strong>, see <a href="#create-a-roundabout">Create a roundabout</a>.</li>
+</ul>
+<p><img alt="Edit the data" src="../../media/user-guide/qgis_add_a_road_and_an_edge.gif" /></p>
+<h3 id="merge-the-editing-session">Merge the editing session<a class="headerlink" href="#merge-the-editing-session" title="Permanent link">#</a></h3>
+<p>The algorithm <code>Merge editing session data</code> (toolbar button <code>Merge editing sandbox data</code>)
+<strong>merges the modifications back</strong> into the <code>road_graph</code> schema
+and updates the <a href="../managed-objects/">managed objects</a>.
+The sandbox data and the merged editing session are then deleted.</p>
+<h3 id="do-not-edit-the-production-schema-directly">Do not edit the production schema directly<a class="headerlink" href="#do-not-edit-the-production-schema-directly" title="Permanent link">#</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Do not edit the production schema <code>road_graph</code> directly</p>
+<p>The layers of the production schema <code>road_graph</code> can technically be edited,
+but some automatic processes <strong>only work with an editing session</strong>:</p>
+<ul>
+<li>the <strong>intersections</strong> between edges are only cut <strong>inside the editing session polygon</strong>.
+  Without an editing session, a new edge crossing a road is <strong>not connected</strong> to it,
+  without any error message, and the road graph becomes wrong,</li>
+<li>the <strong>managed objects</strong> (business data) are only updated when an editing session is <strong>merged</strong>:
+  their references or geometries are no longer right after a direct modification of the road graph,</li>
+<li>the modifications are <strong>not logged</strong>: they cannot be displayed with the action <code>Display edited data</code>,
+  nor cancelled with the action <code>Drop editing session</code>,</li>
+<li>the modifications are immediately visible by all the users, for example in Lizmap.</li>
+</ul>
+<p>Always edit the road graph in an editing session.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Correct the whole road graph after a first import</p>
+<p>The editing session polygon can cover <strong>all the data</strong>, for example a rectangle around the whole road graph,
+to correct the data after a first <a href="../import/#import-the-road-graph-edges-and-markers">import</a>.
+The performance is the same as with a small editing session: with the <a href="../import/#create-a-demo-database">demo data</a>
+(7,809 edges), the data are cloned in about 1 second, and the edits and the merge take the same time.
+But only one editing session can be edited at a time: the other users must wait for the merge
+to edit the road graph.</p>
+</div>
 <h2 id="editing-session-actions">Editing session actions<a class="headerlink" href="#editing-session-actions" title="Permanent link">#</a></h2>
 <p>The <code>editing_sessions</code> layer has three <strong>layer actions</strong>.
 To run an action on an editing session, use the <code>Identify Features</code> tool and <strong>right-click</strong>
@@ -1504,6 +1679,40 @@ It can be changed at any time, for example before drawing or modifying a road wh
 <p>Before drawing a new road which crosses a <strong>highway interchange</strong> without being connected to it,
 set the field to <code>True</code> for the new edge, or for the crossed highway and access roads edges:
 no node will be created at these intersections, and only the roads really connected will be split.</p>
+</div>
+<h2 id="impacts-of-the-modifications-on-the-references">Impacts of the modifications on the references<a class="headerlink" href="#impacts-of-the-modifications-on-the-references" title="Permanent link">#</a></h2>
+<p>The <strong>references</strong> of each edge, at its start and end points, are calculated automatically
+by the database trigger functions (see <a href="../../database-guide/tables/#edges">Tables and fields</a>):</p>
+<ul>
+<li>the <strong>marker</strong> and the <strong>abscissa</strong>: the last marker before the point, and the distance from this marker,</li>
+<li>the <strong>cumulative distance</strong>: the distance from the start of the road.</li>
+</ul>
+<p>They only depend on what is located <strong>before</strong> the point, in the direction of the road.
+A modification of the road graph therefore only impacts the references <strong>downstream</strong> of it:</p>
+<p><img alt="Impacts of the modifications on the references" src="../../media/user-guide/references_impacts.svg" /></p>
+<ol>
+<li><strong>The geometry of an edge is modified</strong>, for example when a vertex is moved: the road becomes longer or shorter.<ul>
+<li>the references of the edges <strong>upstream</strong> of the modified edge do not change,</li>
+<li>the <strong>markers and abscissas</strong> change from the modified edge <strong>up to the next marker</strong>, real or virtual.
+  After it, the abscissas are measured from this marker, which has not moved,</li>
+<li>the <strong>cumulative distances</strong> change for <strong>all the edges downstream</strong>, up to the end of the road.</li>
+</ul>
+</li>
+<li><strong>An edge is split by a node</strong>, for example at a new crossroad: the geometry of the road does not change.
+   Only the two parts of the split edge get their new references: the references of all the other edges
+   do not change. This is the fastest modification, even on a long road.</li>
+<li><strong>A marker is moved, added or deleted</strong>: the <strong>markers and abscissas</strong> change between the old or new position
+   of the marker and the next marker. The cumulative distances do not change.</li>
+</ol>
+<p>When the editing session is merged, the <a href="../managed-objects/#update-rules">managed objects</a> of the modified roads
+are updated with the same logic: for example, an object located downstream of a lengthened edge gets a greater
+cumulative distance, and a greater abscissa if it is located before the next marker.
+See <a href="../managed-objects/#example-impacts-of-a-graph-modification">Example: impacts of a graph modification</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The references of the edges are recalculated for the <strong>whole road</strong> after a modification of its geometry
+or of its markers: on a long road, for example a road of 100 km with more than 100 edges,
+each modification can take a few seconds.</p>
 </div>
 <h2 id="how-to-edit-the-data-in-qgis">How to edit the data in QGIS<a class="headerlink" href="#how-to-edit-the-data-in-qgis" title="Permanent link">#</a></h2>
 <p>In QGIS, you can edit the layer data by toggling the <strong>editing mode</strong> for each layer:</p>
