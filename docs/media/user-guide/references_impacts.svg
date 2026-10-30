@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="640" viewBox="0 0 900 640" font-family="Arial, Helvetica, sans-serif">
+  <rect width="900" height="640" fill="#ffffff"/>
+
+  <!-- Direction of the road -->
+  <text x="450" y="24" text-anchor="middle" font-size="15" fill="#424242">Direction of the road</text>
+  <line x1="320" y1="34" x2="572" y2="34" stroke="#424242" stroke-width="1.5"/>
+  <path d="M 570 29 L 582 34 L 570 39 z" fill="#424242"/>
+
+  <!-- ============ 1. Geometry of an edge modified ============ -->
+  <text x="20" y="72" font-size="16" font-weight="bold" fill="#212121">1. The geometry of the edge e2 is modified (e.g. a vertex is moved)</text>
+  <g transform="translate(0, 120)">
+    <!-- road -->
+    <line x1="60" y1="40" x2="220" y2="40" stroke="#9e9e9e" stroke-width="7"/>
+    <path d="M 220 40 L 260 40 L 300 5 L 340 40 L 380 40" fill="none" stroke="#e65100" stroke-width="7" stroke-linejoin="round"/>
+    <line x1="380" y1="40" x2="470" y2="40" stroke="#e65100" stroke-width="7"/>
+    <line x1="470" y1="40" x2="840" y2="40" stroke="#f9a825" stroke-width="7"/>
+    <path d="M 220 40 L 380 40" fill="none" stroke="#9e9e9e" stroke-width="2" stroke-dasharray="5,4"/>
+    <!-- nodes -->
+    <g fill="#ffffff" stroke="#424242" stroke-width="2">
+      <circle cx="60" cy="40" r="6"/><circle cx="220" cy="40" r="6"/><circle cx="380" cy="40" r="6"/>
+      <circle cx="540" cy="40" r="6"/><circle cx="700" cy="40" r="6"/><circle cx="840" cy="40" r="6"/>
+    </g>
+    <!-- edges labels -->
+    <g font-size="13" fill="#424242" text-anchor="middle">
+      <text x="140" y="68">e1</text><text x="300" y="68">e2</text><text x="460" y="68">e3</text>
+      <text x="620" y="68">e4</text><text x="770" y="68">e5</text>
+    </g>
+    <!-- markers -->
+    <g font-size="13" font-weight="bold" fill="#1b5e20" text-anchor="middle">
+      <path d="M 60 30 L 60 10 L 76 16 L 60 22" fill="#2e7d32" stroke="#1b5e20"/><text x="66" y="2">PR 12</text>
+      <path d="M 470 30 L 470 10 L 486 16 L 470 22" fill="#2e7d32" stroke="#1b5e20"/><text x="476" y="2">PR 13</text>
+      <path d="M 760 30 L 760 10 L 776 16 L 760 22" fill="#2e7d32" stroke="#1b5e20"/><text x="766" y="2">PR 14</text>
+    </g>
+    <!-- impacts -->
+    <g font-size="12.5" fill="#212121" text-anchor="middle">
+      <text x="140" y="92">unchanged</text>
+      <text x="345" y="92">abscissas and cumulative distances</text>
+      <text x="345" y="108">change up to the next marker</text>
+      <text x="655" y="92">only the cumulative distances change</text>
+      <text x="655" y="108">(the abscissas are measured from PR 13 and PR 14)</text>
+    </g>
+  </g>
+
+  <!-- ============ 2. Edge split by a node ============ -->
+  <text x="20" y="272" font-size="16" font-weight="bold" fill="#212121">2. The edge e2 is split by a node (e.g. a new crossroad)</text>
+  <g transform="translate(0, 320)">
+    <line x1="60" y1="40" x2="220" y2="40" stroke="#9e9e9e" stroke-width="7"/>
+    <line x1="220" y1="40" x2="380" y2="40" stroke="#1565c0" stroke-width="7"/>
+    <line x1="380" y1="40" x2="840" y2="40" stroke="#9e9e9e" stroke-width="7"/>
+    <line x1="300" y1="40" x2="300" y2="0" stroke="#757575" stroke-width="4"/>
+    <g fill="#ffffff" stroke="#424242" stroke-width="2">
+      <circle cx="60" cy="40" r="6"/><circle cx="220" cy="40" r="6"/><circle cx="380" cy="40" r="6"/>
+      <circle cx="540" cy="40" r="6"/><circle cx="700" cy="40" r="6"/><circle cx="840" cy="40" r="6"/>
+    </g>
+    <circle cx="300" cy="40" r="8" fill="#1565c0" stroke="#0d47a1" stroke-width="2"/>
+    <g font-size="13" fill="#424242" text-anchor="middle">
+      <text x="140" y="68">e1</text><text x="260" y="68">e2</text><text x="340" y="68">new edge</text>
+      <text x="460" y="68">e3</text><text x="620" y="68">e4</text><text x="770" y="68">e5</text>
+    </g>
+    <g font-size="13" font-weight="bold" fill="#1b5e20" text-anchor="middle">
+      <path d="M 60 30 L 60 10 L 76 16 L 60 22" fill="#2e7d32" stroke="#1b5e20"/><text x="66" y="2">PR 12</text>
+      <path d="M 470 30 L 470 10 L 486 16 L 470 22" fill="#2e7d32" stroke="#1b5e20"/><text x="476" y="2">PR 13</text>
+      <path d="M 760 30 L 760 10 L 776 16 L 760 22" fill="#2e7d32" stroke="#1b5e20"/><text x="766" y="2">PR 14</text>
+    </g>
+    <g font-size="12.5" fill="#212121" text-anchor="middle">
+      <text x="140" y="92">unchanged</text>
+      <text x="300" y="92">only the 2 parts get</text>
+      <text x="300" y="108">their references</text>
+      <text x="610" y="92">unchanged: the road keeps the same geometry</text>
+    </g>
+  </g>
+
+  <!-- ============ 3. Marker moved ============ -->
+  <text x="20" y="472" font-size="16" font-weight="bold" fill="#212121">3. The marker PR 13 is moved (or added, or deleted)</text>
+  <g transform="translate(0, 520)">
+    <line x1="60" y1="40" x2="400" y2="40" stroke="#9e9e9e" stroke-width="7"/>
+    <line x1="400" y1="40" x2="760" y2="40" stroke="#6a1b9a" stroke-width="7"/>
+    <line x1="760" y1="40" x2="840" y2="40" stroke="#9e9e9e" stroke-width="7"/>
+    <g fill="#ffffff" stroke="#424242" stroke-width="2">
+      <circle cx="60" cy="40" r="6"/><circle cx="220" cy="40" r="6"/><circle cx="380" cy="40" r="6"/>
+      <circle cx="540" cy="40" r="6"/><circle cx="700" cy="40" r="6"/><circle cx="840" cy="40" r="6"/>
+    </g>
+    <g font-size="13" fill="#424242" text-anchor="middle">
+      <text x="140" y="68">e1</text><text x="300" y="68">e2</text><text x="460" y="68">e3</text>
+      <text x="620" y="68">e4</text><text x="770" y="68">e5</text>
+    </g>
+    <!-- old position of PR 13 -->
+    <path d="M 470 30 L 470 10 L 486 16 L 470 22" fill="none" stroke="#1b5e20" stroke-dasharray="3,2"/>
+    <line x1="462" y1="16" x2="424" y2="16" stroke="#424242" stroke-width="1.5"/>
+    <path d="M 426 11 L 416 16 L 426 21 z" fill="#424242"/>
+    <g font-size="13" font-weight="bold" fill="#1b5e20" text-anchor="middle">
+      <path d="M 60 30 L 60 10 L 76 16 L 60 22" fill="#2e7d32" stroke="#1b5e20"/><text x="66" y="2">PR 12</text>
+      <path d="M 400 30 L 400 10 L 416 16 L 400 22" fill="#2e7d32" stroke="#1b5e20"/><text x="406" y="2">PR 13</text>
+      <path d="M 760 30 L 760 10 L 776 16 L 760 22" fill="#2e7d32" stroke="#1b5e20"/><text x="766" y="2">PR 14</text>
+    </g>
+    <g font-size="12.5" fill="#212121" text-anchor="middle">
+      <text x="230" y="92">unchanged</text>
+      <text x="580" y="92">markers and abscissas change between the old or new position</text>
+      <text x="580" y="108">and the next marker. The cumulative distances do not change</text>
+    </g>
+  </g>
+</svg>
