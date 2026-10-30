@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.6.2 - 2026-10-30
+
+### Summary
+
+**Highlights**
+
+* **Performance**: editing long roads is much faster, for example adding an edge crossing a road
+  of 135 edges takes about 0.6 s instead of 8 to 13 s
+* **Docs**: new explanation of the impacts of the modifications on the references, with a diagram
+
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 41)
+
 ### Changed
 
 * **SQL**: faster editing of long roads: the references of a road are no longer calculated several times
