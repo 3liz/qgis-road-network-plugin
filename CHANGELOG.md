@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.6.3 - 2026-10-30
+
+### Summary
+
+**Highlights**
+
+* **Performance**: merging an editing session is much faster on long roads: only the managed objects
+  which may be impacted by the modifications are updated, for example 0.4 s instead of 13 s for a new crossroad
+* **Fixes**: more precise cumulative distances (to the centimeter), and the managed lines are no longer
+  shortened by 1 cm at each merge
+
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 42).
+  It calculates again the references of all the edges, which can take a few minutes on a large road graph
+* Optionally, run the algorithm `Update managed objects from the road graph` on each managed table
+  to correct their cumulative distances
+
 ### Changed
 
 * **SQL**: faster merge of the editing sessions: only the managed objects which may be impacted
