@@ -73,7 +73,7 @@
             <div class="content-wrapper">
                 <!-- Content Header (Page header) -->
                 <section class="content-header">
-                    <h1>update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[])</h1><br />
+                    <h1>get_managed_object_geometry_from_references(_road_code text, _start_marker_code integer, _start_abscissa real, _end_marker_code integer, _end_abscissa real, _offset real, _side text)</h1><br />
                     <div class="box box-primary">
                         <div class="box-header with-border">
                             <i class="fa fa-file-text-o"></i>
@@ -85,7 +85,7 @@
                         </div>
                         <!-- /.box-header -->
                         <div class="box-body clearfix">
-                            <p><p>Updates managed objects geometries or references when the road graph changes. It uses the information stored in the road_graph.managed_objects table</p></p>
+                            <p><p>Get the geometry of a managed object from its references, with the functions get_road_point_from_reference for a point (_end_marker_code is NULL) or get_road_substring_from_references for a line. It returns NULL with a warning instead of raising an exception if the geometry cannot be calculated, for example if the end references are before the start references.</p></p>
                         </div>
                         <!-- /.box-body -->
                     </div>
@@ -112,18 +112,38 @@
                                 </thead>
                                 <tbody>
                                 <tr>
-                                    <td>_schema_name</td>
+                                    <td>_road_code</td>
                                     <td>text</td>
                                     <td>IN</td>
                                 </tr>
                                 <tr>
-                                    <td>_table_name</td>
-                                    <td>text</td>
+                                    <td>_start_marker_code</td>
+                                    <td>integer</td>
                                     <td>IN</td>
                                 </tr>
                                 <tr>
-                                    <td>_road_codes</td>
-                                    <td>text[]</td>
+                                    <td>_start_abscissa</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_end_marker_code</td>
+                                    <td>integer</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_end_abscissa</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_offset</td>
+                                    <td>real</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_side</td>
+                                    <td>text</td>
                                     <td>IN</td>
                                 </tr>
                                 </tbody>
@@ -140,7 +160,7 @@
                             </div>
                         </div>
                         <div class="box-body">
-                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    sql_text text;&#10;    table_exists boolean;&#10;    managed_object record;&#10;    updated_stats_geometry jsonb;&#10;    updated_stats_references jsonb;&#10;    merged_last_updated_objects_ids integer[];&#10;    updated_stats jsonb;&#10;    update_count integer;&#10;BEGIN&#10;    -- Get info on the managed object table&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT *&#10;        FROM road_graph.managed_objects&#10;        WHERE&#10;            schema_name &#61; &#39;%1$s&#39;&#10;            AND table_name &#61; &#39;%2$s&#39;&#10;        LIMIT 1;&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO managed_object&#10;    ;&#10;    IF managed_object IS NULL THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; is not registered as managed object in the road graph system !&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- Check if the table exists in the database&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT to_regclass(&#39;%1$I.%2$I&#39;) IS NOT NULL AS exists&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name&#10;    );&#10;    EXECUTE sql_text&#10;    INTO table_exists&#10;    ;&#10;    IF NOT table_exists THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; does not exist in the database !&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;&#10;    -- CHOIX IMPORTANT&#10;    -- Lorsqu&#39;on demande la modification de la géométrie,&#10;    -- il faut toujours au préalable recalculer d&#39;abord les références&#10;    -- de début et de fin à partir du nouveau graphe,&#10;    -- pour ensuite adapter la géométrie (si jamais les edges support ont été modifiés)&#10;    -- Cela assure que le début et la fin des lignes des données métiers restent&#10;    -- les &quot;mêmes&quot; sur le terrain (ex: début à cette maison, et fin à ce carrefour)&#10;    -- Par contre on ne calcule pas les offset et side (pour respecter cette donnée)&#10;&#10;    -- Update objects references in both cases&#10;    -- But when we do it before updating geometries, we should not modify the offset and side values&#10;&#10;    SELECT road_graph.update_table_references_from_geometries(&#10;        _schema_name,&#10;        _table_name,&#10;        _road_codes,&#10;        CASE&#10;            WHEN managed_object.update_policy_on_graph_change &#61; &#39;geometry&#39;&#10;                THEN False&#10;            ELSE True&#10;        END&#10;    )&#10;    INTO updated_stats_references&#10;    ;&#10;    IF updated_stats_references IS NULL THEN&#10;        updated_stats_references &#61; jsonb_build_object(&#10;            &#39;nb&#39;, 0,&#10;            &#39;last_updated_objects_ids&#39;, ARRAY[]::integer[]&#10;        );&#10;    END IF;&#10;    updated_stats &#61; updated_stats_references;&#10;&#10;    IF managed_object.update_policy_on_graph_change &#61; &#39;geometry&#39; THEN&#10;        -- Update geometries based on references&#10;        SELECT road_graph.update_table_geometries_from_references(&#10;            _schema_name,&#10;            _table_name,&#10;            _road_codes&#10;        )&#10;        INTO updated_stats_geometry&#10;        ;&#10;        IF updated_stats_geometry IS NULL THEN&#10;            updated_stats_geometry &#61; jsonb_build_object(&#10;                &#39;nb&#39;, 0,&#10;                &#39;last_updated_objects_ids&#39;, ARRAY[]::integer[]&#10;            );&#10;        END IF;&#10;        -- Get combined stats&#10;        -- RAISE NOTICE &#39;--------------&#39;;&#10;        -- RAISE NOTICE &#39;refs, %&#39;, updated_stats_references::json;&#10;        -- RAISE NOTICE &#39;geoms, %&#39;, updated_stats_geometry::json;&#10;        merged_last_updated_objects_ids &#61; (&#10;            WITH a AS (&#10;                SELECT t FROM jsonb_array_elements(&#10;                        CASE&#10;                        WHEN jsonb_typeof(updated_stats_references-&gt;&#39;last_updated_objects_ids&#39;) &#61; &#39;array&#39;&#10;                        THEN updated_stats_references-&gt;&#39;last_updated_objects_ids&#39;&#10;                        ELSE &#39;[]&#39;&#10;                        END&#10;                ) AS t&#10;                UNION&#10;                SELECT t FROM jsonb_array_elements(&#10;                        CASE&#10;                        WHEN jsonb_typeof(updated_stats_geometry-&gt;&#39;last_updated_objects_ids&#39;) &#61; &#39;array&#39;&#10;                        THEN updated_stats_geometry-&gt;&#39;last_updated_objects_ids&#39;&#10;                        ELSE &#39;[]&#39;&#10;                        END&#10;                ) AS t&#10;            )&#10;            SELECT array_agg(t ORDER BY t)&#10;            FROM a&#10;        );&#10;        -- RAISE NOTICE &#39;merged_last_updated_objects_ids, %&#39;, merged_last_updated_objects_ids;&#10;        -- RAISE NOTICE &#39;--------------&#39;;&#10;&#10;&#10;        updated_stats &#61; jsonb_build_object(&#10;            &#39;nb&#39;,&#10;            array_length(merged_last_updated_objects_ids, 1),&#10;            &#39;last_updated_objects_ids&#39;,&#10;            merged_last_updated_objects_ids&#10;        )&#10;        ;&#10;&#10;    END IF;&#10;&#10;    -- Check results&#10;    IF updated_stats IS NULL THEN&#10;        RAISE NOTICE &#39;No object updated for %.%&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;    IF (updated_stats-&gt;&gt;&#39;nb&#39;)::integer &#61; 0 THEN&#10;        RAISE NOTICE &#39;No object updated for %.%&#39;, _schema_name, _table_name;&#10;        RETURN NULL;&#10;    END IF;&#10;    -- Update the managed_objects table&#10;    EXECUTE format(&#10;        $SQL$&#10;            UPDATE road_graph.managed_objects AS o&#10;            SET (&#10;                last_updated_objects_ids,&#10;                last_update&#10;            ) &#61; (&#10;                ARRAY[%3$s]::integer[],&#10;                now()::timestamp(0)&#10;            )&#10;            WHERE o.schema_name &#61; &#39;%1$I&#39;&#10;            AND o.table_name &#61; &#39;%2$I&#39;&#10;        $SQL$,&#10;        _schema_name,&#10;        _table_name,&#10;        -- convert json array to string like 1,3,10&#10;        (&#10;            SELECT array_to_string(array_agg(j)::text[], &#39;,&#39;)&#10;            FROM jsonb_array_elements(&#10;                CASE&#10;                    WHEN jsonb_typeof(updated_stats-&gt;&#39;last_updated_objects_ids&#39;) &#61; &#39;array&#39;&#10;                        THEN updated_stats-&gt;&#39;last_updated_objects_ids&#39;&#10;                    ELSE &#39;[]&#39;&#10;                END&#10;            ) AS j&#10;        )&#10;    );&#10;&#10;    -- Return the number of updated features&#10;    RETURN (updated_stats-&gt;&gt;&#39;nb&#39;)::integer;&#10;&#10;END;</textarea>
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">BEGIN&#10;    -- Point&#10;    IF _end_marker_code IS NULL THEN&#10;        RETURN road_graph.get_road_point_from_reference(&#10;            _road_code, _start_marker_code, _start_abscissa, _offset, _side&#10;        );&#10;    END IF;&#10;&#10;    -- Line&#10;    RETURN road_graph.get_road_substring_from_references(&#10;        _road_code, _start_marker_code, _start_abscissa, _end_marker_code, _end_abscissa, _offset, _side&#10;    );&#10;&#10;EXCEPTION WHEN OTHERS THEN&#10;    -- Do not cancel the update of all the objects because of one object&#10;    RAISE WARNING &#39;The geometry of the object of the road % with the references % + % -&gt; % + % cannot be calculated: %&#39;,&#10;        _road_code, _start_marker_code, _start_abscissa, _end_marker_code, _end_abscissa, SQLERRM&#10;    ;&#10;    RETURN NULL;&#10;END;</textarea>
                         </div>
                     </div>
                 </section>

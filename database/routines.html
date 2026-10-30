@@ -130,15 +130,6 @@
                                         <td><p>Lors de la suppression d&rsquo;un tronçon, on supprime les Nodes qui étaient rattachés aux sommets amont et aval du tronçon, uniquement si ces derniers ne sont plus rattachés à aucun autre tronçon. On fusionne aussi les tronçons collés plus liés par les possibles noeuds supprimés</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/after_marker_insert_or_update_o_60c9d02a.html">after_marker_insert_or_update_or_delete()</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>trigger</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Update road edges references after a marker has been created, updated or deleted.</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/merge_edges_id_edge_a_integer___438c4883.html">merge_edges(id_edge_a integer, id_edge_b integer)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -146,15 +137,6 @@
                                         <td>boolean</td>
                                         <td>INVOKER</td>
                                         <td><p>Merge two edges by their geometry. The merged edge is the one with the lowest id. The other edge is deleted. The node between the two edges is not deleted but its id is stored in the session variable &lsquo;road.graph.merge.edges.useless.node&rsquo; for further use if needed.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/get_downstream_multilinestring__b24d02d7.html">get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>jsonb</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/after_node_insert_or_update___c64fd1da.html">after_node_insert_or_update()</a></td>
@@ -186,22 +168,15 @@
                                         <td><p>When a node is deleted, we update all the edges linked to it to keep the graph consistent. We also merge edges if the deleted node was between two edges.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/merge_table_linestring_features_96acf608.html">merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)</a></td>
+                                        <td><a href="routines/update_table_references_from_ge_906013e1.html">update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean DEFAULT true, _impacts jsonb DEFAULT NULL::jsonb)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
                                         <td>false</td>
-                                        <td>json</td>
+                                        <td>jsonb</td>
                                         <td>INVOKER</td>
-                                        <td><p>Merge two linestring features of the same table. The kept one is the one with the lower start_cumulative. The other one is deleted.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/update_managed_objects_on_graph_b118c5ab.html">update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[])</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>integer</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Updates managed objects geometries or references when the road graph changes. It uses the information stored in the road_graph.managed_objects table</p></td>
+                                        <td><p>Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects. The given columns must exists: * for points: road_code, marker_code, abscissa. Optional columns: offset &amp; side, * road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset &amp; side</p>
+<p>The parameter _update_offset_and_side allows to not update the offset and side columns of the target table. It is useful when used before updating the table geometries from the references (to keep the object in the same start and end places but adapt the geometry)</p>
+<p>The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/update_edge_references__road_co_9885dcd5.html">update_edge_references(_road_code text DEFAULT NULL::text, _edge_ids integer[] DEFAULT NULL::integer[])</a></td>
@@ -211,6 +186,216 @@
                                         <td>boolean</td>
                                         <td>INVOKER</td>
                                         <td><p>Find the edges corresponding to the optionaly given _road_code and _edges_ids and calculate their start and end points references. This method calculates the road cached objects to speed of the process for big roads with many edges</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/after_edge_insert_or_update___889d4a3f.html">after_edge_insert_or_update()</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>trigger</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Multiples opérations lancées suite à la modification d&rsquo;un troncon. Déplacement du noeud initial et terminal liés si besoin. Suppression des noeuds orphelins si besoin. Création des noeuds non existants à l&rsquo;intersection avec les autres edges seulement pour les edges de même niveau</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_managed_objects_impacts_fil_7144198f.html">get_managed_objects_impacts_filter(_geometry_type text, _table_cols text[], _geometry_column text)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>true</td>
+                                        <td>text</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Build the SQL filter of the managed objects which may be impacted by the modifications of the road graph. The managed table must have the alias mo, and the impacts returned by the function get_editing_session_impacts must be given as the first parameter $1 of the query.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/merge_editing_session_data__edi_591e7628.html">merge_editing_session_data(_editing_session_id integer)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>boolean</td>
+                                        <td>DEFINER</td>
+                                        <td><p>Copy data from the given editing session into the road_graph schema.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_reference_from_point__point_3c39ef66.html">get_reference_from_point(_point geometry, _road_code text DEFAULT NULL::text, _use_cache boolean DEFAULT false)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Calculate the references for the given point. The second parameter _road_code allows to narrow the search to the specified road. Since this method is heavily used and the calculation is costly, we can pass a third parameter _use_cache which allows to use a pre-generated cache (to be build before using this function).</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_updated_roads_from_editing__6a3e58b6.html">get_updated_roads_from_editing_session(_editing_session_id integer)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(road_codes text[])</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Get distinct road_code values from the objects concerned by editing_sessions.logged_ids column content for the given editing session</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_spatial_road__road_code_tex_9433d1cd.html">get_spatial_road(_road_code text)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>geometry</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Build the road geometry for the given road id. It can then be used with ST_LocateAlong.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/update_managed_objects_on_graph_55e0b37b.html">update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>integer</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Updates managed objects geometries or references when the road graph changes. It uses the information stored in the road_graph.managed_objects table. The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_edge_references__edge_id_in_a6aa623b.html">get_edge_references(_edge_id integer, _use_cache boolean DEFAULT false)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>json</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Return the references of the given edge start and end point. Could be used to UPDATE the edges of a road. By default does not use road object cache store in a temporary table. This behaviour can be overriden by setting _use_cache TO True;</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_or_create_edge_node__point__c0a07fc7.html">get_or_create_edge_node(_point geometry, _create boolean)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(node_id integer, node_geom geometry, is_created boolean)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Get the node of the given start or end point of an edge: the first node closer than 0.5 m. If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place). Used by the trigger function before_edge_insert_or_update.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_editing_session_impacts__ed_101beef5.html">get_editing_session_impacts(_editing_session_id integer)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>sql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Get the impacts of the given editing session on the roads, to update only the managed objects which may be impacted. It must be run before the merge of the editing session, since it compares the production and editing data. It returns a JSON array with one object per impacted road: * road_code, * whole_road: true if all the objects of the road must be updated (references not calculated for the modified edges, for example for the roundabouts), * geometry_changed: false if the edges have only been split, or if only their attributes have changed, * start_marker_code &amp; start_abscissa: the references of the first modified point, * end_marker_code: the last marker of the modified edges, * near_geom: the modified edges geometries, before and after the modifications, as hexadecimal EWKB, * marker_ranges: for each modified marker, the code of the previous marker and its code. The function get_managed_objects_impacts_filter uses this JSON to filter the managed objects to update.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/before_edge_insert_or_update___b2f68ae2.html">before_edge_insert_or_update()</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>trigger</td>
+                                        <td>INVOKER</td>
+                                        <td><p>During the creation or modification of an edge, we verify that the upstream and downstream nodes exist within 50 cm of the start and end of the edge. If they do, we use them and update the edge geometry so that the start and end are exactly on these nodes. Otherwise, we create the missing nodes. Additionally, during the creation of an edge, if the road code is provided and no marker 0 exists for this road, we automatically create one at the start of the edge. During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point, we move marker 0 to this new starting point. Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge based on its geometry and position on the road.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/copy_data_to_editing_session__e_942c81d3.html">copy_data_to_editing_session(_editing_session_id integer)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>boolean</td>
+                                        <td>DEFINER</td>
+                                        <td><p>Copy production data from the road_graph shema to the road_graph_editing schema corresponding to the given editing session ID.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/split_table_linestring_feature__af152153.html">split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>json</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Splits a table linestring feature by a given point. The feature keeps the first part, and a new feature is created with the second part. If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa, the references of the cut point become the end references of the feature and the start references of the new feature. The feature can be digitized in the direction of the road or in the opposite direction: the new geometries keep its direction.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/reorder_multilinestring_parts___27b0cac3.html">reorder_multilinestring_parts(_multilinestring geometry, _road_code text)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>geometry</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Reorder the parts of the given road MULTILINESTRING based on the graph. For each part, the references of the start &amp; end points is calculated, which helps to reorder the parts. We also reverse the geometry if needed (since the ST_OffsetCurve sometimes does not respect the node order)</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/aa_before_record_insert_or_upda_e79aa80d.html">aa_before_record_insert_or_update()</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>trigger</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Set the created_at and updated_at fields</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_snapped_line_from_track__tr_ba560ea2.html">get_snapped_line_from_track(_track geometry, _densify_distance real DEFAULT 2, _max_distance real DEFAULT 25, _road_change_penalty real DEFAULT 100)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>geometry</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Build a multilinestring snapped on the road graph edges from a GPS track (for example from a GPX file) which can be imprecise. The track is densified with a point every _densify_distance meters (default 2m), and each point is assigned to one of the roads closer than _max_distance (default 25m). To avoid zigzags between two close roads, the chosen sequence of roads minimizes the sum of the distances between the points and their roads, plus a penalty _road_change_penalty (default 100, expressed as a surface in m² between the track and the roads) each time the road changes. The returned geometry follows the edges geometries, in the direction of the track. Gaps between two unconnected edges are filled with the shortest path of maximum 5 edges. If no path is found, a new part is created in the multilinestring. A track without SRID is considered to be in the road graph projection, and other tracks are reprojected. The result is returned in the road graph projection. The result can be passed to the function get_road_sections_from_snapped_line to get the references of the crossed roads.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_managed_object_geometry_fro_24c51c03.html">get_managed_object_geometry_from_references(_road_code text, _start_marker_code integer, _start_abscissa real, _end_marker_code integer, _end_abscissa real, _offset real, _side text)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Get the geometry of a managed object from its references, with the functions get_road_point_from_reference for a point (_end_marker_code is NULL) or get_road_substring_from_references for a line. It returns NULL with a warning instead of raising an exception if the geometry cannot be calculated, for example if the end references are before the start references.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/toggle_foreign_key_constraints__12b5438f.html">toggle_foreign_key_constraints(_toggle boolean DEFAULT true)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>boolean</td>
+                                        <td>DEFINER</td>
+                                        <td><p>Deactivate or reactivate the foreign key constraints to ease the merging road_graph_editing data into road_graph schema. It is also used when importing data from templates.</p>
+<p>Under the hood, it drops or drops &amp; creates the constraint depending on the value of the _toggle parameter</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_road_previous_marker_from_p_f5bf9fb7.html">get_road_previous_marker_from_point(_road_code text, _point geometry, _use_cache boolean DEFAULT false)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(id integer, road_code text, code integer, abscissa real, geom geometry, road_linestring_from_marker_to_point geometry, road_linestring_from_start_to_point geometry, closing_multilinestring geometry, is_next_edge_start_marker boolean, cumulative real)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Get the closest upstream marker for the given road from a given point. This function can use roads cached objects generated beforehand via function build_road_cached_objects. Or use a full SQL query with no use of temporary tables, depending of the paramter _use_cache</p>
+<p>Illustration |m0&mdash;-m1&mdash;-|  |-m2-m2b&mdash;-m3&mdash;-|    p3   m4  |&mdash;&mdash;&ndash;m5&mdash;| p0     p1                         p2 p0 -&gt; marker is m1 p1 -&gt; marker is m2b (virtual marker with a non-null abscissa) p2 -&gt; marker is m3 p3 -&gt; marker is m4, since it is the start marker of the first next edge and p3 is not on a real previous edge.</p>
+<p>The function also returns: * the simple linestring (no gaps) made by merging all edges linestrings from the marker to the point * the simple linestring (no gaps) made by merging all edges linestrings from the start to the point * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps) * if the found marker is the start marker of the next edge (for p3-like cases when the point is between two edges)</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/after_marker_insert_or_update_o_60c9d02a.html">after_marker_insert_or_update_or_delete()</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>trigger</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Update road edges references after a marker has been created, updated or deleted.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_downstream_multilinestring__b24d02d7.html">get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/merge_table_linestring_features_96acf608.html">merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>json</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Merge two linestring features of the same table. The kept one is the one with the lower start_cumulative. The other one is deleted.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/update_table_geometries_from_re_e59a6026.html">update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Update the given table geometries based on the references. This function needs the table to be listed in the table road_graph.managed_objects. The objects whose geometry cannot be calculated are not updated, and a warning is raised. The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/get_upper_roundabout_node_to_de_f8905d65.html">get_upper_roundabout_node_to_delete(_road_code text)</a></td>
@@ -258,15 +443,6 @@
                                         <td><p>Returns a JSON object with the given references and the geometry of the corresponding point</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/after_edge_insert_or_update___889d4a3f.html">after_edge_insert_or_update()</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>trigger</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Multiples opérations lancées suite à la modification d&rsquo;un troncon. Déplacement du noeud initial et terminal liés si besoin. Suppression des noeuds orphelins si besoin. Création des noeuds non existants à l&rsquo;intersection avec les autres edges seulement pour les edges de même niveau</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/clean_digitized_roundabout__roa_d007d1ba.html">clean_digitized_roundabout(_road_code text)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -276,52 +452,6 @@
                                         <td><p>Clean a roundabout digitized by QGIS circle tool: * delete the edges inside the roundabout * remove the circle node added add 12 o&rsquo;clock * add a marker for this roundabout if not already present</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/update_table_references_from_ge_5aab6111.html">update_table_references_from_geometries(_schema_name text, _table_name text, _road_codes text[], _update_offset_and_side boolean DEFAULT true)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>jsonb</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Update the given table references based on the geometries. This function needs the table to be listed in the table road_graph.managed_objects. The given columns must exists: * for points: road_code, marker_code, abscissa. Optional columns: offset &amp; side, * road_code, start_marker_code, start_abscissa, end_marker_code, end_abscissa. Optional columns: start_cumulative, end_cumulative, offset &amp; side</p>
-<p>The parameter _update_offset_and_side allows to not update the offset and side columns of the target table. It is useful when used before updating the table geometries from the references (to keep the object in the same start and end places but adapt the geometry)</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/merge_editing_session_data__edi_591e7628.html">merge_editing_session_data(_editing_session_id integer)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>boolean</td>
-                                        <td>DEFINER</td>
-                                        <td><p>Copy data from the given editing session into the road_graph schema.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/get_reference_from_point__point_3c39ef66.html">get_reference_from_point(_point geometry, _road_code text DEFAULT NULL::text, _use_cache boolean DEFAULT false)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>jsonb</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Calculate the references for the given point. The second parameter _road_code allows to narrow the search to the specified road. Since this method is heavily used and the calculation is costly, we can pass a third parameter _use_cache which allows to use a pre-generated cache (to be build before using this function).</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/get_updated_roads_from_editing__6a3e58b6.html">get_updated_roads_from_editing_session(_editing_session_id integer)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>TABLE(road_codes text[])</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Get distinct road_code values from the objects concerned by editing_sessions.logged_ids column content for the given editing session</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/update_table_geometries_from_re_cc3cebd6.html">update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[])</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>jsonb</td>
-                                        <td>INVOKER</td>
-                                        <td></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/create_queries_from_editing_ses_6aa2bef3.html">create_queries_from_editing_session(_editing_session_id integer)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -329,15 +459,6 @@
                                         <td>TABLE(sql_text text)</td>
                                         <td>INVOKER</td>
                                         <td><p>Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/get_spatial_road__road_code_tex_9433d1cd.html">get_spatial_road(_road_code text)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>geometry</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Build the road geometry for the given road id. It can then be used with ST_LocateAlong.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/before_editing_sessions_update__bd574145.html">before_editing_sessions_update()</a></td>
@@ -358,42 +479,6 @@
                                         <td><p>Trigger function allowing to update the references of an inserted or update managed object feature</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/get_edge_references__edge_id_in_a6aa623b.html">get_edge_references(_edge_id integer, _use_cache boolean DEFAULT false)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>json</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Return the references of the given edge start and end point. Could be used to UPDATE the edges of a road. By default does not use road object cache store in a temporary table. This behaviour can be overriden by setting _use_cache TO True;</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/get_or_create_edge_node__point__c0a07fc7.html">get_or_create_edge_node(_point geometry, _create boolean)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>TABLE(node_id integer, node_geom geometry, is_created boolean)</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Get the node of the given start or end point of an edge: the first node closer than 0.5 m. If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place). Used by the trigger function before_edge_insert_or_update.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/before_edge_insert_or_update___b2f68ae2.html">before_edge_insert_or_update()</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>trigger</td>
-                                        <td>INVOKER</td>
-                                        <td><p>During the creation or modification of an edge, we verify that the upstream and downstream nodes exist within 50 cm of the start and end of the edge. If they do, we use them and update the edge geometry so that the start and end are exactly on these nodes. Otherwise, we create the missing nodes. Additionally, during the creation of an edge, if the road code is provided and no marker 0 exists for this road, we automatically create one at the start of the edge. During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point, we move marker 0 to this new starting point. Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge based on its geometry and position on the road.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/copy_data_to_editing_session__e_942c81d3.html">copy_data_to_editing_session(_editing_session_id integer)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>boolean</td>
-                                        <td>DEFINER</td>
-                                        <td><p>Copy production data from the road_graph shema to the road_graph_editing schema corresponding to the given editing session ID.</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/editing_survey___e14344a2.html">editing_survey()</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -401,15 +486,6 @@
                                         <td>trigger</td>
                                         <td>INVOKER</td>
                                         <td><p>Logs the modifications done inside the editing session schema tables. It also check that the edited geometries are inside the editing session polygon.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/split_table_linestring_feature__af152153.html">split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>json</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Splits a table linestring feature by a given point. The feature keeps the first part, and a new feature is created with the second part. If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa, the references of the cut point become the end references of the feature and the start references of the new feature. The feature can be digitized in the direction of the road or in the opposite direction: the new geometries keep its direction.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/update_road_edges_neighbours__r_863ac281.html">update_road_edges_neighbours(_road_code text, _start_node integer)</a></td>
@@ -430,15 +506,6 @@
                                         <td><p>Return the ordered list of the roads followed by the given line, with the start and end references (marker, abscissa and cumulative) for each road, the direction (downstream or upstream) and the line portion on this road. The line must follow the road graph edges, for example the result of the function get_snapped_line_from_track. The parameter _tolerance (default 1m) is the maximum distance between the line and the edges. A line without SRID is considered to be in the road graph projection, and other lines are reprojected. Example of output (the geom column is not shown): road_order | road_code     | start_marker | start_abscissa | start_cumulative | end_marker | end_abscissa | end_cumulative | direction  | length &mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&mdash;&mdash;&ndash;+&mdash;&mdash;&mdash;&mdash;&mdash;-+&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&mdash;&mdash;&ndash;+&mdash;&mdash;&mdash;&mdash;&mdash;-+&mdash;&mdash;&mdash;&mdash;+&mdash;&mdash;&ndash; 1 | D40           |           14 |         905.27 |          16361.8 |         15 |       396.15 |        16761.4 | downstream |  399.6 2 | GIR_D40_D16-1 |            0 |              0 |                0 |          0 |        39.17 |          39.17 | downstream |  39.17 3 | D16           |            0 |         716.82 |           716.82 |          0 |         1.62 |           1.62 | upstream   | 715.19</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/reorder_multilinestring_parts___27b0cac3.html">reorder_multilinestring_parts(_multilinestring geometry, _road_code text)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>geometry</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Reorder the parts of the given road MULTILINESTRING based on the graph. For each part, the references of the start &amp; end points is calculated, which helps to reorder the parts. We also reverse the geometry if needed (since the ST_OffsetCurve sometimes does not respect the node order)</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/get_road_substring_from_referen_42107f63.html">get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean DEFAULT false, _to_last_edge_end boolean DEFAULT false)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -448,15 +515,6 @@
                                         <td><p>Returns a JSON object with the given references and the geometry of the built linestring. The produced multilinestring geometry has been reordered based on the graph if it contains more than one part. The parameters _from_first_edge_start &amp; _to_last_edge_end allows to respectively add the edge under the result linestring start point &amp; the edge under the result linestring end point.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/aa_before_record_insert_or_upda_e79aa80d.html">aa_before_record_insert_or_update()</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>trigger</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Set the created_at and updated_at fields</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/add_managed_object_reference_fi_f22fffe3.html">add_managed_object_reference_fields(_schema_name text, _table_name text, _add_optional_fields boolean DEFAULT true)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -464,15 +522,6 @@
                                         <td>TABLE(field_name text, field_type text, field_status text)</td>
                                         <td>INVOKER</td>
                                         <td><p>Add the reference fields needed by the managed objects functions to the given table, depending on its geometry type. The geometry type is read from the table road_graph.managed_objects if the table is registered, or else from its geometry column geom. * all the geometry types: road_code (text), and the optional fields offset (real) and side (text), * point: marker_code (integer), abscissa (real), and the optional field cumulative (real), * linestring and multilinestring: start_marker_code, end_marker_code (integer), start_abscissa, end_abscissa (real), and the optional fields start_cumulative, end_cumulative (real). The optional fields are added only if the parameter _add_optional_fields is True (default). The existing fields are not modified. The function returns one line per field with its name, type and status: added, already exists, or already exists with the type of the existing field. If the fields cannot be added, it returns one line with the status: table not found, geom column not found, or geometry type not supported.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/get_snapped_line_from_track__tr_ba560ea2.html">get_snapped_line_from_track(_track geometry, _densify_distance real DEFAULT 2, _max_distance real DEFAULT 25, _road_change_penalty real DEFAULT 100)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>geometry</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Build a multilinestring snapped on the road graph edges from a GPS track (for example from a GPX file) which can be imprecise. The track is densified with a point every _densify_distance meters (default 2m), and each point is assigned to one of the roads closer than _max_distance (default 25m). To avoid zigzags between two close roads, the chosen sequence of roads minimizes the sum of the distances between the points and their roads, plus a penalty _road_change_penalty (default 100, expressed as a surface in m² between the track and the roads) each time the road changes. The returned geometry follows the edges geometries, in the direction of the track. Gaps between two unconnected edges are filled with the shortest path of maximum 5 edges. If no path is found, a new part is created in the multilinestring. A track without SRID is considered to be in the road graph projection, and other tracks are reprojected. The result is returned in the road graph projection. The result can be passed to the function get_road_sections_from_snapped_line to get the references of the crossed roads.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/get_ordered_edges__road_code_te_2dc7f629.html">get_ordered_edges(_road_code text, _initial_id integer DEFAULT &#39;-1&#39;::integer, _direction text DEFAULT &#39;downstream&#39;::text)</a></td>
@@ -502,16 +551,6 @@
                                         <td><p>Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid. The function is used to have a single point of maintenance for getting settings.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/toggle_foreign_key_constraints__12b5438f.html">toggle_foreign_key_constraints(_toggle boolean DEFAULT true)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>boolean</td>
-                                        <td>DEFINER</td>
-                                        <td><p>Deactivate or reactivate the foreign key constraints to ease the merging road_graph_editing data into road_graph schema. It is also used when importing data from templates.</p>
-<p>Under the hood, it drops or drops &amp; creates the constraint depending on the value of the _toggle parameter</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/build_road_cached_objects__road_72cadd0c.html">build_road_cached_objects(_road_code text)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -520,17 +559,6 @@
                                         <td>INVOKER</td>
                                         <td><p>Calculate the given road geometries used in linear referencing tools &amp; the road marker locations: * the simple linestring (no gaps) made by merging all edges linestrings after connecting edges * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps) * the order of the edges, used by get_reference_from_point to avoid calculating it again for each point</p>
 <p>Cached data is stored in the temporary table road_cache, with one row per road, living only until COMMIT. Each call replaces the row of the given road: the cache of a road must be built again after any modification of its edges or markers in the same transaction, before using it. The functions using the cache fall back to the calculation without cache if the road is not in the cache.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/get_road_previous_marker_from_p_f5bf9fb7.html">get_road_previous_marker_from_point(_road_code text, _point geometry, _use_cache boolean DEFAULT false)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>TABLE(id integer, road_code text, code integer, abscissa real, geom geometry, road_linestring_from_marker_to_point geometry, road_linestring_from_start_to_point geometry, closing_multilinestring geometry, is_next_edge_start_marker boolean, cumulative real)</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Get the closest upstream marker for the given road from a given point. This function can use roads cached objects generated beforehand via function build_road_cached_objects. Or use a full SQL query with no use of temporary tables, depending of the paramter _use_cache</p>
-<p>Illustration |m0&mdash;-m1&mdash;-|  |-m2-m2b&mdash;-m3&mdash;-|    p3   m4  |&mdash;&mdash;&ndash;m5&mdash;| p0     p1                         p2 p0 -&gt; marker is m1 p1 -&gt; marker is m2b (virtual marker with a non-null abscissa) p2 -&gt; marker is m3 p3 -&gt; marker is m4, since it is the start marker of the first next edge and p3 is not on a real previous edge.</p>
-<p>The function also returns: * the simple linestring (no gaps) made by merging all edges linestrings from the marker to the point * the simple linestring (no gaps) made by merging all edges linestrings from the start to the point * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps) * if the found marker is the start marker of the next edge (for p3-like cases when the point is between two edges)</p></td>
                                     </tr>
                                 </tbody>
                             </table>

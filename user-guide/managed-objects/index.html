@@ -1712,6 +1712,18 @@ The function returns one line per managed object, with its trigger status:</p>
 <li><strong>(Multi)linestring objects</strong> must often follow the changes: the start and end points are kept
   and only the nodes in between are edited, e.g. a painting roadwork.</li>
 </ul>
+<p>To keep the merge fast on long roads, only the objects which <strong>may be impacted</strong> by the modifications
+are updated (see <a href="../graph-editing/#impacts-of-the-modifications-on-the-references">Impacts of the modifications on the references</a>):</p>
+<ul>
+<li>the objects located <strong>less than 50 m</strong> from the modified edges,</li>
+<li>if the <strong>geometry of the road has changed</strong>, the objects located <strong>downstream</strong> of the first modified edge:
+  up to the end of the road if the table has a <code>cumulative</code> field, or else up to the last marker of the modified edges,</li>
+<li>the objects located between a <strong>modified marker</strong> and the previous marker.</li>
+</ul>
+<p>An edge only split by a node, for example at a new crossroad, or whose attributes only have changed,
+does not change the geometry of the road. The other objects keep their references and geometries.</p>
+<p>If the geometry of an object cannot be calculated from its references, for example when its end references
+are before its start references, the object is not updated and a warning is displayed, but the merge is not cancelled.</p>
 <p>The algorithm <code>Update managed objects from the road graph</code> can also be run manually on a given layer,
 with the following parameters:</p>
 <ul>
