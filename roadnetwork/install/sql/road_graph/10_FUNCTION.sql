@@ -1826,6 +1826,21 @@ BEGIN
                 ''
             )
         );
+
+        -- The references of the managed lines follow the road direction (start before end),
+        -- like in the function update_table_references_from_geometries:
+        -- invert start and end if the line is digitized in the opposite direction of the road
+        IF (
+            (start_references->>'marker_code')::integer,
+            (start_references->>'abscissa')::real
+        ) > (
+            (end_references->>'marker_code')::integer,
+            (end_references->>'abscissa')::real
+        ) THEN
+            SELECT end_references, start_references
+            INTO start_references, end_references;
+        END IF;
+
         -- Update the NEW object with the given references
 
         -- road_code - keep object road_code intact if it is not empty
@@ -1927,7 +1942,9 @@ $_$;
 
 
 -- FUNCTION calculate_managed_object_references()
-COMMENT ON FUNCTION road_graph.calculate_managed_object_references() IS 'Trigger function allowing to update the references of an inserted or update managed object feature';
+COMMENT ON FUNCTION road_graph.calculate_managed_object_references() IS 'Trigger function allowing to update the references of an inserted or update managed object feature.
+For a line, the start and end references follow the road direction (start before end),
+even if the line is digitized in the opposite direction of the road.';
 
 
 -- clean_digitized_roundabout(text)
@@ -6371,49 +6388,37 @@ BEGIN
         )
     );
 
-    -- Build the new geometries
-    -- geom_1: from the feature start point to the cut point
-    -- geom_2: from the cut point to the feature end point
-    -- The feature can be digitized in the opposite direction of the road:
-    -- the road substrings must be calculated in the road direction,
-    -- then reversed to keep the direction of the feature
-    is_reversed = (start_references->>'cumulative')::real > (end_references->>'cumulative')::real;
-    IF NOT is_reversed THEN
-        geom_1 = ((road_graph.get_road_substring_from_references(
-            to_jsonb(feature)->>'road_code',
-            (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
-            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
-            (start_references->>'offset')::real, start_references->>'side'
-        ))->>'geom')::geometry(MultiLinestring, 2154);
-        geom_2 = ((road_graph.get_road_substring_from_references(
-            to_jsonb(feature)->>'road_code',
-            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
-            (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
-            (start_references->>'offset')::real, start_references->>'side'
-        ))->>'geom')::geometry(MultiLinestring, 2154);
-    ELSE
-        geom_1 = ((road_graph.get_road_substring_from_references(
-            to_jsonb(feature)->>'road_code',
-            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
-            (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
-            (start_references->>'offset')::real, start_references->>'side'
-        ))->>'geom')::geometry(MultiLinestring, 2154);
-        geom_2 = ((road_graph.get_road_substring_from_references(
-            to_jsonb(feature)->>'road_code',
-            (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
-            (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
-            (start_references->>'offset')::real, start_references->>'side'
-        ))->>'geom')::geometry(MultiLinestring, 2154);
-        -- Reverse the parts and their order
-        geom_1 = (
-            SELECT ST_Multi(ST_Collect(ST_Reverse(d.geom) ORDER BY d.path DESC))
-            FROM ST_Dump(geom_1) AS d
-        );
-        geom_2 = (
-            SELECT ST_Multi(ST_Collect(ST_Reverse(d.geom) ORDER BY d.path DESC))
-            FROM ST_Dump(geom_2) AS d
-        );
+    -- The references of the managed lines follow the road direction (start before end),
+    -- like in the functions update_table_references_from_geometries and get_road_substring_from_references.
+    -- If the feature is digitized in the opposite direction of the road,
+    -- its start and end references are swapped: the two new geometries follow the road direction
+    is_reversed = (
+        (start_references->>'marker_code')::integer,
+        (start_references->>'abscissa')::real
+    ) > (
+        (end_references->>'marker_code')::integer,
+        (end_references->>'abscissa')::real
+    );
+    IF is_reversed THEN
+        SELECT end_references, start_references
+        INTO start_references, end_references;
     END IF;
+
+    -- Build the new geometries, in the road direction
+    -- geom_1: from the start references to the cut point
+    -- geom_2: from the cut point to the end references
+    geom_1 = ((road_graph.get_road_substring_from_references(
+        to_jsonb(feature)->>'road_code',
+        (start_references->>'marker_code')::integer, (start_references->>'abscissa')::real,
+        (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+        (start_references->>'offset')::real, start_references->>'side'
+    ))->>'geom')::geometry(MultiLinestring, 2154);
+    geom_2 = ((road_graph.get_road_substring_from_references(
+        to_jsonb(feature)->>'road_code',
+        (closest_point_references->>'marker_code')::integer, (closest_point_references->>'abscissa')::real,
+        (end_references->>'marker_code')::integer, (end_references->>'abscissa')::real,
+        (start_references->>'offset')::real, start_references->>'side'
+    ))->>'geom')::geometry(MultiLinestring, 2154);
 
     -- Transform geometries into multigeometries if needed
     IF geometry_column_data.geom_type ILIKE 'multi%' THEN
@@ -6421,16 +6426,20 @@ BEGIN
         geom_2 = ST_Multi(geom_2);
     END IF;
 
-    -- References of the cut point:
-    -- they become the end references of the feature and the start references of the new feature.
-    -- The start references of the feature are kept, and the new feature gets the original end references.
-    -- The new feature is created from the updated feature: its end references are set explicitly
+    -- References of the two features, set explicitly instead of keeping the stored values,
+    -- which could be in the opposite order or not correspond to the geometry:
+    -- the feature goes from the start references to the cut point,
+    -- and the new feature goes from the cut point to the end references.
+    -- The cumulative distances are also set if the table has these fields
     update_references_sql = '';
     insert_references_fields = '';
     insert_references_values = '';
     IF has_references THEN
         update_references_sql = format(
-            ', end_marker_code = %1$L::integer, end_abscissa = %2$L::real',
+            ', start_marker_code = %1$L::integer, start_abscissa = %2$L::real'
+            ', end_marker_code = %3$L::integer, end_abscissa = %4$L::real',
+            start_references->>'marker_code',
+            start_references->>'abscissa',
             closest_point_references->>'marker_code',
             closest_point_references->>'abscissa'
         );
@@ -6439,9 +6448,31 @@ BEGIN
             ', %1$L::integer, %2$L::real, %3$L::integer, %4$L::real',
             closest_point_references->>'marker_code',
             closest_point_references->>'abscissa',
-            to_jsonb(feature)->>'end_marker_code',
-            to_jsonb(feature)->>'end_abscissa'
+            end_references->>'marker_code',
+            end_references->>'abscissa'
         );
+        IF 'start_cumulative' = ANY(table_cols) THEN
+            update_references_sql = concat(
+                update_references_sql,
+                format(', start_cumulative = %1$L::real', start_references->>'cumulative')
+            );
+            insert_references_fields = concat(insert_references_fields, ', start_cumulative');
+            insert_references_values = concat(
+                insert_references_values,
+                format(', %1$L::real', closest_point_references->>'cumulative')
+            );
+        END IF;
+        IF 'end_cumulative' = ANY(table_cols) THEN
+            update_references_sql = concat(
+                update_references_sql,
+                format(', end_cumulative = %1$L::real', closest_point_references->>'cumulative')
+            );
+            insert_references_fields = concat(insert_references_fields, ', end_cumulative');
+            insert_references_values = concat(
+                insert_references_values,
+                format(', %1$L::real', end_references->>'cumulative')
+            );
+        END IF;
     END IF;
 
     -- Update the feature and insert the new one
@@ -6486,7 +6517,7 @@ BEGIN
             'start_marker', 'start_abscissa', 'start_cumulative',
             'uid', 'longueur'
         )
-        AND NOT (has_references AND field IN ('start_marker_code', 'end_marker_code', 'end_abscissa'))
+        AND NOT (has_references AND field IN ('start_marker_code', 'end_marker_code', 'end_abscissa', 'end_cumulative'))
         ;
 
         -- Create the new feature
@@ -6553,10 +6584,13 @@ $_$;
 
 -- FUNCTION split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)
 COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.
-The feature keeps the first part, and a new feature is created with the second part.
+The two new geometries follow the road direction, even if the feature is digitized in the opposite direction,
+like the geometries calculated from the references.
+The feature keeps the first part in the road direction, and a new feature is created with the second part.
 If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa,
+the references of the two features are calculated in the road direction (start before end):
 the references of the cut point become the end references of the feature and the start references of the new feature.
-The feature can be digitized in the direction of the road or in the opposite direction: the new geometries keep its direction.';
+The fields start_cumulative and end_cumulative are also set if they exist.';
 
 
 -- toggle_foreign_key_constraints(boolean)

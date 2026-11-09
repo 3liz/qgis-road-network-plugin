@@ -2610,22 +2610,27 @@ def test_split_table_linestring_feature_by_point(rollback_db_connection: psycopg
     assert list(rows[0]) == [2, 100.0, cut_marker, cut_abscissa, 0.0, "right"]
     assert list(rows[1]) == [cut_marker, cut_abscissa, 3, 10.0, 0.0, "right"]
 
-    # Same split for a feature digitized in the opposite direction of the road (3+10 -> 2+100)
+    # Same split for a feature digitized in the opposite direction of the road,
+    # whose references are stored in the road direction (2+100 -> 3+10).
+    # Before, each part got the references of the other part.
+    # The table also has the cumulative fields, which must be set
     rollback_db_connection.rollback()
     cursor.execute("""
+        ALTER TABLE managed.demo_safety_barriers
+        ADD COLUMN start_cumulative real, ADD COLUMN end_cumulative real
+    """)
+    cursor.execute("""
         UPDATE managed.demo_safety_barriers
-        SET
-            geom = ST_Reverse(geom),
-            start_marker_code = 3, start_abscissa = 10,
-            end_marker_code = 2, end_abscissa = 100
+        SET geom = ST_Reverse(geom)
         WHERE id = 3
         RETURNING
-            ST_AsText(ST_StartPoint(ST_GeometryN(geom, 1))),
-            ST_AsText(ST_EndPoint(ST_GeometryN(geom, 1)))
+            ST_AsText(ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom)))),
+            ST_AsText(ST_StartPoint(ST_GeometryN(geom, 1)))
     """)
     row = cursor.fetchone()
     assert row is not None
-    start_point, end_point = row
+    # Start and end points in the road direction
+    road_start_point, road_end_point = row
     cursor.execute(
         """
         SELECT road_graph.split_table_linestring_feature_by_point(
@@ -2638,27 +2643,96 @@ def test_split_table_linestring_feature_by_point(rollback_db_connection: psycopg
     assert row is not None
     assert row[0] == "success"
 
-    # The two features keep the direction of the original feature
+    # The two features follow the road direction, like the geometries calculated from the references:
+    # the feature goes from 2+100 to the cut point, and the new feature from the cut point to 3+10
     cursor.execute("""
         SELECT
             start_marker_code, round(start_abscissa::numeric, 2)::float,
             end_marker_code, round(end_abscissa::numeric, 2)::float,
             ST_AsText(ST_StartPoint(ST_GeometryN(geom, 1))),
-            ST_AsText(ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom))))
+            ST_AsText(ST_EndPoint(ST_GeometryN(geom, ST_NumGeometries(geom)))),
+            round(start_cumulative::numeric, 2)::float,
+            round(end_cumulative::numeric, 2)::float
         FROM managed.demo_safety_barriers
         WHERE road_code = 'D72'
         ORDER BY id
     """)
     rows = cursor.fetchall()
     assert len(rows) == 2
-    assert list(rows[0][0:4]) == [3, 10.0, cut_marker, cut_abscissa]
-    assert list(rows[1][0:4]) == [cut_marker, cut_abscissa, 2, 100.0]
-    # The first feature starts at the original start point,
-    # the second feature ends at the original end point
-    assert rows[0][4] == start_point
-    assert rows[1][5] == end_point
+    assert list(rows[0][0:4]) == [2, 100.0, cut_marker, cut_abscissa]
+    assert list(rows[1][0:4]) == [cut_marker, cut_abscissa, 3, 10.0]
+    assert rows[0][4] == road_start_point
+    assert rows[1][5] == road_end_point
     # The first feature ends where the second feature starts
     assert rows[0][5] == rows[1][4]
+    # Cumulative distances: the cut point ends the first feature and starts the second one
+    cut_cumulative = round(float(point_references["cumulative"]), 2)
+    assert rows[0][7] == cut_cumulative
+    assert rows[1][6] == cut_cumulative
+    assert rows[0][6] < cut_cumulative < rows[1][7]
+
+    # The references stored in the opposite order (3+10 -> 2+100) give the same result
+    rollback_db_connection.rollback()
+    cursor.execute("""
+        UPDATE managed.demo_safety_barriers
+        SET
+            geom = ST_Reverse(geom),
+            start_marker_code = 3, start_abscissa = 10,
+            end_marker_code = 2, end_abscissa = 100
+        WHERE id = 3
+    """)
+    cursor.execute(
+        """
+        SELECT road_graph.split_table_linestring_feature_by_point(
+            'managed', 'demo_safety_barriers', 3, ST_GeomFromText(%s, 2154)
+        )->>'status'
+        """,
+        (point,),
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "success"
+    cursor.execute("""
+        SELECT
+            start_marker_code, round(start_abscissa::numeric, 2)::float,
+            end_marker_code, round(end_abscissa::numeric, 2)::float
+        FROM managed.demo_safety_barriers
+        WHERE road_code = 'D72'
+        ORDER BY id
+    """)
+    rows = cursor.fetchall()
+    assert [list(r) for r in rows] == [
+        [2, 100.0, cut_marker, cut_abscissa],
+        [cut_marker, cut_abscissa, 3, 10.0],
+    ]
+
+
+def test_trigger_managed_line_references_follow_road_direction(rollback_db_connection: psycopg.Connection):
+    """The trigger trg_calculate_managed_object_references calculates the references of a line
+    in the road direction (start before end), even if the line is digitized in the opposite direction,
+    like the function update_table_references_from_geometries.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+    cursor.execute("""
+        CREATE TRIGGER trg_calculate_managed_object_references
+        BEFORE INSERT OR UPDATE OF geom ON managed.demo_safety_barriers
+        FOR EACH ROW EXECUTE PROCEDURE road_graph.calculate_managed_object_references()
+    """)
+    # Line of the road D72 from 2+200 to 2+600, digitized in the opposite direction
+    cursor.execute("""
+        INSERT INTO managed.demo_safety_barriers (material, road_code, geom)
+        SELECT
+            'Metal', 'D72',
+            ST_Multi(ST_Reverse(ST_GeometryN((
+                road_graph.get_road_substring_from_references('D72', 2, 200, 2, 600, 0, 'right')->>'geom'
+            )::geometry, 1)))
+        RETURNING
+            start_marker_code, round(start_abscissa::numeric, 0)::float,
+            end_marker_code, round(end_abscissa::numeric, 0)::float
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert list(row) == [2, 200.0, 2, 600.0]
 
 
 def test_update_managed_objects_algorithm_preserve_start_end_points(

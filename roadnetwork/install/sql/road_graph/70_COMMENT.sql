@@ -126,7 +126,9 @@ The functions using the cache fall back to the calculation without cache if the 
 
 
 -- FUNCTION calculate_managed_object_references()
-COMMENT ON FUNCTION road_graph.calculate_managed_object_references() IS 'Trigger function allowing to update the references of an inserted or update managed object feature';
+COMMENT ON FUNCTION road_graph.calculate_managed_object_references() IS 'Trigger function allowing to update the references of an inserted or update managed object feature.
+For a line, the start and end references follow the road direction (start before end),
+even if the line is digitized in the opposite direction of the road.';
 
 
 -- FUNCTION clean_digitized_roundabout(_road_code text)
@@ -317,10 +319,13 @@ The function returns the id of the new created edge or null if the edge has not 
 
 -- FUNCTION split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)
 COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.
-The feature keeps the first part, and a new feature is created with the second part.
+The two new geometries follow the road direction, even if the feature is digitized in the opposite direction,
+like the geometries calculated from the references.
+The feature keeps the first part in the road direction, and a new feature is created with the second part.
 If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa,
+the references of the two features are calculated in the road direction (start before end):
 the references of the cut point become the end references of the feature and the start references of the new feature.
-The feature can be digitized in the direction of the road or in the opposite direction: the new geometries keep its direction.';
+The fields start_cumulative and end_cumulative are also set if they exist.';
 
 
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)

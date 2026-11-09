@@ -142,6 +142,11 @@ The script sends the red point to the action `split_line_by_point`.
 The database function `road_graph.split_table_linestring_feature_by_point`
 splits the line, and the layer is refreshed.
 
+The two lines follow the **direction of the road**, even if the line was drawn
+in the opposite direction: the original feature keeps the first part,
+and the new feature gets the second part. Their start and end references
+are calculated in the direction of the road.
+
 The default popup button of this action is hidden, because it does not send
 the clicked point.
 

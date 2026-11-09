@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 43)
+
+### Fixed
+
+* **SQL**: split of a managed object line by a point (Lizmap action `split_line_by_point`): for a line drawn
+  in the opposite direction of the road, each part could get the references of the other part,
+  or start after its end. The two parts now follow the direction of the road, like the geometries
+  calculated from the references, and their four references, and their cumulative distances
+  if the table has these fields, are calculated in the direction of the road (migration `upgrade_to_43.sql`)
+* **SQL**: the trigger calculating the references of the managed objects (`trg_calculate_managed_object_references`)
+  gave a start reference greater than the end reference for a line drawn in the opposite direction of the road.
+  They are now inverted, like in the algorithm `Update managed objects from the road graph`
+* **Lizmap**: in the form `Create the geometry from references` of the editing panel, the start and end references
+  of a line drawn in the opposite direction of the road were displayed in the drawing order.
+  They are now ordered in the direction of the road, like the geometry created from them
+
 ## 0.6.3 - 2026-10-30
 
 ### Summary
