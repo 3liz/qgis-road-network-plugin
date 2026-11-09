@@ -3,12 +3,6 @@ table.road_network_table {
     width:100%;
     font-size: 10pt;
 }
-table.road_network_table th
-table.road_network_table td,
-{
-    vertical-align: center;
-    width: 30%;
-}
 table.road_network_table input,
 table.road_network_table select
 {
@@ -55,6 +49,15 @@ details.road_network_details > div {
     border-radius: 5px;
     margin: 5px;
     padding: 5px;
+}
+
+/* Offset and side inputs of the editing form, hidden by default */
+details.road_network_offset_details {
+    margin: 5px 0px;
+}
+details.road_network_offset_details > summary {
+    cursor: pointer;
+    font-size: 10pt;
 }
 
 form.road_network_form  input:disabled+label {

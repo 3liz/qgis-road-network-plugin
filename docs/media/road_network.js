@@ -1225,23 +1225,38 @@ var lizRoadNetwork = function () {
         }
 
         // Add offset and side inputs
+        // They are hidden in a details block, since they are rarely modified:
+        // the user can display them by clicking on the summary.
+        // A details element cannot be placed between table rows,
+        // so the table is closed before it, and a new table is opened after it for the buttons
         html += `
-                <tr>
-                    <th>${tr('Offset')}</th>
-                    <th>${tr('Side')}</th>
-                    <th></th>
-                </tr>
-                <tr>
-                    <td><input type="number" min="0" max="100" step="0.1" id="rd_editing_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
-                    <td>
-                        <select id="rd_editing_side" name="side">
-                            <option value="left" selected>${tr('Left')}</option>
-                            <option value="right">${tr('Right')}</option>
-                        </select>
-                    </td>
-                    <td>
-                    </td>
-                </tr>
+            </tbody>
+        </table>
+        <details class="road_network_offset_details">
+            <summary>${tr('Offset')}</summary>
+            <table class="road_network_table" border="0" cellpadding="2" cellspacing="1">
+                <tbody>
+                    <tr>
+                        <th>${tr('Offset')}</th>
+                        <th>${tr('Side')}</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td><input type="number" min="0" max="100" step="0.1" id="rd_editing_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
+                        <td>
+                            <select id="rd_editing_side" name="side">
+                                <option value="left" selected>${tr('Left')}</option>
+                                <option value="right">${tr('Right')}</option>
+                            </select>
+                        </td>
+                        <td>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </details>
+        <table class="road_network_table" border="0" cellpadding="2" cellspacing="1">
+            <tbody>
                 <tr>
                     <td>
                         <button
