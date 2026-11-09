@@ -302,7 +302,15 @@ COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id in
 
 
 -- FUNCTION merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)
-COMMENT ON FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) IS 'Merge two linestring features of the same table. The kept one is the one with the lower start_cumulative. The other one is deleted.';
+COMMENT ON FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) IS 'Merge two linestring features of the same table.
+The feature A, chosen first by the user, is kept with its field values and gets the merged geometry, in the road direction.
+The feature B is deleted. If the table has the references fields, the references of the feature A
+(and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction.
+@param _schema_name Schema of the table
+@param _table_name Name of the table
+@param _feature_id_a Primary key value of the feature to keep
+@param _feature_id_b Primary key value of the feature to merge into the feature A, then deleted
+@return JSON object with the keys status (success or error) and message';
 
 
 -- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)

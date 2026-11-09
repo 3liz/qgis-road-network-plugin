@@ -5673,9 +5673,12 @@ DECLARE
     geometry_column_data record;
     feature_a record;
     feature_b record;
-    feature_to_delete record;
     sql_text text;
     target_geometry geometry(MULTILINESTRING, 2154);
+    table_cols text[];
+    start_references jsonb;
+    end_references jsonb;
+    update_references_sql text;
     update_result record;
 BEGIN
     -- Check the given feature ids
@@ -5794,18 +5797,11 @@ BEGIN
         );
     END IF;
 
-    -- Merge features: keep the one with the smallest start_cumulative
-    -- and add geometry from the other one
-    -- Decide which feature must be deleted
-    feature_to_delete = feature_b;
-    IF
-        Coalesce(feature_b.start_marker_code * 10000 + feature_b.start_abscissa, 0.0)
-        < Coalesce(feature_a.start_marker_code * 10000 + feature_a.start_abscissa, 0.0)
-    THEN
-        feature_to_delete = feature_a;
-    END IF;
+    -- Merge features: keep the feature A, chosen first by the user, with its field values,
+    -- and add the geometry of the feature B, which is deleted
 
     -- Compute merged geometry
+    -- The parts are ordered and oriented in the road direction
     target_geometry = road_graph.reorder_multilinestring_parts(
         ST_Multi(
             ST_Union(
@@ -5816,7 +5812,68 @@ BEGIN
         feature_a.road_code
     );
 
-    -- Delete and UPDATE in the same request
+    -- Get the table columns, to update the references if the table has the references fields
+    sql_text = format(
+        $SQL$
+        SELECT array_agg(column_name::text) AS cols
+        FROM information_schema.columns
+        WHERE table_schema = '%1$s' AND table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO table_cols
+    ;
+
+    -- References of the merged geometry, in the road direction (start before end),
+    -- set explicitly since the feature A only kept its own references,
+    -- and the table may have no trigger calculating them
+    update_references_sql = '';
+    IF table_cols @> ARRAY['start_marker_code', 'start_abscissa', 'end_marker_code', 'end_abscissa']::text[] THEN
+        start_references = road_graph.get_reference_from_point(
+            ST_StartPoint(ST_GeometryN(target_geometry, 1)),
+            Nullif(trim(feature_a.road_code), '')
+        );
+        end_references = road_graph.get_reference_from_point(
+            ST_EndPoint(ST_GeometryN(target_geometry, ST_NumGeometries(target_geometry))),
+            Nullif(trim(feature_a.road_code), '')
+        );
+        -- Invert start and end if needed
+        IF (
+            (start_references->>'marker_code')::integer,
+            (start_references->>'abscissa')::real
+        ) > (
+            (end_references->>'marker_code')::integer,
+            (end_references->>'abscissa')::real
+        ) THEN
+            SELECT end_references, start_references
+            INTO start_references, end_references;
+        END IF;
+        update_references_sql = format(
+            ', start_marker_code = %1$L::integer, start_abscissa = %2$L::real'
+            ', end_marker_code = %3$L::integer, end_abscissa = %4$L::real',
+            start_references->>'marker_code',
+            start_references->>'abscissa',
+            end_references->>'marker_code',
+            end_references->>'abscissa'
+        );
+        -- Cumulative distances if the table has these fields
+        IF 'start_cumulative' = ANY(table_cols) THEN
+            update_references_sql = concat(
+                update_references_sql,
+                format(', start_cumulative = %1$L::real', start_references->>'cumulative')
+            );
+        END IF;
+        IF 'end_cumulative' = ANY(table_cols) THEN
+            update_references_sql = concat(
+                update_references_sql,
+                format(', end_cumulative = %1$L::real', end_references->>'cumulative')
+            );
+        END IF;
+    END IF;
+
+    -- Delete the feature B and update the feature A in the same request
     sql_text = format(
         $SQL$
             WITH del AS (
@@ -5826,10 +5883,8 @@ BEGIN
             ),
             up AS (
                 UPDATE %1$I.%2$I
-                SET %5$I = ST_GeomFromGeoJSON('%6$s')
-                WHERE True
-                AND %3$I IN (%7$s, %8$s)
-                AND %3$I != %4$s
+                SET %5$I = ST_GeomFromGeoJSON('%6$s')%8$s
+                WHERE %3$I = %7$s
                 RETURNING *
             )
             SELECT *
@@ -5838,10 +5893,11 @@ BEGIN
         _schema_name,
         _table_name,
         primary_key_field,
-        (to_jsonb(feature_to_delete))->>primary_key_field,
+        _feature_id_b,
         geometry_column_data.geom_name,
         ST_AsGeoJSON(target_geometry),
-        _feature_id_a, _feature_id_b
+        _feature_id_a,
+        update_references_sql
     );
     EXECUTE sql_text
     INTO update_result
@@ -5857,7 +5913,15 @@ $_$;
 
 
 -- FUNCTION merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)
-COMMENT ON FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) IS 'Merge two linestring features of the same table. The kept one is the one with the lower start_cumulative. The other one is deleted.';
+COMMENT ON FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) IS 'Merge two linestring features of the same table.
+The feature A, chosen first by the user, is kept with its field values and gets the merged geometry, in the road direction.
+The feature B is deleted. If the table has the references fields, the references of the feature A
+(and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction.
+@param _schema_name Schema of the table
+@param _table_name Name of the table
+@param _feature_id_a Primary key value of the feature to keep
+@param _feature_id_b Primary key value of the feature to merge into the feature A, then deleted
+@return JSON object with the keys status (success or error) and message';
 
 
 -- reorder_multilinestring_parts(geometry, text)

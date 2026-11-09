@@ -47,7 +47,7 @@ The geometry has been created from the references.,La géométrie a bien été c
 The geometry could not be created automatically from the references.<br/>Possible cause: the geometry point is too far from the road (more than 50m).,La géométrie n'a pas pu être créée automatiquement à partir des références.<br/>Cause possible : le point de la géométrie est trop éloigné de la route (plus de 50m).
 "No point found. Please open the ""{panel}"" panel, then click on a point of the line.","Aucun point n'a été trouvé. Veuillez ouvrir le panneau ""{panel}"", puis cliquer un point sur la ligne."
 Choose this feature to merge,Choisir cet objet pour fusion
-Choose this feature to merge it then with another feature of the same layer,Choisir cet objet pour pouvoir ensuite le fusionner avec un autre objet de la même couche
+"Choose this feature to merge it then with another feature of the same layer. The merged feature keeps the values of the feature chosen first","Choisir cet objet pour pouvoir ensuite le fusionner avec un autre objet de la même couche. L'objet fusionné garde les valeurs de l'objet choisi en premier"
 Merge with the chosen feature,Fusionner avec l'objet choisi
 Click on this button to merge this feature with the previously chosen feature,"En cliquant sur ce bouton, vous pouvez lancer la fusion entre cet objet et l'objet précédemment choisi."
 Merging...,Fusion en cours...

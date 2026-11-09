@@ -6,6 +6,13 @@
 
 * Run the algorithm `Upgrade database structure` to upgrade the database (migration 43)
 
+### Changed
+
+* **SQL**: merge of two managed object lines (Lizmap action `merge_selected_lines`): the merged feature
+  is now the feature chosen first, with its field values, instead of the feature with the lowest start references.
+  Its references, and its cumulative distances if the table has these fields, are calculated from the merged line
+  in the direction of the road, even if the table has no trigger calculating them (migration `upgrade_to_43.sql`)
+
 ### Fixed
 
 * **SQL**: split of a managed object line by a point (Lizmap action `split_line_by_point`): for a line drawn

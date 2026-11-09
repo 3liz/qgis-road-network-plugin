@@ -38,7 +38,7 @@ var lizRoadNetwork = function () {
     const ROAD_MERGE_LINES_BUTTONS = {
         0: {
             'text': 'Choose this feature to merge',
-            'title': 'Choose this feature to merge it then with another feature of the same layer'
+            'title': 'Choose this feature to merge it then with another feature of the same layer. The merged feature keeps the values of the feature chosen first'
         },
         1: {
             'text': 'Merge with the chosen feature',
@@ -131,7 +131,8 @@ var lizRoadNetwork = function () {
                     lizMap.mainLizmap.map.clearHighlightFeatures();
 
                     // Get object layer and feature ids
-                    const featureId = ROAD_MERGE_LINES_STATE.feature_id_b;
+                    // The feature chosen first (A) is kept, the feature B has been deleted
+                    const featureId = ROAD_MERGE_LINES_STATE.feature_id_a;
                     const layerId = ROAD_MERGE_LINES_STATE.layer_id;
 
                     // Clean the popup : keep only the merged feature (to avoid issues)

@@ -169,6 +169,10 @@ The script runs the action `merge_selected_lines` with the IDs of the two featur
 The database function `road_graph.merge_table_linestring_features` merges them
 and the layer is refreshed. The popup then shows only the merged feature.
 
+The merged feature is the **feature chosen first**: it keeps its field values,
+and the second feature is deleted. Its references are calculated from the merged line,
+in the direction of the road.
+
 Once a first feature is chosen, the merge button is only displayed for features
 of the same layer.
 

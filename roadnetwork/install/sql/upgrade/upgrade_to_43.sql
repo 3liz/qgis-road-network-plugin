@@ -13,6 +13,12 @@
 -- calculate_managed_object_references (trigger trg_calculate_managed_object_references):
 -- the start and end references of a line digitized in the opposite direction of the road are inverted,
 -- like in the function update_table_references_from_geometries.
+--
+-- merge_table_linestring_features (Lizmap action merge_selected_lines):
+-- the kept feature is now the feature A, chosen first by the user, instead of the feature
+-- with the lowest start references. Its references, and cumulative distances, are calculated
+-- from the merged geometry, in the road direction: before, it kept its own references
+-- if the table had no trigger calculating them.
 
 -- calculate_managed_object_references()
 CREATE OR REPLACE FUNCTION road_graph.calculate_managed_object_references() RETURNS trigger
@@ -607,3 +613,264 @@ If the table has the fields start_marker_code, start_abscissa, end_marker_code a
 the references of the two features are calculated in the road direction (start before end):
 the references of the cut point become the end references of the feature and the start references of the new feature.
 The fields start_cumulative and end_cumulative are also set if they exist.';
+
+
+-- merge_table_linestring_features(text, text, integer, integer)
+CREATE OR REPLACE FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) RETURNS json
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+    primary_key_field text;
+    geometry_column_data record;
+    feature_a record;
+    feature_b record;
+    sql_text text;
+    target_geometry geometry(MULTILINESTRING, 2154);
+    table_cols text[];
+    start_references jsonb;
+    end_references jsonb;
+    update_references_sql text;
+    update_result record;
+BEGIN
+    -- Check the given feature ids
+    IF Coalesce(_feature_id_a, 0) = Coalesce(_feature_id_b, 0) THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', format('The given feature ids are equals: %L and %L', _feature_id_a, _feature_id_b)
+        );
+    END IF;
+
+    -- Get the table primary key field
+    sql_text = format(
+        $SQL$
+        SELECT a.attname
+        FROM pg_index i
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = '%1$I.%2$I'::regclass AND i.indisprimary
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO primary_key_field
+    ;
+    IF primary_key_field IS NULL THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', format('The table %I.%I does not have a primary key !', _schema_name, _table_name)
+        );
+    END IF;
+
+    -- Get geometry column name
+    sql_text = format(
+        $SQL$
+        SELECT f_geometry_column AS geom_name, "type" AS geom_type
+        FROM geometry_columns
+        WHERE f_table_schema = '%1$s' AND f_table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO geometry_column_data
+    ;
+    IF geometry_column_data.geom_name IS NULL THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', format('The table %I.%I does not have a geometry column !', _schema_name, _table_name)
+        );
+    END IF;
+
+    -- Get both features
+    -- feature A
+    sql_text = format(
+        $SQL$
+            SELECT *
+            FROM %1$I.%2$I
+            WHERE %3$I = %4$s
+            LIMIT 1
+        $SQL$,
+        _schema_name,
+        _table_name,
+        primary_key_field,
+        _feature_id_a
+    );
+    EXECUTE sql_text
+    INTO feature_a
+    ;
+    IF feature_a.geom IS NULL THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', format('No object found with id = %L ', _feature_id_a)
+        );
+    END IF;
+
+    -- Check road_code values
+    IF NOT to_jsonb(feature_a) ? 'road_code' THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', 'The given feature does not have the mandatory column road_code !'
+        );
+    END IF;
+
+    -- feature B
+    sql_text = format(
+        $SQL$
+            SELECT *
+            FROM %1$I.%2$I
+            WHERE %3$I = %4$s
+            LIMIT 1
+        $SQL$,
+        _schema_name,
+        _table_name,
+        primary_key_field,
+        _feature_id_b
+    );
+    EXECUTE sql_text
+    INTO feature_b
+    ;
+    IF feature_b.geom IS NULL THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', format('No object found with id = %L ', _feature_id_b)
+        );
+    END IF;
+
+    -- Prevent from merging if features does not share the same road_code
+    IF Coalesce(feature_a.road_code, '') != Coalesce(feature_b.road_code, '') THEN
+        RETURN json_build_object(
+            'status', 'error',
+            'message', format(
+                'The given features do not share the same road_code: %L VS %L',
+                feature_a.road_code,
+                feature_b.road_code
+            )
+        );
+    END IF;
+
+    -- Merge features: keep the feature A, chosen first by the user, with its field values,
+    -- and add the geometry of the feature B, which is deleted
+
+    -- Compute merged geometry
+    -- The parts are ordered and oriented in the road direction
+    target_geometry = road_graph.reorder_multilinestring_parts(
+        ST_Multi(
+            ST_Union(
+                ST_GeomFromGeoJSON((to_json(feature_a))->>geometry_column_data.geom_name),
+                ST_GeomFromGeoJSON((to_json(feature_b))->>geometry_column_data.geom_name)
+            )
+        ),
+        feature_a.road_code
+    );
+
+    -- Get the table columns, to update the references if the table has the references fields
+    sql_text = format(
+        $SQL$
+        SELECT array_agg(column_name::text) AS cols
+        FROM information_schema.columns
+        WHERE table_schema = '%1$s' AND table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO table_cols
+    ;
+
+    -- References of the merged geometry, in the road direction (start before end),
+    -- set explicitly since the feature A only kept its own references,
+    -- and the table may have no trigger calculating them
+    update_references_sql = '';
+    IF table_cols @> ARRAY['start_marker_code', 'start_abscissa', 'end_marker_code', 'end_abscissa']::text[] THEN
+        start_references = road_graph.get_reference_from_point(
+            ST_StartPoint(ST_GeometryN(target_geometry, 1)),
+            Nullif(trim(feature_a.road_code), '')
+        );
+        end_references = road_graph.get_reference_from_point(
+            ST_EndPoint(ST_GeometryN(target_geometry, ST_NumGeometries(target_geometry))),
+            Nullif(trim(feature_a.road_code), '')
+        );
+        -- Invert start and end if needed
+        IF (
+            (start_references->>'marker_code')::integer,
+            (start_references->>'abscissa')::real
+        ) > (
+            (end_references->>'marker_code')::integer,
+            (end_references->>'abscissa')::real
+        ) THEN
+            SELECT end_references, start_references
+            INTO start_references, end_references;
+        END IF;
+        update_references_sql = format(
+            ', start_marker_code = %1$L::integer, start_abscissa = %2$L::real'
+            ', end_marker_code = %3$L::integer, end_abscissa = %4$L::real',
+            start_references->>'marker_code',
+            start_references->>'abscissa',
+            end_references->>'marker_code',
+            end_references->>'abscissa'
+        );
+        -- Cumulative distances if the table has these fields
+        IF 'start_cumulative' = ANY(table_cols) THEN
+            update_references_sql = concat(
+                update_references_sql,
+                format(', start_cumulative = %1$L::real', start_references->>'cumulative')
+            );
+        END IF;
+        IF 'end_cumulative' = ANY(table_cols) THEN
+            update_references_sql = concat(
+                update_references_sql,
+                format(', end_cumulative = %1$L::real', end_references->>'cumulative')
+            );
+        END IF;
+    END IF;
+
+    -- Delete the feature B and update the feature A in the same request
+    sql_text = format(
+        $SQL$
+            WITH del AS (
+                DELETE FROM %1$I.%2$I
+                WHERE %3$I = %4$s
+                RETURNING *
+            ),
+            up AS (
+                UPDATE %1$I.%2$I
+                SET %5$I = ST_GeomFromGeoJSON('%6$s')%8$s
+                WHERE %3$I = %7$s
+                RETURNING *
+            )
+            SELECT *
+            FROM up
+        $SQL$,
+        _schema_name,
+        _table_name,
+        primary_key_field,
+        _feature_id_b,
+        geometry_column_data.geom_name,
+        ST_AsGeoJSON(target_geometry),
+        _feature_id_a,
+        update_references_sql
+    );
+    EXECUTE sql_text
+    INTO update_result
+    ;
+
+    RETURN json_build_object(
+        'status', 'success',
+        'message', 'The two features have been successfully merged.'
+    );
+
+END;
+$_$;
+
+
+-- FUNCTION merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)
+COMMENT ON FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) IS 'Merge two linestring features of the same table.
+The feature A, chosen first by the user, is kept with its field values and gets the merged geometry, in the road direction.
+The feature B is deleted. If the table has the references fields, the references of the feature A
+(and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction.
+@param _schema_name Schema of the table
+@param _table_name Name of the table
+@param _feature_id_a Primary key value of the feature to keep
+@param _feature_id_b Primary key value of the feature to merge into the feature A, then deleted
+@return JSON object with the keys status (success or error) and message';
+

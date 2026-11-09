@@ -2707,6 +2707,63 @@ def test_split_table_linestring_feature_by_point(rollback_db_connection: psycopg
     ]
 
 
+def test_merge_table_linestring_features(rollback_db_connection: psycopg.Connection):
+    """Merge two managed object lines, like the Lizmap action merge_selected_lines.
+    The safety barrier 3 (D72, 2+100 -> 3+10) is first split in two features.
+    The feature A, chosen first, is the second part (downstream): it must be kept with its field values,
+    and get the references of the merged line, in the road direction.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Split the safety barrier 3 at 40% of the line
+    cursor.execute("""
+        SELECT road_graph.split_table_linestring_feature_by_point(
+            'managed', 'demo_safety_barriers', 3,
+            (SELECT ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4) FROM managed.demo_safety_barriers WHERE id = 3)
+        )->>'status'
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "success"
+
+    # The new feature (second part) gets another material, to check the kept values
+    cursor.execute("""
+        UPDATE managed.demo_safety_barriers
+        SET material = 'Wood'
+        WHERE road_code = 'D72' AND id != 3
+        RETURNING id
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    feature_id_a = row[0]
+
+    # Merge: the feature A is the second part, the feature B is the first part
+    cursor.execute(
+        """
+        SELECT road_graph.merge_table_linestring_features(
+            'managed', 'demo_safety_barriers', %s, 3
+        )->>'status'
+        """,
+        (feature_id_a,),
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "success"
+
+    # Only the feature A remains, with its values and the references of the merged line
+    cursor.execute("""
+        SELECT
+            id, material,
+            start_marker_code, round(start_abscissa::numeric, 0)::float,
+            end_marker_code, round(end_abscissa::numeric, 0)::float
+        FROM managed.demo_safety_barriers
+        WHERE road_code = 'D72'
+        ORDER BY id
+    """)
+    rows = cursor.fetchall()
+    assert [list(r) for r in rows] == [[feature_id_a, "Wood", 2, 100.0, 3, 10.0]]
+
+
 def test_trigger_managed_line_references_follow_road_direction(rollback_db_connection: psycopg.Connection):
     """The trigger trg_calculate_managed_object_references calculates the references of a line
     in the road direction (start before end), even if the line is digitized in the opposite direction,
