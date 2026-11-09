@@ -302,7 +302,7 @@
                                         <td>false</td>
                                         <td>json</td>
                                         <td>INVOKER</td>
-                                        <td><p>Splits a table linestring feature by a given point. The feature keeps the first part, and a new feature is created with the second part. If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa, the references of the cut point become the end references of the feature and the start references of the new feature. The feature can be digitized in the direction of the road or in the opposite direction: the new geometries keep its direction.</p></td>
+                                        <td><p>Splits a table linestring feature by a given point. The two new geometries follow the road direction, even if the feature is digitized in the opposite direction, like the geometries calculated from the references. The feature keeps the first part in the road direction, and a new feature is created with the second part. If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa, the references of the two features are calculated in the road direction (start before end): the references of the cut point become the end references of the feature and the start references of the new feature. The fields start_cumulative and end_cumulative are also set if they exist.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/reorder_multilinestring_parts___27b0cac3.html">reorder_multilinestring_parts(_multilinestring geometry, _road_code text)</a></td>
@@ -386,7 +386,7 @@
                                         <td>false</td>
                                         <td>json</td>
                                         <td>INVOKER</td>
-                                        <td><p>Merge two linestring features of the same table. The kept one is the one with the lower start_cumulative. The other one is deleted.</p></td>
+                                        <td><p>Merge two linestring features of the same table. The feature A, chosen first by the user, is kept with its field values and gets the merged geometry, in the road direction. The feature B is deleted. If the table has the references fields, the references of the feature A (and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction. @param _schema_name Schema of the table @param _table_name Name of the table @param _feature_id_a Primary key value of the feature to keep @param _feature_id_b Primary key value of the feature to merge into the feature A, then deleted @return JSON object with the keys status (success or error) and message</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/update_table_geometries_from_re_e59a6026.html">update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb)</a></td>
@@ -476,7 +476,7 @@
                                         <td>false</td>
                                         <td>trigger</td>
                                         <td>INVOKER</td>
-                                        <td><p>Trigger function allowing to update the references of an inserted or update managed object feature</p></td>
+                                        <td><p>Trigger function allowing to update the references of an inserted or update managed object feature. For a line, the start and end references follow the road direction (start before end), even if the line is digitized in the opposite direction of the road.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/editing_survey___e14344a2.html">editing_survey()</a></td>

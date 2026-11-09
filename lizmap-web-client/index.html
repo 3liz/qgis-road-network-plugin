@@ -1829,6 +1829,10 @@ It splits a line in two features at a point.</p>
 <p>The script sends the red point to the action <code>split_line_by_point</code>.
 The database function <code>road_graph.split_table_linestring_feature_by_point</code>
 splits the line, and the layer is refreshed.</p>
+<p>The two lines follow the <strong>direction of the road</strong>, even if the line was drawn
+in the opposite direction: the original feature keeps the first part,
+and the new feature gets the second part. Their start and end references
+are calculated in the direction of the road.</p>
 <p>The default popup button of this action is hidden, because it does not send
 the clicked point.</p>
 <h3 id="merge-two-lines">Merge two lines<a class="headerlink" href="#merge-two-lines" title="Permanent link">#</a></h3>
@@ -1847,6 +1851,9 @@ It merges two features of the same layer into one feature.</p>
 <p>The script runs the action <code>merge_selected_lines</code> with the IDs of the two features.
 The database function <code>road_graph.merge_table_linestring_features</code> merges them
 and the layer is refreshed. The popup then shows only the merged feature.</p>
+<p>The merged feature is the <strong>feature chosen first</strong>: it keeps its field values,
+and the second feature is deleted. Its references are calculated from the merged line,
+in the direction of the road.</p>
 <p>Once a first feature is chosen, the merge button is only displayed for features
 of the same layer.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>

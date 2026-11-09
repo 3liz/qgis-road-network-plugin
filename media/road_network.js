@@ -38,7 +38,7 @@ var lizRoadNetwork = function () {
     const ROAD_MERGE_LINES_BUTTONS = {
         0: {
             'text': 'Choose this feature to merge',
-            'title': 'Choose this feature to merge it then with another feature of the same layer'
+            'title': 'Choose this feature to merge it then with another feature of the same layer. The merged feature keeps the values of the feature chosen first'
         },
         1: {
             'text': 'Merge with the chosen feature',
@@ -131,7 +131,8 @@ var lizRoadNetwork = function () {
                     lizMap.mainLizmap.map.clearHighlightFeatures();
 
                     // Get object layer and feature ids
-                    const featureId = ROAD_MERGE_LINES_STATE.feature_id_b;
+                    // The feature chosen first (A) is kept, the feature B has been deleted
+                    const featureId = ROAD_MERGE_LINES_STATE.feature_id_a;
                     const layerId = ROAD_MERGE_LINES_STATE.layer_id;
 
                     // Clean the popup : keep only the merged feature (to avoid issues)
@@ -427,6 +428,12 @@ var lizRoadNetwork = function () {
                     ROAD_EDITION_FORM_REFERENCES_FILLED.start = true;
                 } else if (vertex_number == 1) {
                     ROAD_EDITION_FORM_REFERENCES_FILLED.end = true;
+                }
+
+                // Once the references of the first and last vertices of a line have been received,
+                // order them in the road direction: the line may have been drawn in the opposite direction
+                if (ROAD_EDITION_FORM_REFERENCES_FILLED.start && ROAD_EDITION_FORM_REFERENCES_FILLED.end) {
+                    orderEditingFormLineReferences();
                 }
             }
 
@@ -922,6 +929,10 @@ var lizRoadNetwork = function () {
     function getRoadSubstringFromReferences() {
 
         // Line geometry
+        // Order the start and end references of the form in the road direction,
+        // since the user can type them or draw the line in the opposite direction
+        orderEditingFormLineReferences();
+
         // Get start and end references from the form
         const startReferences = {
             road_code: document.getElementById('rd_editing_road_code').value,
@@ -971,8 +982,8 @@ var lizRoadNetwork = function () {
         }
 
         // Build the action parameters
-        // Invert start and edge values if needed
-        let actionParams = {
+        // The start and end references have been ordered in the road direction above
+        const actionParams = {
             road_code: startReferences.road_code,
             start_marker_code: startReferences.marker_code,
             start_abscissa: startReferences.abscissa,
@@ -981,31 +992,6 @@ var lizRoadNetwork = function () {
             offset: startReferences.offset,
             side: startReferences.side
         };
-        let mustRevertStartAndEnd = false;
-        if (parseInt(startReferences.marker_code) < parseInt(endReferences.marker_code)) {
-            // Do nothing, the order is correct
-            mustRevertStartAndEnd = false;
-        } else if (parseInt(startReferences.marker_code) == parseInt(endReferences.marker_code)) {
-            if (parseFloat(startReferences.abscissa) <= parseFloat(endReferences.abscissa)) {
-                // Do nothing, the order is correct
-                mustRevertStartAndEnd = false;
-            } else {
-                mustRevertStartAndEnd = true;
-            }
-        }  else {
-            mustRevertStartAndEnd = true;
-        }
-        if (mustRevertStartAndEnd) {
-            actionParams = {
-                road_code: startReferences.road_code,
-                start_marker_code: endReferences.marker_code,
-                start_abscissa: endReferences.abscissa,
-                end_marker_code: startReferences.marker_code,
-                end_abscissa: startReferences.abscissa,
-                offset: startReferences.offset,
-                side: startReferences.side
-            };
-        }
 
         // Run the Lizmap action to get the road substring between point A and point B
         lizMap.mainLizmap.action.runLizmapAction(
@@ -1016,6 +1002,46 @@ var lizRoadNetwork = function () {
             null,
             actionParams
         );
+    }
+
+    /**
+     * Order the start and end references of the editing form in the road direction (start before end).
+     *
+     * The references of the managed lines follow the road direction,
+     * like in the database functions. If the start references are after the end references,
+     * for example when the line has been drawn in the opposite direction of the road,
+     * the start and end marker codes and abscissas of the form are swapped.
+     *
+     * @return {boolean} True if the references have been swapped, false otherwise
+     */
+    function orderEditingFormLineReferences() {
+        const startMarker = document.getElementById('rd_editing_marker_code');
+        const startAbscissa = document.getElementById('rd_editing_abscissa');
+        const endMarker = document.getElementById('rd_editing_marker_code_end');
+        const endAbscissa = document.getElementById('rd_editing_abscissa_end');
+        // No end references for the points
+        if (!startMarker || !startAbscissa || !endMarker || !endAbscissa) {
+            return false;
+        }
+
+        // Do nothing if the references are not filled in
+        const values = [startMarker, startAbscissa, endMarker, endAbscissa].map(input => parseFloat(input.value));
+        if (values.some(value => isNaN(value))) {
+            return false;
+        }
+        const [startMarkerValue, startAbscissaValue, endMarkerValue, endAbscissaValue] = values;
+        const mustSwap = (
+            startMarkerValue > endMarkerValue
+            || (startMarkerValue == endMarkerValue && startAbscissaValue > endAbscissaValue)
+        );
+        if (!mustSwap) {
+            return false;
+        }
+
+        [startMarker.value, endMarker.value] = [endMarker.value, startMarker.value];
+        [startAbscissa.value, endAbscissa.value] = [endAbscissa.value, startAbscissa.value];
+
+        return true;
     }
 
     /**
@@ -1199,23 +1225,38 @@ var lizRoadNetwork = function () {
         }
 
         // Add offset and side inputs
+        // They are hidden in a details block, since they are rarely modified:
+        // the user can display them by clicking on the summary.
+        // A details element cannot be placed between table rows,
+        // so the table is closed before it, and a new table is opened after it for the buttons
         html += `
-                <tr>
-                    <th>${tr('Offset')}</th>
-                    <th>${tr('Side')}</th>
-                    <th></th>
-                </tr>
-                <tr>
-                    <td><input type="number" min="0" max="100" step="0.1" id="rd_editing_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
-                    <td>
-                        <select id="rd_editing_side" name="side">
-                            <option value="left" selected>${tr('Left')}</option>
-                            <option value="right">${tr('Right')}</option>
-                        </select>
-                    </td>
-                    <td>
-                    </td>
-                </tr>
+            </tbody>
+        </table>
+        <details class="road_network_offset_details">
+            <summary>${tr('Offset')}</summary>
+            <table class="road_network_table" border="0" cellpadding="2" cellspacing="1">
+                <tbody>
+                    <tr>
+                        <th>${tr('Offset')}</th>
+                        <th>${tr('Side')}</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td><input type="number" min="0" max="100" step="0.1" id="rd_editing_offset" name="offset" value="0" placeholder="Ex: 2.5"/></td>
+                        <td>
+                            <select id="rd_editing_side" name="side">
+                                <option value="left" selected>${tr('Left')}</option>
+                                <option value="right">${tr('Right')}</option>
+                            </select>
+                        </td>
+                        <td>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </details>
+        <table class="road_network_table" border="0" cellpadding="2" cellspacing="1">
+            <tbody>
                 <tr>
                     <td>
                         <button
