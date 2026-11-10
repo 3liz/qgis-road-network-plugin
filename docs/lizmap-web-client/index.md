@@ -131,6 +131,8 @@ It splits a line in two features at a point.
 
 The button is only displayed if the user can **modify the geometry** and
 **create features** in this layer, in the Lizmap editing configuration.
+These rights can be changed with the constant `ROAD_SPLIT_NEEDED_RIGHTS` of the script
+(see [Configure the script](#4-configure-the-script)).
 
 1. Open the **Graphe routier** panel and click on the line where it must be split.
    A red point is displayed on the map.
@@ -156,7 +158,10 @@ This tool adds a button to the popup of the features of a line layer.
 It merges two features of the same layer into one feature.
 
 The button is only displayed if the user can **modify the geometry** and
-**delete features** in this layer, in the Lizmap editing configuration.
+**create features** in this layer, in the Lizmap editing configuration.
+The right to delete features is not required by default, even if the second feature is deleted.
+These rights can be changed with the constant `ROAD_MERGE_NEEDED_RIGHTS` of the script
+(see [Configure the script](#4-configure-the-script)).
 
 1. In the popup of the first line, click **Choose this feature to merge**. The button label becomes
    **Feature chosen to merge**.
@@ -237,6 +242,12 @@ Open [road_network.js](../media/road_network.js) and edit the
 | `ROAD_ROADS_LAYER_NAME` | `roads` | WFS name of the `roads` layer |
 | `ROAD_EDGES_LAYER_ID` | `edges_7df8a321_...` | QGIS ID of the `edges` layer |
 | `ROAD_ORDER_FIELD` | `road_order` | Field used to sort the list of roads |
+| `ROAD_SPLIT_NEEDED_RIGHTS` | `['createFeature', 'modifyGeometry']` | Editing rights needed on a line layer to display the split button |
+| `ROAD_MERGE_NEEDED_RIGHTS` | `['createFeature', 'modifyGeometry']` | Editing rights needed on a line layer to display the merge button. Add `'deleteFeature'` to also require the right to delete features |
+
+The editing rights are the capabilities of the layer in the Lizmap editing configuration:
+`createFeature` (create features), `modifyAttribute` (modify the attributes),
+`modifyGeometry` (modify the geometry) and `deleteFeature` (delete features).
 
 Do not edit the code below the `END CONFIGURATION` comment.
 

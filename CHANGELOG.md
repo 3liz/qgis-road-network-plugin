@@ -19,6 +19,10 @@
 
 * **Lizmap**: in the form `Create the geometry from references` of the editing panel, the fields `Offset` and `Side`
   are hidden by default: click on `Offset` to display them
+* **Lizmap**: the button `Merge two lines` of the popup no longer requires the right to delete features,
+  but the rights to create features and modify the geometry. The editing rights needed to display the buttons
+  `Split a line at a point` and `Merge two lines` can be changed with the new constants
+  `ROAD_SPLIT_NEEDED_RIGHTS` and `ROAD_MERGE_NEEDED_RIGHTS` of the script `road_network.js`
 * **SQL**: merge of two managed object lines (Lizmap action `merge_selected_lines`): the merged feature
   is now the feature chosen first, with its field values, instead of the feature with the lowest start references.
   Its references, and its cumulative distances if the table has these fields, are calculated from the merged line

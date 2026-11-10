@@ -15,6 +15,17 @@ var lizRoadNetwork = function () {
     const ROAD_EDGES_LAYER_ID = 'edges_7df8a321_25e8_4a67_9bf8_796e4782e147';
     const ROAD_ORDER_FIELD = 'road_order';
 
+    // Editing rights needed by the user on a line layer to see the buttons
+    // "Split a line at a point" and "Merge two lines" in the popup of its features.
+    // They are set for each layer in the Lizmap editing configuration. Possible values:
+    // 'createFeature' (create features), 'modifyAttribute' (modify the attributes),
+    // 'modifyGeometry' (modify the geometry), 'deleteFeature' (delete features)
+    // Split: the geometry of the line is shortened, and a new feature is created with the second part
+    const ROAD_SPLIT_NEEDED_RIGHTS = ['createFeature', 'modifyGeometry'];
+    // Merge: the geometry of the feature chosen first is modified, and the other feature is deleted.
+    // Add 'deleteFeature' to also require the right to delete features
+    const ROAD_MERGE_NEEDED_RIGHTS = ['createFeature', 'modifyGeometry'];
+
     // =================
     // END CONFIGURATION
     // Do not edit below
@@ -1600,9 +1611,9 @@ var lizRoadNetwork = function () {
         const originalBt = element.parentNode.querySelector('button[value^="split_line_by_point"]');
         if (originalBt) originalBt.remove();
 
-        // Do not add the button if the user cannot edit the layer features
+        // Do not add the button if the user does not have the needed editing rights on the layer
         // Splitting a line modifies the feature geometry and creates a new feature
-        if (!hasEditionCapabilities(layerId, ['modifyGeometry', 'createFeature'])) {
+        if (!hasEditionCapabilities(layerId, ROAD_SPLIT_NEEDED_RIGHTS)) {
             return true;
         }
 
@@ -1682,9 +1693,9 @@ var lizRoadNetwork = function () {
             return true;
         }
 
-        // Do not add the button if the user cannot edit the layer features
+        // Do not add the button if the user does not have the needed editing rights on the layer
         // Merging two lines modifies the geometry of one feature and deletes the other one
-        if (!hasEditionCapabilities(layerId, ['modifyGeometry', 'deleteFeature'])) {
+        if (!hasEditionCapabilities(layerId, ROAD_MERGE_NEEDED_RIGHTS)) {
             return true;
         }
 
