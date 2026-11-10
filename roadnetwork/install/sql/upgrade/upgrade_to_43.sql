@@ -19,6 +19,16 @@
 -- with the lowest start references. Its references, and cumulative distances, are calculated
 -- from the merged geometry, in the road direction: before, it kept its own references
 -- if the table had no trigger calculating them.
+--
+-- update_managed_object_linked_geometries: new trigger function updating the lines of a managed table
+-- which were connected to the start or the end of an updated line: their references and geometries
+-- are calculated again to stay connected to the line (shortened or extended).
+-- It is disabled by the session variable road.graph.disable.linked.geometries, set by the functions
+-- split_table_linestring_feature_by_point, merge_table_linestring_features
+-- and update_table_geometries_from_references.
+--
+-- add_managed_objects_triggers: also creates the trigger trg_update_managed_object_linked_geometries
+-- on the line tables, if it does not already exist. It now returns one line per trigger, with the new column trigger_name.
 
 -- calculate_managed_object_references()
 CREATE OR REPLACE FUNCTION road_graph.calculate_managed_object_references() RETURNS trigger
@@ -214,6 +224,7 @@ $_$;
 
 -- FUNCTION calculate_managed_object_references()
 COMMENT ON FUNCTION road_graph.calculate_managed_object_references() IS 'Trigger function allowing to update the references of an inserted or update managed object feature.
+
 For a line, the start and end references follow the road direction (start before end),
 even if the line is digitized in the opposite direction of the road.';
 
@@ -497,6 +508,10 @@ BEGIN
         END IF;
     END IF;
 
+    -- Disable the trigger updating the linked lines: the line following the feature
+    -- must not be moved to the cut point, since the new feature is inserted between them
+    PERFORM set_config('road.graph.disable.linked.geometries', '1', true);
+
     -- Update the feature and insert the new one
     -- Use a try/catch to avoid doing half the job
     BEGIN
@@ -588,12 +603,16 @@ BEGIN
             v_message = message_text,
             v_context = pg_exception_context
         ;
+        -- Re-enable the trigger updating the linked lines
+        PERFORM set_config('road.graph.disable.linked.geometries', '0', true);
         RETURN json_build_object(
             'status', 'error',
             'message', format('Error while splitting the feature: %s', v_sqlstate || ' - ' || v_message)
         );
     END;
 
+    -- Re-enable the trigger updating the linked lines
+    PERFORM set_config('road.graph.disable.linked.geometries', '0', true);
 
     RETURN json_build_object(
         'status', 'success',
@@ -606,13 +625,17 @@ $_$;
 
 -- FUNCTION split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)
 COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.
+
 The two new geometries follow the road direction, even if the feature is digitized in the opposite direction,
 like the geometries calculated from the references.
 The feature keeps the first part in the road direction, and a new feature is created with the second part.
+
 If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa,
 the references of the two features are calculated in the road direction (start before end):
 the references of the cut point become the end references of the feature and the start references of the new feature.
-The fields start_cumulative and end_cumulative are also set if they exist.';
+The fields start_cumulative and end_cumulative are also set if they exist.
+
+The lines connected to the feature are not modified by the trigger trg_update_managed_object_linked_geometries.';
 
 
 -- merge_table_linestring_features(text, text, integer, integer)
@@ -824,6 +847,10 @@ BEGIN
         END IF;
     END IF;
 
+    -- Disable the trigger updating the lines linked to the feature A:
+    -- the merged line covers the feature B, and its other linked lines must not be modified
+    PERFORM set_config('road.graph.disable.linked.geometries', '1', true);
+
     -- Delete the feature B and update the feature A in the same request
     sql_text = format(
         $SQL$
@@ -854,6 +881,9 @@ BEGIN
     INTO update_result
     ;
 
+    -- Re-enable the trigger updating the linked lines
+    PERFORM set_config('road.graph.disable.linked.geometries', '0', true);
+
     RETURN json_build_object(
         'status', 'success',
         'message', 'The two features have been successfully merged.'
@@ -865,12 +895,658 @@ $_$;
 
 -- FUNCTION merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)
 COMMENT ON FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) IS 'Merge two linestring features of the same table.
-The feature A, chosen first by the user, is kept with its field values and gets the merged geometry, in the road direction.
-The feature B is deleted. If the table has the references fields, the references of the feature A
-(and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction.
-@param _schema_name Schema of the table
-@param _table_name Name of the table
-@param _feature_id_a Primary key value of the feature to keep
-@param _feature_id_b Primary key value of the feature to merge into the feature A, then deleted
-@return JSON object with the keys status (success or error) and message';
 
+The feature A, chosen first by the user, is kept with its field values
+and gets the merged geometry, in the road direction. The feature B is deleted.
+
+If the table has the references fields, the references of the feature A
+(and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction.
+
+The lines connected to the features are not modified by the trigger trg_update_managed_object_linked_geometries.
+
+It returns a JSON object with the keys status (success or error) and message.';
+
+
+-- update_table_geometries_from_references(text, text, text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+    road_code text;
+    update_count integer;
+    sql_text text;
+    table_exists boolean;
+    primary_key_field text;
+    needed_fields text[];
+    managed_object record;
+    table_cols text[];
+    updated_stats record;
+BEGIN
+
+    -- Get info on the managed object table
+    sql_text = format(
+        $SQL$
+        SELECT *
+        FROM road_graph.managed_objects
+        WHERE
+            schema_name = '%1$s'
+            AND table_name = '%2$s'
+        LIMIT 1;
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO managed_object
+    ;
+    IF managed_object IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" is not registered as managed object in the road graph system !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Check if the table exists in the database
+    sql_text = format(
+        $SQL$
+        SELECT to_regclass('%1$I.%2$I') IS NOT NULL AS exists
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO table_exists
+    ;
+    IF NOT table_exists THEN
+        RAISE NOTICE 'The table "%"."%" does not exist in the database !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Get the table primary key field
+    sql_text = format(
+        $SQL$
+        SELECT a.attname
+        FROM pg_index i
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = '%1$I.%2$I'::regclass AND i.indisprimary
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO primary_key_field
+    ;
+    IF primary_key_field IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" does not have a primary key !', _schema_name, _table_name;
+        RETURN NULL;
+    END IF;
+
+    -- Check the table contains the needed fields based on the geometry type of the managed object
+    sql_text = format(
+        $SQL$
+        SELECT array_agg(column_name) AS cols
+        FROM information_schema.columns
+        WHERE table_schema = '%1$s' AND table_name = '%2$s';
+        $SQL$,
+        _schema_name,
+        _table_name
+    );
+    EXECUTE sql_text
+    INTO table_cols
+    ;
+    -- For point geometry type, we need road_code, marker_code and abscissa fields
+    needed_fields = ARRAY[
+        'road_code', 'marker_code', 'abscissa'
+    ]::text[];
+    -- For line geometry type, we also need start_marker_code, start_abscissa, end_marker_code and end_abscissa fields
+    IF lower(managed_object.geometry_type) IN ('linestring', 'multilinestring')
+    THEN
+        needed_fields = ARRAY[
+            'road_code',
+            'start_marker_code', 'start_abscissa',
+            'end_marker_code', 'end_abscissa'
+        ]::text[];
+    END IF;
+    IF NOT (table_cols @> needed_fields)
+        THEN
+            RAISE NOTICE 'The table "%"."%" does not contain the necessary fields to update geometries from references !', _schema_name, _table_name;
+            RETURN NULL;
+    END IF;
+
+    -- Update geometries based on references
+    -- and geometry type of the managed object
+    -- We filter the objects to update based on the given road codes
+    -- We must check if the road_graph function returns a valid geometry
+    sql_text = format(
+        $SQL$
+            WITH get_geom AS (
+                SELECT
+                    mo.%1$I AS id,
+                    road_graph.get_managed_object_geometry_from_references(
+                        mo.road_code::text,
+                        %9$s,
+                        %6$s,
+                        %7$s
+                    )->'geom' AS geom
+                FROM
+                    %2$I.%3$I AS mo
+                WHERE (
+                    mo.road_code = ANY(string_to_array('%4$s', ',')::text[])
+                    OR '%4$s' = ''
+                )
+                AND (%8$s)
+            ),
+            updated_objects AS (
+                SELECT
+                    g.id,
+                    CASE
+                        WHEN g.geom = 'null'::jsonb THEN NULL
+                        ELSE ST_GeomFromGeoJSON(g.geom)
+                    END::geometry(%5$s, 2154) AS geom
+                FROM get_geom AS g
+            ),
+            run_update AS (
+                UPDATE %2$I.%3$I AS mo
+                SET
+                    geom = ST_ReducePrecision(u.geom, 0.01)
+                FROM updated_objects AS u
+                WHERE mo.%1$I = u.id
+                AND u.geom IS NOT NULL
+                AND (
+                    mo.geom IS NULL
+                    OR NOT ST_Equals(
+                        ST_ReducePrecision(mo.geom, 0.01),
+                        ST_ReducePrecision(u.geom, 0.01)
+                    )
+                )
+                RETURNING mo.*
+            )
+            SELECT
+                count(r.*) AS nb,
+                array_agg(r.%1$I) AS last_updated_objects_ids
+            FROM run_update AS r
+        $SQL$,
+        -- 1
+        primary_key_field,
+        -- 2
+        _schema_name,
+        -- 3
+        _table_name,
+        -- 4 : list of road codes
+        Coalesce(array_to_string(_road_codes::text[], ','), ''),
+        -- 5 : geometry type
+        managed_object.geometry_type,
+        -- Use default values for side and offset if columns does not exists or value is NULL
+        -- else we need to cast to the expected function parameter formats
+        -- 6
+        CASE WHEN 'offset' = ANY(table_cols) THEN 'Coalesce(mo."offset"::real, 0.0::real)' ELSE '0.0::real' END,
+        -- 7
+        CASE WHEN 'side' = ANY(table_cols) THEN 'Coalesce(mo.side::text, ''right''::text) ' ELSE '''right''::text' END,
+        -- 8 : filter of the impacted objects
+        CASE
+            WHEN _impacts IS NULL THEN 'TRUE'
+            ELSE road_graph.get_managed_objects_impacts_filter(managed_object.geometry_type, table_cols, 'geom')
+        END,
+        -- used fields: we need to cast the values taken from the managed table
+        -- The end references are NULL for the points
+        -- 9
+        CASE
+            WHEN lower(managed_object.geometry_type) = 'point'
+            THEN 'mo.marker_code::integer, mo.abscissa::real, NULL::integer, NULL::real'
+            ELSE 'mo.start_marker_code::integer, mo.start_abscissa::real, mo.end_marker_code::integer, mo.end_abscissa::real'
+        END
+    );
+    RAISE NOTICE 'sql = %', sql_text;
+    -- Disable the trigger updating the linked lines:
+    -- all the objects are calculated from their own references
+    PERFORM set_config('road.graph.disable.linked.geometries', '1', true);
+    EXECUTE sql_text
+    INTO updated_stats
+    USING _impacts;
+    -- Re-enable the trigger updating the linked lines
+    PERFORM set_config('road.graph.disable.linked.geometries', '0', true);
+
+    RETURN to_jsonb(updated_stats);
+
+END;
+$_$;
+
+
+-- FUNCTION update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb)
+COMMENT ON FUNCTION road_graph.update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb) IS 'Update the given table geometries based on the references. This function needs the table to be listed in the table road_graph.managed_objects.
+The objects whose geometry cannot be calculated are not updated, and a warning is raised.
+The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects
+which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.';
+
+
+-- update_managed_object_linked_geometries()
+CREATE OR REPLACE FUNCTION road_graph.update_managed_object_linked_geometries() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+    new_jsonb jsonb;
+    old_jsonb jsonb;
+    managed_object record;
+    primary_key_field text;
+    old_end_points geometry;
+    linked record;
+    linked_jsonb jsonb;
+    linked_start record;
+    linked_end record;
+    start_marker_code integer;
+    start_abscissa real;
+    end_marker_code integer;
+    end_abscissa real;
+    cumulative_sql text;
+    substring_jsonb jsonb;
+    linked_geom geometry;
+    sql_text text;
+    updated_number integer = 0;
+    -- Maximum distance between the end points of two lines considered as connected
+    tolerance constant real = 0.05;
+BEGIN
+    -- Trigger disabled by session variable, for example when merging the editing session,
+    -- when the managed objects are updated from the road graph, when splitting or merging lines,
+    -- or when this trigger updates the linked lines (to avoid a cascade of updates)
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
+        OR road_graph.get_current_setting('road.graph.disable.linked.geometries', '0') = '1'
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- Only for the updates of the geometry
+    IF TG_OP != 'UPDATE' OR NEW.geom IS NULL OR OLD.geom IS NULL
+        OR ST_Equals(NEW.geom, OLD.geom)
+    THEN
+        RETURN NEW;
+    END IF;
+
+    new_jsonb = to_jsonb(NEW);
+    old_jsonb = to_jsonb(OLD);
+
+    -- Check the table has the needed reference fields
+    IF NOT new_jsonb ?& ARRAY['road_code', 'start_marker_code', 'start_abscissa', 'end_marker_code', 'end_abscissa'] THEN
+        RAISE NOTICE 'The table "%"."%" does not have the reference fields needed to update the linked lines !',
+            TG_TABLE_SCHEMA, TG_TABLE_NAME;
+        RETURN NEW;
+    END IF;
+
+    -- Only for the lines registered as managed objects
+    SELECT o.*
+    INTO managed_object
+    FROM road_graph.managed_objects AS o
+    WHERE o.schema_name = TG_TABLE_SCHEMA
+    AND o.table_name = TG_TABLE_NAME
+    LIMIT 1
+    ;
+    IF managed_object IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" is not registered as managed object in the road graph system !',
+            TG_TABLE_SCHEMA, TG_TABLE_NAME;
+        RETURN NEW;
+    END IF;
+    IF lower(managed_object.geometry_type) NOT IN ('linestring', 'multilinestring') THEN
+        RETURN NEW;
+    END IF;
+
+    -- The linked lines follow the edited line only if it stays on the same road
+    IF Coalesce(trim(new_jsonb->>'road_code'), '') = ''
+        OR new_jsonb->>'road_code' IS DISTINCT FROM old_jsonb->>'road_code'
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- Nothing to do if the references have not changed.
+    -- The references of NEW must have been calculated before, for example by the trigger
+    -- trg_calculate_managed_object_references (BEFORE trigger, run before this AFTER trigger)
+    IF (new_jsonb->>'start_marker_code', new_jsonb->>'start_abscissa')
+        IS NOT DISTINCT FROM (old_jsonb->>'start_marker_code', old_jsonb->>'start_abscissa')
+        AND (new_jsonb->>'end_marker_code', new_jsonb->>'end_abscissa')
+        IS NOT DISTINCT FROM (old_jsonb->>'end_marker_code', old_jsonb->>'end_abscissa')
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- Get the table primary key field
+    SELECT a.attname
+    INTO primary_key_field
+    FROM pg_index AS i
+    JOIN pg_attribute AS a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+    WHERE i.indrelid = TG_RELID AND i.indisprimary
+    LIMIT 1
+    ;
+    IF primary_key_field IS NULL THEN
+        RAISE NOTICE 'The table "%"."%" does not have a primary key !', TG_TABLE_SCHEMA, TG_TABLE_NAME;
+        RETURN NEW;
+    END IF;
+
+    -- Start and end points of the line before its modification
+    old_end_points = ST_Collect(
+        ST_StartPoint(ST_GeometryN(ST_Multi(OLD.geom), 1)),
+        ST_EndPoint(ST_GeometryN(ST_Multi(OLD.geom), ST_NumGeometries(ST_Multi(OLD.geom))))
+    );
+
+    -- Disable the triggers on the updated linked lines:
+    -- their references are set here, and they must not update their own linked lines
+    PERFORM set_config('road.graph.disable.trigger', '1', true);
+    PERFORM set_config('road.graph.disable.linked.geometries', '1', true);
+
+    -- Loop over the other lines of the same road
+    -- whose start or end point touched the start or end point of the line before its modification
+    sql_text = format(
+        $SQL$
+        SELECT to_jsonb(t) AS feature
+        FROM %1$I.%2$I AS t
+        WHERE t.%3$I::text != $1
+        AND t.road_code = $2
+        AND ST_DWithin(t.geom, $3, $4)
+        AND ST_DWithin(
+            ST_Collect(
+                ST_StartPoint(ST_GeometryN(ST_Multi(t.geom), 1)),
+                ST_EndPoint(ST_GeometryN(ST_Multi(t.geom), ST_NumGeometries(ST_Multi(t.geom))))
+            ),
+            $3, $4
+        )
+        $SQL$,
+        TG_TABLE_SCHEMA,
+        TG_TABLE_NAME,
+        primary_key_field
+    );
+    FOR linked IN EXECUTE sql_text
+        USING old_jsonb->>primary_key_field, new_jsonb->>'road_code', old_end_points, tolerance
+    LOOP
+        linked_jsonb = linked.feature;
+
+        -- Current references of the linked line, in the road direction
+        SELECT
+            (linked_jsonb->>'start_marker_code')::integer AS marker_code,
+            (linked_jsonb->>'start_abscissa')::real AS abscissa
+        INTO linked_start;
+        SELECT
+            (linked_jsonb->>'end_marker_code')::integer AS marker_code,
+            (linked_jsonb->>'end_abscissa')::real AS abscissa
+        INTO linked_end;
+        IF linked_start.marker_code IS NULL OR linked_start.abscissa IS NULL
+            OR linked_end.marker_code IS NULL OR linked_end.abscissa IS NULL
+        THEN
+            CONTINUE;
+        END IF;
+
+        start_marker_code = linked_start.marker_code;
+        start_abscissa = linked_start.abscissa;
+        end_marker_code = linked_end.marker_code;
+        end_abscissa = linked_end.abscissa;
+        cumulative_sql = '';
+
+        IF (linked_start.marker_code, linked_start.abscissa) < (
+            (old_jsonb->>'start_marker_code')::integer, (old_jsonb->>'start_abscissa')::real
+        ) THEN
+            -- The linked line is upstream: it ended at the start of the line.
+            -- Its end must follow the new start of the line
+            IF (new_jsonb->>'start_marker_code', new_jsonb->>'start_abscissa')
+                IS NOT DISTINCT FROM (old_jsonb->>'start_marker_code', old_jsonb->>'start_abscissa')
+            THEN
+                CONTINUE;
+            END IF;
+            end_marker_code = (new_jsonb->>'start_marker_code')::integer;
+            end_abscissa = (new_jsonb->>'start_abscissa')::real;
+            IF linked_jsonb ? 'end_cumulative' AND new_jsonb ? 'start_cumulative' THEN
+                cumulative_sql = format(', end_cumulative = %L::real', new_jsonb->>'start_cumulative');
+            END IF;
+        ELSIF (linked_end.marker_code, linked_end.abscissa) > (
+            (old_jsonb->>'end_marker_code')::integer, (old_jsonb->>'end_abscissa')::real
+        ) THEN
+            -- The linked line is downstream: it started at the end of the line.
+            -- Its start must follow the new end of the line
+            IF (new_jsonb->>'end_marker_code', new_jsonb->>'end_abscissa')
+                IS NOT DISTINCT FROM (old_jsonb->>'end_marker_code', old_jsonb->>'end_abscissa')
+            THEN
+                CONTINUE;
+            END IF;
+            start_marker_code = (new_jsonb->>'end_marker_code')::integer;
+            start_abscissa = (new_jsonb->>'end_abscissa')::real;
+            IF linked_jsonb ? 'start_cumulative' AND new_jsonb ? 'end_cumulative' THEN
+                cumulative_sql = format(', start_cumulative = %L::real', new_jsonb->>'end_cumulative');
+            END IF;
+        ELSE
+            -- The linked line overlaps the line: it is not modified
+            CONTINUE;
+        END IF;
+
+        -- The line has been extended over the whole linked line: it cannot be calculated
+        IF (start_marker_code, start_abscissa) >= (end_marker_code, end_abscissa) THEN
+            RAISE NOTICE 'The linked line "%"."%" % = % is not modified: its new start references % + % are not before its new end references % + %',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME, primary_key_field, linked_jsonb->>primary_key_field,
+                start_marker_code, start_abscissa, end_marker_code, end_abscissa
+            ;
+            CONTINUE;
+        END IF;
+
+        -- Build the new geometry of the linked line from its new references,
+        -- keeping its offset and side
+        BEGIN
+            substring_jsonb = road_graph.get_road_substring_from_references(
+                linked_jsonb->>'road_code',
+                start_marker_code, start_abscissa,
+                end_marker_code, end_abscissa,
+                Coalesce((linked_jsonb->>'offset')::real, 0.0::real),
+                Coalesce(linked_jsonb->>'side', 'right')
+            );
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'The geometry of the linked line "%"."%" % = % cannot be calculated: %',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME, primary_key_field, linked_jsonb->>primary_key_field, SQLERRM
+            ;
+            CONTINUE;
+        END;
+        linked_geom = ST_GeomFromGeoJSON(substring_jsonb->>'geom');
+        IF linked_geom IS NULL OR ST_IsEmpty(linked_geom) THEN
+            CONTINUE;
+        END IF;
+        linked_geom = ST_SetSRID(linked_geom, 2154);
+
+        -- Adapt the geometry to the type of the table
+        IF lower(managed_object.geometry_type) = 'linestring' THEN
+            linked_geom = ST_LineMerge(linked_geom);
+            IF GeometryType(linked_geom) != 'LINESTRING' THEN
+                RAISE NOTICE 'The geometry of the linked line "%"."%" % = % is not a single linestring',
+                    TG_TABLE_SCHEMA, TG_TABLE_NAME, primary_key_field, linked_jsonb->>primary_key_field
+                ;
+                CONTINUE;
+            END IF;
+        ELSE
+            linked_geom = ST_Multi(linked_geom);
+        END IF;
+
+        -- Update the geometry and the references of the linked line
+        EXECUTE format(
+            $SQL$
+            UPDATE %1$I.%2$I
+            SET
+                geom = $1,
+                start_marker_code = $2, start_abscissa = $3,
+                end_marker_code = $4, end_abscissa = $5
+                %4$s
+            WHERE %3$I::text = $6
+            $SQL$,
+            TG_TABLE_SCHEMA,
+            TG_TABLE_NAME,
+            primary_key_field,
+            cumulative_sql
+        )
+        USING
+            linked_geom,
+            start_marker_code, start_abscissa,
+            end_marker_code, end_abscissa,
+            linked_jsonb->>primary_key_field
+        ;
+        updated_number = updated_number + 1;
+    END LOOP;
+
+    -- Re-enable the triggers
+    PERFORM set_config('road.graph.disable.linked.geometries', '0', true);
+    PERFORM set_config('road.graph.disable.trigger', '0', true);
+
+    IF updated_number > 0 THEN
+        RAISE NOTICE 'Number of linked lines updated in "%"."%": %', TG_TABLE_SCHEMA, TG_TABLE_NAME, updated_number;
+    END IF;
+
+    RETURN NEW;
+END;
+$_$;
+
+
+-- FUNCTION update_managed_object_linked_geometries()
+COMMENT ON FUNCTION road_graph.update_managed_object_linked_geometries() IS 'Trigger function updating the lines of a managed object table
+which were connected to the start or the end of an updated line.
+
+The linked lines are the other lines of the same road whose start or end point touched (5 cm tolerance)
+the start or end point of the line before its modification:
+
+* an upstream linked line gets the new start references of the line as end references,
+* a downstream linked line gets the new end references of the line as start references,
+* the cumulative distances are also updated if the fields exist.
+
+Their geometry is built again with the function get_road_substring_from_references,
+keeping their offset and side: they are shortened or extended to stay connected.
+A linked line is not modified if its new references are not ordered (the line has been extended over it).
+
+It must be used in an AFTER UPDATE OF geom trigger, so that the references of the updated line
+are already calculated, for example by the trigger trg_calculate_managed_object_references.
+The function road_graph.add_managed_objects_triggers creates this trigger, named trg_update_managed_object_linked_geometries.
+
+The table must be registered in road_graph.managed_objects with a line geometry type, and have the fields
+road_code, start_marker_code, start_abscissa, end_marker_code and end_abscissa.
+
+The trigger is disabled by the session variables road.graph.disable.trigger
+or road.graph.disable.linked.geometries set to 1.';
+
+
+-- add_managed_objects_triggers()
+-- The returned columns have changed: the function must be dropped first
+DROP FUNCTION IF EXISTS road_graph.add_managed_objects_triggers();
+CREATE OR REPLACE FUNCTION road_graph.add_managed_objects_triggers() RETURNS TABLE(schema_name text, table_name text, trigger_name text, trigger_status text)
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+    managed_object record;
+    table_regclass regclass;
+BEGIN
+    FOR managed_object IN
+        SELECT o.schema_name, o.table_name, o.geometry_type, o.add_trigger_on_geom_change
+        FROM road_graph.managed_objects AS o
+        ORDER BY o.id
+    LOOP
+        schema_name = managed_object.schema_name;
+        table_name = managed_object.table_name;
+        trigger_name = NULL;
+
+        -- Only add the triggers if it has been asked for this table
+        IF NOT managed_object.add_trigger_on_geom_change THEN
+            trigger_status = 'not requested';
+            RETURN NEXT;
+            CONTINUE;
+        END IF;
+
+        -- Check the table exists
+        table_regclass = to_regclass(format('%I.%I', schema_name, table_name));
+        IF table_regclass IS NULL THEN
+            trigger_status = 'table not found';
+            RETURN NEXT;
+            CONTINUE;
+        END IF;
+
+        -- Check the table has a geom column, used by the triggers
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_attribute AS a
+            WHERE a.attrelid = table_regclass
+            AND a.attname = 'geom'
+            AND NOT a.attisdropped
+        ) THEN
+            trigger_status = 'geom column not found';
+            RETURN NEXT;
+            CONTINUE;
+        END IF;
+
+        -- Trigger calculating the references of the inserted or updated features
+        -- It is not created again if it already exists
+        trigger_name = 'trg_calculate_managed_object_references';
+        IF EXISTS (
+            SELECT 1
+            FROM pg_trigger AS t
+            WHERE t.tgrelid = table_regclass
+            AND t.tgname = trigger_name
+            AND NOT t.tgisinternal
+        ) THEN
+            trigger_status = 'already exists';
+        ELSE
+            EXECUTE format(
+                $SQL$
+                CREATE TRIGGER trg_calculate_managed_object_references
+                BEFORE INSERT OR UPDATE OF geom
+                ON %1$I.%2$I
+                FOR EACH ROW EXECUTE PROCEDURE road_graph.calculate_managed_object_references();
+                $SQL$,
+                schema_name,
+                table_name
+            );
+            trigger_status = 'created';
+        END IF;
+        RETURN NEXT;
+
+        -- Trigger updating the lines connected to the updated line, only for the lines
+        -- It is not created again if it already exists
+        IF lower(managed_object.geometry_type) IN ('linestring', 'multilinestring') THEN
+            trigger_name = 'trg_update_managed_object_linked_geometries';
+            IF EXISTS (
+                SELECT 1
+                FROM pg_trigger AS t
+                WHERE t.tgrelid = table_regclass
+                AND t.tgname = trigger_name
+                AND NOT t.tgisinternal
+            ) THEN
+                trigger_status = 'already exists';
+            ELSE
+                EXECUTE format(
+                    $SQL$
+                    CREATE TRIGGER trg_update_managed_object_linked_geometries
+                    AFTER UPDATE OF geom
+                    ON %1$I.%2$I
+                    FOR EACH ROW EXECUTE PROCEDURE road_graph.update_managed_object_linked_geometries();
+                    $SQL$,
+                    schema_name,
+                    table_name
+                );
+                trigger_status = 'created';
+            END IF;
+            RETURN NEXT;
+        END IF;
+    END LOOP;
+
+    RETURN;
+END;
+$_$;
+
+
+-- FUNCTION add_managed_objects_triggers()
+COMMENT ON FUNCTION road_graph.add_managed_objects_triggers() IS 'Create the managed objects triggers on each table listed in road_graph.managed_objects
+with the column add_trigger_on_geom_change set to True.
+
+Each trigger is only created if it does not already exist:
+
+* trg_calculate_managed_object_references, for all the geometry types:
+  it calculates the references of the inserted or updated features
+  with the function road_graph.calculate_managed_object_references,
+* trg_update_managed_object_linked_geometries, only for the linestring and multilinestring tables:
+  it updates the lines connected to an updated line
+  with the function road_graph.update_managed_object_linked_geometries.
+
+It returns one line per trigger with the schema name, table name, trigger name and trigger status:
+created or already exists.
+
+If no trigger can be created for a managed object, it returns one line with an empty trigger name
+and the status: not requested, table not found or geom column not found.';
+
+
+-- managed_objects.add_trigger_on_geom_change
+COMMENT ON COLUMN road_graph.managed_objects.add_trigger_on_geom_change IS 'If True, the function road_graph.add_managed_objects_triggers will create the trigger
+trg_calculate_managed_object_references on this table, which calculates the references
+of the features on insert or on geometry update, and for the line tables the trigger
+trg_update_managed_object_linked_geometries, which updates the lines connected to an updated line.';

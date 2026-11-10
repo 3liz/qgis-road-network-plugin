@@ -25,8 +25,9 @@ with the update policy to apply to each of them:
 * `update_policy_on_graph_change`: the rule chosen by the administrator:
     * `references`: the geometry is kept and the **references are updated**,
     * `geometry`: the references are kept and the **geometry is updated**.
-* `add_trigger_on_geom_change`: if `True`, the trigger calculating the references
-  is created on this table by the function `road_graph.add_managed_objects_triggers()`
+* `add_trigger_on_geom_change`: if `True`, the trigger calculating the references,
+  and for the line tables the trigger updating the connected lines,
+  are created on this table by the function `road_graph.add_managed_objects_triggers()`
   (see [below](#automatic-calculation-of-the-references)). Default: `False`.
 
 Each table must have the **reference columns** corresponding to its geometry type.
@@ -186,23 +187,28 @@ The table must be listed in `road_graph.managed_objects`, and have a `road_code`
 The function `road_graph.add_managed_objects_triggers()` creates this trigger, named
 `trg_calculate_managed_object_references`, on **every table** listed in `road_graph.managed_objects`
 with the column `add_trigger_on_geom_change` set to `True`.
+For the **linestring and multilinestring** tables, it also creates the trigger
+`trg_update_managed_object_linked_geometries`
+(see [Automatic update of the connected lines](#automatic-update-of-the-connected-lines)).
 Run it after adding new tables in the managed objects layer, or after checking this column:
 
 ```sql
 SELECT * FROM road_graph.add_managed_objects_triggers();
 ```
 
-It can be run several times: the trigger is only created when it does not already exist.
+It can be run several times: each trigger is only created when it does not already exist.
 Unchecking `add_trigger_on_geom_change` does not remove an existing trigger.
-The function returns one line per managed object, with its trigger status:
+The function returns one line per trigger, with its status,
+or one line without trigger name when no trigger can be created for the table:
 
-| schema_name | table_name    | trigger_status        |
-|-------------|---------------|-----------------------|
-| public      | demo_painting | created               |
-| public      | demo_trees    | already exists        |
-| public      | demo_nogeom   | geom column not found |
-| public      | missing_table | table not found       |
-| public      | demo_signs    | not requested         |
+| schema_name | table_name    | trigger_name                                | trigger_status        |
+|-------------|---------------|---------------------------------------------|-----------------------|
+| public      | demo_painting | trg_calculate_managed_object_references     | created               |
+| public      | demo_painting | trg_update_managed_object_linked_geometries | created               |
+| public      | demo_trees    | trg_calculate_managed_object_references     | already exists        |
+| public      | demo_nogeom   |                                             | geom column not found |
+| public      | missing_table |                                             | table not found       |
+| public      | demo_signs    |                                             | not requested         |
 
 For each table, the created trigger is equivalent to:
 
@@ -212,6 +218,38 @@ BEFORE INSERT OR UPDATE OF geom
 ON public.demo_painting
 FOR EACH ROW EXECUTE PROCEDURE road_graph.calculate_managed_object_references();
 ```
+
+## Automatic update of the connected lines
+
+The trigger function `road_graph.update_managed_object_linked_geometries` keeps the **lines connected**
+when the **geometry of a line is updated**: the other lines of the same table and the same road
+whose start or end point **touched** (5 cm tolerance) the start or end point of the line before its modification
+are **shortened or extended** to stay connected to it:
+
+* an **upstream** line gets the new start references of the line as end references,
+* a **downstream** line gets the new end references of the line as start references.
+
+Their geometry is calculated again from their references with the function
+`road_graph.get_road_substring_from_references`, keeping their offset and side.
+The cumulative distances are also updated if the table has the fields `start_cumulative` and `end_cumulative`.
+A connected line is not modified if the updated line now covers it entirely.
+
+The table must be listed in `road_graph.managed_objects` with a line geometry type, and have the fields
+`road_code`, `start_marker_code`, `start_abscissa`, `end_marker_code` and `end_abscissa`.
+The function `road_graph.add_managed_objects_triggers()` creates this trigger on the line tables
+with the column `add_trigger_on_geom_change` set to `True`. It is fired **after the update** of the geometry,
+so that the references of the updated line have already been calculated, for example by the trigger
+`trg_calculate_managed_object_references`. It is equivalent to:
+
+```sql
+CREATE TRIGGER trg_update_managed_object_linked_geometries
+AFTER UPDATE OF geom
+ON public.demo_painting
+FOR EACH ROW EXECUTE PROCEDURE road_graph.update_managed_object_linked_geometries();
+```
+
+The connected lines are not modified when a line is split or merged with the Lizmap actions,
+when the managed objects are updated from the road graph, or when the editing session is merged.
 
 ## Update rules
 

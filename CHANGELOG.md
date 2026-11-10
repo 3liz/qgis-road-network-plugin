@@ -6,6 +6,15 @@
 
 * Run the algorithm `Upgrade database structure` to upgrade the database (migration 43)
 
+### Added
+
+* **SQL**: new trigger function `update_managed_object_linked_geometries`: when the geometry of a managed line
+  is updated, the lines of the same table and road which were connected to its start or end are shortened
+  or extended to stay connected. Their references, and cumulative distances, follow the new references
+  of the line, and their geometry is calculated again from them. The function `add_managed_objects_triggers`
+  creates this trigger `trg_update_managed_object_linked_geometries` on the line tables,
+  and now returns one line per trigger with its name (migration `upgrade_to_43.sql`)
+
 ### Changed
 
 * **Lizmap**: in the form `Create the geometry from references` of the editing panel, the fields `Offset` and `Side`

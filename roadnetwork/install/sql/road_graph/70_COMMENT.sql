@@ -46,12 +46,23 @@ or geometry type not supported.';
 
 
 -- FUNCTION add_managed_objects_triggers()
-COMMENT ON FUNCTION road_graph.add_managed_objects_triggers() IS 'Create the trigger trg_calculate_managed_object_references for each table listed in road_graph.managed_objects
-with the column add_trigger_on_geom_change set to True, if it does not already exist.
-This trigger calculates the references of the inserted or updated features
-with the function road_graph.calculate_managed_object_references.
-It returns one line per managed object with its schema name, table name and trigger status:
-created, already exists, not requested, table not found or geom column not found.';
+COMMENT ON FUNCTION road_graph.add_managed_objects_triggers() IS 'Create the managed objects triggers on each table listed in road_graph.managed_objects
+with the column add_trigger_on_geom_change set to True.
+
+Each trigger is only created if it does not already exist:
+
+* trg_calculate_managed_object_references, for all the geometry types:
+  it calculates the references of the inserted or updated features
+  with the function road_graph.calculate_managed_object_references,
+* trg_update_managed_object_linked_geometries, only for the linestring and multilinestring tables:
+  it updates the lines connected to an updated line
+  with the function road_graph.update_managed_object_linked_geometries.
+
+It returns one line per trigger with the schema name, table name, trigger name and trigger status:
+created or already exists.
+
+If no trigger can be created for a managed object, it returns one line with an empty trigger name
+and the status: not requested, table not found or geom column not found.';
 
 
 -- FUNCTION after_edge_delete()
@@ -127,6 +138,7 @@ The functions using the cache fall back to the calculation without cache if the 
 
 -- FUNCTION calculate_managed_object_references()
 COMMENT ON FUNCTION road_graph.calculate_managed_object_references() IS 'Trigger function allowing to update the references of an inserted or update managed object feature.
+
 For a line, the start and end references follow the road direction (start before end),
 even if the line is digitized in the opposite direction of the road.';
 
@@ -303,14 +315,16 @@ COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id in
 
 -- FUNCTION merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)
 COMMENT ON FUNCTION road_graph.merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer) IS 'Merge two linestring features of the same table.
-The feature A, chosen first by the user, is kept with its field values and gets the merged geometry, in the road direction.
-The feature B is deleted. If the table has the references fields, the references of the feature A
+
+The feature A, chosen first by the user, is kept with its field values
+and gets the merged geometry, in the road direction. The feature B is deleted.
+
+If the table has the references fields, the references of the feature A
 (and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction.
-@param _schema_name Schema of the table
-@param _table_name Name of the table
-@param _feature_id_a Primary key value of the feature to keep
-@param _feature_id_b Primary key value of the feature to merge into the feature A, then deleted
-@return JSON object with the keys status (success or error) and message';
+
+The lines connected to the features are not modified by the trigger trg_update_managed_object_linked_geometries.
+
+It returns a JSON object with the keys status (success or error) and message.';
 
 
 -- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
@@ -327,13 +341,17 @@ The function returns the id of the new created edge or null if the edge has not 
 
 -- FUNCTION split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry)
 COMMENT ON FUNCTION road_graph.split_table_linestring_feature_by_point(_schema_name text, _table_name text, _feature_id integer, _point geometry) IS 'Splits a table linestring feature by a given point.
+
 The two new geometries follow the road direction, even if the feature is digitized in the opposite direction,
 like the geometries calculated from the references.
 The feature keeps the first part in the road direction, and a new feature is created with the second part.
+
 If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa,
 the references of the two features are calculated in the road direction (start before end):
 the references of the cut point become the end references of the feature and the start references of the new feature.
-The fields start_cumulative and end_cumulative are also set if they exist.';
+The fields start_cumulative and end_cumulative are also set if they exist.
+
+The lines connected to the feature are not modified by the trigger trg_update_managed_object_linked_geometries.';
 
 
 -- FUNCTION toggle_foreign_key_constraints(_toggle boolean)
@@ -352,6 +370,32 @@ and calculate their start and end points references.
 This method calculates the road cached objects to speed of the process
 for big roads with many edges
 ';
+
+
+-- FUNCTION update_managed_object_linked_geometries()
+COMMENT ON FUNCTION road_graph.update_managed_object_linked_geometries() IS 'Trigger function updating the lines of a managed object table
+which were connected to the start or the end of an updated line.
+
+The linked lines are the other lines of the same road whose start or end point touched (5 cm tolerance)
+the start or end point of the line before its modification:
+
+* an upstream linked line gets the new start references of the line as end references,
+* a downstream linked line gets the new end references of the line as start references,
+* the cumulative distances are also updated if the fields exist.
+
+Their geometry is built again with the function get_road_substring_from_references,
+keeping their offset and side: they are shortened or extended to stay connected.
+A linked line is not modified if its new references are not ordered (the line has been extended over it).
+
+It must be used in an AFTER UPDATE OF geom trigger, so that the references of the updated line
+are already calculated, for example by the trigger trg_calculate_managed_object_references.
+The function road_graph.add_managed_objects_triggers creates this trigger, named trg_update_managed_object_linked_geometries.
+
+The table must be registered in road_graph.managed_objects with a line geometry type, and have the fields
+road_code, start_marker_code, start_abscissa, end_marker_code and end_abscissa.
+
+The trigger is disabled by the session variables road.graph.disable.trigger
+or road.graph.disable.linked.geometries set to 1.';
 
 
 -- FUNCTION update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb)
@@ -495,7 +539,8 @@ COMMENT ON COLUMN road_graph.managed_objects.last_updated_objects_ids IS 'The li
 -- managed_objects.add_trigger_on_geom_change
 COMMENT ON COLUMN road_graph.managed_objects.add_trigger_on_geom_change IS 'If True, the function road_graph.add_managed_objects_triggers will create the trigger
 trg_calculate_managed_object_references on this table, which calculates the references
-of the features on insert or on geometry update.';
+of the features on insert or on geometry update, and for the line tables the trigger
+trg_update_managed_object_linked_geometries, which updates the lines connected to an updated line.';
 
 
 -- markers

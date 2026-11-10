@@ -2792,6 +2792,185 @@ def test_trigger_managed_line_references_follow_road_direction(rollback_db_conne
     assert list(row) == [2, 200.0, 2, 600.0]
 
 
+def test_trigger_update_managed_object_linked_geometries(rollback_db_connection: psycopg.Connection):
+    """The trigger function update_managed_object_linked_geometries updates the lines
+    which were connected to the start or the end of an updated line, to keep them connected.
+    The safety barrier 3 (D72, 2+100 -> 3+10) is split in two connected features:
+    A (upstream, id 3) and B (downstream).
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # References of the points at 20%, 60% and 80% of the initial line
+    cursor.execute("""
+        SELECT
+            (ref->>'marker_code')::integer, (ref->>'abscissa')::real
+        FROM (
+            SELECT road_graph.get_reference_from_point(
+                ST_LineInterpolatePoint(ST_GeometryN(b.geom, 1), r.ratio), b.road_code
+            ) AS ref, r.ratio
+            FROM managed.demo_safety_barriers AS b, (VALUES (0.2), (0.6), (0.8)) AS r(ratio)
+            WHERE b.id = 3
+        ) AS p
+        ORDER BY p.ratio
+    """)
+    references = cursor.fetchall()
+    assert len(references) == 3
+
+    # Triggers calculating the references of the updated line, then updating its linked lines
+    cursor.execute("""
+        CREATE TRIGGER trg_calculate_managed_object_references
+        BEFORE INSERT OR UPDATE OF geom ON managed.demo_safety_barriers
+        FOR EACH ROW EXECUTE PROCEDURE road_graph.calculate_managed_object_references()
+    """)
+    cursor.execute("""
+        CREATE TRIGGER trg_update_managed_object_linked_geometries
+        AFTER UPDATE OF geom ON managed.demo_safety_barriers
+        FOR EACH ROW EXECUTE PROCEDURE road_graph.update_managed_object_linked_geometries()
+    """)
+
+    # Split the safety barrier 3 at 40% of the line: the split must not be impacted by the trigger
+    cursor.execute("""
+        SELECT road_graph.split_table_linestring_feature_by_point(
+            'managed', 'demo_safety_barriers', 3,
+            (
+                SELECT ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4)
+                FROM managed.demo_safety_barriers WHERE id = 3
+            )
+        )->>'status'
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == "success"
+    cursor.execute("""
+        SELECT id, start_marker_code, start_abscissa, end_marker_code, end_abscissa
+        FROM managed.demo_safety_barriers
+        WHERE road_code = 'D72'
+        ORDER BY id
+    """)
+    rows = cursor.fetchall()
+    assert len(rows) == 2
+    feature_a, feature_b = rows
+    assert feature_a[0] == 3
+    feature_b_id = feature_b[0]
+    # The two features are connected, and the end of B has not been modified by the split
+    assert (feature_a[3], feature_a[4]) == (feature_b[1], feature_b[2])
+    assert (feature_b[3], feature_b[4]) == (3, 10.0)
+
+    def check_connected(expected_marker: int, expected_abscissa: float):
+        """Check that the end of A and the start of B have the expected references,
+        that they touch each other, and that the start of A and the end of B are not modified."""
+        cursor.execute(
+            """
+            SELECT
+                a.end_marker_code, round(a.end_abscissa::numeric, 1)::float,
+                b.start_marker_code, round(b.start_abscissa::numeric, 1)::float,
+                ST_Distance(
+                    ST_EndPoint(ST_GeometryN(a.geom, ST_NumGeometries(a.geom))),
+                    ST_StartPoint(ST_GeometryN(b.geom, 1))
+                ),
+                a.start_marker_code, round(a.start_abscissa::numeric, 1)::float,
+                b.end_marker_code, round(b.end_abscissa::numeric, 1)::float
+            FROM managed.demo_safety_barriers AS a, managed.demo_safety_barriers AS b
+            WHERE a.id = 3 AND b.id = %s
+            """,
+            (feature_b_id,),
+        )
+        row = cursor.fetchone()
+        assert row is not None
+        abscissa = round(expected_abscissa, 1)
+        assert list(row[0:4]) == [expected_marker, abscissa, expected_marker, abscissa]
+        # The lines touch each other
+        assert row[4] <= 0.05
+        assert list(row[5:9]) == [2, 100.0, 3, 10.0]
+
+    # The upstream line A is updated: the downstream line B follows its new end.
+    # A is shortened to 20% of the initial line (B is extended),
+    # then extended to 60% of the initial line (B is shortened)
+    for marker, abscissa in references[0:2]:
+        cursor.execute(
+            """
+            UPDATE managed.demo_safety_barriers
+            SET geom = ST_Multi(ST_GeomFromGeoJSON(
+                road_graph.get_road_substring_from_references(
+                    'D72', 2, 100, %s::integer, %s::real, 0, 'right'
+                )->>'geom'
+            ))
+            WHERE id = 3
+            """,
+            (marker, abscissa),
+        )
+        check_connected(marker, abscissa)
+
+    # The downstream line B is updated: the upstream line A follows its new start.
+    # B now starts at 80% of the initial line (A is extended)
+    marker, abscissa = references[2]
+    cursor.execute(
+        """
+        UPDATE managed.demo_safety_barriers
+        SET geom = ST_Multi(ST_GeomFromGeoJSON(
+            road_graph.get_road_substring_from_references(
+                'D72', %s::integer, %s::real, 3, 10, 0, 'right'
+            )->>'geom'
+        ))
+        WHERE id = %s
+        """,
+        (marker, abscissa, feature_b_id),
+    )
+    check_connected(marker, abscissa)
+
+
+def test_add_managed_objects_triggers(rollback_db_connection: psycopg.Connection):
+    """The function add_managed_objects_triggers creates the trigger calculating the references
+    on every requested table, and for the line tables the trigger updating the linked lines.
+    Each trigger is only created if it does not already exist.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+    cursor.execute("UPDATE road_graph.managed_objects SET add_trigger_on_geom_change = True")
+    sql = """
+        SELECT schema_name, table_name, trigger_name, trigger_status
+        FROM road_graph.add_managed_objects_triggers()
+    """
+
+    # First call: all the triggers are created
+    cursor.execute(sql)
+    assert [list(r) for r in cursor.fetchall()] == [
+        ["managed", "demo_trees", "trg_calculate_managed_object_references", "created"],
+        ["managed", "demo_safety_barriers", "trg_calculate_managed_object_references", "created"],
+        ["managed", "demo_safety_barriers", "trg_update_managed_object_linked_geometries", "created"],
+    ]
+
+    # Second call: the triggers already exist, they are not created again
+    cursor.execute(sql)
+    assert [list(r) for r in cursor.fetchall()] == [
+        ["managed", "demo_trees", "trg_calculate_managed_object_references", "already exists"],
+        ["managed", "demo_safety_barriers", "trg_calculate_managed_object_references", "already exists"],
+        ["managed", "demo_safety_barriers", "trg_update_managed_object_linked_geometries", "already exists"],
+    ]
+
+    # The triggers exist on the tables
+    cursor.execute("""
+        SELECT c.relname, t.tgname
+        FROM pg_trigger AS t
+        JOIN pg_class AS c ON c.oid = t.tgrelid
+        JOIN pg_namespace AS n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'managed' AND NOT t.tgisinternal
+        ORDER BY c.relname, t.tgname
+    """)
+    assert [list(r) for r in cursor.fetchall()] == [
+        ["demo_safety_barriers", "trg_calculate_managed_object_references"],
+        ["demo_safety_barriers", "trg_update_managed_object_linked_geometries"],
+        ["demo_trees", "trg_calculate_managed_object_references"],
+    ]
+
+    # Not requested
+    cursor.execute("UPDATE road_graph.managed_objects SET add_trigger_on_geom_change = False")
+    cursor.execute(sql)
+    assert [list(r) for r in cursor.fetchall()] == [
+        ["managed", "demo_trees", None, "not requested"],
+        ["managed", "demo_safety_barriers", None, "not requested"],
+    ]
+
+
 def test_update_managed_objects_algorithm_preserve_start_end_points(
     processing_provider: Provider, db_connection: psycopg.Connection
 ):
