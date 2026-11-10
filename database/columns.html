@@ -668,7 +668,7 @@
         "nullable": "",
         "autoUpdated": "",
         "defaultValue": "false",
-        "comments": "<p>If True, the function road_graph.add_managed_objects_triggers will create the trigger trg_calculate_managed_object_references on this table, which calculates the references of the features on insert or on geometry update.</p>"
+        "comments": "<p>If True, the function road_graph.add_managed_objects_triggers will create the trigger trg_calculate_managed_object_references on this table, which calculates the references of the features on insert or on geometry update, and for the line tables the trigger trg_update_managed_object_linked_geometries, which updates the lines connected to an updated line.</p>"
     },
     {
         "tableName": "markers",

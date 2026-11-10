@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>update_managed_object_linked_geometries()</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Trigger function updating the lines of a managed object table which were connected to the start or the end of an updated line.</p>
+<p>The linked lines are the other lines of the same road whose start or end point touched (5 cm tolerance) the start or end point of the line before its modification:</p>
+<ul>
+<li>an upstream linked line gets the new start references of the line as end references,</li>
+<li>a downstream linked line gets the new end references of the line as start references,</li>
+<li>the cumulative distances are also updated if the fields exist.</li>
+</ul>
+<p>Their geometry is built again with the function get_road_substring_from_references, keeping their offset and side: they are shortened or extended to stay connected. A linked line is not modified if its new references are not ordered (the line has been extended over it).</p>
+<p>It must be used in an AFTER UPDATE OF geom trigger, so that the references of the updated line are already calculated, for example by the trigger trg_calculate_managed_object_references. The function road_graph.add_managed_objects_triggers creates this trigger, named trg_update_managed_object_linked_geometries.</p>
+<p>The table must be registered in road_graph.managed_objects with a line geometry type, and have the fields road_code, start_marker_code, start_abscissa, end_marker_code and end_abscissa.</p>
+<p>The trigger is disabled by the session variables road.graph.disable.trigger or road.graph.disable.linked.geometries set to 1.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td></td>
+                                    <td></td>
+                                    <td>IN</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    new_jsonb jsonb;&#10;    old_jsonb jsonb;&#10;    managed_object record;&#10;    primary_key_field text;&#10;    old_end_points geometry;&#10;    linked record;&#10;    linked_jsonb jsonb;&#10;    linked_start record;&#10;    linked_end record;&#10;    start_marker_code integer;&#10;    start_abscissa real;&#10;    end_marker_code integer;&#10;    end_abscissa real;&#10;    cumulative_sql text;&#10;    substring_jsonb jsonb;&#10;    linked_geom geometry;&#10;    sql_text text;&#10;    updated_number integer &#61; 0;&#10;    -- Maximum distance between the end points of two lines considered as connected&#10;    tolerance constant real &#61; 0.05;&#10;BEGIN&#10;    -- Trigger disabled by session variable, for example when merging the editing session,&#10;    -- when the managed objects are updated from the road graph, when splitting or merging lines,&#10;    -- or when this trigger updates the linked lines (to avoid a cascade of updates)&#10;    IF road_graph.get_current_setting(&#39;road.graph.disable.trigger&#39;, &#39;0&#39;) &#61; &#39;1&#39;&#10;        OR road_graph.get_current_setting(&#39;road.graph.disable.linked.geometries&#39;, &#39;0&#39;) &#61; &#39;1&#39;&#10;    THEN&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    -- Only for the updates of the geometry&#10;    IF TG_OP !&#61; &#39;UPDATE&#39; OR NEW.geom IS NULL OR OLD.geom IS NULL&#10;        OR ST_Equals(NEW.geom, OLD.geom)&#10;    THEN&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    new_jsonb &#61; to_jsonb(NEW);&#10;    old_jsonb &#61; to_jsonb(OLD);&#10;&#10;    -- Check the table has the needed reference fields&#10;    IF NOT new_jsonb ?&amp; ARRAY[&#39;road_code&#39;, &#39;start_marker_code&#39;, &#39;start_abscissa&#39;, &#39;end_marker_code&#39;, &#39;end_abscissa&#39;] THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; does not have the reference fields needed to update the linked lines !&#39;,&#10;            TG_TABLE_SCHEMA, TG_TABLE_NAME;&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    -- Only for the lines registered as managed objects&#10;    SELECT o.*&#10;    INTO managed_object&#10;    FROM road_graph.managed_objects AS o&#10;    WHERE o.schema_name &#61; TG_TABLE_SCHEMA&#10;    AND o.table_name &#61; TG_TABLE_NAME&#10;    LIMIT 1&#10;    ;&#10;    IF managed_object IS NULL THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; is not registered as managed object in the road graph system !&#39;,&#10;            TG_TABLE_SCHEMA, TG_TABLE_NAME;&#10;        RETURN NEW;&#10;    END IF;&#10;    IF lower(managed_object.geometry_type) NOT IN (&#39;linestring&#39;, &#39;multilinestring&#39;) THEN&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    -- The linked lines follow the edited line only if it stays on the same road&#10;    IF Coalesce(trim(new_jsonb-&gt;&gt;&#39;road_code&#39;), &#39;&#39;) &#61; &#39;&#39;&#10;        OR new_jsonb-&gt;&gt;&#39;road_code&#39; IS DISTINCT FROM old_jsonb-&gt;&gt;&#39;road_code&#39;&#10;    THEN&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    -- Nothing to do if the references have not changed.&#10;    -- The references of NEW must have been calculated before, for example by the trigger&#10;    -- trg_calculate_managed_object_references (BEFORE trigger, run before this AFTER trigger)&#10;    IF (new_jsonb-&gt;&gt;&#39;start_marker_code&#39;, new_jsonb-&gt;&gt;&#39;start_abscissa&#39;)&#10;        IS NOT DISTINCT FROM (old_jsonb-&gt;&gt;&#39;start_marker_code&#39;, old_jsonb-&gt;&gt;&#39;start_abscissa&#39;)&#10;        AND (new_jsonb-&gt;&gt;&#39;end_marker_code&#39;, new_jsonb-&gt;&gt;&#39;end_abscissa&#39;)&#10;        IS NOT DISTINCT FROM (old_jsonb-&gt;&gt;&#39;end_marker_code&#39;, old_jsonb-&gt;&gt;&#39;end_abscissa&#39;)&#10;    THEN&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    -- Get the table primary key field&#10;    SELECT a.attname&#10;    INTO primary_key_field&#10;    FROM pg_index AS i&#10;    JOIN pg_attribute AS a ON a.attrelid &#61; i.indrelid AND a.attnum &#61; ANY(i.indkey)&#10;    WHERE i.indrelid &#61; TG_RELID AND i.indisprimary&#10;    LIMIT 1&#10;    ;&#10;    IF primary_key_field IS NULL THEN&#10;        RAISE NOTICE &#39;The table &quot;%&quot;.&quot;%&quot; does not have a primary key !&#39;, TG_TABLE_SCHEMA, TG_TABLE_NAME;&#10;        RETURN NEW;&#10;    END IF;&#10;&#10;    -- Start and end points of the line before its modification&#10;    old_end_points &#61; ST_Collect(&#10;        ST_StartPoint(ST_GeometryN(ST_Multi(OLD.geom), 1)),&#10;        ST_EndPoint(ST_GeometryN(ST_Multi(OLD.geom), ST_NumGeometries(ST_Multi(OLD.geom))))&#10;    );&#10;&#10;    -- Disable the triggers on the updated linked lines:&#10;    -- their references are set here, and they must not update their own linked lines&#10;    PERFORM set_config(&#39;road.graph.disable.trigger&#39;, &#39;1&#39;, true);&#10;    PERFORM set_config(&#39;road.graph.disable.linked.geometries&#39;, &#39;1&#39;, true);&#10;&#10;    -- Loop over the other lines of the same road&#10;    -- whose start or end point touched the start or end point of the line before its modification&#10;    sql_text &#61; format(&#10;        $SQL$&#10;        SELECT to_jsonb(t) AS feature&#10;        FROM %1$I.%2$I AS t&#10;        WHERE t.%3$I::text !&#61; $1&#10;        AND t.road_code &#61; $2&#10;        AND ST_DWithin(t.geom, $3, $4)&#10;        AND ST_DWithin(&#10;            ST_Collect(&#10;                ST_StartPoint(ST_GeometryN(ST_Multi(t.geom), 1)),&#10;                ST_EndPoint(ST_GeometryN(ST_Multi(t.geom), ST_NumGeometries(ST_Multi(t.geom))))&#10;            ),&#10;            $3, $4&#10;        )&#10;        $SQL$,&#10;        TG_TABLE_SCHEMA,&#10;        TG_TABLE_NAME,&#10;        primary_key_field&#10;    );&#10;    FOR linked IN EXECUTE sql_text&#10;        USING old_jsonb-&gt;&gt;primary_key_field, new_jsonb-&gt;&gt;&#39;road_code&#39;, old_end_points, tolerance&#10;    LOOP&#10;        linked_jsonb &#61; linked.feature;&#10;&#10;        -- Current references of the linked line, in the road direction&#10;        SELECT&#10;            (linked_jsonb-&gt;&gt;&#39;start_marker_code&#39;)::integer AS marker_code,&#10;            (linked_jsonb-&gt;&gt;&#39;start_abscissa&#39;)::real AS abscissa&#10;        INTO linked_start;&#10;        SELECT&#10;            (linked_jsonb-&gt;&gt;&#39;end_marker_code&#39;)::integer AS marker_code,&#10;            (linked_jsonb-&gt;&gt;&#39;end_abscissa&#39;)::real AS abscissa&#10;        INTO linked_end;&#10;        IF linked_start.marker_code IS NULL OR linked_start.abscissa IS NULL&#10;            OR linked_end.marker_code IS NULL OR linked_end.abscissa IS NULL&#10;        THEN&#10;            CONTINUE;&#10;        END IF;&#10;&#10;        start_marker_code &#61; linked_start.marker_code;&#10;        start_abscissa &#61; linked_start.abscissa;&#10;        end_marker_code &#61; linked_end.marker_code;&#10;        end_abscissa &#61; linked_end.abscissa;&#10;        cumulative_sql &#61; &#39;&#39;;&#10;&#10;        IF (linked_start.marker_code, linked_start.abscissa) &lt; (&#10;            (old_jsonb-&gt;&gt;&#39;start_marker_code&#39;)::integer, (old_jsonb-&gt;&gt;&#39;start_abscissa&#39;)::real&#10;        ) THEN&#10;            -- The linked line is upstream: it ended at the start of the line.&#10;            -- Its end must follow the new start of the line&#10;            IF (new_jsonb-&gt;&gt;&#39;start_marker_code&#39;, new_jsonb-&gt;&gt;&#39;start_abscissa&#39;)&#10;                IS NOT DISTINCT FROM (old_jsonb-&gt;&gt;&#39;start_marker_code&#39;, old_jsonb-&gt;&gt;&#39;start_abscissa&#39;)&#10;            THEN&#10;                CONTINUE;&#10;            END IF;&#10;            end_marker_code &#61; (new_jsonb-&gt;&gt;&#39;start_marker_code&#39;)::integer;&#10;            end_abscissa &#61; (new_jsonb-&gt;&gt;&#39;start_abscissa&#39;)::real;&#10;            IF linked_jsonb ? &#39;end_cumulative&#39; AND new_jsonb ? &#39;start_cumulative&#39; THEN&#10;                cumulative_sql &#61; format(&#39;, end_cumulative &#61; %L::real&#39;, new_jsonb-&gt;&gt;&#39;start_cumulative&#39;);&#10;            END IF;&#10;        ELSIF (linked_end.marker_code, linked_end.abscissa) &gt; (&#10;            (old_jsonb-&gt;&gt;&#39;end_marker_code&#39;)::integer, (old_jsonb-&gt;&gt;&#39;end_abscissa&#39;)::real&#10;        ) THEN&#10;            -- The linked line is downstream: it started at the end of the line.&#10;            -- Its start must follow the new end of the line&#10;            IF (new_jsonb-&gt;&gt;&#39;end_marker_code&#39;, new_jsonb-&gt;&gt;&#39;end_abscissa&#39;)&#10;                IS NOT DISTINCT FROM (old_jsonb-&gt;&gt;&#39;end_marker_code&#39;, old_jsonb-&gt;&gt;&#39;end_abscissa&#39;)&#10;            THEN&#10;                CONTINUE;&#10;            END IF;&#10;            start_marker_code &#61; (new_jsonb-&gt;&gt;&#39;end_marker_code&#39;)::integer;&#10;            start_abscissa &#61; (new_jsonb-&gt;&gt;&#39;end_abscissa&#39;)::real;&#10;            IF linked_jsonb ? &#39;start_cumulative&#39; AND new_jsonb ? &#39;end_cumulative&#39; THEN&#10;                cumulative_sql &#61; format(&#39;, start_cumulative &#61; %L::real&#39;, new_jsonb-&gt;&gt;&#39;end_cumulative&#39;);&#10;            END IF;&#10;        ELSE&#10;            -- The linked line overlaps the line: it is not modified&#10;            CONTINUE;&#10;        END IF;&#10;&#10;        -- The line has been extended over the whole linked line: it cannot be calculated&#10;        IF (start_marker_code, start_abscissa) &gt;&#61; (end_marker_code, end_abscissa) THEN&#10;            RAISE NOTICE &#39;The linked line &quot;%&quot;.&quot;%&quot; % &#61; % is not modified: its new start references % + % are not before its new end references % + %&#39;,&#10;                TG_TABLE_SCHEMA, TG_TABLE_NAME, primary_key_field, linked_jsonb-&gt;&gt;primary_key_field,&#10;                start_marker_code, start_abscissa, end_marker_code, end_abscissa&#10;            ;&#10;            CONTINUE;&#10;        END IF;&#10;&#10;        -- Build the new geometry of the linked line from its new references,&#10;        -- keeping its offset and side&#10;        BEGIN&#10;            substring_jsonb &#61; road_graph.get_road_substring_from_references(&#10;                linked_jsonb-&gt;&gt;&#39;road_code&#39;,&#10;                start_marker_code, start_abscissa,&#10;                end_marker_code, end_abscissa,&#10;                Coalesce((linked_jsonb-&gt;&gt;&#39;offset&#39;)::real, 0.0::real),&#10;                Coalesce(linked_jsonb-&gt;&gt;&#39;side&#39;, &#39;right&#39;)&#10;            );&#10;        EXCEPTION WHEN OTHERS THEN&#10;            RAISE NOTICE &#39;The geometry of the linked line &quot;%&quot;.&quot;%&quot; % &#61; % cannot be calculated: %&#39;,&#10;                TG_TABLE_SCHEMA, TG_TABLE_NAME, primary_key_field, linked_jsonb-&gt;&gt;primary_key_field, SQLERRM&#10;            ;&#10;            CONTINUE;&#10;        END;&#10;        linked_geom &#61; ST_GeomFromGeoJSON(substring_jsonb-&gt;&gt;&#39;geom&#39;);&#10;        IF linked_geom IS NULL OR ST_IsEmpty(linked_geom) THEN&#10;            CONTINUE;&#10;        END IF;&#10;        linked_geom &#61; ST_SetSRID(linked_geom, 2154);&#10;&#10;        -- Adapt the geometry to the type of the table&#10;        IF lower(managed_object.geometry_type) &#61; &#39;linestring&#39; THEN&#10;            linked_geom &#61; ST_LineMerge(linked_geom);&#10;            IF GeometryType(linked_geom) !&#61; &#39;LINESTRING&#39; THEN&#10;                RAISE NOTICE &#39;The geometry of the linked line &quot;%&quot;.&quot;%&quot; % &#61; % is not a single linestring&#39;,&#10;                    TG_TABLE_SCHEMA, TG_TABLE_NAME, primary_key_field, linked_jsonb-&gt;&gt;primary_key_field&#10;                ;&#10;                CONTINUE;&#10;            END IF;&#10;        ELSE&#10;            linked_geom &#61; ST_Multi(linked_geom);&#10;        END IF;&#10;&#10;        -- Update the geometry and the references of the linked line&#10;        EXECUTE format(&#10;            $SQL$&#10;            UPDATE %1$I.%2$I&#10;            SET&#10;                geom &#61; $1,&#10;                start_marker_code &#61; $2, start_abscissa &#61; $3,&#10;                end_marker_code &#61; $4, end_abscissa &#61; $5&#10;                %4$s&#10;            WHERE %3$I::text &#61; $6&#10;            $SQL$,&#10;            TG_TABLE_SCHEMA,&#10;            TG_TABLE_NAME,&#10;            primary_key_field,&#10;            cumulative_sql&#10;        )&#10;        USING&#10;            linked_geom,&#10;            start_marker_code, start_abscissa,&#10;            end_marker_code, end_abscissa,&#10;            linked_jsonb-&gt;&gt;primary_key_field&#10;        ;&#10;        updated_number &#61; updated_number + 1;&#10;    END LOOP;&#10;&#10;    -- Re-enable the triggers&#10;    PERFORM set_config(&#39;road.graph.disable.linked.geometries&#39;, &#39;0&#39;, true);&#10;    PERFORM set_config(&#39;road.graph.disable.trigger&#39;, &#39;0&#39;, true);&#10;&#10;    IF updated_number &gt; 0 THEN&#10;        RAISE NOTICE &#39;Number of linked lines updated in &quot;%&quot;.&quot;%&quot;: %&#39;, TG_TABLE_SCHEMA, TG_TABLE_NAME, updated_number;&#10;    END IF;&#10;&#10;    RETURN NEW;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

@@ -1818,7 +1818,9 @@ geometry could not be created. The most common cause is a point more than
 <p>This tool adds a button to the popup of the features of a line layer.
 It splits a line in two features at a point.</p>
 <p>The button is only displayed if the user can <strong>modify the geometry</strong> and
-<strong>create features</strong> in this layer, in the Lizmap editing configuration.</p>
+<strong>create features</strong> in this layer, in the Lizmap editing configuration.
+These rights can be changed with the constant <code>ROAD_SPLIT_NEEDED_RIGHTS</code> of the script
+(see <a href="#4-configure-the-script">Configure the script</a>).</p>
 <ol>
 <li>Open the <strong>Graphe routier</strong> panel and click on the line where it must be split.
    A red point is displayed on the map.</li>
@@ -1839,7 +1841,10 @@ the clicked point.</p>
 <p>This tool adds a button to the popup of the features of a line layer.
 It merges two features of the same layer into one feature.</p>
 <p>The button is only displayed if the user can <strong>modify the geometry</strong> and
-<strong>delete features</strong> in this layer, in the Lizmap editing configuration.</p>
+<strong>create features</strong> in this layer, in the Lizmap editing configuration.
+The right to delete features is not required by default, even if the second feature is deleted.
+These rights can be changed with the constant <code>ROAD_MERGE_NEEDED_RIGHTS</code> of the script
+(see <a href="#4-configure-the-script">Configure the script</a>).</p>
 <ol>
 <li>In the popup of the first line, click <strong>Choose this feature to merge</strong>. The button label becomes
    <strong>Feature chosen to merge</strong>.
@@ -1968,8 +1973,21 @@ of the edited geometry.</p>
 <td><code>road_order</code></td>
 <td>Field used to sort the list of roads</td>
 </tr>
+<tr>
+<td><code>ROAD_SPLIT_NEEDED_RIGHTS</code></td>
+<td><code>['createFeature', 'modifyGeometry']</code></td>
+<td>Editing rights needed on a line layer to display the split button</td>
+</tr>
+<tr>
+<td><code>ROAD_MERGE_NEEDED_RIGHTS</code></td>
+<td><code>['createFeature', 'modifyGeometry']</code></td>
+<td>Editing rights needed on a line layer to display the merge button. Add <code>'deleteFeature'</code> to also require the right to delete features</td>
+</tr>
 </tbody>
 </table>
+<p>The editing rights are the capabilities of the layer in the Lizmap editing configuration:
+<code>createFeature</code> (create features), <code>modifyAttribute</code> (modify the attributes),
+<code>modifyGeometry</code> (modify the geometry) and <code>deleteFeature</code> (delete features).</p>
 <p>Do not edit the code below the <code>END CONFIGURATION</code> comment.</p>
 <h3 id="5-add-the-files-to-lizmap">5. Add the files to Lizmap<a class="headerlink" href="#5-add-the-files-to-lizmap" title="Permanent link">#</a></h3>
 <p>Follow the Lizmap documentation:

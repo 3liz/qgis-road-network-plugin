@@ -302,7 +302,10 @@
                                         <td>false</td>
                                         <td>json</td>
                                         <td>INVOKER</td>
-                                        <td><p>Splits a table linestring feature by a given point. The two new geometries follow the road direction, even if the feature is digitized in the opposite direction, like the geometries calculated from the references. The feature keeps the first part in the road direction, and a new feature is created with the second part. If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa, the references of the two features are calculated in the road direction (start before end): the references of the cut point become the end references of the feature and the start references of the new feature. The fields start_cumulative and end_cumulative are also set if they exist.</p></td>
+                                        <td><p>Splits a table linestring feature by a given point.</p>
+<p>The two new geometries follow the road direction, even if the feature is digitized in the opposite direction, like the geometries calculated from the references. The feature keeps the first part in the road direction, and a new feature is created with the second part.</p>
+<p>If the table has the fields start_marker_code, start_abscissa, end_marker_code and end_abscissa, the references of the two features are calculated in the road direction (start before end): the references of the cut point become the end references of the feature and the start references of the new feature. The fields start_cumulative and end_cumulative are also set if they exist.</p>
+<p>The lines connected to the feature are not modified by the trigger trg_update_managed_object_linked_geometries.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/reorder_multilinestring_parts___27b0cac3.html">reorder_multilinestring_parts(_multilinestring geometry, _road_code text)</a></td>
@@ -312,6 +315,25 @@
                                         <td>geometry</td>
                                         <td>INVOKER</td>
                                         <td><p>Reorder the parts of the given road MULTILINESTRING based on the graph. For each part, the references of the start &amp; end points is calculated, which helps to reorder the parts. We also reverse the geometry if needed (since the ST_OffsetCurve sometimes does not respect the node order)</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/update_managed_object_linked_ge_a13184cd.html">update_managed_object_linked_geometries()</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>trigger</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Trigger function updating the lines of a managed object table which were connected to the start or the end of an updated line.</p>
+<p>The linked lines are the other lines of the same road whose start or end point touched (5 cm tolerance) the start or end point of the line before its modification:</p>
+<ul>
+<li>an upstream linked line gets the new start references of the line as end references,</li>
+<li>a downstream linked line gets the new end references of the line as start references,</li>
+<li>the cumulative distances are also updated if the fields exist.</li>
+</ul>
+<p>Their geometry is built again with the function get_road_substring_from_references, keeping their offset and side: they are shortened or extended to stay connected. A linked line is not modified if its new references are not ordered (the line has been extended over it).</p>
+<p>It must be used in an AFTER UPDATE OF geom trigger, so that the references of the updated line are already calculated, for example by the trigger trg_calculate_managed_object_references. The function road_graph.add_managed_objects_triggers creates this trigger, named trg_update_managed_object_linked_geometries.</p>
+<p>The table must be registered in road_graph.managed_objects with a line geometry type, and have the fields road_code, start_marker_code, start_abscissa, end_marker_code and end_abscissa.</p>
+<p>The trigger is disabled by the session variables road.graph.disable.trigger or road.graph.disable.linked.geometries set to 1.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/aa_before_record_insert_or_upda_e79aa80d.html">aa_before_record_insert_or_update()</a></td>
@@ -386,7 +408,11 @@
                                         <td>false</td>
                                         <td>json</td>
                                         <td>INVOKER</td>
-                                        <td><p>Merge two linestring features of the same table. The feature A, chosen first by the user, is kept with its field values and gets the merged geometry, in the road direction. The feature B is deleted. If the table has the references fields, the references of the feature A (and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction. @param _schema_name Schema of the table @param _table_name Name of the table @param _feature_id_a Primary key value of the feature to keep @param _feature_id_b Primary key value of the feature to merge into the feature A, then deleted @return JSON object with the keys status (success or error) and message</p></td>
+                                        <td><p>Merge two linestring features of the same table.</p>
+<p>The feature A, chosen first by the user, is kept with its field values and gets the merged geometry, in the road direction. The feature B is deleted.</p>
+<p>If the table has the references fields, the references of the feature A (and its cumulative distances if the fields exist) are calculated from the merged geometry, in the road direction.</p>
+<p>The lines connected to the features are not modified by the trigger trg_update_managed_object_linked_geometries.</p>
+<p>It returns a JSON object with the keys status (success or error) and message.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/update_table_geometries_from_re_e59a6026.html">update_table_geometries_from_references(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb)</a></td>
@@ -429,9 +455,16 @@
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
                                         <td>false</td>
-                                        <td>TABLE(schema_name text, table_name text, trigger_status text)</td>
+                                        <td>TABLE(schema_name text, table_name text, trigger_name text, trigger_status text)</td>
                                         <td>INVOKER</td>
-                                        <td><p>Create the trigger trg_calculate_managed_object_references for each table listed in road_graph.managed_objects with the column add_trigger_on_geom_change set to True, if it does not already exist. This trigger calculates the references of the inserted or updated features with the function road_graph.calculate_managed_object_references. It returns one line per managed object with its schema name, table name and trigger status: created, already exists, not requested, table not found or geom column not found.</p></td>
+                                        <td><p>Create the managed objects triggers on each table listed in road_graph.managed_objects with the column add_trigger_on_geom_change set to True.</p>
+<p>Each trigger is only created if it does not already exist:</p>
+<ul>
+<li>trg_calculate_managed_object_references, for all the geometry types: it calculates the references of the inserted or updated features with the function road_graph.calculate_managed_object_references,</li>
+<li>trg_update_managed_object_linked_geometries, only for the linestring and multilinestring tables: it updates the lines connected to an updated line with the function road_graph.update_managed_object_linked_geometries.</li>
+</ul>
+<p>It returns one line per trigger with the schema name, table name, trigger name and trigger status: created or already exists.</p>
+<p>If no trigger can be created for a managed object, it returns one line with an empty trigger name and the status: not requested, table not found or geom column not found.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/get_road_point_from_reference___ca3474fc.html">get_road_point_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text)</a></td>
@@ -476,7 +509,8 @@
                                         <td>false</td>
                                         <td>trigger</td>
                                         <td>INVOKER</td>
-                                        <td><p>Trigger function allowing to update the references of an inserted or update managed object feature. For a line, the start and end references follow the road direction (start before end), even if the line is digitized in the opposite direction of the road.</p></td>
+                                        <td><p>Trigger function allowing to update the references of an inserted or update managed object feature.</p>
+<p>For a line, the start and end references follow the road direction (start before end), even if the line is digitized in the opposite direction of the road.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/editing_survey___e14344a2.html">editing_survey()</a></td>
