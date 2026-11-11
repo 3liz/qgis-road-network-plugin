@@ -16,11 +16,16 @@ from qgis.core import (
     QgsPointXY,
     QgsProcessingException,
     QgsProviderConnectionException,
+    QgsDataSourceUri,
+    QgsProject,
     QgsProviderRegistry,
+    QgsRuleBasedRenderer,
     QgsVectorLayer,
     QgsWkbTypes,
 )
 
+from roadnetwork.actions import runner
+from roadnetwork.graph_issues import ISSUE_ACTIONS, ISSUES_RUN_PROPERTY, setup_issues_layer
 from roadnetwork.plugin_tools.feedback import LoggerProcessingFeedBack
 from roadnetwork.plugin_tools.resources import (
     available_migrations,
@@ -3636,8 +3641,15 @@ def test_check_graph_architecture(rollback_db_connection: psycopg.Connection):
 
     # The checks are run on the production and editing schemas, with the default options
     for schema in ("road_graph", "road_graph_editing"):
-        cursor.execute(f"SELECT id, check_code, details FROM {schema}.check_graph() WHERE check_code = 'T99'")
+        cursor.execute(f"SELECT id, check_code, details FROM {schema}.check_graph(ARRAY['T99'])")
         assert cursor.fetchall() == [(1, "T99", {"tolerance": 1})]
+
+    # The ids follow each other when several checks are run
+    cursor.execute("SELECT count(*), count(DISTINCT id), min(id), max(id) FROM road_graph.check_graph()")
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0] == row[1] == row[3]
+    assert row[2] == 1
 
     # The given options override the default options
     cursor.execute("""
@@ -3713,11 +3725,28 @@ def test_check_graph_algorithms(processing_provider: Provider):
         "details",
         "fix_action",
         "fix_params",
+        "fix_status",
+        "fix_message",
     ]
     assert points.fields().names() == expected_fields
     assert lines.fields().names() == expected_fields
     for feature in points.getFeatures():
         assert feature["schema_name"] == "road_graph_editing"
+
+    # Set up of the issues layers, done when they are loaded in the project:
+    # actions run by the plugin, translated labels of the values, style
+    setup_issues_layer(points, "test", "run_1")
+    assert points.customProperty(ISSUES_RUN_PROPERTY) == "run_1"
+    commands = [action.command() for action in points.actions().actions()]
+    assert len(commands) == 3
+    for name in ISSUE_ACTIONS:
+        assert any(f"'{name}'" in command for command in commands)
+    assert points.editorWidgetSetup(points.fields().indexOf("fix_status")).type() == "ValueMap"
+    assert isinstance(points.renderer(), QgsRuleBasedRenderer)
+    assert len(points.renderer().rootRule().children()) == 3
+    # A second set up does not duplicate the actions
+    setup_issues_layer(points, "test", "run_1")
+    assert len(points.actions().actions()) == 3
 
     # Fix the issues of the editing session
     output = processing.run(
@@ -3740,3 +3769,336 @@ def test_check_graph_algorithms(processing_provider: Provider):
             },
             feedback=LoggerProcessingFeedBack(),
         )
+
+
+def test_check_graph_crossing_edges(rollback_db_connection: psycopg.Connection):
+    """Check G01: edges crossing or touching each other without being split by a node.
+    The test data contain many crossings of roads on bridges, and some roads arriving on another road
+    without splitting it. The issues are fixed in an editing session created around one of them.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Issues of the production schema: the edges touching each other must be cut,
+    # the action for the edges crossing each other must be chosen (bridges)
+    cursor.execute("""
+        SELECT details->>'crossing_type', fix_action, count(*)
+        FROM road_graph.check_graph(ARRAY['G01'])
+        GROUP BY 1, 2
+        ORDER BY 1, 2
+    """)
+    counts = {(row[0], row[1]): row[2] for row in cursor.fetchall()}
+    assert set(counts.keys()) == {("crossing", None), ("touching", "cut_edges")}
+
+    # The option crossing_fix_action gives the action for the edges crossing each other
+    cursor.execute("""
+        SELECT DISTINCT fix_action
+        FROM road_graph.check_graph(ARRAY['G01'], NULL, '{"G01": {"crossing_fix_action": "mark_as_bridge"}}')
+        WHERE details->>'crossing_type' = 'crossing'
+    """)
+    assert cursor.fetchall() == [("mark_as_bridge",)]
+    with pytest.raises(psycopg.errors.RaiseException, match="crossing_fix_action of the check G01"):
+        cursor.execute("""
+            SELECT * FROM road_graph.check_graph(ARRAY['G01'], NULL, '{"G01": {"crossing_fix_action": "x"}}')
+        """)
+    rollback_db_connection.rollback()
+
+    # The road codes filter keeps the issues of the given roads
+    cursor.execute("""
+        SELECT DISTINCT d.road_code
+        FROM road_graph.check_graph(ARRAY['G01'], ARRAY['D613']) AS i,
+        jsonb_array_elements_text(i.details->'road_codes') AS d(road_code)
+    """)
+    assert "D613" in [row[0] for row in cursor.fetchall()]
+
+    # Editing session around a touching issue with crossing issues nearby
+    cursor.execute("""
+        WITH issues AS (
+            SELECT * FROM road_graph.check_graph(ARRAY['G01'])
+        ),
+        touching AS (
+            SELECT t.geom
+            FROM issues AS t
+            WHERE t.details->>'crossing_type' = 'touching'
+            ORDER BY (
+                SELECT count(*) FROM issues AS c
+                WHERE c.details->>'crossing_type' = 'crossing' AND ST_DWithin(c.geom, t.geom, 300)
+            ) DESC, t.id
+            LIMIT 1
+        )
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G01 test', 'test', ST_Envelope(ST_Buffer(t.geom, 300))
+        FROM touching AS t
+        RETURNING id
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+
+    def editing_issues() -> list:
+        """Get the issues G01 of the editing session, inside its polygon."""
+        cursor.execute("""
+            SELECT i.details->>'crossing_type', i.fix_params, i.edge_ids
+            FROM road_graph_editing.check_graph(ARRAY['G01']) AS i
+            JOIN road_graph.editing_sessions AS s ON ST_Intersects(s.geom, i.geom)
+            WHERE s.label = 'G01 test'
+            ORDER BY i.id
+        """)
+        return cursor.fetchall()
+
+    issues = editing_issues()
+    touching = [i for i in issues if i[0] == "touching"]
+    crossing = [i for i in issues if i[0] == "crossing"]
+    assert touching
+    assert len(crossing) >= 2
+
+    def fix(action: str, params: dict) -> dict:
+        """Fix an issue in the editing session."""
+        cursor.execute("SELECT road_graph_editing.fix_graph_issue(%s, %s)", (action, json.dumps(params)))
+        row = cursor.fetchone()
+        assert row is not None
+        return row[0]
+
+    # Touching edges: the edge is split by the existing node, then the issue is skipped
+    result = fix("cut_edges", touching[0][1])
+    assert result["status"] == "success", result
+    assert fix("cut_edges", touching[0][1])["status"] == "skipped"
+
+    # Crossing edges connected: a node is created and the two edges are split
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
+    edges_count = cursor.fetchone()[0]
+    result = fix("cut_edges", crossing[0][1])
+    assert result["status"] == "success", result
+    assert "new node" in result["message"]
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
+    assert cursor.fetchone()[0] == edges_count + 2
+
+    # Crossing edges on a bridge: only the given edge is marked
+    params = dict(crossing[1][1], edge_id=crossing[1][2][0])
+    result = fix("mark_as_bridge", params)
+    assert result["status"] == "success", result
+    cursor.execute(
+        "SELECT id, no_intersection_cutting FROM road_graph_editing.edges WHERE id = ANY(%s) ORDER BY id",
+        (crossing[1][2],),
+    )
+    assert [r[1] for r in cursor.fetchall()] == [True, False]
+    assert fix("mark_as_bridge", params)["status"] == "skipped"
+
+    # The fixed issues are not found anymore
+    remaining = [i[1]["point"] for i in editing_issues()]
+    for issue in (touching[0], crossing[0], crossing[1]):
+        assert issue[1]["point"] not in remaining
+
+    # The production schema is not modified
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G01'])")
+    assert cursor.fetchone()[0] == sum(counts.values())
+
+
+def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest.MonkeyPatch):
+    """The actions of the issues layers fix an issue with a right click,
+    store the result in the issues layers, and select the edges of an issue.
+    The algorithm Fix the road graph issues skips the issues already fixed.
+    An editing session is created around an issue G01, then dropped at the end of the test."""
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection = metadata.findConnection("test")
+    project = QgsProject.instance()
+
+    # Editing session around a touching issue G01, with crossing issues nearby
+    data = connection.executeSql("""
+        WITH issues AS (
+            SELECT * FROM road_graph.check_graph(ARRAY['G01'])
+        ),
+        touching AS (
+            SELECT t.geom
+            FROM issues AS t
+            WHERE t.details->>'crossing_type' = 'touching'
+            ORDER BY (
+                SELECT count(*) FROM issues AS c
+                WHERE c.details->>'crossing_type' = 'crossing' AND ST_DWithin(c.geom, t.geom, 300)
+            ) DESC, t.id
+            LIMIT 1
+        )
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'Actions test', 'test', ST_Envelope(ST_Buffer(t.geom, 300))
+        FROM touching AS t
+        RETURNING id
+    """)
+    editing_session_id = data[0][0]
+    connection.executeSql(f"SELECT road_graph.copy_data_to_editing_session({editing_session_id})")
+
+    # Edges layer of the editing session
+    uri = QgsDataSourceUri(connection.uri())
+    uri.setDataSource("road_graph_editing", "edges", "geom", "", "id")
+    edges_layer = QgsVectorLayer(uri.uri(), "edges copie", "postgres")
+    assert edges_layer.isValid()
+
+    points = lines = None
+    try:
+        # Issues of the editing session
+        output = processing.run(
+            f"{processing_provider.id()}:check_graph",
+            {
+                "CONNECTION_NAME": "test",
+                "SCHEMA": 0,
+                "CHECKS": "G01",
+                "OUTPUT_POINTS": "TEMPORARY_OUTPUT",
+                "OUTPUT_LINES": "TEMPORARY_OUTPUT",
+            },
+            feedback=LoggerProcessingFeedBack(),
+        )
+        points = output["OUTPUT_POINTS"]
+        lines = output["OUTPUT_LINES"]
+        setup_issues_layer(points, "test", "actions_test")
+        setup_issues_layer(lines, "test", "actions_test")
+        project.addMapLayers([points, lines, edges_layer])
+
+        # Issues inside the editing session polygon
+        data = connection.executeSql(f"""
+            SELECT ST_AsText(geom) FROM road_graph.editing_sessions WHERE id = {editing_session_id}
+        """)
+        polygon = QgsGeometry.fromWkt(data[0][0])
+        issues = [f for f in points.getFeatures() if polygon.intersects(f.geometry())]
+        touching = next(f for f in issues if json.loads(f["details"])["crossing_type"] == "touching")
+        crossings = [f for f in issues if json.loads(f["details"])["crossing_type"] == "crossing"]
+        assert len(crossings) >= 2
+
+        def issue_values(layer: QgsVectorLayer, issue_id: int) -> list:
+            """Get the fix action, status and message of an issue."""
+            feature = next(f for f in layer.getFeatures() if f["id"] == issue_id)
+            return [feature["fix_action"], feature["fix_status"], feature["fix_message"]]
+
+        # Fix the touching issue: the result is stored in the points and lines layers
+        assert runner.run("fix_graph_issue", layer_id=points.id(), issue_id=touching["id"]) is None
+        values = issue_values(points, touching["id"])
+        assert values[0:2] == ["cut_edges", "success"], values
+        assert issue_values(lines, touching["id"])[1] == "success"
+        runner.run("fix_graph_issue", layer_id=points.id(), issue_id=touching["id"])
+        assert issue_values(points, touching["id"])[1] == "skipped"
+
+        # A crossing issue has no fix action: nothing is done
+        runner.run("fix_graph_issue", layer_id=points.id(), issue_id=crossings[0]["id"])
+        assert issue_values(points, crossings[0]["id"]) == [None, None, None]
+
+        # Choose the fix of a crossing issue: mark only its second edge as a bridge
+        answers = iter([1, 2])
+
+        def get_item(parent, title, label, items, current, editable):
+            """Choose the item at the next index of the answers."""
+            return items[next(answers)], True
+
+        monkeypatch.setattr("roadnetwork.actions.graph_issues.QInputDialog.getItem", get_item)
+        runner.run("choose_graph_issue_fix", layer_id=points.id(), issue_id=crossings[0]["id"])
+        values = issue_values(points, crossings[0]["id"])
+        assert values[0:2] == ["mark_as_bridge", "success"], values
+        edge_ids = [int(i) for i in crossings[0]["edge_ids"].split(",")]
+        data = connection.executeSql(f"""
+            SELECT no_intersection_cutting FROM road_graph_editing.edges
+            WHERE id IN ({edge_ids[0]}, {edge_ids[1]}) ORDER BY id
+        """)
+        assert [row[0] for row in data] == [False, True]
+
+        # Select the edges of an issue
+        runner.run("select_graph_issue_edges", layer_id=points.id(), issue_id=crossings[1]["id"])
+        selected = sorted(f["id"] for f in edges_layer.selectedFeatures())
+        assert selected == sorted(int(i) for i in crossings[1]["edge_ids"].split(","))
+
+        # The algorithm skips the issues already fixed, and the issues without fix action
+        output = processing.run(
+            f"{processing_provider.id()}:fix_graph_issues",
+            {"CONNECTION_NAME": "test", "INPUT": points},
+            feedback=LoggerProcessingFeedBack(),
+        )
+        assert output["ERRORS"] == 0
+    finally:
+        project.removeMapLayers([layer.id() for layer in (points, lines, edges_layer) if layer is not None])
+        connection.executeSql(f"SELECT road_graph.drop_editing_session({editing_session_id})")
+
+
+def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection):
+    """Check G02: edges ending near another edge without being connected to it.
+    The issues are fixed in an editing session created around the largest gap.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Issues of the production schema: the distance is lower than the default tolerance of 2 m
+    cursor.execute("""
+        SELECT count(*), max((details->>'distance')::numeric)::float, bool_and(fix_action = 'extend_edge')
+        FROM road_graph.check_graph(ARRAY['G02'])
+    """)
+    count, max_distance, all_extend = cursor.fetchone()
+    assert count > 0
+    assert max_distance <= 2
+    assert all_extend
+
+    # The tolerance can be changed
+    cursor.execute("""
+        SELECT count(*), max((details->>'distance')::numeric)::float
+        FROM road_graph.check_graph(ARRAY['G02'], NULL, '{"G02": {"tolerance": 0.5}}')
+    """)
+    small_count, small_max_distance = cursor.fetchone()
+    assert small_count < count
+    assert small_max_distance <= 0.5
+
+    # Editing session around the largest gap
+    cursor.execute("""
+        WITH issue AS (
+            SELECT geom
+            FROM road_graph.check_graph(ARRAY['G02'])
+            ORDER BY (details->>'distance')::numeric DESC
+            LIMIT 1
+        )
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G02 test', 'test', ST_Envelope(ST_Buffer(i.geom, 100))
+        FROM issue AS i
+        RETURNING id
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+
+    cursor.execute("""
+        SELECT i.fix_params, i.edge_ids, i.node_ids
+        FROM road_graph_editing.check_graph(ARRAY['G02']) AS i
+        JOIN road_graph.editing_sessions AS s ON ST_Intersects(s.geom, i.geom)
+        WHERE s.label = 'G02 test'
+        ORDER BY (i.details->>'distance')::numeric DESC
+        LIMIT 1
+    """)
+    params, _edge_ids, node_ids = cursor.fetchone()
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
+    edges_count = cursor.fetchone()[0]
+
+    def fix() -> dict:
+        """Fix the issue in the editing session."""
+        cursor.execute("SELECT road_graph_editing.fix_graph_issue('extend_edge', %s)", (json.dumps(params),))
+        row = cursor.fetchone()
+        assert row is not None
+        return row[0]
+
+    result = fix()
+    assert result["status"] == "success", result
+
+    # The node of the free end has been moved to the point to join, and the other edge has been split there
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
+    assert cursor.fetchone()[0] == edges_count + 1
+    cursor.execute(
+        """
+        SELECT
+            ST_Distance(n.geom, ST_GeomFromEWKT(%s)),
+            (SELECT count(*) FROM road_graph_editing.edges AS e WHERE %s IN (e.start_node, e.end_node))
+        FROM road_graph_editing.nodes AS n
+        WHERE n.id = %s
+        """,
+        (params["target"], node_ids[0], node_ids[0]),
+    )
+    distance, edges_at_node = cursor.fetchone()
+    # The coordinates of the edges are rounded to 10 cm by the triggers
+    assert distance < 0.1
+    assert edges_at_node == 3
+
+    # The issue is fixed
+    assert fix()["status"] == "skipped"
+    cursor.execute(
+        "SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G02']) WHERE fix_params->>'point' = %s",
+        (params["point"],),
+    )
+    assert cursor.fetchone()[0] == 0

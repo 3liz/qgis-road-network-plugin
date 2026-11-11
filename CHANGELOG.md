@@ -12,6 +12,14 @@
   SQL functions `check_graph` and `fix_graph_issue`, and table `glossary_graph_check` listing the checks
   and their default options, to find the issues of the road graph,
   for example after an import, and fix them in an editing session (migration `upgrade_to_44.sql`)
+* **Road graph checks**: the layers created by the algorithm `Check the road graph` have actions to fix an issue
+  with a right click (`Fix this issue`, `Choose the fix of this issue…`), or to select its edges,
+  a style showing the fixed issues in grey, and the fields `fix_status` and `fix_message` storing the result of the fixes
+* **Road graph checks** - G01: edges crossing or touching each other without being split by a node.
+  The edges touching each other are fixed by a node splitting them, and the edges crossing each other
+  by a node or by the field `no_intersection_cutting` (bridge, tunnel), chosen for each issue
+* **Road graph checks** - G02: edges ending near another edge without being connected to it (T junction),
+  fixed by extending the edge to the other edge, which is split there
 
 ## 0.6.4 - 2026-11-12
 

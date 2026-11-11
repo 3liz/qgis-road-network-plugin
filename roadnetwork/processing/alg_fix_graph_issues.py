@@ -1,27 +1,25 @@
-import json
-
-from psycopg2 import connect
-from psycopg2 import sql as pg_sql
-
 from qgis.core import (
-    QgsDataSourceUri,
     QgsProcessing,
+    QgsProcessingAlgorithm,
     QgsProcessingException,
     QgsProcessingOutputNumber,
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterProviderConnection,
     QgsProject,
-    QgsProviderConnectionException,
     QgsProviderRegistry,
 )
 
+from ..graph_issues import (
+    EDITING_SCHEMA,
+    ISSUES_RUN_PROPERTY,
+    fix_status_labels,
+    run_fix,
+    set_issue_fix_result,
+)
 from ..plugin_tools.i18n import tr
 from ..plugin_tools.resources import plugin_name_normalized
 from .base_algorithm import BaseProcessingAlgorithm
 from .tools import get_connection_name
-
-# The issues can only be fixed in the editing session
-EDITING_SCHEMA = "road_graph_editing"
 
 # Fields needed in the input layer, created by the algorithm Check the road graph
 NEEDED_FIELDS = ("id", "schema_name", "check_code", "fix_action", "fix_params")
@@ -39,6 +37,10 @@ class FixGraphIssues(BaseProcessingAlgorithm):
 
     def displayName(self):
         return tr("Fix the road graph issues")
+
+    def flags(self):
+        # The issues layers of the project are updated with the result of the fixes
+        return super().flags() | QgsProcessingAlgorithm.FlagNoThreading
 
     def group(self):
         return tr("Road graph checks")
@@ -59,6 +61,12 @@ class FixGraphIssues(BaseProcessingAlgorithm):
             "Only the issues with a fix action are fixed: the others must be fixed manually. "
             "The issues are fixed in the order of their check codes. "
             "An issue already fixed by a previous action is skipped."
+            "\n"
+            "\n"
+            "The result of each fix is stored in the fields fix_status and fix_message of the issues layers. "
+            "If the layers of the editing session are in editing mode, "
+            "the fixes are run in their transaction: "
+            "save the modifications afterwards."
             "\n"
             "\n"
             "Run the algorithm Check the road graph again afterwards to check the result."
@@ -128,6 +136,10 @@ class FixGraphIssues(BaseProcessingAlgorithm):
                         "run the algorithm Check the road graph on the schema {}."
                     ).format(EDITING_SCHEMA)
                 )
+            # Issue already fixed, for example with a right click
+            has_status = feature.fields().indexOf("fix_status") >= 0
+            if has_status and feature["fix_status"] in ("success", "skipped"):
+                continue
             if not feature["fix_action"]:
                 manual_count += 1
                 continue
@@ -138,37 +150,34 @@ class FixGraphIssues(BaseProcessingAlgorithm):
         if manual_count:
             feedback.pushInfo(tr("{} issue(s) must be fixed manually.").format(manual_count))
 
+        # The layer of the issues, to store the result of the fixes in the issues layers of the same run
+        layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
+        run_id = layer.customProperty(ISSUES_RUN_PROPERTY) if layer else None
+        project = context.project() or QgsProject.instance()
+
         # Fix each issue
+        # If the layers of the editing session are in editing mode, the fixes are run in their transaction
         counts = {"success": 0, "skipped": 0, "error": 0}
-        pg_conn = connect(QgsDataSourceUri(connection.uri()).connectionInfo())
-        try:
-            for index, (check_code, issue_id, fix_action, fix_params) in enumerate(issues):
-                if feedback.isCanceled():
-                    break
-                feedback.setProgress(int(100 * index / len(issues)))
+        status_labels = fix_status_labels()
+        for index, (check_code, issue_id, fix_action, fix_params) in enumerate(issues):
+            if feedback.isCanceled():
+                break
+            feedback.setProgress(int(100 * index / len(issues)))
 
-                sql = pg_sql.SQL("SELECT {schema}.fix_graph_issue({action}, {params}::jsonb)::text").format(
-                    schema=pg_sql.Identifier(EDITING_SCHEMA),
-                    action=pg_sql.Literal(fix_action),
-                    params=pg_sql.Literal(fix_params),
-                )
-                try:
-                    data = connection.executeSql(sql.as_string(pg_conn))
-                    result = json.loads(data[0][0])
-                except (QgsProviderConnectionException, ValueError, IndexError) as e:
-                    result = {"status": "error", "message": str(e)}
+            status, message = run_fix(connection_name, fix_action, fix_params, project)
+            if status not in counts:
+                status = "error"
+            counts[status] += 1
+            if run_id:
+                set_issue_fix_result(project, run_id, issue_id, status, message, layers=[layer])
 
-                status = result.get("status", "error")
-                counts[status if status in counts else "error"] += 1
-                message = tr("{} - issue {} - {}: {} {}").format(
-                    check_code, issue_id, fix_action, status, result.get("message", "")
-                )
-                if status == "error":
-                    feedback.reportError(message)
-                else:
-                    feedback.pushInfo(message)
-        finally:
-            pg_conn.close()
+            message = tr("{} - issue {} - {}: {} {}").format(
+                check_code, issue_id, fix_action, status_labels[status], message
+            )
+            if status == "error":
+                feedback.reportError(message)
+            else:
+                feedback.pushInfo(message)
 
         # Summary
         feedback.pushInfo(

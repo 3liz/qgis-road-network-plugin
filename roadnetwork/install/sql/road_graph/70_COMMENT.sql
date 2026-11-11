@@ -160,6 +160,38 @@ The function can be run on the production schema or on the editing schema: road_
 checks the data of the editing session. The issues must be fixed in an editing session, with the function fix_graph_issue.';
 
 
+-- FUNCTION check_graph_crossing_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_crossing_edges(_road_codes text[], _options jsonb) IS 'Check G01 run by the function check_graph: find the edges crossing each other without being split by a node.
+
+An issue is returned for each crossing point which is not at the start or end point of both edges (50 cm tolerance,
+like the triggers splitting the edges). The edges with the field no_intersection_cutting set to True,
+for example on a bridge, are ignored.
+
+The details give the crossing type, the road codes and classes of the two edges, and the angle between them,
+which help to find the bridges:
+
+* touching: the point is the start or end point of one of the edges, for example a road arriving on another road.
+  The edges are surely connected: the fix action is cut_edges, which creates a node at the point and splits the edges,
+* crossing: the edges cross each other, maybe on a bridge or in a tunnel. The fix action is given by the option
+  crossing_fix_action of the check, NULL by default: it must be chosen for each issue, cut_edges if the roads
+  are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
+
+
+-- FUNCTION check_graph_t_junction_gaps(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_t_junction_gaps(_road_codes text[], _options jsonb) IS 'Check G02 run by the function check_graph: find the edges ending near another edge without being connected to it,
+for example a road arriving on another road and stopping a few decimeters before it (T junction).
+
+An issue is returned for each free end of an edge (no other edge is connected to it)
+which is less than the tolerance from another edge: option tolerance, 2 m by default.
+The edges connected to the opposite end of the edge are ignored, for example its next edge if it is very short,
+and the edges crossed by the edge near its free end: the edge goes beyond the other edge, which is found by the check G01.
+When two free ends are close to each other, only one issue is returned.
+
+The point to join is the closest point of the other edge, or its start or end point if it is less than 50 cm from it.
+The details give the road codes of the two edges, the distance, and the join type: edge or edge_end.
+The issue can be fixed with the action extend_edge, which adds the point to join at the free end of the edge.';
+
+
 -- FUNCTION clean_digitized_roundabout(_road_code text)
 COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
 * delete the edges inside the roundabout
@@ -185,6 +217,31 @@ COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done 
 It also check that the edited geometries are inside the editing session polygon.';
 
 
+-- FUNCTION fix_graph_cut_edges(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_cut_edges(_params jsonb) IS 'Action cut_edges run by the function fix_graph_issue, to fix the issues of the check G01:
+split the edges crossing each other at the given point.
+
+The parameter _params must contain the crossing point as EWKT: {"point": "SRID=2154;POINT(x y)"}.
+A node is created at this point, or the existing node less than 50 cm from it is used,
+and the triggers split the edges passing there.
+
+It returns a JSON object with the keys status (success, or skipped if no edge must be split at this point) and message.';
+
+
+-- FUNCTION fix_graph_extend_edge(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_extend_edge(_params jsonb) IS 'Action extend_edge run by the function fix_graph_issue, to fix the issues of the check G02:
+extend an edge from its free end to the point to join on another edge.
+
+The parameter _params must contain the edge id, the side of the free end (start or end),
+the free end and the point to join as EWKT:
+{"edge_id": 12, "side": "end", "point": "SRID=2154;POINT(x y)", "target": "SRID=2154;POINT(x y)"}.
+The point to join is added at the free end of the edge: the triggers move the node of the free end
+to this point, and split the other edge there.
+
+It returns a JSON object with the keys status (success, or skipped if the edge does not end at the given point anymore,
+or is already connected there) and message.';
+
+
 -- FUNCTION fix_graph_issue(_fix_action text, _params jsonb)
 COMMENT ON FUNCTION road_graph.fix_graph_issue(_fix_action text, _params jsonb) IS 'Fix an issue of the road graph found by the function check_graph, with the given action and parameters.
 
@@ -192,9 +249,21 @@ The issues must be fixed in an editing session: the function only works in the e
 with road_graph_editing.fix_graph_issue. It runs the function named fix_graph_ followed by the action name.
 
 The issue may have been fixed by a previous action, for example when several issues concern the same edges:
-the action then does nothing and returns the status skipped.
+the action then does nothing and returns the status skipped. If the action fails, its changes are cancelled
+and the status error is returned with the error message.
 
 It returns a JSON object with the keys status (success, skipped or error) and message.';
+
+
+-- FUNCTION fix_graph_mark_as_bridge(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_mark_as_bridge(_params jsonb) IS 'Action mark_as_bridge run by the function fix_graph_issue, to fix the issues of the check G01
+when the edges must not be connected, for example on a bridge or in a tunnel.
+
+It sets the field no_intersection_cutting to True for the edges passing by the crossing point:
+the given edge if the parameter _params contains edge_id, or else all the edges of edge_ids:
+{"point": "SRID=2154;POINT(x y)", "edge_ids": [12, 34], "edge_id": 12}.
+
+It returns a JSON object with the keys status (success, or skipped if the edges are already marked) and message.';
 
 
 -- FUNCTION get_current_setting(setting_name text, default_value text)

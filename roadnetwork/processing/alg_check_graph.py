@@ -1,6 +1,7 @@
 import json
 
 from typing import Optional
+from uuid import uuid4
 
 from psycopg2 import connect
 from psycopg2 import sql as pg_sql
@@ -25,8 +26,9 @@ from qgis.core import (
     QgsProviderRegistry,
     QgsWkbTypes,
 )
-from qgis.PyQt.QtCore import QMetaType
+from qgis.PyQt.QtCore import QMetaType, QVariant
 
+from ..graph_issues import POST_PROCESSORS, IssuesLayerPostProcessor, check_titles
 from ..plugin_tools.i18n import tr
 from ..plugin_tools.resources import plugin_name_normalized
 from .base_algorithm import BaseProcessingAlgorithm
@@ -46,16 +48,16 @@ def split_list(value: str) -> list:
 
 
 def json_value(value: object) -> Optional[str]:
-    """Convert a JSON value returned by the database into a JSON string.
+    """Convert a value returned by the database into a text value.
 
-    :param value: The value returned by the database: a dict, a list, a string or None
-    :return: The JSON string, or None
+    :param value: The value returned by the database: a string, a dict or a list, or NULL
+    :return: The text value, a JSON string for a dict or a list, or None for NULL
     """
-    if value is None:
+    if value is None or (isinstance(value, QVariant) and value.isNull()):
         return None
-    if isinstance(value, str):
-        return value
-    return json.dumps(value)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    return str(value)
 
 
 class CheckGraph(BaseProcessingAlgorithm):
@@ -99,6 +101,12 @@ class CheckGraph(BaseProcessingAlgorithm):
             "The algorithm creates two layers: a point layer locating each issue, "
             "and a line layer showing the issues for which a line is useful "
             "(edge, gap between two edges, etc.)."
+            "\n"
+            "\n"
+            "Each issue can be fixed with a right click on it, with the Identify Features tool: "
+            "the actions Fix this issue, Choose the fix of this issue and Select the edges of this issue "
+            "are added to the layers. "
+            "The result of the fix is stored in the fields fix_status and fix_message."
         )
 
     def initAlgorithm(self, config=None):
@@ -197,6 +205,8 @@ class CheckGraph(BaseProcessingAlgorithm):
         fields.append(QgsField("details", QMetaType.Type.QString))
         fields.append(QgsField("fix_action", QMetaType.Type.QString))
         fields.append(QgsField("fix_params", QMetaType.Type.QString))
+        fields.append(QgsField("fix_status", QMetaType.Type.QString))
+        fields.append(QgsField("fix_message", QMetaType.Type.QString))
         return fields
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -276,9 +286,12 @@ class CheckGraph(BaseProcessingAlgorithm):
             raise QgsProcessingException(str(e))
 
         # Add the issues to the output layers
+        # The titles of the checks are translated, and the fix status and message are empty
+        titles = check_titles()
         issues_count = {}
         for row in data:
-            attributes = [row[0], schema] + [json_value(v) for v in row[1:11]]
+            attributes = [row[0], schema] + [json_value(v) for v in row[1:11]] + [None, None]
+            attributes[3] = titles.get(row[1], row[2])
             issues_count[row[1]] = issues_count.get(row[1], 0) + 1
 
             # Point locating the issue
@@ -300,5 +313,14 @@ class CheckGraph(BaseProcessingAlgorithm):
             feedback.pushInfo(tr("No issue found."))
         for check_code, count in sorted(issues_count.items()):
             feedback.pushInfo(tr("{}: {} issue(s)").format(check_code, count))
+
+        # Set up the layers once loaded in the project: actions to fix the issues, style, aliases.
+        # The points and lines layers share the same run id, to store the result of a fix in both layers
+        run_id = uuid4().hex
+        for dest_id in (dest_id_points, dest_id_lines):
+            if context.willLoadLayerOnCompletion(dest_id):
+                post_processor = IssuesLayerPostProcessor(connection_name, run_id)
+                POST_PROCESSORS.append(post_processor)
+                context.layerToLoadOnCompletionDetails(dest_id).setPostProcessor(post_processor)
 
         return {self.OUTPUT_POINTS: dest_id_points, self.OUTPUT_LINES: dest_id_lines}

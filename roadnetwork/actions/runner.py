@@ -2,6 +2,11 @@ from inspect import Parameter, signature
 from typing import Any
 
 from ..plugin_tools.i18n import tr
+from .graph_issues import (
+    choose_graph_issue_fix,
+    fix_graph_issue,
+    select_graph_issue_edges,
+)
 from .methods import (
     create_editing_session,
     display_edited_data,
@@ -15,6 +20,9 @@ ACTIONS = (
     display_edited_data,
     drop_editing_session,
     finalize_roundabout,
+    fix_graph_issue,
+    choose_graph_issue_fix,
+    select_graph_issue_edges,
 )
 
 
@@ -43,6 +51,9 @@ def run(name: str, **kwargs: Any) -> RunActionError | None:
         - display_edited_data
         - drop_editing_session
         - finalize_roundabout
+        - fix_graph_issue
+        - choose_graph_issue_fix
+        - select_graph_issue_edges
     :param **kwargs: Arguments to pass to the action.
     :return: None, or the error if the action cannot be run
     """

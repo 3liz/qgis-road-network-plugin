@@ -7,9 +7,10 @@ in a temporary QGIS profile containing a demo PostgreSQL connection.
 
 Usage, from the repository root:
 
-    python3 .docker/processing_screenshots.py [OUTPUT_DIR]
+    python3 .docker/processing_screenshots.py [OUTPUT_DIR] [ALGORITHM_NAME ...]
 
 OUTPUT_DIR defaults to docs/media, the output file names are relative to it.
+The screenshots of all the algorithms are created, unless some algorithm names are given.
 """
 
 import os
@@ -42,6 +43,8 @@ ALGORITHMS = {
     "merge_editing_session": "user-guide/processing_merge_editing_session.png",
     "update_managed_objects": "user-guide/processing_update_managed_objects.png",
     "get_road_sections_from_line": "user-guide/processing_get_road_sections_from_line.png",
+    "check_graph": "user-guide/processing_check_graph.png",
+    "fix_graph_issues": "user-guide/processing_fix_graph_issues.png",
 }
 
 # Template layers loaded in the project, to be selected in the layer parameters
@@ -50,12 +53,24 @@ TEMPLATE_LAYERS = {
     "source_markers": ROOT / "roadnetwork" / "resources" / "import" / "source_markers.fgb",
 }
 
+# Memory layers loaded in the project, to be selected in the layer parameters: name: URI
+MEMORY_LAYERS = {
+    "Road graph issues (points)": "Point?crs=EPSG:2154&field=id:integer&field=check_code:string",
+}
+
+# Parameters of some algorithms, besides the connection: algorithm name: {parameter: layer name}
+LAYER_PARAMETERS = {
+    "fix_graph_issues": {"INPUT": "Road graph issues (points)"},
+}
+
 DIALOG_WIDTH = 1200
 DIALOG_HEIGHT = 600
 
 
 def main() -> int:
     output_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "media"
+    # Algorithms to process: all of them, or the given ones
+    names = sys.argv[2:] or list(ALGORITHMS.keys())
 
     # Use a temporary QGIS profile, to avoid using the user connections and settings
     profile_dir = tempfile.mkdtemp(prefix="qgis-profile-")
@@ -73,6 +88,8 @@ def main() -> int:
             print(f"Layer '{layer_path}' is not valid", file=sys.stderr)  # noqa: T201
             return 1
         QgsProject.instance().addMapLayer(layer)
+    for layer_name, layer_uri in MEMORY_LAYERS.items():
+        QgsProject.instance().addMapLayer(QgsVectorLayer(layer_uri, layer_name, "memory"))
 
     from processing.core.Processing import Processing
     from processing.gui.AlgorithmDialog import AlgorithmDialog
@@ -84,7 +101,8 @@ def main() -> int:
     provider = Provider()
     QgsApplication.processingRegistry().addProvider(provider)
 
-    for name, file_name in ALGORITHMS.items():
+    for name in names:
+        file_name = ALGORITHMS[name]
         algorithm = provider.algorithm(name)
         if algorithm is None:
             print(f"Algorithm '{name}' not found", file=sys.stderr)  # noqa: T201
@@ -92,13 +110,15 @@ def main() -> int:
 
         dialog = AlgorithmDialog(algorithm.create())
         # Select the demo connection in every connection parameter
-        dialog.setParameters(
-            {
-                param.name(): DEMO_CONNECTION_NAME
-                for param in algorithm.parameterDefinitions()
-                if param.type() == "providerconnection"
-            }
-        )
+        parameters = {
+            param.name(): DEMO_CONNECTION_NAME
+            for param in algorithm.parameterDefinitions()
+            if param.type() == "providerconnection"
+        }
+        # Select the given layers in the layer parameters
+        for param_name, layer_name in LAYER_PARAMETERS.get(name, {}).items():
+            parameters[param_name] = QgsProject.instance().mapLayersByName(layer_name)[0]
+        dialog.setParameters(parameters)
         dialog.resize(DIALOG_WIDTH, DIALOG_HEIGHT)
         dialog.show()
         app.processEvents()

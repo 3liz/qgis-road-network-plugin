@@ -108,6 +108,9 @@ which must be installed and activated:
 
 They are used when the user would like to modify the Road graph. See the corresponding documentation.
 
+The layers of the road graph issues created by the algorithm `Check the road graph` also have actions,
+to fix an issue with a right click: see [Fix an issue with a right click](graph-checks.md#fix-an-issue-with-a-right-click).
+
 To run an action on a feature, use the `Identify Features` tool and **right-click** on the feature in the map,
 or use the `Run Feature Action` tool of the `Attributes` toolbar.
 
