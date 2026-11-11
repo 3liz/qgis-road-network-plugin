@@ -27,6 +27,15 @@
   is now the feature chosen first, with its field values, instead of the feature with the lowest start references.
   Its references, and its cumulative distances if the table has these fields, are calculated from the merged line
   in the direction of the road, even if the table has no trigger calculating them (migration `upgrade_to_43.sql`)
+* **SQL**: the functions called from outside the plugin which only read data (`get_reference_from_point`,
+  `get_road_point_from_reference`, `get_road_substring_from_references`, `get_managed_object_geometry_from_references`,
+  `get_snapped_line_from_track`, `get_road_sections_from_snapped_line`, `get_spatial_road`)
+  and the trigger function `calculate_managed_object_references` now set their `search_path` to `public`:
+  they work even if the `search_path` of the caller does not contain the schema `public`, where PostGIS is installed
+  (migration `upgrade_to_43.sql`)
+* **SQL**: security: the `SECURITY DEFINER` functions `copy_data_to_editing_session`, `drop_editing_session`
+  and `toggle_foreign_key_constraints` now set their `search_path` to `public, pg_temp`,
+  and `merge_editing_session_data` prefixes the objects of the production schema (migration `upgrade_to_43.sql`)
 
 ### Fixed
 

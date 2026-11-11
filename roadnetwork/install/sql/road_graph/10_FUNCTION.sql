@@ -1791,6 +1791,7 @@ The functions using the cache fall back to the calculation without cache if the 
 -- calculate_managed_object_references()
 CREATE FUNCTION road_graph.calculate_managed_object_references() RETURNS trigger
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $_$
 DECLARE
     new_jsonb jsonb;
@@ -2099,6 +2100,7 @@ COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'C
 -- copy_data_to_editing_session(integer)
 CREATE FUNCTION road_graph.copy_data_to_editing_session(_editing_session_id integer) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
 DECLARE
     editing_session_record record;
@@ -2369,6 +2371,7 @@ COMMENT ON FUNCTION road_graph.create_queries_from_editing_session(_editing_sess
 -- drop_editing_session(integer)
 CREATE FUNCTION road_graph.drop_editing_session(_editing_session_id integer) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
 DECLARE
     editing_session_record record;
@@ -3089,6 +3092,7 @@ The function get_managed_objects_impacts_filter uses this JSON to filter the man
 -- get_managed_object_geometry_from_references(text, integer, real, integer, real, real, text)
 CREATE FUNCTION road_graph.get_managed_object_geometry_from_references(_road_code text, _start_marker_code integer, _start_abscissa real, _end_marker_code integer, _end_abscissa real, _offset real, _side text) RETURNS jsonb
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $$
 BEGIN
     -- Point
@@ -3496,6 +3500,7 @@ COMMENT ON FUNCTION road_graph.get_ordered_edges(_road_code text, _initial_id in
 -- get_reference_from_point(geometry, text, boolean)
 CREATE FUNCTION road_graph.get_reference_from_point(_point geometry, _road_code text DEFAULT NULL::text, _use_cache boolean DEFAULT false) RETURNS jsonb
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $$
 DECLARE
     closest_edge record;
@@ -3699,6 +3704,7 @@ Since this method is heavily used and the calculation is costly, we can pass a t
 -- get_road_point_from_reference(text, integer, real, real, text)
 CREATE FUNCTION road_graph.get_road_point_from_reference(_road_code text, _marker_code integer, _abscissa real, _offset real, _side text) RETURNS jsonb
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $$
 DECLARE
     get_downstream_multilinestring_from_reference record;
@@ -4101,6 +4107,7 @@ The function also returns:
 -- get_road_sections_from_snapped_line(geometry, real)
 CREATE FUNCTION road_graph.get_road_sections_from_snapped_line(_line geometry, _tolerance real DEFAULT 1) RETURNS TABLE(road_order integer, road_code text, start_marker integer, start_abscissa real, start_cumulative real, end_marker integer, end_abscissa real, end_cumulative real, direction text, length real, geom geometry)
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $$
 DECLARE
     line geometry;
@@ -4243,6 +4250,7 @@ Example of output (the geom column is not shown):
 -- get_road_substring_from_references(text, integer, real, integer, real, real, text, boolean, boolean)
 CREATE FUNCTION road_graph.get_road_substring_from_references(_road_code text, _start_marker_code integer, _start_marker_abscissa real, _end_marker_code integer, _end_marker_abscissa real, _offset real, _side text, _from_first_edge_start boolean DEFAULT false, _to_last_edge_end boolean DEFAULT false) RETURNS jsonb
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $$
 DECLARE
     _road_edges_min_max_values record;
@@ -4555,6 +4563,7 @@ The parameters _from_first_edge_start & _to_last_edge_end allows to respectively
 -- get_snapped_line_from_track(geometry, real, real, real)
 CREATE FUNCTION road_graph.get_snapped_line_from_track(_track geometry, _densify_distance real DEFAULT 2, _max_distance real DEFAULT 25, _road_change_penalty real DEFAULT 100) RETURNS geometry
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $$
 DECLARE
     track geometry;
@@ -4960,6 +4969,7 @@ The result can be passed to the function get_road_sections_from_snapped_line to 
 -- get_spatial_road(text)
 CREATE FUNCTION road_graph.get_spatial_road(_road_code text) RETURNS geometry
     LANGUAGE plpgsql
+    SET search_path TO 'public'
     AS $$
 DECLARE
     road_geom geometry(multilinestringM, 2154);
@@ -5585,7 +5595,7 @@ BEGIN
     -- Get editing session record
     SELECT INTO editing_session_record
     *
-    FROM editing_sessions
+    FROM "road_graph".editing_sessions
     WHERE id = _editing_session_id
     ;
 
@@ -5604,9 +5614,8 @@ BEGIN
         INTO _toggle_triggers;
 
     -- Get the road codes concerned by the editing session
-    -- no need to prefix the function by the schema name because the search_path is set in the function definition
     SELECT INTO road_codes
-        get_updated_roads_from_editing_session(_editing_session_id)
+        "road_graph".get_updated_roads_from_editing_session(_editing_session_id)
     ;
 
     -- Get the impacts of the editing session on the roads, to update only the managed objects
@@ -5615,7 +5624,7 @@ BEGIN
     -- Only the roads whose edges geometries or markers have changed are impacted:
     -- the other edges have only been updated by the calculation of their references
     SELECT INTO impacts
-        get_editing_session_impacts(_editing_session_id)
+        "road_graph".get_editing_session_impacts(_editing_session_id)
     ;
     SELECT INTO road_codes
         array_agg(i->>'road_code')
@@ -5623,11 +5632,10 @@ BEGIN
     ;
 
     -- Create SQL to run for each edited data
-    -- no need to prefix the function by the schema name because the search_path is set in the function definition
     FOR sql_record IN
         SELECT
             sql_text
-        FROM create_queries_from_editing_session(_editing_session_id)
+        FROM "road_graph".create_queries_from_editing_session(_editing_session_id)
     LOOP
        -- RAISE NOTICE 'SQL = %', sql_record.sql_text;
        EXECUTE sql_record.sql_text;
@@ -5688,7 +5696,7 @@ BEGIN
     TRUNCATE road_graph_editing.editing_sessions CASCADE;
 
     -- Delete merged editing session
-    DELETE FROM editing_sessions
+    DELETE FROM "road_graph".editing_sessions
     WHERE id = _editing_session_id
     ;
 
@@ -6721,6 +6729,7 @@ The lines connected to the feature are not modified by the trigger trg_update_ma
 -- toggle_foreign_key_constraints(boolean)
 CREATE FUNCTION road_graph.toggle_foreign_key_constraints(_toggle boolean DEFAULT true) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
 DECLARE
 sql_text text;

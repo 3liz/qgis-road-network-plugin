@@ -3508,3 +3508,78 @@ def test_get_managed_object_geometry_from_references(rollback_db_connection: psy
     row = cursor.fetchone()
     assert row is not None
     assert row[0] == "ST_Point"
+
+
+def test_functions_search_path(rollback_db_connection: psycopg.Connection):
+    """Check the search_path set as property of the functions, in the production and editing schemas.
+    The functions called from outside the plugin must work even if the search_path of the caller
+    does not contain public, where PostGIS is installed.
+    The schema road_graph must not be in the search_path of the functions installed in the editing schema,
+    except for merge_editing_session_data which works on the production schema.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    expected = {
+        # Functions called from outside the plugin, which only read data
+        "calculate_managed_object_references": "search_path=public",
+        "get_managed_object_geometry_from_references": "search_path=public",
+        "get_merged_geom_from_table_and_ids": "search_path=public",
+        "get_reference_from_point": "search_path=public",
+        "get_road_point_from_reference": "search_path=public",
+        "get_road_sections_from_snapped_line": "search_path=public",
+        "get_road_substring_from_references": "search_path=public",
+        "get_snapped_line_from_track": "search_path=public",
+        "get_spatial_road": "search_path=public",
+        # SECURITY DEFINER functions
+        "copy_data_to_editing_session": "search_path=public, pg_temp",
+        "drop_editing_session": "search_path=public, pg_temp",
+        "merge_editing_session_data": "search_path=road_graph, public",
+        "toggle_foreign_key_constraints": "search_path=public, pg_temp",
+    }
+    for schema in ("road_graph", "road_graph_editing"):
+        cursor.execute(
+            """
+            SELECT p.proname, array_to_string(p.proconfig, ' | ')
+            FROM pg_proc AS p
+            JOIN pg_namespace AS n ON n.oid = p.pronamespace
+            WHERE n.nspname = %s
+            AND p.proconfig IS NOT NULL
+            ORDER BY p.proname
+            """,
+            (schema,),
+        )
+        assert dict(cursor.fetchall()) == expected, schema
+
+    # All the SECURITY DEFINER functions have a search_path
+    cursor.execute("""
+        SELECT n.nspname, p.proname
+        FROM pg_proc AS p
+        JOIN pg_namespace AS n ON n.oid = p.pronamespace
+        WHERE n.nspname IN ('road_graph', 'road_graph_editing')
+        AND p.prosecdef
+        AND p.proconfig IS NULL
+    """)
+    assert cursor.fetchall() == []
+
+    # The functions work with a search_path without public:
+    # the PostGIS functions used in the query are prefixed by public
+    cursor.execute("SET LOCAL search_path TO pg_catalog")
+    cursor.execute("""
+        SELECT
+            road_graph.get_reference_from_point(
+                public.ST_PointFromText('POINT(447899.527 6905276.755)', 2154), 'D613', False
+            )->>'road_code',
+            public.ST_GeometryType(
+                public.ST_GeomFromGeoJSON(
+                    road_graph.get_road_substring_from_references('D72', 2, 100, 3, 10, 0, 'right')->>'geom'
+                )
+            ),
+            public.ST_GeometryType(
+                public.ST_GeomFromGeoJSON(
+                    road_graph.get_road_point_from_reference('D72', 2, 100, 0, 'right')->>'geom'
+                )
+            )
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    assert list(row) == ["D613", "ST_MultiLineString", "ST_Point"]
