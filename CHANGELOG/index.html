@@ -1096,8 +1096,30 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#064-2026-11-12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.6.4 - 2026-11-12
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.6.4 - 2026-11-12">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
@@ -1150,7 +1172,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary" class="md-nav__link">
+  <a href="#summary_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1200,7 +1222,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_1" class="md-nav__link">
+  <a href="#summary_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1239,7 +1261,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_2" class="md-nav__link">
+  <a href="#summary_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1300,7 +1322,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_3" class="md-nav__link">
+  <a href="#summary_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -2218,9 +2240,14 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
-<p><strong>Upgrade notes</strong></p>
+<h2 id="064-2026-11-12">0.6.4 - 2026-11-12<a class="headerlink" href="#064-2026-11-12" title="Permanent link">#</a></h2>
+<h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>
+<p><strong>Highlights</strong></p>
 <ul>
-<li>Run the algorithm <code>Upgrade database structure</code> to upgrade the database (migration 43)</li>
+<li><strong>Managed objects</strong>: the split and merge of lines in Lizmap now give the right references, even for lines
+  drawn in the opposite direction of the road, and the lines connected to an edited line stay connected</li>
+<li><strong>Security</strong>: the <code>SECURITY DEFINER</code> functions set their <code>search_path</code>, and the read-only functions
+  work even if the <code>search_path</code> of the caller does not contain <code>public</code></li>
 </ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">#</a></h3>
 <ul>
@@ -2243,6 +2270,15 @@
   is now the feature chosen first, with its field values, instead of the feature with the lowest start references.
   Its references, and its cumulative distances if the table has these fields, are calculated from the merged line
   in the direction of the road, even if the table has no trigger calculating them (migration <code>upgrade_to_43.sql</code>)</li>
+<li><strong>SQL</strong>: the functions called from outside the plugin which only read data (<code>get_reference_from_point</code>,
+  <code>get_road_point_from_reference</code>, <code>get_road_substring_from_references</code>, <code>get_managed_object_geometry_from_references</code>,
+  <code>get_snapped_line_from_track</code>, <code>get_road_sections_from_snapped_line</code>, <code>get_spatial_road</code>)
+  and the trigger function <code>calculate_managed_object_references</code> now set their <code>search_path</code> to <code>public</code>:
+  they work even if the <code>search_path</code> of the caller does not contain the schema <code>public</code>, where PostGIS is installed
+  (migration <code>upgrade_to_43.sql</code>)</li>
+<li><strong>SQL</strong>: security: the <code>SECURITY DEFINER</code> functions <code>copy_data_to_editing_session</code>, <code>drop_editing_session</code>
+  and <code>toggle_foreign_key_constraints</code> now set their <code>search_path</code> to <code>public, pg_temp</code>,
+  and <code>merge_editing_session_data</code> prefixes the objects of the production schema (migration <code>upgrade_to_43.sql</code>)</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>
@@ -2259,7 +2295,7 @@
   They are now ordered in the direction of the road, like the geometry created from them</li>
 </ul>
 <h2 id="063-2026-10-30">0.6.3 - 2026-10-30<a class="headerlink" href="#063-2026-10-30" title="Permanent link">#</a></h2>
-<h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>
+<h3 id="summary_1">Summary<a class="headerlink" href="#summary_1" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>Performance</strong>: merging an editing session is much faster on long roads: only the managed objects
@@ -2297,7 +2333,7 @@
   offset or cumulative distance <code>0</code>, instead of an empty field</li>
 </ul>
 <h2 id="062-2026-10-30">0.6.2 - 2026-10-30<a class="headerlink" href="#062-2026-10-30" title="Permanent link">#</a></h2>
-<h3 id="summary_1">Summary<a class="headerlink" href="#summary_1" title="Permanent link">#</a></h3>
+<h3 id="summary_2">Summary<a class="headerlink" href="#summary_2" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>Performance</strong>: editing long roads is much faster, for example adding an edge crossing a road
@@ -2320,7 +2356,7 @@
   and explain how to correct the whole road graph after a first import with an editing session covering all the data</li>
 </ul>
 <h2 id="061-2026-10-29">0.6.1 - 2026-10-29<a class="headerlink" href="#061-2026-10-29" title="Permanent link">#</a></h2>
-<h3 id="summary_2">Summary<a class="headerlink" href="#summary_2" title="Permanent link">#</a></h3>
+<h3 id="summary_3">Summary<a class="headerlink" href="#summary_3" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>GPS tracks</strong>: new Processing algorithm to get the road sections followed by the lines of a layer,
@@ -2351,7 +2387,7 @@
 <li><strong>SQL</strong>: the search of the next edge of an edge could fail if two edges of the same road started at the same node</li>
 </ul>
 <h2 id="060-2026-10-28">0.6.0 - 2026-10-28<a class="headerlink" href="#060-2026-10-28" title="Permanent link">#</a></h2>
-<h3 id="summary_3">Summary<a class="headerlink" href="#summary_3" title="Permanent link">#</a></h3>
+<h3 id="summary_4">Summary<a class="headerlink" href="#summary_4" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>GPS tracks</strong>: snap a GPS track, for example from a GPX file, on the road graph,

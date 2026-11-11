@@ -5651,7 +5651,7 @@ BEGIN
     -- Get editing session record
     SELECT INTO editing_session_record
     *
-    FROM editing_sessions
+    FROM "road_graph".editing_sessions
     WHERE id = _editing_session_id
     ;
 
@@ -5670,9 +5670,8 @@ BEGIN
         INTO _toggle_triggers;
 
     -- Get the road codes concerned by the editing session
-    -- no need to prefix the function by the schema name because the search_path is set in the function definition
     SELECT INTO road_codes
-        get_updated_roads_from_editing_session(_editing_session_id)
+        "road_graph".get_updated_roads_from_editing_session(_editing_session_id)
     ;
 
     -- Get the impacts of the editing session on the roads, to update only the managed objects
@@ -5681,7 +5680,7 @@ BEGIN
     -- Only the roads whose edges geometries or markers have changed are impacted:
     -- the other edges have only been updated by the calculation of their references
     SELECT INTO impacts
-        get_editing_session_impacts(_editing_session_id)
+        "road_graph".get_editing_session_impacts(_editing_session_id)
     ;
     SELECT INTO road_codes
         array_agg(i->>'road_code')
@@ -5689,11 +5688,10 @@ BEGIN
     ;
 
     -- Create SQL to run for each edited data
-    -- no need to prefix the function by the schema name because the search_path is set in the function definition
     FOR sql_record IN
         SELECT
             sql_text
-        FROM create_queries_from_editing_session(_editing_session_id)
+        FROM "road_graph".create_queries_from_editing_session(_editing_session_id)
     LOOP
        -- RAISE NOTICE 'SQL = %', sql_record.sql_text;
        EXECUTE sql_record.sql_text;
@@ -5754,7 +5752,7 @@ BEGIN
     TRUNCATE road_graph_editing.editing_sessions CASCADE;
 
     -- Delete merged editing session
-    DELETE FROM editing_sessions
+    DELETE FROM "road_graph".editing_sessions
     WHERE id = _editing_session_id
     ;
 
