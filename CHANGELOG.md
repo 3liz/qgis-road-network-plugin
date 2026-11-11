@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 43)
+
+### Added
+
+* **Road graph checks**: new algorithms `Check the road graph` and `Fix the road graph issues`,
+  SQL functions `check_graph` and `fix_graph_issue`, and table `glossary_graph_check` listing the checks
+  and their default options, to find the issues of the road graph,
+  for example after an import, and fix them in an editing session (migration `upgrade_to_44.sql`)
+
 ## 0.6.4 - 2026-11-12
 
 ### Summary
@@ -58,7 +69,6 @@
 * **Lizmap**: in the form `Create the geometry from references` of the editing panel, the start and end references
   of a line drawn in the opposite direction of the road were displayed in the drawing order.
   They are now ordered in the direction of the road, like the geometry created from them
-
 
 ## 0.6.3 - 2026-10-30
 

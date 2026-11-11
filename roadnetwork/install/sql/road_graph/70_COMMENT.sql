@@ -143,6 +143,23 @@ For a line, the start and end references follow the road direction (start before
 even if the line is digitized in the opposite direction of the road.';
 
 
+-- FUNCTION check_graph(_checks text[], _road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph(_checks text[], _road_codes text[], _options jsonb) IS 'Run the checks of the road graph and return one line per issue found.
+
+The checks are listed in the table glossary_graph_check of the production schema.
+All the active checks are run if _checks is NULL, and all the roads are checked if _road_codes is NULL.
+The parameter _options overrides the default options of the checks stored in this table,
+with the check code as key: {"G02": {"tolerance": 2}}.
+
+Each line gives the check code and title, the severity (error or warning), the road code,
+the ids of the edges, nodes and markers concerned, some details, the action which can fix the issue
+with its parameters (NULL if the issue must be fixed manually), a point locating the issue (geom)
+and, if useful, a line showing it (geom_detail).
+
+The function can be run on the production schema or on the editing schema: road_graph_editing.check_graph()
+checks the data of the editing session. The issues must be fixed in an editing session, with the function fix_graph_issue.';
+
+
 -- FUNCTION clean_digitized_roundabout(_road_code text)
 COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
 * delete the edges inside the roundabout
@@ -166,6 +183,18 @@ COMMENT ON FUNCTION road_graph.drop_editing_session(_editing_session_id integer)
 -- FUNCTION editing_survey()
 COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done inside the editing session schema tables.
 It also check that the edited geometries are inside the editing session polygon.';
+
+
+-- FUNCTION fix_graph_issue(_fix_action text, _params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_issue(_fix_action text, _params jsonb) IS 'Fix an issue of the road graph found by the function check_graph, with the given action and parameters.
+
+The issues must be fixed in an editing session: the function only works in the editing schema,
+with road_graph_editing.fix_graph_issue. It runs the function named fix_graph_ followed by the action name.
+
+The issue may have been fixed by a previous action, for example when several issues concern the same edges:
+the action then does nothing and returns the status skipped.
+
+It returns a JSON object with the keys status (success, skipped or error) and message.';
 
 
 -- FUNCTION get_current_setting(setting_name text, default_value text)
@@ -499,6 +528,42 @@ COMMENT ON COLUMN road_graph.editing_sessions.unique_code IS 'Automatically gene
 
 -- editing_sessions.cloned_ids
 COMMENT ON COLUMN road_graph.editing_sessions.cloned_ids IS 'Object containing the list of unique ids for each cloned data (roads, edges, nodes, etc.)';
+
+
+-- glossary_graph_check
+COMMENT ON TABLE road_graph.glossary_graph_check IS 'Checks of the road graph run by the function check_graph. The rows are added by the plugin migrations: only the columns default_options and is_active should be modified.';
+
+
+-- glossary_graph_check.code
+COMMENT ON COLUMN road_graph.glossary_graph_check.code IS 'Code of the check, e.g. G01. The checks are numbered in the recommended order of the fixes.';
+
+
+-- glossary_graph_check.title
+COMMENT ON COLUMN road_graph.glossary_graph_check.title IS 'Title of the check';
+
+
+-- glossary_graph_check.severity
+COMMENT ON COLUMN road_graph.glossary_graph_check.severity IS 'Severity of the issues found by the check: error or warning';
+
+
+-- glossary_graph_check.function_name
+COMMENT ON COLUMN road_graph.glossary_graph_check.function_name IS 'Name of the function running the check, in the same schema as the function check_graph';
+
+
+-- glossary_graph_check.fix_actions
+COMMENT ON COLUMN road_graph.glossary_graph_check.fix_actions IS 'Actions which can fix the issues found by the check, with the function fix_graph_issue';
+
+
+-- glossary_graph_check.default_options
+COMMENT ON COLUMN road_graph.glossary_graph_check.default_options IS 'Default options of the check, for example its tolerance. They can be modified by the administrator, and overridden by the options given to the function check_graph.';
+
+
+-- glossary_graph_check.is_active
+COMMENT ON COLUMN road_graph.glossary_graph_check.is_active IS 'If False, the check is not run by the function check_graph, unless it is explicitly asked';
+
+
+-- glossary_graph_check.description
+COMMENT ON COLUMN road_graph.glossary_graph_check.description IS 'Description of the check and of its fix actions';
 
 
 -- glossary_road_class

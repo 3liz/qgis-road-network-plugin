@@ -5,9 +5,11 @@ from ..plugin_tools.resources import (
     plugin_name,
     resources_path,
 )
+from .alg_check_graph import CheckGraph
 from .alg_configure_plugin import ConfigurePlugin
 from .alg_create_database_local_interface import CreateDatabaseLocalInterface
 from .alg_create_editing_session import CreateEditingSession
+from .alg_fix_graph_issues import FixGraphIssues
 from .alg_get_road_sections_from_line import GetRoadSectionsFromLine
 from .alg_import_data import ImportData
 from .alg_merge_editing_session import MergeEditingSession
@@ -42,6 +44,10 @@ class Provider(QgsProcessingProvider):
         self.addAlgorithm(CreateEditingSession())
         self.addAlgorithm(MergeEditingSession())
         self.addAlgorithm(UpdateManagedObjects())
+
+        # Road graph checks
+        self.addAlgorithm(CheckGraph())
+        self.addAlgorithm(FixGraphIssues())
 
         # Linear referencing
         self.addAlgorithm(GetRoadSectionsFromLine())

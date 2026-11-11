@@ -18,6 +18,7 @@ from qgis.core import (
     QgsProviderConnectionException,
     QgsProviderRegistry,
     QgsVectorLayer,
+    QgsWkbTypes,
 )
 
 from roadnetwork.plugin_tools.feedback import LoggerProcessingFeedBack
@@ -47,6 +48,7 @@ TABLES_FOR_FIRST_VERSION = [
 TABLES_FOR_CURRENT_VERSION = [
     "edges",
     "editing_sessions",
+    "glossary_graph_check",
     "glossary_road_class",
     "managed_objects",
     "markers",
@@ -3522,6 +3524,7 @@ def test_functions_search_path(rollback_db_connection: psycopg.Connection):
     expected = {
         # Functions called from outside the plugin, which only read data
         "calculate_managed_object_references": "search_path=public",
+        "check_graph": "search_path=public",
         "get_managed_object_geometry_from_references": "search_path=public",
         "get_merged_geom_from_table_and_ids": "search_path=public",
         "get_reference_from_point": "search_path=public",
@@ -3583,3 +3586,157 @@ def test_functions_search_path(rollback_db_connection: psycopg.Connection):
     row = cursor.fetchone()
     assert row is not None
     assert list(row) == ["D613", "ST_MultiLineString", "ST_Point"]
+
+
+def test_check_graph_architecture(rollback_db_connection: psycopg.Connection):
+    """The function check_graph runs the checks listed in the table glossary_graph_check,
+    with their default options overridden by the given options.
+    The function fix_graph_issue runs the fix actions, only in the editing schema.
+    A test check T99 and its fix action are created for the test.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # The function of each check exists
+    cursor.execute("""
+        SELECT g.code, g.function_name, to_regproc('road_graph.' || g.function_name) IS NOT NULL
+        FROM road_graph.glossary_graph_check AS g
+    """)
+    for check_code, function_name, function_exists in cursor.fetchall():
+        assert function_exists, f"{check_code}: function {function_name} not found"
+
+    # Test check returning one issue with its options, in the production and editing schemas,
+    # and its fix action in the editing schema
+    for schema in ("road_graph", "road_graph_editing"):
+        cursor.execute(f"""
+            CREATE FUNCTION {schema}.check_graph_test(_road_codes text[], _options jsonb)
+            RETURNS TABLE(
+                check_code text, check_title text, severity text, road_code text,
+                edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb,
+                fix_action text, fix_params jsonb, geom geometry, geom_detail geometry
+            )
+            LANGUAGE sql AS $$
+                SELECT
+                    'T99', 'Test check', 'warning', 'D72', ARRAY[1], NULL::integer[], NULL::integer[],
+                    _options, 'test', jsonb_build_object('value', 1),
+                    ST_SetSRID(ST_MakePoint(0, 0), 2154), NULL::geometry
+            $$
+        """)
+        cursor.execute(f"""
+            CREATE FUNCTION {schema}.fix_graph_test(_params jsonb) RETURNS jsonb
+            LANGUAGE sql AS $$
+                SELECT jsonb_build_object('status', 'success', 'message', '{schema} ' || (_params->>'value'))
+            $$
+        """)
+    cursor.execute("""
+        INSERT INTO road_graph.glossary_graph_check (
+            code, title, severity, function_name, fix_actions, default_options
+        )
+        VALUES ('T99', 'Test check', 'warning', 'check_graph_test', ARRAY['test'], '{"tolerance": 1}')
+    """)
+
+    # The checks are run on the production and editing schemas, with the default options
+    for schema in ("road_graph", "road_graph_editing"):
+        cursor.execute(f"SELECT id, check_code, details FROM {schema}.check_graph() WHERE check_code = 'T99'")
+        assert cursor.fetchall() == [(1, "T99", {"tolerance": 1})]
+
+    # The given options override the default options
+    cursor.execute("""
+        SELECT details
+        FROM road_graph.check_graph(ARRAY['T99'], NULL, '{"T99": {"tolerance": 5, "other": true}}')
+    """)
+    assert cursor.fetchall() == [({"tolerance": 5, "other": True},)]
+
+    # An inactive check is only run if it is asked
+    cursor.execute("UPDATE road_graph.glossary_graph_check SET is_active = False WHERE code = 'T99'")
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph() WHERE check_code = 'T99'")
+    assert cursor.fetchone() == (0,)
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['T99'])")
+    assert cursor.fetchone() == (1,)
+
+    # The fix action is run in the editing schema
+    cursor.execute("SELECT road_graph_editing.fix_graph_issue('test', '{\"value\": 1}')")
+    assert cursor.fetchone() == ({"status": "success", "message": "road_graph_editing 1"},)
+
+    # The issues cannot be fixed in the production schema
+    cursor.execute("SELECT road_graph.fix_graph_issue('test', '{}')")
+    row = cursor.fetchone()
+    assert row is not None
+    assert row[0]["status"] == "error"
+    assert "must be fixed in an editing session" in row[0]["message"]
+
+    # Unknown action in the editing schema
+    cursor.execute("SELECT road_graph_editing.fix_graph_issue('unknown_action', '{}')")
+    assert cursor.fetchone() == (
+        {"status": "error", "message": "Unknown action to fix the road graph: 'unknown_action'"},
+    )
+
+    # The function of the check must exist
+    cursor.execute("UPDATE road_graph.glossary_graph_check SET function_name = 'missing' WHERE code = 'T99'")
+    with pytest.raises(psycopg.errors.RaiseException, match="function missing of the road graph check T99"):
+        cursor.execute("SELECT * FROM road_graph.check_graph(ARRAY['T99'])")
+    rollback_db_connection.rollback()
+
+    # An unknown check raises an exception
+    with pytest.raises(psycopg.errors.RaiseException, match="Unknown road graph checks: XX"):
+        cursor.execute("SELECT * FROM road_graph.check_graph(ARRAY['XX'])")
+    rollback_db_connection.rollback()
+
+
+def test_check_graph_algorithms(processing_provider: Provider):
+    """The Processing algorithms Check the road graph and Fix the road graph issues
+    create the issues layers, and fix the issues of the editing session."""
+    output = processing.run(
+        f"{processing_provider.id()}:check_graph",
+        {
+            "CONNECTION_NAME": "test",
+            "SCHEMA": 0,
+            "OUTPUT_POINTS": "TEMPORARY_OUTPUT",
+            "OUTPUT_LINES": "TEMPORARY_OUTPUT",
+        },
+        feedback=LoggerProcessingFeedBack(),
+    )
+    points = output["OUTPUT_POINTS"]
+    lines = output["OUTPUT_LINES"]
+    assert points.crs().authid() == "EPSG:2154"
+    assert points.geometryType() == QgsWkbTypes.PointGeometry
+    assert lines.geometryType() == QgsWkbTypes.LineGeometry
+    expected_fields = [
+        "id",
+        "schema_name",
+        "check_code",
+        "check_title",
+        "severity",
+        "road_code",
+        "edge_ids",
+        "node_ids",
+        "marker_ids",
+        "details",
+        "fix_action",
+        "fix_params",
+    ]
+    assert points.fields().names() == expected_fields
+    assert lines.fields().names() == expected_fields
+    for feature in points.getFeatures():
+        assert feature["schema_name"] == "road_graph_editing"
+
+    # Fix the issues of the editing session
+    output = processing.run(
+        f"{processing_provider.id()}:fix_graph_issues",
+        {"CONNECTION_NAME": "test", "INPUT": points},
+        feedback=LoggerProcessingFeedBack(),
+    )
+    assert output["ERRORS"] == 0
+
+    # Invalid options
+    with pytest.raises(QgsProcessingException, match="must be a JSON object"):
+        processing.run(
+            f"{processing_provider.id()}:check_graph",
+            {
+                "CONNECTION_NAME": "test",
+                "SCHEMA": 0,
+                "OPTIONS": "[1, 2]",
+                "OUTPUT_POINTS": "TEMPORARY_OUTPUT",
+                "OUTPUT_LINES": "TEMPORARY_OUTPUT",
+            },
+            feedback=LoggerProcessingFeedBack(),
+        )

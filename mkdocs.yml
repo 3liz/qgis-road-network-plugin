@@ -19,6 +19,7 @@ nav:
       - QGIS project and tools: user-guide/qgis-project.md
       - Processing algorithms: user-guide/processing.md
       - Road graph editing: user-guide/graph-editing.md
+      - Check and fix the road graph: user-guide/graph-checks.md
       - Managed objects: user-guide/managed-objects.md
     - Changelog: changelog.md
     - Contribution: contributing.md

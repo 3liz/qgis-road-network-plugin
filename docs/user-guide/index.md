@@ -13,6 +13,8 @@ This guide is split in five parts:
 * [Processing algorithms](processing.md): the algorithms provided by the plugin.
 * [Road graph editing](graph-editing.md): how to edit the roads, edges and markers
   in a dedicated editing session.
+* [Check and fix the road graph](graph-checks.md): how to find and fix the issues of the road graph,
+  for example after an import.
 * [Managed objects](managed-objects.md): how to prepare the business data based on the road network,
   and how they are kept up to date when the graph changes.
 

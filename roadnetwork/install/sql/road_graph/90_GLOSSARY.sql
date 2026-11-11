@@ -20,6 +20,12 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Data for Name: glossary_graph_check; Type: TABLE DATA; Schema: road_graph; Owner: -
+--
+
+
+
+--
 -- Data for Name: glossary_road_class; Type: TABLE DATA; Schema: road_graph; Owner: -
 --
 

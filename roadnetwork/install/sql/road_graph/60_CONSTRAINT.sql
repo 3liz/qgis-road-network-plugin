@@ -31,6 +31,11 @@ ALTER TABLE ONLY road_graph.editing_sessions
     ADD CONSTRAINT editing_sessions_pkey PRIMARY KEY (id);
 
 
+-- glossary_graph_check glossary_graph_check_pkey
+ALTER TABLE ONLY road_graph.glossary_graph_check
+    ADD CONSTRAINT glossary_graph_check_pkey PRIMARY KEY (code);
+
+
 -- glossary_road_class glossary_road_class_code_key
 ALTER TABLE ONLY road_graph.glossary_road_class
     ADD CONSTRAINT glossary_road_class_code_key UNIQUE (code);
