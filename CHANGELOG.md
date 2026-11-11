@@ -2,9 +2,17 @@
 
 ## Unreleased
 
-**Upgrade notes**
+## 0.6.4 - 2026-11-12
 
-* Run the algorithm `Upgrade database structure` to upgrade the database (migration 43)
+### Summary
+
+**Highlights**
+
+* **Managed objects**: the split and merge of lines in Lizmap now give the right references, even for lines
+  drawn in the opposite direction of the road, and the lines connected to an edited line stay connected
+* **Security**: the `SECURITY DEFINER` functions set their `search_path`, and the read-only functions
+  work even if the `search_path` of the caller does not contain `public`
+
 
 ### Added
 
@@ -50,6 +58,7 @@
 * **Lizmap**: in the form `Create the geometry from references` of the editing panel, the start and end references
   of a line drawn in the opposite direction of the road were displayed in the drawing order.
   They are now ordered in the direction of the road, like the geometry created from them
+
 
 ## 0.6.3 - 2026-10-30
 
