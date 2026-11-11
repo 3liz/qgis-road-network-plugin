@@ -4,7 +4,7 @@
 
 **Upgrade notes**
 
-* Run the algorithm `Upgrade database structure` to upgrade the database (migration 43)
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 44)
 
 ### Added
 
@@ -24,6 +24,9 @@
 * **Security**: the `SECURITY DEFINER` functions set their `search_path`, and the read-only functions
   work even if the `search_path` of the caller does not contain `public`
 
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 43)
 
 ### Added
 
