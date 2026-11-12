@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>check_graph_t_junction_gaps(_road_codes text[], _options jsonb)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Check G02 run by the function check_graph: find the edges ending near another edge without being connected to it, for example a road arriving on another road and stopping a few decimeters before it (T junction).</p>
+<p>An issue is returned for each free end of an edge (no other edge is connected to it) which is less than the tolerance from another edge: option tolerance, 2 m by default. The edges connected to the opposite end of the edge are ignored, for example its next edge if it is very short, and the edges crossed by the edge near its free end: the edge goes beyond the other edge, which is found by the check G01. When two free ends are close to each other, only one issue is returned.</p>
+<p>The point to join is the closest point of the other edge, or its start or end point if it is less than 50 cm from it. The details give the road codes of the two edges, the distance, and the join type: edge or edge_end. The issue can be fixed with the action extend_edge, which adds the point to join at the free end of the edge.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_road_codes</td>
+                                    <td>text[]</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_options</td>
+                                    <td>jsonb</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>check_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>check_title</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>severity</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>road_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>edge_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>node_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>marker_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>details</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_action</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_params</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom_detail</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    -- Maximum distance between the free end of an edge and another edge&#10;    tolerance real &#61; Coalesce((_options-&gt;&gt;&#39;tolerance&#39;)::real, 2.0);&#10;    -- Distance used by the triggers to split an edge by a node, and to reuse an existing node&#10;    node_tolerance real &#61; 0.50;&#10;    -- Maximum distance between two connected edges&#10;    connected_tolerance real &#61; 0.001;&#10;BEGIN&#10;    RETURN QUERY&#10;    WITH&#10;    -- Start and end points of the edges&#10;    ends AS (&#10;        SELECT e.id, e.road_code, e.geom AS edge_geom, &#39;start&#39;::text AS side, e.start_node AS node_id,&#10;            ST_StartPoint(e.geom) AS point, ST_EndPoint(e.geom) AS opposite_point&#10;        FROM road_graph.edges AS e&#10;        WHERE _road_codes IS NULL OR e.road_code &#61; ANY(_road_codes)&#10;        UNION ALL&#10;        SELECT e.id, e.road_code, e.geom AS edge_geom, &#39;end&#39;::text AS side, e.end_node AS node_id,&#10;            ST_EndPoint(e.geom) AS point, ST_StartPoint(e.geom) AS opposite_point&#10;        FROM road_graph.edges AS e&#10;        WHERE _road_codes IS NULL OR e.road_code &#61; ANY(_road_codes)&#10;    ),&#10;    -- Free ends: no other edge is connected to them&#10;    free_ends AS (&#10;        SELECT f.*&#10;        FROM ends AS f&#10;        WHERE NOT EXISTS (&#10;            SELECT 1&#10;            FROM road_graph.edges AS o&#10;            WHERE o.id !&#61; f.id&#10;            AND ST_DWithin(o.geom, f.point, connected_tolerance)&#10;        )&#10;    ),&#10;    -- Closest other edge less than the tolerance from each free end. Are ignored:&#10;    -- * the edges connected to the opposite end of the edge, for example its next edge if it is very short,&#10;    -- * the edges crossed by the edge near its free end: the edge goes beyond the other edge,&#10;    --   the crossing is found by the check G01&#10;    gaps AS (&#10;        SELECT DISTINCT ON (f.id, f.side)&#10;            f.*,&#10;            o.id AS other_id, o.road_code AS other_road_code,&#10;            ST_Distance(o.geom, f.point) AS distance,&#10;            ST_ClosestPoint(o.geom, f.point) AS closest_point,&#10;            ST_StartPoint(o.geom) AS other_start, ST_EndPoint(o.geom) AS other_end&#10;        FROM free_ends AS f&#10;        JOIN road_graph.edges AS o&#10;            ON o.id !&#61; f.id&#10;            AND ST_DWithin(o.geom, f.point, tolerance)&#10;            AND NOT ST_DWithin(o.geom, f.opposite_point, connected_tolerance)&#10;            AND NOT (&#10;                ST_Intersects(o.geom, f.edge_geom)&#10;                AND ST_DWithin(ST_Intersection(o.geom, f.edge_geom), f.point, tolerance)&#10;            )&#10;        ORDER BY f.id, f.side, ST_Distance(o.geom, f.point)&#10;    ),&#10;    -- Point to join: the closest point of the other edge,&#10;    -- or its start or end point if it is closer than the distance used by the triggers to split it&#10;    targets AS (&#10;        SELECT&#10;            g.*,&#10;            CASE&#10;                WHEN ST_DWithin(g.closest_point, g.other_start, node_tolerance)&#10;                    AND ST_Distance(g.closest_point, g.other_start) &lt;&#61; ST_Distance(g.closest_point, g.other_end)&#10;                    THEN g.other_start&#10;                WHEN ST_DWithin(g.closest_point, g.other_end, node_tolerance)&#10;                    THEN g.other_end&#10;                ELSE g.closest_point&#10;            END AS target&#10;        FROM gaps AS g&#10;    ),&#10;    -- Two free ends close to each other: keep only one issue&#10;    issues AS (&#10;        SELECT t.*&#10;        FROM targets AS t&#10;        WHERE NOT EXISTS (&#10;            SELECT 1&#10;            FROM free_ends AS f&#10;            WHERE f.id &#61; t.other_id&#10;            AND ST_Equals(f.point, t.target)&#10;            AND f.id &lt; t.id&#10;            AND ST_DWithin(f.point, t.point, tolerance)&#10;        )&#10;    )&#10;    SELECT&#10;        &#39;G02&#39;::text,&#10;        &#39;Edge ending near another edge without being connected&#39;::text,&#10;        &#39;error&#39;::text,&#10;        i.road_code,&#10;        ARRAY[i.id, i.other_id],&#10;        CASE WHEN i.node_id IS NULL THEN NULL ELSE ARRAY[i.node_id] END,&#10;        NULL::integer[],&#10;        jsonb_build_object(&#10;            &#39;road_codes&#39;, jsonb_build_array(i.road_code, i.other_road_code),&#10;            &#39;distance&#39;, round(ST_Distance(i.point, i.target)::numeric, 2),&#10;            -- The free end joins the other edge in its middle, or at its start or end point&#10;            &#39;join_type&#39;, CASE WHEN ST_Equals(i.target, i.closest_point) THEN &#39;edge&#39; ELSE &#39;edge_end&#39; END&#10;        ),&#10;        &#39;extend_edge&#39;::text,&#10;        jsonb_build_object(&#10;            &#39;edge_id&#39;, i.id,&#10;            &#39;side&#39;, i.side,&#10;            &#39;point&#39;, ST_AsEWKT(i.point),&#10;            &#39;target&#39;, ST_AsEWKT(i.target)&#10;        ),&#10;        i.point,&#10;        ST_MakeLine(i.point, i.target)&#10;    FROM issues AS i&#10;    ORDER BY i.road_code, i.id, i.side&#10;    ;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

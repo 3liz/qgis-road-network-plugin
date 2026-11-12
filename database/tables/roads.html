@@ -139,7 +139,7 @@
                                     <td><p>Unique integer ID (automatic)</p></td>
                                 </tr>
                                 <tr>
-                                    <td class='indexedColumn' title='Indexed'><i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'></i><span id="road_code">road_code</span></td>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="road_code">road_code</span></td>
                                     <td>text</td>
                                     <td>2147483647</td>
                                     <td title=''></td>
@@ -161,6 +161,11 @@
                                     </td>
                                     <td>
                                         <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="roads.road_code&#39;s name implies that it&#39;s a child of glossary_graph_check.code, but it doesn&#39;t reference that column."><a href='glossary_graph_check.html'>glossary_graph_check</a><span class='relatedKey'>.code</span></td>
+                                                <td class="constraint detail">Implied Constraint</td>
+                                                <td class="constraint detail"><span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
                                         </table>
                                     </td>
                                     <td></td>
@@ -205,7 +210,7 @@
                                     <td></td>
                                 </tr>
                                 <tr>
-                                    <td><span id="road_class_code">road_class_code</span></td>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="road_class_code">road_class_code</span></td>
                                     <td>text</td>
                                     <td>2147483647</td>
                                     <td title='nullable'>√</td>
@@ -217,6 +222,11 @@
                                     </td>
                                     <td>
                                         <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="roads.road_class_code&#39;s name implies that it&#39;s a child of glossary_graph_check.code, but it doesn&#39;t reference that column."><a href='glossary_graph_check.html'>glossary_graph_check</a><span class='relatedKey'>.code</span></td>
+                                                <td class="constraint detail">Implied Constraint</td>
+                                                <td class="constraint detail"><span title='Restrict delete:&#10;Parent cannot be deleted if children exist'>R</span></td>
+                                            </tr>
                                         </table>
                                     </td>
                                     <td></td>
@@ -422,6 +432,8 @@
                                 <ul class="nav nav-tabs pull-left ui-sortable-handle">
                                     <li class="active"><a href="#oneDegreeImg-chart" data-toggle="tab" aria-expanded="true">One</a></li>
                                     <li class=""><a href="#twodegreesDegreeImg-chart" data-toggle="tab" aria-expanded="true">Two degrees</a></li>
+                                    <li class=""><a href="#oneimpliedDegreeImg-chart" data-toggle="tab" aria-expanded="true">One implied</a></li>
+                                    <li class=""><a href="#twoimpliedDegreeImg-chart" data-toggle="tab" aria-expanded="true">Two implied</a></li>
                                 </ul>
                                 <div class="tab-content no-padding">
                                     <div class="chart tab-pane active" id="oneDegreeImg-chart" style="position: relative; overflow-x:auto;">
@@ -442,6 +454,29 @@
 <area shape="rect" id="node4" href="markers.html" target="_top" title="markers" alt="" coords="778,8,942,243">
 </map>
                                         <a name='diagram'><img id="twodegreesDegreeImg" src="../diagrams/tables/roads.2degrees.png" usemap="#twoDegreesRelationshipsDiagram" class="diagram" border="0" align="left"></a>
+                                    </div>
+                                    <div class="chart tab-pane " id="oneimpliedDegreeImg-chart" style="position: relative; overflow-x:auto;">
+                                        <map id="oneDegreeRelationshipsDiagramImplied" name="oneDegreeRelationshipsDiagramImplied">
+<area shape="rect" id="node1" href="edges.html" target="_top" title="edges" alt="" coords="1063,5,1340,240">
+<area shape="rect" id="node2" href="roads.html" target="_top" title="roads" alt="" coords="667,129,1019,521">
+<area shape="rect" id="node3" href="glossary_road_class.html" target="_top" title="glossary_road_class" alt="" coords="347,191,623,343">
+<area shape="rect" id="node4" href="glossary_graph_check.html" target="_top" title="glossary_graph_check" alt="" coords="5,220,303,337">
+<area shape="rect" id="node5" href="markers.html" target="_top" title="markers" alt="" coords="1119,257,1283,492">
+</map>
+                                        <a name='diagram'><img id="oneimpliedDegreeImg" src="../diagrams/tables/roads.implied1degrees.png" usemap="#oneDegreeRelationshipsDiagramImplied" class="diagram" border="0" align="left"></a>
+                                    </div>
+                                    <div class="chart tab-pane " id="twoimpliedDegreeImg-chart" style="position: relative; overflow-x:auto;">
+                                        <map id="twoDegreesRelationshipsDiagramImplied" name="twoDegreesRelationshipsDiagramImplied">
+<area shape="rect" id="node1" href="edges.html" target="_top" title="edges" alt="" coords="1145,324,1423,559">
+<area shape="rect" id="node2" href="nodes.html" target="_top" title="nodes" alt="" coords="854,415,997,503">
+<area shape="rect" id="node3" href="roads.html" target="_top" title="roads" alt="" coords="749,5,1101,397">
+<area shape="rect" id="node5" href="glossary_graph_check.html" target="_top" title="glossary_graph_check" alt="" coords="5,172,303,260">
+<area shape="rect" id="node6" href="glossary_road_class.html" target="_top" title="glossary_road_class" alt="" coords="388,101,664,189">
+<area shape="rect" id="node4" href="editing_sessions.html" target="_top" title="editing_sessions" alt="" coords="404,243,648,331">
+<area shape="rect" id="node7" href="markers.html" target="_top" title="markers" alt="" coords="1202,8,1366,243">
+<area shape="rect" id="node8" href="v_road_without_zero_marker.html" target="_top" title="v_road_without_zero_marker" alt="" coords="347,348,705,412">
+</map>
+                                        <a name='diagram'><img id="twoimpliedDegreeImg" src="../diagrams/tables/roads.implied2degrees.png" usemap="#twoDegreesRelationshipsDiagramImplied" class="diagram" border="0" align="left"></a>
                                     </div>
                                 </div>
                             </div>

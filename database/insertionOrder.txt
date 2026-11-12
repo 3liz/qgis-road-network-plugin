@@ -1,8 +1,9 @@
+glossary_graph_check
 nodes
 glossary_road_class
 roads
+editing_sessions
 markers
 edges
-editing_sessions
 managed_objects
 metadata

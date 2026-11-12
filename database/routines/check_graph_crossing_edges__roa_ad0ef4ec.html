@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>check_graph_crossing_edges(_road_codes text[], _options jsonb)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Check G01 run by the function check_graph: find the edges crossing each other without being split by a node.</p>
+<p>An issue is returned for each crossing point which is not at the start or end point of both edges (50 cm tolerance, like the triggers splitting the edges). The edges with the field no_intersection_cutting set to True, for example on a bridge, are ignored.</p>
+<p>The details give the crossing type, the road codes and classes of the two edges, and the angle between them, which help to find the bridges:</p>
+<ul>
+<li>touching: the point is the start or end point of one of the edges, for example a road arriving on another road. The edges are surely connected: the fix action is cut_edges, which creates a node at the point and splits the edges,</li>
+<li>crossing: the edges cross each other, maybe on a bridge or in a tunnel. The fix action is given by the option crossing_fix_action of the check, NULL by default: it must be chosen for each issue, cut_edges if the roads are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.</li>
+</ul></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_road_codes</td>
+                                    <td>text[]</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_options</td>
+                                    <td>jsonb</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>check_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>check_title</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>severity</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>road_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>edge_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>node_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>marker_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>details</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_action</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_params</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom_detail</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    -- Distance used by the triggers to split an edge by a node, and to reuse an existing node&#10;    tolerance real &#61; 0.50;&#10;    -- Action fixing the edges crossing each other, chosen by the administrator: NULL by default,&#10;    -- since they may be on a bridge. The edges touching each other are always cut&#10;    crossing_fix_action text &#61; Nullif(_options-&gt;&gt;&#39;crossing_fix_action&#39;, &#39;&#39;);&#10;BEGIN&#10;    IF crossing_fix_action NOT IN (&#39;cut_edges&#39;, &#39;mark_as_bridge&#39;) THEN&#10;        RAISE EXCEPTION &#39;The option crossing_fix_action of the check G01 must be cut_edges or mark_as_bridge, not %&#39;,&#10;            crossing_fix_action;&#10;    END IF;&#10;&#10;    RETURN QUERY&#10;    WITH&#10;    -- Points where two edges cross or touch each other.&#10;    -- The edges which must not be cut, for example on a bridge, are ignored&#10;    crossings AS (&#10;        SELECT&#10;            a.id AS a_id, b.id AS b_id,&#10;            a.road_code AS a_road_code, b.road_code AS b_road_code,&#10;            a.geom AS a_geom, b.geom AS b_geom,&#10;            (ST_Dump(ST_CollectionExtract(ST_Intersection(a.geom, b.geom), 1))).geom AS point&#10;        FROM road_graph.edges AS a&#10;        JOIN road_graph.edges AS b&#10;            ON a.id &lt; b.id&#10;            AND ST_Intersects(a.geom, b.geom)&#10;        WHERE NOT Coalesce(a.no_intersection_cutting, False)&#10;        AND NOT Coalesce(b.no_intersection_cutting, False)&#10;        AND (&#10;            _road_codes IS NULL&#10;            OR a.road_code &#61; ANY(_road_codes)&#10;            OR b.road_code &#61; ANY(_road_codes)&#10;        )&#10;    ),&#10;    -- Keep the points which are not at the start or end of both edges:&#10;    -- at least one of the edges must be split there.&#10;    -- If the point is at the start or end of one edge, the edges touch each other: they are surely connected.&#10;    -- Else they cross each other, maybe on a bridge&#10;    issues AS (&#10;        SELECT&#10;            c.*,&#10;            (&#10;                ST_DWithin(c.point, ST_StartPoint(c.a_geom), tolerance)&#10;                OR ST_DWithin(c.point, ST_EndPoint(c.a_geom), tolerance)&#10;                OR ST_DWithin(c.point, ST_StartPoint(c.b_geom), tolerance)&#10;                OR ST_DWithin(c.point, ST_EndPoint(c.b_geom), tolerance)&#10;            ) AS is_touching&#10;        FROM crossings AS c&#10;        WHERE (&#10;            NOT ST_DWithin(c.point, ST_StartPoint(c.a_geom), tolerance)&#10;            AND NOT ST_DWithin(c.point, ST_EndPoint(c.a_geom), tolerance)&#10;        ) OR (&#10;            NOT ST_DWithin(c.point, ST_StartPoint(c.b_geom), tolerance)&#10;            AND NOT ST_DWithin(c.point, ST_EndPoint(c.b_geom), tolerance)&#10;        )&#10;    ),&#10;    -- Direction of each edge at the crossing point, from its points 1 m before and after,&#10;    -- to get the angle between the edges: it helps to find the bridges&#10;    directions AS (&#10;        SELECT&#10;            i.*,&#10;            degrees(ST_Azimuth(&#10;                ST_LineInterpolatePoint(i.a_geom, greatest(ST_LineLocatePoint(i.a_geom, i.point) - 1 / ST_Length(i.a_geom), 0)),&#10;                ST_LineInterpolatePoint(i.a_geom, least(ST_LineLocatePoint(i.a_geom, i.point) + 1 / ST_Length(i.a_geom), 1))&#10;            )) AS a_azimuth,&#10;            degrees(ST_Azimuth(&#10;                ST_LineInterpolatePoint(i.b_geom, greatest(ST_LineLocatePoint(i.b_geom, i.point) - 1 / ST_Length(i.b_geom), 0)),&#10;                ST_LineInterpolatePoint(i.b_geom, least(ST_LineLocatePoint(i.b_geom, i.point) + 1 / ST_Length(i.b_geom), 1))&#10;            )) AS b_azimuth&#10;        FROM issues AS i&#10;    )&#10;    SELECT&#10;        &#39;G01&#39;::text,&#10;        &#39;Crossing edges without node&#39;::text,&#10;        &#39;error&#39;::text,&#10;        d.a_road_code,&#10;        ARRAY[d.a_id, d.b_id],&#10;        -- Existing node close to the crossing point, not used by the edges&#10;        (&#10;            SELECT array_agg(n.id ORDER BY n.id)&#10;            FROM road_graph.nodes AS n&#10;            WHERE ST_DWithin(n.geom, d.point, tolerance)&#10;        ),&#10;        NULL::integer[],&#10;        jsonb_build_object(&#10;            &#39;crossing_type&#39;, CASE WHEN d.is_touching THEN &#39;touching&#39; ELSE &#39;crossing&#39; END,&#10;            &#39;road_codes&#39;, jsonb_build_array(d.a_road_code, d.b_road_code),&#10;            &#39;road_classes&#39;, jsonb_build_array(ra.road_class, rb.road_class),&#10;            -- Angle between the two edges, from 0 (parallel) to 90 degrees (perpendicular)&#10;            &#39;angle&#39;, round((90 - abs(90 - mod((abs(d.a_azimuth - d.b_azimuth))::numeric, 180)))::numeric, 1)&#10;        ),&#10;        CASE WHEN d.is_touching THEN &#39;cut_edges&#39; ELSE crossing_fix_action END,&#10;        jsonb_build_object(&#10;            &#39;point&#39;, ST_AsEWKT(d.point),&#10;            &#39;edge_ids&#39;, jsonb_build_array(d.a_id, d.b_id)&#10;        ),&#10;        d.point,&#10;        ST_Collect(d.a_geom, d.b_geom)&#10;    FROM directions AS d&#10;    LEFT JOIN road_graph.roads AS ra ON ra.road_code &#61; d.a_road_code&#10;    LEFT JOIN road_graph.roads AS rb ON rb.road_code &#61; d.b_road_code&#10;    ORDER BY d.a_road_code, d.a_id, d.b_id&#10;    ;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>
