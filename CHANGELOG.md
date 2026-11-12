@@ -22,6 +22,12 @@
   fixed by extending the edge to the other edge, which is split there
 * **Road graph checks** - G03: nodes close to each other, fixed by merging them
 
+### Fixed
+
+* **Edges**: when an edge is created or modified, its start and end points use the **closest node**
+  less than 50 cm from them, instead of the node with the lowest id. Before, modifying any vertex of an edge
+  could connect it to another node close to its start or end node
+
 ## 0.6.4 - 2026-11-12
 
 ### Summary

@@ -2104,11 +2104,17 @@ BEGIN
             OR (e.start_node = b.id AND e.end_node = a.id)
         )
     ),
-    -- The node kept is the one with the lowest id: the triggers use the node with the lowest id
-    -- less than 50 cm from the start or end point of an edge (see get_or_create_edge_node)
+    -- Node to keep: the node with the most edges, so that the fewest edges are moved,
+    -- or else the node with the lowest id (the first node of the pair), i.e. the oldest node
     issues AS (
-        SELECT p.*
-        FROM pairs AS p
+        SELECT
+            p.*,
+            CASE WHEN keep_a THEN p.a_id ELSE p.b_id END AS keep_id,
+            CASE WHEN keep_a THEN p.a_geom ELSE p.b_geom END AS keep_geom,
+            CASE WHEN keep_a THEN p.b_id ELSE p.a_id END AS remove_id,
+            CASE WHEN keep_a THEN p.b_geom ELSE p.a_geom END AS remove_geom
+        FROM pairs AS p,
+        LATERAL (SELECT cardinality(p.a_edge_ids) >= cardinality(p.b_edge_ids) AS keep_a) AS k
         WHERE _road_codes IS NULL OR p.pair_road_codes && _road_codes
     )
     SELECT
@@ -2117,7 +2123,7 @@ BEGIN
         'error'::text,
         (SELECT min(c) FROM unnest(i.pair_road_codes) AS c),
         (SELECT array_agg(DISTINCT x ORDER BY x) FROM unnest(i.a_edge_ids || i.b_edge_ids) AS x),
-        ARRAY[i.a_id, i.b_id],
+        ARRAY[i.keep_id, i.remove_id],
         NULL::integer[],
         jsonb_build_object(
             'road_codes', (SELECT jsonb_agg(DISTINCT c ORDER BY c) FROM unnest(i.pair_road_codes) AS c),
@@ -2125,11 +2131,11 @@ BEGIN
         ),
         'merge_nodes'::text,
         jsonb_build_object(
-            'keep_node_id', i.a_id,
-            'remove_node_id', i.b_id
+            'keep_node_id', i.keep_id,
+            'remove_node_id', i.remove_id
         ),
-        i.a_geom,
-        CASE WHEN ST_Equals(i.a_geom, i.b_geom) THEN NULL ELSE ST_MakeLine(i.b_geom, i.a_geom) END
+        i.keep_geom,
+        CASE WHEN ST_Equals(i.a_geom, i.b_geom) THEN NULL ELSE ST_MakeLine(i.remove_geom, i.keep_geom) END
     FROM issues AS i
     ORDER BY 4, i.a_id, i.b_id
     ;
@@ -2143,8 +2149,9 @@ COMMENT ON FUNCTION road_graph.check_graph_close_nodes(_road_codes text[], _opti
 An issue is returned for each pair of nodes less than the tolerance from each other: option tolerance, 1 m by default.
 The nodes linked by an edge are ignored: this edge is very short, and is found by another check.
 
-The node to keep is the node with the lowest id, like in the triggers which use the node with the lowest id
-less than 50 cm from the start or end point of an edge: it is the first node of node_ids, and the point of the issue. The details give the road codes of the edges of the two nodes, and the distance.
+The node to keep is the node with the most edges, so that the fewest edges are moved,
+or else the node with the lowest id, i.e. the oldest node: it is the first node of node_ids,
+and the point of the issue. The details give the road codes of the edges of the two nodes, and the distance.
 The issue can be fixed with the action merge_nodes, which moves the edges of the other node to the node to keep.';
 
 
@@ -4080,12 +4087,15 @@ CREATE FUNCTION road_graph.get_or_create_edge_node(_point geometry, _create bool
     LANGUAGE plpgsql
     AS $$
 BEGIN
-    -- Get the first node closer than 0.5 m from the given start or end point of an edge
+    -- Get the closest node less than 0.5 m from the given start or end point of an edge,
+    -- or the node with the lowest id if several nodes are at the same distance.
+    -- The closest node must be used: when an edge is modified, its start or end point
+    -- must stay on its node, even if another node is less than 0.5 m from it
     SELECT n.id, n.geom
     INTO node_id, node_geom
     FROM road_graph.nodes AS n
     WHERE ST_DWithin(n.geom, _point, 0.50)
-    ORDER BY n.id, n.geom <-> _point
+    ORDER BY n.geom <-> _point, n.id
     LIMIT 1
     ;
     is_created = False;
@@ -4125,7 +4135,9 @@ $$;
 
 
 -- FUNCTION get_or_create_edge_node(_point geometry, _create boolean)
-COMMENT ON FUNCTION road_graph.get_or_create_edge_node(_point geometry, _create boolean) IS 'Get the node of the given start or end point of an edge: the first node closer than 0.5 m.
+COMMENT ON FUNCTION road_graph.get_or_create_edge_node(_point geometry, _create boolean) IS 'Get the node of the given start or end point of an edge: the closest node less than 0.5 m from it,
+or the node with the lowest id if several nodes are at the same distance.
+
 If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place).
 Used by the trigger function before_edge_insert_or_update.';
 

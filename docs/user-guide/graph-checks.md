@@ -174,8 +174,9 @@ The check returns one issue for each pair of nodes less than the **tolerance** f
 option `tolerance`, **1 m** by default. The nodes linked by an edge are ignored: this edge is very short,
 and must be examined with the check of the short edges.
 
-The **node to keep** is the node with the **lowest id**, like in the triggers, which use the node with the lowest id
-less than 50 cm from the start or end point of an edge. It is the first node of `node_ids`, and the point of the issue.
+The **node to keep** is the node with the **most edges**, so that the fewest edges are moved,
+or else the node with the **lowest id**, i.e. the oldest node.
+It is the first node of `node_ids`, and the point of the issue.
 The field `details` gives the road codes of the edges of the two nodes and the `distance`.
 
 Many of these issues are also found by the check [G02](#g02-edge-ending-near-another-edge),

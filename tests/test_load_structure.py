@@ -4111,11 +4111,22 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
     cursor = rollback_db_connection.cursor()
 
     # Issues of the production schema: the distance is lower than the default tolerance of 1 m,
-    # and the node to keep is the first node, with the lowest id
+    # and the node to keep is the first node: the node with the most edges, or else the node with the lowest id
     cursor.execute("""
+        WITH node_edges AS (
+            SELECT n.id, count(e.id) AS edge_count
+            FROM road_graph.nodes AS n
+            LEFT JOIN road_graph.edges AS e ON n.id IN (e.start_node, e.end_node)
+            GROUP BY n.id
+        )
         SELECT count(*), max((details->>'distance')::numeric)::float, bool_and(fix_action = 'merge_nodes'),
-            bool_and((fix_params->>'keep_node_id')::integer = node_ids[1] AND node_ids[1] < node_ids[2])
-        FROM road_graph.check_graph(ARRAY['G03'])
+            bool_and(
+                (fix_params->>'keep_node_id')::integer = node_ids[1]
+                AND (k.edge_count > r.edge_count OR (k.edge_count = r.edge_count AND node_ids[1] < node_ids[2]))
+            )
+        FROM road_graph.check_graph(ARRAY['G03']) AS i
+        JOIN node_edges AS k ON k.id = i.node_ids[1]
+        JOIN node_edges AS r ON r.id = i.node_ids[2]
     """)
     count, max_distance, all_merge, keep_first = cursor.fetchone()
     assert count > 0
@@ -4189,3 +4200,42 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
         (str(params["remove_node_id"]),),
     )
     assert cursor.fetchone()[0] == 0
+
+
+def test_edge_update_keeps_closest_node(rollback_db_connection: psycopg.Connection):
+    """When an edge is modified, its start and end points stay on their nodes,
+    even if another node with a lower id is less than 50 cm from them:
+    the triggers use the closest node (see get_or_create_edge_node).
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Edges of the node with the highest id of the pairs of nodes less than 50 cm from each other
+    cursor.execute("""
+        CREATE TEMPORARY TABLE test_close_node_edges AS
+        SELECT e.id AS edge_id, n.node_id, e.start_node = n.node_id AS is_start
+        FROM road_graph.check_graph(ARRAY['G03'], NULL, '{"G03": {"tolerance": 0.45}}') AS i,
+        LATERAL (SELECT greatest(i.node_ids[1], i.node_ids[2]) AS node_id) AS n
+        JOIN road_graph.edges AS e
+            ON n.node_id IN (e.start_node, e.end_node)
+    """)
+    cursor.execute("SELECT count(*) FROM test_close_node_edges")
+    count = cursor.fetchone()[0]
+    assert count > 0
+
+    # Modify only the vertices between the start and end points of these edges
+    cursor.execute("""
+        UPDATE road_graph.edges AS e
+        SET geom = ST_Segmentize(e.geom, 1)
+        FROM test_close_node_edges AS t
+        WHERE e.id = t.edge_id
+    """)
+
+    # The edges still use their node, not the other node with a lower id
+    cursor.execute("""
+        SELECT count(*)
+        FROM test_close_node_edges AS t
+        JOIN road_graph.edges AS e
+            ON e.id = t.edge_id
+        WHERE CASE WHEN t.is_start THEN e.start_node ELSE e.end_node END = t.node_id
+    """)
+    assert cursor.fetchone()[0] == count
