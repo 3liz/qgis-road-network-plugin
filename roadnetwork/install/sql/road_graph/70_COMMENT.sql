@@ -160,6 +160,17 @@ The function can be run on the production schema or on the editing schema: road_
 checks the data of the editing session. The issues must be fixed in an editing session, with the function fix_graph_issue.';
 
 
+-- FUNCTION check_graph_close_nodes(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_close_nodes(_road_codes text[], _options jsonb) IS 'Check G03 run by the function check_graph: find the nodes close to each other, which should be the same node.
+
+An issue is returned for each pair of nodes less than the tolerance from each other: option tolerance, 1 m by default.
+The nodes linked by an edge are ignored: this edge is very short, and is found by another check.
+
+The node to keep is the node with the lowest id, like in the triggers which use the node with the lowest id
+less than 50 cm from the start or end point of an edge: it is the first node of node_ids, and the point of the issue. The details give the road codes of the edges of the two nodes, and the distance.
+The issue can be fixed with the action merge_nodes, which moves the edges of the other node to the node to keep.';
+
+
 -- FUNCTION check_graph_crossing_edges(_road_codes text[], _options jsonb)
 COMMENT ON FUNCTION road_graph.check_graph_crossing_edges(_road_codes text[], _options jsonb) IS 'Check G01 run by the function check_graph: find the edges crossing each other without being split by a node.
 
@@ -264,6 +275,19 @@ the given edge if the parameter _params contains edge_id, or else all the edges 
 {"point": "SRID=2154;POINT(x y)", "edge_ids": [12, 34], "edge_id": 12}.
 
 It returns a JSON object with the keys status (success, or skipped if the edges are already marked) and message.';
+
+
+-- FUNCTION fix_graph_merge_nodes(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_merge_nodes(_params jsonb) IS 'Action merge_nodes run by the function fix_graph_issue, to fix the issues of the check G03:
+merge two nodes close to each other.
+
+The parameter _params must contain the ids of the node to keep and of the node to remove:
+{"keep_node_id": 12, "remove_node_id": 34}.
+The start and end points of the edges of the node to remove are moved to the node to keep,
+then the node to remove is deleted.
+
+It returns a JSON object with the keys status (success, skipped if the node to remove does not exist anymore,
+or error if the nodes are linked by an edge) and message.';
 
 
 -- FUNCTION get_current_setting(setting_name text, default_value text)

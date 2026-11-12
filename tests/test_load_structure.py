@@ -4102,3 +4102,90 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection)
         (params["point"],),
     )
     assert cursor.fetchone()[0] == 0
+
+
+def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
+    """Check G03: nodes close to each other, which should be the same node.
+    The issues are fixed in an editing session created around one of them.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Issues of the production schema: the distance is lower than the default tolerance of 1 m,
+    # and the node to keep is the first node, with the lowest id
+    cursor.execute("""
+        SELECT count(*), max((details->>'distance')::numeric)::float, bool_and(fix_action = 'merge_nodes'),
+            bool_and((fix_params->>'keep_node_id')::integer = node_ids[1] AND node_ids[1] < node_ids[2])
+        FROM road_graph.check_graph(ARRAY['G03'])
+    """)
+    count, max_distance, all_merge, keep_first = cursor.fetchone()
+    assert count > 0
+    assert max_distance <= 1
+    assert all_merge
+    assert keep_first
+
+    # The tolerance can be changed
+    cursor.execute("""
+        SELECT count(*) FROM road_graph.check_graph(ARRAY['G03'], NULL, '{"G03": {"tolerance": 0.15}}')
+    """)
+    assert cursor.fetchone()[0] < count
+
+    # Editing session around an issue
+    cursor.execute("""
+        WITH issue AS (
+            SELECT geom FROM road_graph.check_graph(ARRAY['G03']) ORDER BY id LIMIT 1
+        )
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G03 test', 'test', ST_Envelope(ST_Buffer(i.geom, 100))
+        FROM issue AS i
+        RETURNING id
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+
+    cursor.execute("""
+        SELECT i.fix_params, i.edge_ids
+        FROM road_graph_editing.check_graph(ARRAY['G03']) AS i
+        JOIN road_graph.editing_sessions AS s ON ST_Intersects(s.geom, i.geom)
+        WHERE s.label = 'G03 test'
+        ORDER BY i.id
+        LIMIT 1
+    """)
+    params, edge_ids = cursor.fetchone()
+
+    def fix() -> dict:
+        """Fix the issue in the editing session."""
+        cursor.execute("SELECT road_graph_editing.fix_graph_issue('merge_nodes', %s)", (json.dumps(params),))
+        row = cursor.fetchone()
+        assert row is not None
+        return row[0]
+
+    result = fix()
+    assert result["status"] == "success", result
+
+    # The node has been removed, and all the edges use the node kept
+    cursor.execute(
+        "SELECT count(*) FROM road_graph_editing.nodes WHERE id = %s",
+        (params["remove_node_id"],),
+    )
+    assert cursor.fetchone()[0] == 0
+    cursor.execute(
+        """
+        SELECT count(*)
+        FROM road_graph_editing.edges AS e
+        WHERE e.id = ANY(%s) AND %s IN (e.start_node, e.end_node)
+        """,
+        (edge_ids, params["keep_node_id"]),
+    )
+    assert cursor.fetchone()[0] == len(edge_ids)
+
+    # The issue is fixed
+    assert fix()["status"] == "skipped"
+    cursor.execute(
+        """
+        SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G03'])
+        WHERE fix_params->>'remove_node_id' = %s
+        """,
+        (str(params["remove_node_id"]),),
+    )
+    assert cursor.fetchone()[0] == 0

@@ -9,6 +9,7 @@
 -- Checks:
 -- * G01: Crossing edges without node
 -- * G02: Edge ending near another edge without being connected
+-- * G03: Nodes close to each other
 
 -- glossary_graph_check
 CREATE TABLE IF NOT EXISTS road_graph.glossary_graph_check (
@@ -79,6 +80,16 @@ ON CONFLICT (code) DO UPDATE SET
 
 INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
 VALUES ('G02', 'Edge ending near another edge without being connected', 'error', 'check_graph_t_junction_gaps', '{extend_edge}', '{"tolerance": 2}', 'Free end of an edge (no other edge connected to it) less than the tolerance from another edge, for example a road stopping a few decimeters before the road it arrives on (T junction). Option: tolerance, in meters. Fix: extend_edge extends the edge to the closest point of the other edge, or to its start or end point if it is less than 50 cm from it, and the other edge is split there.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G03', 'Nodes close to each other', 'error', 'check_graph_close_nodes', '{merge_nodes}', '{"tolerance": 1}', 'Nodes less than the tolerance from each other, which should be the same node. The nodes linked by an edge are ignored. Option: tolerance, in meters. Fix: merge_nodes moves the edges of the node with the highest id to the other node, then deletes it.')
 ON CONFLICT (code) DO UPDATE SET
     title = EXCLUDED.title,
     severity = EXCLUDED.severity,
@@ -162,6 +173,89 @@ and, if useful, a line showing it (geom_detail).
 
 The function can be run on the production schema or on the editing schema: road_graph_editing.check_graph()
 checks the data of the editing session. The issues must be fixed in an editing session, with the function fix_graph_issue.';
+
+
+-- check_graph_close_nodes(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_close_nodes(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum distance between two nodes
+    tolerance real = Coalesce((_options->>'tolerance')::real, 1.0);
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Nodes with their edges
+    nodes AS (
+        SELECT
+            n.id, n.geom,
+            array_agg(e.id ORDER BY e.id) FILTER (WHERE e.id IS NOT NULL) AS node_edge_ids,
+            array_agg(DISTINCT e.road_code) FILTER (WHERE e.road_code IS NOT NULL) AS node_road_codes
+        FROM road_graph.nodes AS n
+        LEFT JOIN road_graph.edges AS e
+            ON n.id IN (e.start_node, e.end_node)
+        GROUP BY n.id, n.geom
+    ),
+    -- Pairs of close nodes, not linked by an edge: a short edge is found by another check
+    pairs AS (
+        SELECT
+            a.id AS a_id, b.id AS b_id,
+            a.geom AS a_geom, b.geom AS b_geom,
+            Coalesce(a.node_edge_ids, '{}') AS a_edge_ids, Coalesce(b.node_edge_ids, '{}') AS b_edge_ids,
+            Coalesce(a.node_road_codes, '{}') || Coalesce(b.node_road_codes, '{}') AS pair_road_codes
+        FROM nodes AS a
+        JOIN nodes AS b
+            ON a.id < b.id
+            AND ST_DWithin(a.geom, b.geom, tolerance)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM road_graph.edges AS e
+            WHERE (e.start_node = a.id AND e.end_node = b.id)
+            OR (e.start_node = b.id AND e.end_node = a.id)
+        )
+    ),
+    -- The node kept is the one with the lowest id: the triggers use the node with the lowest id
+    -- less than 50 cm from the start or end point of an edge (see get_or_create_edge_node)
+    issues AS (
+        SELECT p.*
+        FROM pairs AS p
+        WHERE _road_codes IS NULL OR p.pair_road_codes && _road_codes
+    )
+    SELECT
+        'G03'::text,
+        'Nodes close to each other'::text,
+        'error'::text,
+        (SELECT min(c) FROM unnest(i.pair_road_codes) AS c),
+        (SELECT array_agg(DISTINCT x ORDER BY x) FROM unnest(i.a_edge_ids || i.b_edge_ids) AS x),
+        ARRAY[i.a_id, i.b_id],
+        NULL::integer[],
+        jsonb_build_object(
+            'road_codes', (SELECT jsonb_agg(DISTINCT c ORDER BY c) FROM unnest(i.pair_road_codes) AS c),
+            'distance', round(ST_Distance(i.a_geom, i.b_geom)::numeric, 2)
+        ),
+        'merge_nodes'::text,
+        jsonb_build_object(
+            'keep_node_id', i.a_id,
+            'remove_node_id', i.b_id
+        ),
+        i.a_geom,
+        CASE WHEN ST_Equals(i.a_geom, i.b_geom) THEN NULL ELSE ST_MakeLine(i.b_geom, i.a_geom) END
+    FROM issues AS i
+    ORDER BY 4, i.a_id, i.b_id
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_close_nodes(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_close_nodes(_road_codes text[], _options jsonb) IS 'Check G03 run by the function check_graph: find the nodes close to each other, which should be the same node.
+
+An issue is returned for each pair of nodes less than the tolerance from each other: option tolerance, 1 m by default.
+The nodes linked by an edge are ignored: this edge is very short, and is found by another check.
+
+The node to keep is the node with the lowest id, like in the triggers which use the node with the lowest id
+less than 50 cm from the start or end point of an edge: it is the first node of node_ids, and the point of the issue. The details give the road codes of the edges of the two nodes, and the distance.
+The issue can be fixed with the action merge_nodes, which moves the edges of the other node to the node to keep.';
 
 
 -- check_graph_crossing_edges(text[], jsonb)
@@ -709,3 +803,92 @@ the given edge if the parameter _params contains edge_id, or else all the edges 
 {"point": "SRID=2154;POINT(x y)", "edge_ids": [12, 34], "edge_id": 12}.
 
 It returns a JSON object with the keys status (success, or skipped if the edges are already marked) and message.';
+
+
+-- fix_graph_merge_nodes(jsonb)
+CREATE OR REPLACE FUNCTION road_graph.fix_graph_merge_nodes(_params jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    keep_node record;
+    remove_node record;
+BEGIN
+    -- Nodes to keep and to remove
+    SELECT n.*
+    INTO keep_node
+    FROM road_graph.nodes AS n
+    WHERE n.id = (_params->>'keep_node_id')::integer
+    ;
+    SELECT n.*
+    INTO remove_node
+    FROM road_graph.nodes AS n
+    WHERE n.id = (_params->>'remove_node_id')::integer
+    ;
+
+    -- The node may have been merged or deleted by a previous fix
+    IF remove_node.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The node %s does not exist anymore', _params->>'remove_node_id')
+        );
+    END IF;
+    IF keep_node.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', format('The node to keep %s does not exist anymore', _params->>'keep_node_id')
+        );
+    END IF;
+
+    -- The nodes must not be linked by an edge, which would be reduced to a point
+    IF EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        WHERE (e.start_node = keep_node.id AND e.end_node = remove_node.id)
+        OR (e.start_node = remove_node.id AND e.end_node = keep_node.id)
+    ) THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', format('The nodes %s and %s are linked by an edge', keep_node.id, remove_node.id)
+        );
+    END IF;
+
+    -- Move the start and end points of the edges of the node to remove to the node to keep:
+    -- the triggers use the node to keep for these edges
+    UPDATE road_graph.edges AS e
+    SET geom = ST_SetPoint(e.geom, 0, keep_node.geom)
+    WHERE e.start_node = remove_node.id
+    ;
+    UPDATE road_graph.edges AS e
+    SET geom = ST_SetPoint(e.geom, ST_NPoints(e.geom) - 1, keep_node.geom)
+    WHERE e.end_node = remove_node.id
+    ;
+
+    -- Delete the node to remove, which has no edge anymore
+    DELETE FROM road_graph.nodes AS n
+    WHERE n.id = remove_node.id
+    AND NOT EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        WHERE remove_node.id IN (e.start_node, e.end_node)
+    )
+    ;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format('The node %s has been merged into the node %s', remove_node.id, keep_node.id)
+    );
+END;
+$$;
+
+
+-- FUNCTION fix_graph_merge_nodes(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_merge_nodes(_params jsonb) IS 'Action merge_nodes run by the function fix_graph_issue, to fix the issues of the check G03:
+merge two nodes close to each other.
+
+The parameter _params must contain the ids of the node to keep and of the node to remove:
+{"keep_node_id": 12, "remove_node_id": 34}.
+The start and end points of the edges of the node to remove are moved to the node to keep,
+then the node to remove is deleted.
+
+It returns a JSON object with the keys status (success, skipped if the node to remove does not exist anymore,
+or error if the nodes are linked by an edge) and message.';

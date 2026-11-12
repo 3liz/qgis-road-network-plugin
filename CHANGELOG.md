@@ -20,6 +20,7 @@
   by a node or by the field `no_intersection_cutting` (bridge, tunnel), chosen for each issue
 * **Road graph checks** - G02: edges ending near another edge without being connected to it (T junction),
   fixed by extending the edge to the other edge, which is split there
+* **Road graph checks** - G03: nodes close to each other, fixed by merging them
 
 ## 0.6.4 - 2026-11-12
 

@@ -57,6 +57,7 @@ def check_titles() -> dict:
     return {
         "G01": tr("Crossing edges without node"),
         "G02": tr("Edge ending near another edge without being connected"),
+        "G03": tr("Nodes close to each other"),
     }
 
 
@@ -69,6 +70,7 @@ def fix_action_labels() -> dict:
         "cut_edges": tr("Cut the edges with a node"),
         "mark_as_bridge": tr("Mark the edges as not connected (bridge, tunnel)"),
         "extend_edge": tr("Extend the edge to the other edge"),
+        "merge_nodes": tr("Merge the nodes"),
     }
 
 

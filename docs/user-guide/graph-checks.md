@@ -92,6 +92,7 @@ the algorithm Fix the road graph issues fixes the issues in this order.
 |------|-------|-----|
 | [G01](#g01-crossing-edges-without-node) | Edges crossing or touching each other without node | `cut_edges` or `mark_as_bridge` |
 | [G02](#g02-edge-ending-near-another-edge) | Edge ending near another edge without being connected (T junction) | `extend_edge` |
+| [G03](#g03-nodes-close-to-each-other) | Nodes close to each other | `merge_nodes` |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -163,6 +164,27 @@ UPDATE road_graph.glossary_graph_check
 SET default_options = default_options || '{"tolerance": 3}'
 WHERE code = 'G02';
 ```
+
+### G03: Nodes close to each other
+
+Two nodes a few centimeters or decimeters from each other should usually be the same node:
+the roads arriving there are not connected in the graph.
+
+The check returns one issue for each pair of nodes less than the **tolerance** from each other:
+option `tolerance`, **1 m** by default. The nodes linked by an edge are ignored: this edge is very short,
+and must be examined with the check of the short edges.
+
+The **node to keep** is the node with the **lowest id**, like in the triggers, which use the node with the lowest id
+less than 50 cm from the start or end point of an edge. It is the first node of `node_ids`, and the point of the issue.
+The field `details` gives the road codes of the edges of the two nodes and the `distance`.
+
+Many of these issues are also found by the check [G02](#g02-edge-ending-near-another-edge),
+when an edge ends near the start or end point of another edge: they are skipped once fixed by G02.
+
+Fix action:
+
+* `merge_nodes`: move the start and end points of the edges of the other node to the node to keep,
+  then delete the other node.
 
 ## Configuration of the checks
 
