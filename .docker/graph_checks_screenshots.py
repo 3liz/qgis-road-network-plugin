@@ -4,11 +4,7 @@ Create the screenshots of the documentation page docs/user-guide/graph-checks.md
 
 * a map of the road graph issues found by the check G01, with the context menu
   displayed by a right click on an issue,
-* the dialogs used to choose the fix of an issue,
-* a map of an issue of each check, from G01 to G10.
-
-The test data does not contain issues of the checks G05, G06 and G09: they are added
-to the test data, which must be imported again afterwards.
+* the dialogs used to choose the fix of an issue.
 
 The maps are rendered by QGIS itself, without a display (Qt offscreen platform),
 with the layers and styles of the administration project plugin_admin.qgs,
@@ -77,74 +73,6 @@ IMAGE_HEIGHT = 800
 JPEG_QUALITY = 85
 # Half width of the map extent, in meters
 HALF_WIDTH = 150
-
-# Issues added to the test data, which does not contain issues of the checks G05, G06 and G09:
-# two reversed edges, a branch using the code of the road,
-# and a first marker 80 cm after the start of the road
-SYNTHETIC_ISSUES_SQL = """
-    UPDATE road_graph.edges AS e
-    SET geom = ST_Reverse(e.geom)
-    WHERE e.id IN (
-        SELECT unnest(ARRAY[a.id, a.next_edge_id])
-        FROM road_graph.edges AS a
-        JOIN road_graph.roads AS r ON r.road_code = a.road_code AND r.road_type = 'road'
-        JOIN road_graph.edges AS n ON n.id = a.next_edge_id
-        WHERE a.previous_edge_id IS NOT NULL AND n.next_edge_id IS NOT NULL
-        AND ST_Length(a.geom) BETWEEN 300 AND 800 AND ST_Length(n.geom) BETWEEN 300 AND 800
-        ORDER BY a.id
-        LIMIT 1
-    );
-    INSERT INTO road_graph.edges (road_code, geom)
-    SELECT e.road_code, ST_MakeLine(n.geom, ST_Translate(n.geom, 60, 90))
-    FROM road_graph.edges AS e
-    JOIN road_graph.roads AS r ON r.road_code = e.road_code AND r.road_type = 'road'
-    JOIN road_graph.nodes AS n ON n.id = e.end_node
-    WHERE e.next_edge_id IS NOT NULL
-    ORDER BY e.id
-    LIMIT 1;
-    UPDATE road_graph.markers AS m
-    SET geom = ST_LineInterpolatePoint(e.geom, 0.8 / ST_Length(e.geom))
-    FROM road_graph.edges AS e
-    WHERE (m.id, e.id) = (
-        SELECT m0.id, f.id
-        FROM road_graph.edges AS f
-        JOIN road_graph.roads AS r ON r.road_code = f.road_code AND r.road_type = 'road'
-        JOIN road_graph.markers AS m0 ON m0.road_code = f.road_code AND m0.code = 0 AND m0.abscissa = 0
-        WHERE f.previous_edge_id IS NULL AND f.start_cumulative = 0 AND ST_Length(f.geom) > 50
-        ORDER BY f.id
-        LIMIT 1
-    );
-"""
-
-
-def details(feature: QgsFeature) -> dict:
-    """Details of an issue.
-
-    :param feature: The issue
-    :return: The details of the issue, as a dictionary
-    """
-    return json.loads(feature["details"])
-
-
-# For each check: the function choosing the issue displayed, the minimum half width of the map, in meters,
-# and if the map must contain the whole line of the issue
-ISSUE_MAPS = {
-    "G01": (
-        lambda issues: next(f for f in issues if details(f)["crossing_type"] == "touching"),
-        40,
-        False,
-    ),
-    "G02": (lambda issues: max(issues, key=lambda f: float(details(f)["distance"])), 12, True),
-    "G03": (lambda issues: max(issues, key=lambda f: float(details(f)["distance"])), 6, True),
-    "G04": (lambda issues: issues[0], 80, False),
-    "G05": (lambda issues: issues[0], 100, True),
-    "G06": (lambda issues: issues[0], 80, True),
-    "G07": (lambda issues: max(issues, key=lambda f: float(details(f)["parallel_length"])), 50, True),
-    "G08": (lambda issues: issues[0], 12, True),
-    "G09": (lambda issues: issues[0], 5, True),
-    # A marker of the test data, not a marker of the edges reversed above
-    "G10": (lambda issues: next(f for f in issues if f["road_code"] == "ex-N13"), 400, False),
-}
 
 
 def render_map(project: QgsProject, layers: list, extent: QgsRectangle) -> tuple:
@@ -332,58 +260,6 @@ def main() -> int:
     dialog.grab().save(str(file_name))
     dialog.close()
     print(f"choose edge -> {file_name}")  # noqa: T201
-
-    # Map of an issue of each check, below the title of the check in the documentation.
-    # The test data does not contain issues of some checks: they are created first
-    connection.executeSql(SYNTHETIC_ISSUES_SQL)
-    for check_code, (choose_issue, half_width, fit_line) in ISSUE_MAPS.items():
-        output = processing.run(
-            f"{provider.id()}:check_graph",
-            {
-                "CONNECTION_NAME": CONNECTION_NAME,
-                "SCHEMA": 1,
-                "CHECKS": check_code,
-                "OUTPUT_POINTS": "TEMPORARY_OUTPUT",
-                "OUTPUT_LINES": "TEMPORARY_OUTPUT",
-            },
-        )
-        points = output["OUTPUT_POINTS"]
-        lines = output["OUTPUT_LINES"]
-        project.addMapLayers([points, lines])
-        setup_issues_layer(points, CONNECTION_NAME, check_code)
-        setup_issues_layer(lines, CONNECTION_NAME, check_code)
-        issues = list(points.getFeatures())
-        if not issues:
-            print(f"No issue found for the check {check_code}", file=sys.stderr)  # noqa: T201
-            return 1
-        issue = choose_issue(issues)
-
-        # Extent around the issue, and its line if any
-        extent = issue.geometry().boundingBox()
-        for line in lines.getFeatures():
-            if fit_line and line["id"] == issue["id"]:
-                extent.combineExtentWith(line.geometry().boundingBox())
-        center = extent.center()
-        half_width = max(
-            half_width,
-            extent.width() * 0.6,
-            extent.height() * 0.6 * IMAGE_WIDTH / IMAGE_HEIGHT,
-        )
-        half_height = half_width * IMAGE_HEIGHT / IMAGE_WIDTH
-        extent = QgsRectangle(
-            center.x() - half_width,
-            center.y() - half_height,
-            center.x() + half_width,
-            center.y() + half_height,
-        )
-        layers = [points, lines]
-        for name in ("nodes", *PROJECT_LAYERS):
-            layers.append(project.mapLayersByName(name)[0])
-        image, _settings = render_map(project, layers, extent)
-        file_name = output_dir / "user-guide" / f"graph_checks_{check_code.lower()}.jpg"
-        image.save(str(file_name), "JPG", JPEG_QUALITY)
-        print(f"{check_code} -> {file_name}")  # noqa: T201
-        project.removeMapLayers([points.id(), lines.id()])
 
     app.exitQgis()
     return 0
