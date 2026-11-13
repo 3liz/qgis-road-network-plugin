@@ -885,6 +885,61 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#g05-edges-in-the-opposite-direction-of-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G05: Edges in the opposite direction of the road
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g06-road-with-branches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G06: Road with branches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g07-parallel-edges-of-the-same-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G07: Parallel edges of the same road
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g08-short-edge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G08: Short edge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g09-first-marker-not-at-the-start-of-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G09: First marker not at the start of the road
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1378,6 +1433,61 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#g05-edges-in-the-opposite-direction-of-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G05: Edges in the opposite direction of the road
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g06-road-with-branches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G06: Road with branches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g07-parallel-edges-of-the-same-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G07: Parallel edges of the same road
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g08-short-edge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G08: Short edge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g09-first-marker-not-at-the-start-of-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G09: First marker not at the start of the road
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1525,6 +1635,31 @@ the algorithm Fix the road graph issues fixes the issues in this order.</p>
 <td>Useless node: without edge, or between two edges of the same road</td>
 <td><code>delete_node</code></td>
 </tr>
+<tr>
+<td><a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a></td>
+<td>Edges in the opposite direction of the road</td>
+<td><code>reverse_edges</code></td>
+</tr>
+<tr>
+<td><a href="#g06-road-with-branches">G06</a></td>
+<td>Road with branches: more than two edges of the road at a node</td>
+<td>manual</td>
+</tr>
+<tr>
+<td><a href="#g07-parallel-edges-of-the-same-road">G07</a></td>
+<td>Parallel edges of the same road, for example two carriageways</td>
+<td>manual</td>
+</tr>
+<tr>
+<td><a href="#g08-short-edge">G08</a></td>
+<td>Short edge</td>
+<td><code>collapse_edge</code></td>
+</tr>
+<tr>
+<td><a href="#g09-first-marker-not-at-the-start-of-the-road">G09</a></td>
+<td>First marker not at the start of the road</td>
+<td><code>move_marker</code></td>
+</tr>
 </tbody>
 </table>
 <p>To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
@@ -1639,6 +1774,97 @@ this issue is found by the check of the reversed edges.</p>
 <p>Fix the issues of the checks G01 and G03 before: else the triggers would split the merged edge
 at its crossings with the other edges, which may be bridges, or connect it to the close nodes.
 In this case, the fix returns an error and nothing is changed.</p>
+<h3 id="g05-edges-in-the-opposite-direction-of-the-road">G05: Edges in the opposite direction of the road<a class="headerlink" href="#g05-edges-in-the-opposite-direction-of-the-road" title="Permanent link">#</a></h3>
+<p>The edges of a road must be drawn in the direction of the road, from its first marker to its last one:
+the references (marker and abscissa) and the order of the edges depend on it.</p>
+<p>The check groups the edges of each road in <strong>sequences</strong>: two edges follow each other at a node
+where there are only these two edges of the road. The <strong>direction of a sequence</strong> is given:</p>
+<ul>
+<li>by the order of the <strong>markers</strong> of the road located along it (<code>reason</code>: <code>markers</code>),
+  less than the option <code>marker_tolerance</code> from it, <strong>10 m</strong> by default,</li>
+<li>or else, without enough markers, by the direction of most of the length of its edges (<code>reason</code>: <code>neighbours</code>).</li>
+</ul>
+<p>The markers of the roundabouts are not used, and the roundabouts, whose edges form a ring, are not checked.
+The direction of an edge is given by its geometry, not by its fields <code>start_node</code> and <code>end_node</code>.</p>
+<p>The check returns one issue for each group of consecutive edges in the opposite direction of their sequence.
+A whole road drawn in the opposite direction of its markers is also found.
+The field <code>details</code> gives the <code>reason</code>, the number of edges and their length, and the number of consecutive markers
+in the direction of the road (<code>markers_in_road_direction</code>) and in the opposite direction.</p>
+<p>Fix action:</p>
+<ul>
+<li><code>reverse_edges</code>: reverse the geometry of the edges. The triggers swap their start and end nodes,
+  and calculate again their previous and next edges and the references of the road.</li>
+</ul>
+<p>A geometry can also be reversed manually, for example with the QGIS tool <code>Reverse Line</code>.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Use the markers up to 20 m from the edges</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">road_graph</span><span class="p">.</span><span class="n">glossary_graph_check</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">default_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">default_options</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;{&quot;marker_tolerance&quot;: 20}&#39;</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G05&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="g06-road-with-branches">G06: Road with branches<a class="headerlink" href="#g06-road-with-branches" title="Permanent link">#</a></h3>
+<p>A road must be a line: its edges follow each other, without branches. The ramps of an interchange or of a roundabout,
+or the two carriageways of a road, must have their own road code. Else the order of the edges of the road,
+and so the references, cannot be calculated.</p>
+<p>The check returns one issue for each node with <strong>more than two edges of the same road</strong>. The roundabouts are ignored.
+The <strong>main line</strong> of the road at the node is given by the edge arriving at the node and the edge leaving it
+which are the most aligned: the other edges are the <strong>branches</strong>. The field <code>details</code> gives the number of edges
+at the node (<code>edge_count</code>), and the ids of the edges of the main line (<code>main_edge_ids</code>) and of the branches
+(<code>branch_edge_ids</code>). The line of the issue shows the branches.</p>
+<p>There is no fix action: give another road code to the edges of the branches, for example a new road
+for a ramp. Check the main line proposed by the check, especially when the edges are not in the direction of the road
+(check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</p>
+<h3 id="g07-parallel-edges-of-the-same-road">G07: Parallel edges of the same road<a class="headerlink" href="#g07-parallel-edges-of-the-same-road" title="Permanent link">#</a></h3>
+<p>The two carriageways of a road must have their own road code. When they use the same code without being connected,
+the check <a href="#g06-road-with-branches">G06</a> does not find them.</p>
+<p>The check returns one issue, with the severity <code>warning</code>, for each pair of edges of the same road,
+not connected by a node, which <strong>run along each other</strong>:</p>
+<ul>
+<li>less than the option <code>tolerance</code> from each other, <strong>30 m</strong> by default,</li>
+<li>along at least the option <code>min_length</code>, <strong>10 m</strong> by default.</li>
+</ul>
+<p>The edges which only approach each other are ignored, for example the edges of a road on both sides of a roundabout:
+each edge must run along the other one on at least the minimum length. The roundabouts are ignored.
+The field <code>details</code> gives the <code>distance</code> between the edges and the length along which they are parallel
+(<code>parallel_length</code>). The line of the issue shows the parallel parts of the edges.</p>
+<p>There is no fix action: give another road code to one of the carriageways. A road which comes back near itself,
+for example a hairpin bend, can also be found: in this case, there is nothing to fix.</p>
+<h3 id="g08-short-edge">G08: Short edge<a class="headerlink" href="#g08-short-edge" title="Permanent link">#</a></h3>
+<p>A very short edge often comes from the digitizing: for example two junctions a few decimeters from each other
+instead of a crossroads, or a small piece of road left at the end of an edge.</p>
+<p>The check returns one issue for each edge shorter than the option <code>min_length</code>, <strong>3 m</strong> by default.
+The edges of the <strong>roundabouts</strong>, and the edges arriving at a roundabout or leaving it, are often short:
+they are ignored, unless they are reduced to a point (less than 10 cm, the precision of the coordinates).
+The severity is <code>error</code> for an edge reduced to a point, else <code>warning</code>.
+The field <code>details</code> gives the <code>length</code>, the number of other edges at the start and end nodes
+(<code>start_edge_count</code> and <code>end_edge_count</code>), and <code>is_roundabout_edge</code>.</p>
+<p>Fix action:</p>
+<ul>
+<li><code>collapse_edge</code>: delete the edge and merge its two nodes into the <strong>node to keep</strong>: the node with the most edges,
+  or else the node with the lowest id, which is the first node of <code>node_ids</code>.
+  At the other node, the next or previous edge of the <strong>same road</strong> is extended with the geometry of the short edge
+  up to the node to keep: the geometry and the length of the road are kept.
+  The start and end points of the edges of the <strong>other roads</strong> are moved to the node to keep:
+  their last segment is redirected, by less than the length of the short edge.</li>
+</ul>
+<p>The only edge of a road has no fix action: the road would not have any edge anymore.</p>
+<h3 id="g09-first-marker-not-at-the-start-of-the-road">G09: First marker not at the start of the road<a class="headerlink" href="#g09-first-marker-not-at-the-start-of-the-road" title="Permanent link">#</a></h3>
+<p>The <strong>first marker</strong> of a road is the marker with the lowest code and abscissa: it is often the marker 0,
+but it can be a virtual marker with a higher code. It must be at the <strong>start point of the first edge</strong> of the road,
+the edge without previous edge. When it is a few centimeters after it, the start of the road has no reference.</p>
+<p>The check returns one issue for each road whose first marker is more than 5 cm from the start of the road.
+The roundabouts are ignored. The severity is <code>error</code> if the start of the first edge has no reference, else <code>warning</code>.
+The field <code>details</code> gives the <code>marker_code</code>, <code>marker_abscissa</code> and <code>is_virtual</code> of the marker, its <code>distance</code>
+to the start of the road, its position along the first edge (<code>position_on_edge</code>), and <code>has_start_reference</code>.</p>
+<p>Fix action:</p>
+<ul>
+<li><code>move_marker</code>: move the marker to the start of the road. The references of the road are calculated again.
+  It is only proposed when the marker is less than the option <code>tolerance</code> from the start of the road,
+  <strong>1 m</strong> by default. Farther, check the road manually: the marker may be right, and the first edge wrong,
+  for example when the road is in the opposite direction (check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</li>
+</ul>
 <h2 id="configuration-of-the-checks">Configuration of the checks<a class="headerlink" href="#configuration-of-the-checks" title="Permanent link">#</a></h2>
 <p>The checks are listed in the table <code>road_graph.glossary_graph_check</code>, with for each check:
 its code, title, severity, function, fix actions and description.

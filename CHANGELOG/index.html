@@ -2317,12 +2317,26 @@
 <li><strong>Road graph checks</strong> - G03: nodes close to each other, fixed by merging them</li>
 <li><strong>Road graph checks</strong> - G04: useless nodes, without edge or between two edges of the same road,
   fixed by deleting the node, which merges the two edges</li>
+<li><strong>Road graph checks</strong> - G05: edges in the opposite direction of their road, found with the order of the markers
+  or the direction of the neighbour edges, fixed by reversing them</li>
+<li><strong>Road graph checks</strong> - G06: roads with branches, i.e. more than two edges of the road at a node,
+  for example ramps using the code of the road, to fix manually</li>
+<li><strong>Road graph checks</strong> - G07: parallel edges of the same road, for example two carriageways
+  using the same road code, to fix manually</li>
+<li><strong>Road graph checks</strong> - G08: short edges, except near the roundabouts, fixed by removing the edge
+  and merging its nodes</li>
+<li><strong>Road graph checks</strong> - G09: first marker of a road not at the start of the road,
+  fixed by moving the marker to the start of the road when it is less than 1 m from it</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>Edges</strong>: when an edge is created or modified, its start and end points use the <strong>closest node</strong>
   less than 50 cm from them, instead of the node with the lowest id. Before, modifying any vertex of an edge
   could connect it to another node close to its start or end node</li>
+<li><strong>Edges</strong>: reversing the geometry of an edge, for example with the QGIS tool <code>Reverse Line</code>,
+  now swaps its start and end nodes, and calculates again its previous and next edges and the references of its road.
+  Before, the change was ignored, because the geometry was considered unchanged.
+  The migration repairs the edges already reversed</li>
 </ul>
 <h2 id="064-2026-11-12">0.6.4 - 2026-11-12<a class="headerlink" href="#064-2026-11-12" title="Permanent link">#</a></h2>
 <h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>

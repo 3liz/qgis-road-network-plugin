@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>check_graph_road_branches(_road_codes text[], _options jsonb)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Check G06 run by the function check_graph: find the roads with branches, for example the ramps or the carriageways of a road using the code of the road.</p>
+<p>An issue is returned for each node with more than two edges of the same road. The roundabouts are ignored. The main line of the road at the node is given by the edge arriving at the node and the edge leaving it which are the most aligned: the other edges are the branches. The details give the number of edges at the node, and the ids of the edges of the main line and of the branches. The line of the issue shows the branches.</p>
+<p>The issue must be fixed manually, for example by giving another road code to the edges of the branches.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_road_codes</td>
+                                    <td>text[]</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_options</td>
+                                    <td>jsonb</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>check_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>check_title</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>severity</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>road_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>edge_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>node_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>marker_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>details</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_action</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_params</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom_detail</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">BEGIN&#10;    RETURN QUERY&#10;    WITH&#10;    -- Start and end points of the edges of the roads, except the roundabouts&#10;    edge_ends AS (&#10;        SELECT e.id, e.road_code, e.start_node AS node_id, e.geom&#10;        FROM road_graph.edges AS e&#10;        JOIN road_graph.roads AS r ON r.road_code &#61; e.road_code&#10;        WHERE r.road_type !&#61; &#39;roundabout&#39;&#10;        AND (_road_codes IS NULL OR e.road_code &#61; ANY(_road_codes))&#10;        UNION&#10;        SELECT e.id, e.road_code, e.end_node AS node_id, e.geom&#10;        FROM road_graph.edges AS e&#10;        JOIN road_graph.roads AS r ON r.road_code &#61; e.road_code&#10;        WHERE r.road_type !&#61; &#39;roundabout&#39;&#10;        AND (_road_codes IS NULL OR e.road_code &#61; ANY(_road_codes))&#10;    ),&#10;    -- Nodes with more than two edges of the same road: the road has branches&#10;    branch_nodes AS (&#10;        SELECT x.road_code, x.node_id, array_agg(x.id ORDER BY x.id) AS node_edge_ids&#10;        FROM edge_ends AS x&#10;        GROUP BY x.road_code, x.node_id&#10;        HAVING count(*) &gt; 2&#10;    ),&#10;    -- Direction of the edges at the node: the azimuth of the edges arriving at the node at their end,&#10;    -- and of the edges leaving the node at their start, given by their geometry&#10;    node_edges AS (&#10;        SELECT&#10;            b.road_code, b.node_id, n.geom AS node_geom, x.id, x.geom,&#10;            ST_DWithin(ST_EndPoint(x.geom), n.geom, 0.01) AS is_arriving,&#10;            ST_DWithin(ST_StartPoint(x.geom), n.geom, 0.01) AS is_leaving,&#10;            ST_Azimuth(ST_PointN(x.geom, ST_NPoints(x.geom) - 1), ST_EndPoint(x.geom)) AS end_azimuth,&#10;            ST_Azimuth(ST_StartPoint(x.geom), ST_PointN(x.geom, 2)) AS start_azimuth&#10;        FROM branch_nodes AS b&#10;        JOIN road_graph.nodes AS n ON n.id &#61; b.node_id&#10;        JOIN edge_ends AS x ON x.road_code &#61; b.road_code AND x.node_id &#61; b.node_id&#10;    ),&#10;    -- Main line of the road at the node: the edge arriving at the node and the edge leaving it&#10;    -- which are the most aligned. The other edges are the branches&#10;    main_lines AS (&#10;        SELECT DISTINCT ON (a.road_code, a.node_id)&#10;            a.road_code, a.node_id, a.id AS arriving_id, l.id AS leaving_id&#10;        FROM node_edges AS a&#10;        JOIN node_edges AS l&#10;            ON l.road_code &#61; a.road_code&#10;            AND l.node_id &#61; a.node_id&#10;            AND l.id !&#61; a.id&#10;        WHERE a.is_arriving AND l.is_leaving&#10;        -- Deflection angle between the two edges, from 0 (aligned) to pi&#10;        ORDER BY&#10;            a.road_code, a.node_id,&#10;            abs(mod((l.start_azimuth - a.end_azimuth + 3 * pi())::numeric, (2 * pi())::numeric) - pi()),&#10;            a.id, l.id&#10;    )&#10;    SELECT&#10;        &#39;G06&#39;::text,&#10;        &#39;Road with branches&#39;::text,&#10;        &#39;error&#39;::text,&#10;        b.road_code,&#10;        b.node_edge_ids,&#10;        ARRAY[b.node_id],&#10;        NULL::integer[],&#10;        jsonb_build_object(&#10;            &#39;edge_count&#39;, cardinality(b.node_edge_ids),&#10;            &#39;main_edge_ids&#39;, CASE&#10;                WHEN m.arriving_id IS NULL THEN &#39;[]&#39;::jsonb&#10;                ELSE jsonb_build_array(m.arriving_id, m.leaving_id)&#10;            END,&#10;            &#39;branch_edge_ids&#39;, (&#10;                SELECT jsonb_agg(x ORDER BY x)&#10;                FROM unnest(b.node_edge_ids) AS x&#10;                WHERE x IS DISTINCT FROM m.arriving_id AND x IS DISTINCT FROM m.leaving_id&#10;            )&#10;        ),&#10;        NULL::text,&#10;        NULL::jsonb,&#10;        n.geom,&#10;        (&#10;            SELECT ST_Collect(e.geom ORDER BY e.id)&#10;            FROM road_graph.edges AS e&#10;            WHERE e.id &#61; ANY(b.node_edge_ids)&#10;            AND e.id IS DISTINCT FROM m.arriving_id&#10;            AND e.id IS DISTINCT FROM m.leaving_id&#10;        )&#10;    FROM branch_nodes AS b&#10;    JOIN road_graph.nodes AS n ON n.id &#61; b.node_id&#10;    LEFT JOIN main_lines AS m ON m.road_code &#61; b.road_code AND m.node_id &#61; b.node_id&#10;    ORDER BY 4, b.node_id&#10;    ;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

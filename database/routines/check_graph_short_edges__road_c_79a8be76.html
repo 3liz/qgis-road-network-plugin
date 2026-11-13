@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>check_graph_short_edges(_road_codes text[], _options jsonb)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Check G08 run by the function check_graph: find the short edges, often coming from the digitizing, for example two junctions a few decimeters from each other.</p>
+<p>An issue is returned for each edge shorter than the option min_length (3 m by default). The edges of the roundabouts and the edges arriving at a roundabout or leaving it are often short: they are ignored, unless they are reduced to a point (less than 10 cm). The severity is error for an edge reduced to a point, else warning. The details give the length, the number of other edges at the start and end nodes, and if the edge is near a roundabout.</p>
+<p>The issue can be fixed with the action collapse_edge, which deletes the edge and merges its nodes, adding its geometry to the next or previous edge of the same road: the node to keep is the node with the most edges, or else the node with the lowest id, and is the first node of node_ids. The only edge of a road has no fix action.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_road_codes</td>
+                                    <td>text[]</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_options</td>
+                                    <td>jsonb</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>check_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>check_title</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>severity</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>road_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>edge_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>node_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>marker_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>details</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_action</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_params</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom_detail</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    -- Maximum length of a short edge&#10;    min_length real &#61; Coalesce((_options-&gt;&gt;&#39;min_length&#39;)::real, 3.0);&#10;    -- Length of an edge reduced to a point: the coordinates are rounded to 10 cm&#10;    zero_length real &#61; 0.10;&#10;BEGIN&#10;    RETURN QUERY&#10;    WITH&#10;    -- Short edges, with the number of other edges at their start and end nodes&#10;    short_edges AS (&#10;        SELECT&#10;            e.id, e.road_code, e.start_node, e.end_node, e.geom,&#10;            ST_Length(e.geom) AS edge_length,&#10;            (&#10;                SELECT count(*)&#10;                FROM road_graph.edges AS o&#10;                WHERE o.id !&#61; e.id&#10;                AND e.start_node IN (o.start_node, o.end_node)&#10;            ) AS start_edge_count,&#10;            (&#10;                SELECT count(*)&#10;                FROM road_graph.edges AS o&#10;                WHERE o.id !&#61; e.id&#10;                AND e.end_node IN (o.start_node, o.end_node)&#10;            ) AS end_edge_count,&#10;            (&#10;                SELECT count(*)&#10;                FROM road_graph.edges AS o&#10;                WHERE o.road_code &#61; e.road_code&#10;            ) AS road_edge_count,&#10;            -- The edges of the roundabouts, and the edges arriving at a roundabout or leaving it&#10;            r.road_type &#61; &#39;roundabout&#39; OR EXISTS (&#10;                SELECT 1&#10;                FROM road_graph.edges AS o&#10;                JOIN road_graph.roads AS ro ON ro.road_code &#61; o.road_code&#10;                WHERE ro.road_type &#61; &#39;roundabout&#39;&#10;                AND o.id !&#61; e.id&#10;                AND ARRAY[o.start_node, o.end_node] &amp;&amp; ARRAY[e.start_node, e.end_node]&#10;            ) AS is_roundabout_edge&#10;        FROM road_graph.edges AS e&#10;        JOIN road_graph.roads AS r ON r.road_code &#61; e.road_code&#10;        WHERE ST_Length(e.geom) &lt; min_length&#10;        AND (_road_codes IS NULL OR e.road_code &#61; ANY(_road_codes))&#10;    ),&#10;    -- The edges of the roundabouts, or arriving at a roundabout, are often short: they are ignored,&#10;    -- unless they are reduced to a point.&#10;    -- The node to keep is the node with the most edges, or else the node with the lowest id&#10;    issues AS (&#10;        SELECT&#10;            s.*,&#10;            s.edge_length &lt; zero_length AS is_zero_length,&#10;            CASE&#10;                WHEN s.start_edge_count &gt; s.end_edge_count THEN True&#10;                WHEN s.start_edge_count &lt; s.end_edge_count THEN False&#10;                ELSE s.start_node &lt;&#61; s.end_node&#10;            END AS keep_start&#10;        FROM short_edges AS s&#10;        WHERE NOT s.is_roundabout_edge OR s.edge_length &lt; zero_length&#10;    )&#10;    SELECT&#10;        &#39;G08&#39;::text,&#10;        &#39;Short edge&#39;::text,&#10;        CASE WHEN i.is_zero_length THEN &#39;error&#39; ELSE &#39;warning&#39; END,&#10;        i.road_code,&#10;        ARRAY[i.id],&#10;        CASE WHEN i.keep_start THEN ARRAY[i.start_node, i.end_node] ELSE ARRAY[i.end_node, i.start_node] END,&#10;        NULL::integer[],&#10;        jsonb_build_object(&#10;            &#39;length&#39;, round(i.edge_length::numeric, 2),&#10;            &#39;start_edge_count&#39;, i.start_edge_count,&#10;            &#39;end_edge_count&#39;, i.end_edge_count,&#10;            &#39;is_roundabout_edge&#39;, i.is_roundabout_edge&#10;        ),&#10;        -- The only edge of a road is not removed: the road would not have any edge anymore&#10;        CASE WHEN i.road_edge_count &gt; 1 THEN &#39;collapse_edge&#39; ELSE NULL END,&#10;        CASE&#10;            WHEN i.road_edge_count &#61; 1 THEN NULL&#10;            ELSE jsonb_build_object(&#10;                &#39;edge_id&#39;, i.id,&#10;                &#39;keep_node_id&#39;, CASE WHEN i.keep_start THEN i.start_node ELSE i.end_node END,&#10;                &#39;remove_node_id&#39;, CASE WHEN i.keep_start THEN i.end_node ELSE i.start_node END&#10;            )&#10;        END,&#10;        ST_LineInterpolatePoint(i.geom, 0.5),&#10;        i.geom&#10;    FROM issues AS i&#10;    ORDER BY 4, i.id&#10;    ;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

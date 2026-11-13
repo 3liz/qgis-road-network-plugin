@@ -226,6 +226,17 @@
                                         <td><p>Copy data from the given editing session into the road_graph schema.</p></td>
                                     </tr>
                                     <tr>
+                                        <td><a href="routines/check_graph_short_edges__road_c_79a8be76.html">check_graph_short_edges(_road_codes text[], _options jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Check G08 run by the function check_graph: find the short edges, often coming from the digitizing, for example two junctions a few decimeters from each other.</p>
+<p>An issue is returned for each edge shorter than the option min_length (3 m by default). The edges of the roundabouts and the edges arriving at a roundabout or leaving it are often short: they are ignored, unless they are reduced to a point (less than 10 cm). The severity is error for an edge reduced to a point, else warning. The details give the length, the number of other edges at the start and end nodes, and if the edge is near a roundabout.</p>
+<p>The issue can be fixed with the action collapse_edge, which deletes the edge and merges its nodes, adding its geometry to the next or previous edge of the same road: the node to keep is the node with the most edges, or else the node with the lowest id, and is the first node of node_ids. The only edge of a road has no fix action.</p></td>
+                                    </tr>
+                                    <tr>
                                         <td><a href="routines/get_reference_from_point__point_3c39ef66.html">get_reference_from_point(_point geometry, _road_code text DEFAULT NULL::text, _use_cache boolean DEFAULT false)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -275,13 +286,15 @@
 <p>The node to keep is the node with the most edges, so that the fewest edges are moved, or else the node with the lowest id, i.e. the oldest node: it is the first node of node_ids, and the point of the issue. The details give the road codes of the edges of the two nodes, and the distance. The issue can be fixed with the action merge_nodes, which moves the edges of the other node to the node to keep.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/update_managed_objects_on_graph_55e0b37b.html">update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb)</a></td>
+                                        <td><a href="routines/check_graph_road_branches__road_eed98db2.html">check_graph_road_branches(_road_codes text[], _options jsonb)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
                                         <td>false</td>
-                                        <td>integer</td>
+                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
                                         <td>INVOKER</td>
-                                        <td><p>Updates managed objects geometries or references when the road graph changes. It uses the information stored in the road_graph.managed_objects table. The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.</p></td>
+                                        <td><p>Check G06 run by the function check_graph: find the roads with branches, for example the ramps or the carriageways of a road using the code of the road.</p>
+<p>An issue is returned for each node with more than two edges of the same road. The roundabouts are ignored. The main line of the road at the node is given by the edge arriving at the node and the edge leaving it which are the most aligned: the other edges are the branches. The details give the number of edges at the node, and the ids of the edges of the main line and of the branches. The line of the issue shows the branches.</p>
+<p>The issue must be fixed manually, for example by giving another road code to the edges of the branches.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/check_graph__checks_text___DEFA_b4ec54af.html">check_graph(_checks text[] DEFAULT NULL::text[], _road_codes text[] DEFAULT NULL::text[], _options jsonb DEFAULT NULL::jsonb)</a></td>
@@ -294,6 +307,26 @@
 <p>The checks are listed in the table glossary_graph_check of the production schema. All the active checks are run if _checks is NULL, and all the roads are checked if _road_codes is NULL. The parameter _options overrides the default options of the checks stored in this table, with the check code as key: {&ldquo;G02&rdquo;: {&ldquo;tolerance&rdquo;: 2}}.</p>
 <p>Each line gives the check code and title, the severity (error or warning), the road code, the ids of the edges, nodes and markers concerned, some details, the action which can fix the issue with its parameters (NULL if the issue must be fixed manually), a point locating the issue (geom) and, if useful, a line showing it (geom_detail).</p>
 <p>The function can be run on the production schema or on the editing schema: road_graph_editing.check_graph() checks the data of the editing session. The issues must be fixed in an editing session, with the function fix_graph_issue.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/update_managed_objects_on_graph_55e0b37b.html">update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>integer</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Updates managed objects geometries or references when the road graph changes. It uses the information stored in the road_graph.managed_objects table. The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/fix_graph_move_marker__params_j_1e870605.html">fix_graph_move_marker(_params jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Action move_marker run by the function fix_graph_issue, to fix the issues of the check G09: move the first marker of a road to the start of the road.</p>
+<p>The parameter _params must contain the ids of the marker and of the first edge of the road, and the start point of the edge as EWKT: {&ldquo;marker_id&rdquo;: 12, &ldquo;edge_id&rdquo;: 34, &ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;}. The marker is moved to the start point of the edge: the triggers calculate again the references of the road.</p>
+<p>It returns a JSON object with the keys status (success, skipped if the marker does not exist anymore, is already at the start of the road, or if the edge does not start at the given point anymore) and message.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/get_edge_references__edge_id_in_a6aa623b.html">get_edge_references(_edge_id integer, _use_cache boolean DEFAULT false)</a></td>
@@ -330,7 +363,7 @@
                                         <td>false</td>
                                         <td>trigger</td>
                                         <td>INVOKER</td>
-                                        <td><p>During the creation or modification of an edge, we verify that the upstream and downstream nodes exist within 50 cm of the start and end of the edge. If they do, we use them and update the edge geometry so that the start and end are exactly on these nodes. Otherwise, we create the missing nodes. Additionally, during the creation of an edge, if the road code is provided and no marker 0 exists for this road, we automatically create one at the start of the edge. During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point, we move marker 0 to this new starting point. Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge based on its geometry and position on the road.</p></td>
+                                        <td><p>During the creation or modification of an edge, we verify that the upstream and downstream nodes exist within 50 cm of the start and end of the edge. If they do, we use them and update the edge geometry so that the start and end are exactly on these nodes. Otherwise, we create the missing nodes. Additionally, during the creation of an edge, if the road code is provided and no marker 0 exists for this road, we automatically create one at the start of the edge. During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point, we move marker 0 to this new starting point. When the geometry of an edge is only reversed, its start and end nodes are swapped, its previous and next edges are calculated again, and the marker 0 is not moved. Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge based on its geometry and position on the road.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/copy_data_to_editing_session__e_942c81d3.html">copy_data_to_editing_session(_editing_session_id integer)</a></td>
@@ -391,6 +424,17 @@
                                         <td><p>Set the created_at and updated_at fields</p></td>
                                     </tr>
                                     <tr>
+                                        <td><a href="routines/fix_graph_reverse_edges__params_bb6710d4.html">fix_graph_reverse_edges(_params jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Action reverse_edges run by the function fix_graph_issue, to fix the issues of the check G05: reverse the edges in the opposite direction of their road.</p>
+<p>The parameter _params must contain the ids of the edges: {&ldquo;edge_ids&rdquo;: [12, 34]}. Only the edges still found by the check G05 are reversed, one by one: the triggers swap their start and end nodes, and calculate again their previous and next edges and the references of their road.</p>
+<p>It returns a JSON object with the keys status (success, skipped if the edges are not in the opposite direction of their road anymore, or error) and message.</p></td>
+                                    </tr>
+                                    <tr>
                                         <td><a href="routines/get_snapped_line_from_track__tr_ba560ea2.html">get_snapped_line_from_track(_track geometry, _densify_distance real DEFAULT 2, _max_distance real DEFAULT 25, _road_change_penalty real DEFAULT 100)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -445,6 +489,17 @@
 <p>The function also returns: * the simple linestring (no gaps) made by merging all edges linestrings from the marker to the point * the simple linestring (no gaps) made by merging all edges linestrings from the start to the point * the multilinestring made by collecting all connectors between end and start points, which will help to remove them from linestrings to create the definitive geometry (with gaps) * if the found marker is the start marker of the next edge (for p3-like cases when the point is between two edges)</p></td>
                                     </tr>
                                     <tr>
+                                        <td><a href="routines/check_graph_parallel_edges__roa_c2e73d11.html">check_graph_parallel_edges(_road_codes text[], _options jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Check G07 run by the function check_graph: find the edges of the same road running parallel to each other, for example the two carriageways of a road using the same road code.</p>
+<p>An issue is returned for each pair of edges of the same road, not connected by a node, which run along each other less than the option tolerance from each other (30 m by default), along at least the option min_length (10 m by default). The edges which only approach each other, for example on both sides of a roundabout, are ignored. The roundabouts are ignored. The details give the distance between the edges and the length along which they are parallel. The line of the issue shows the parallel parts of the edges.</p>
+<p>The issue must be fixed manually, for example by giving another road code to one of the carriageways.</p></td>
+                                    </tr>
+                                    <tr>
                                         <td><a href="routines/after_marker_insert_or_update_o_60c9d02a.html">after_marker_insert_or_update_or_delete()</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -452,6 +507,18 @@
                                         <td>trigger</td>
                                         <td>INVOKER</td>
                                         <td><p>Update road edges references after a marker has been created, updated or deleted.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/check_graph_first_marker__road__f2f4cc1c.html">check_graph_first_marker(_road_codes text[], _options jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Check G09 run by the function check_graph: find the roads whose first marker is not at the start of the road.</p>
+<p>The first marker of a road is the marker with the lowest code and abscissa: it is often the marker 0, but it can be a virtual marker with a higher code. It must be at the start point of the first edge of the road, the edge without previous edge. Else, when the marker is after the start point, the start of the road has no reference. The roundabouts are ignored.</p>
+<p>An issue is returned for each road whose first marker is more than 5 cm from the start of the road. The severity is error if the start of the first edge has no reference, else warning. The details give the code, abscissa and type of the marker, its distance to the start of the road, its position along the first edge, and if the start of the first edge has a reference.</p>
+<p>The issue can be fixed with the action move_marker, which moves the marker to the start of the road, when it is less than the option tolerance from it (1 m by default). Else, the issue must be fixed manually.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/get_downstream_multilinestring__b24d02d7.html">get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real)</a></td>
@@ -472,6 +539,17 @@
                                         <td><p>Action delete_node run by the function fix_graph_issue, to fix the issues of the check G04: delete a useless node.</p>
 <p>The parameter _params must contain the id of the node: {&ldquo;node_id&rdquo;: 12}. A node without edge is deleted. A node between two edges of the same road is deleted if one edge arrives at the node and the other one leaves it: the trigger before_node_delete merges the two edges into the edge with the lowest id. If the merged edge is not between the start node of the first edge and the end node of the second edge, for example because it has been split at a crossing with another edge, an exception is raised: the function fix_graph_issue cancels the changes and returns an error.</p>
 <p>It returns a JSON object with the keys status (success, skipped if the node does not exist anymore or is not useless anymore, or error) and message.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/fix_graph_collapse_edge__params_d0e121be.html">fix_graph_collapse_edge(_params jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Action collapse_edge run by the function fix_graph_issue, to fix the issues of the check G08: remove a short edge, by merging its two nodes.</p>
+<p>The parameter _params must contain the ids of the edge, of the node to keep and of the node to remove: {&ldquo;edge_id&rdquo;: 12, &ldquo;keep_node_id&rdquo;: 34, &ldquo;remove_node_id&rdquo;: 56}. The edge of the same road following the short edge at the node to remove is extended with the geometry of the short edge up to the node to keep: the geometry of the road is kept. The start and end points of the other edges of the node to remove, for example the edges of the other roads, are moved to the node to keep. Then the edge and the node to remove are deleted. The only edge of a road is not removed.</p>
+<p>It returns a JSON object with the keys status (success, skipped if the edge does not exist anymore or its nodes have changed, or error) and message.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/merge_table_linestring_features_96acf608.html">merge_table_linestring_features(_schema_name text, _table_name text, _feature_id_a integer, _feature_id_b integer)</a></td>
@@ -566,17 +644,6 @@
                                         <td><p>Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/fix_graph_extend_edge__params_j_b9e4f76b.html">fix_graph_extend_edge(_params jsonb)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>jsonb</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Action extend_edge run by the function fix_graph_issue, to fix the issues of the check G02: extend an edge from its free end to the point to join on another edge.</p>
-<p>The parameter _params must contain the edge id, the side of the free end (start or end), the free end and the point to join as EWKT: {&ldquo;edge_id&rdquo;: 12, &ldquo;side&rdquo;: &ldquo;end&rdquo;, &ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;, &ldquo;target&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;}. When the point to join is the start or end point of the other edge, the free end is connected to its node, and the node of the free end is deleted. Else, when the free end is less than 50 cm from the other edge, the node of the free end is moved to the point to join. Else, the point to join is added at the free end of the edge, and the triggers move the node of the free end to this point. In the two last cases, the triggers split the other edge there. If the free end is not connected to another edge afterwards, an exception is raised: the function fix_graph_issue cancels the changes and returns an error.</p>
-<p>It returns a JSON object with the keys status (success, or skipped if the edge does not end at the given point anymore, or is already connected there) and message.</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/fix_graph_cut_edges__params_jso_73b952f4.html">fix_graph_cut_edges(_params jsonb)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -586,6 +653,17 @@
                                         <td><p>Action cut_edges run by the function fix_graph_issue, to fix the issues of the check G01: split the edges crossing each other at the given point.</p>
 <p>The parameter _params must contain the crossing point as EWKT: {&ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;}. A node is created at this point, or the existing node less than 50 cm from it is used, and the triggers split the edges passing there.</p>
 <p>It returns a JSON object with the keys status (success, or skipped if no edge must be split at this point) and message.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/fix_graph_extend_edge__params_j_b9e4f76b.html">fix_graph_extend_edge(_params jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Action extend_edge run by the function fix_graph_issue, to fix the issues of the check G02: extend an edge from its free end to the point to join on another edge.</p>
+<p>The parameter _params must contain the edge id, the side of the free end (start or end), the free end and the point to join as EWKT: {&ldquo;edge_id&rdquo;: 12, &ldquo;side&rdquo;: &ldquo;end&rdquo;, &ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;, &ldquo;target&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;}. When the point to join is the start or end point of the other edge, the free end is connected to its node, and the node of the free end is deleted. Else, when the free end is less than 50 cm from the other edge, the node of the free end is moved to the point to join. Else, the point to join is added at the free end of the edge, and the triggers move the node of the free end to this point. In the two last cases, the triggers split the other edge there. If the free end is not connected to another edge afterwards, an exception is raised: the function fix_graph_issue cancels the changes and returns an error.</p>
+<p>It returns a JSON object with the keys status (success, or skipped if the edge does not end at the given point anymore, or is already connected there) and message.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/before_editing_sessions_update__bd574145.html">before_editing_sessions_update()</a></td>
@@ -627,6 +705,17 @@
                                         <td><p>Action mark_as_bridge run by the function fix_graph_issue, to fix the issues of the check G01 when the edges must not be connected, for example on a bridge or in a tunnel.</p>
 <p>It sets the field no_intersection_cutting to True for the edges passing by the crossing point: the given edge if the parameter _params contains edge_id, or else all the edges of edge_ids: {&ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;, &ldquo;edge_ids&rdquo;: [12, 34], &ldquo;edge_id&rdquo;: 12}.</p>
 <p>It returns a JSON object with the keys status (success, or skipped if the edges are already marked) and message.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/check_graph_reversed_edges__roa_ca9b3f0c.html">check_graph_reversed_edges(_road_codes text[], _options jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Check G05 run by the function check_graph: find the edges in the opposite direction of their road.</p>
+<p>The edges of a road are grouped in sequences: two edges follow each other at a node where there are only these two edges of the road. The direction of each sequence is given by the order of the markers of the road located along it (less than the option marker_tolerance from it, 10 m by default), or else by the direction of most of the length of its edges. The markers of the roundabouts are not used. The direction of the edges is given by their geometry, not by their start and end nodes.</p>
+<p>An issue is returned for each group of consecutive edges in the opposite direction of their sequence. The details give the reason (markers or neighbours), the number of edges and their length, and the number of consecutive markers in the direction of the road and in the opposite direction. The issue can be fixed with the action reverse_edges, which reverses the geometry of the edges.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/editing_survey___e14344a2.html">editing_survey()</a></td>
