@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="250" viewBox="0 0 900 250" font-family="Arial, Helvetica, sans-serif">
+  <rect width="900" height="250" fill="#ffffff"/>
+  <line x1="450.0" y1="12" x2="450.0" y2="238" stroke="#e0e0e0" stroke-width="2"/>
+  <text x="225.0" y="28" font-size="15" font-weight="bold" fill="#212121" text-anchor="middle">Issue</text>
+  <polyline points="40.0,150 225.0,150" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="141.5,150.0 125.3,155.4 125.3,144.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <polyline points="225.0,150 410.0,150" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="326.5,150.0 310.3,155.4 310.3,144.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <polyline points="225.0,150 330.0,70" fill="none" stroke="#e53935" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="284.7,104.5 275.0,118.7 268.5,110.1" fill="#ffffff" stroke="#e53935" stroke-width="2"/>
+  <circle cx="40.0" cy="150" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="410.0" cy="150" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="330.0" cy="70" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="225.0" cy="150" r="6" fill="#e53935" stroke="#e53935" stroke-width="2"/>
+  <text x="132.0" y="175" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">D12</text>
+  <text x="318.0" y="175" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">D12</text>
+  <text x="310.0" y="120" font-size="13" fill="#e53935" text-anchor="middle" font-weight="bold">D12</text>
+  <text x="225.0" y="210" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">3 edges of the road D12 at the node: the branch</text>
+  <text x="225.0" y="228" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">is the edge out of the most aligned edges</text>
+  <text x="675.0" y="28" font-size="15" font-weight="bold" fill="#212121" text-anchor="middle">Manual fix</text>
+  <polyline points="490.0,150 675.0,150" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="591.5,150.0 575.3,155.4 575.3,144.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <polyline points="675.0,150 860.0,150" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="776.5,150.0 760.3,155.4 760.3,144.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <polyline points="675.0,150 780.0,70" fill="none" stroke="#1565c0" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="734.7,104.5 725.0,118.7 718.5,110.1" fill="#ffffff" stroke="#1565c0" stroke-width="2"/>
+  <circle cx="490.0" cy="150" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="860.0" cy="150" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="780.0" cy="70" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="675.0" cy="150" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <text x="582.0" y="175" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">D12</text>
+  <text x="768.0" y="175" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">D12</text>
+  <text x="780.0" y="120" font-size="13" fill="#1565c0" text-anchor="middle" font-weight="bold">D12_ramp</text>
+  <text x="675.0" y="210" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">the branch gets its own road code</text>
+</svg>

@@ -1628,6 +1628,9 @@ are translated in the language of QGIS. The detailed messages returned by the da
 </ul>
 <p>The checks are numbered in the recommended order of the fixes:
 the algorithm Fix the road graph issues fixes the issues in this order.</p>
+<p>Each check below is illustrated by an issue of the test data, displayed with the layers created by the algorithm
+Check the road graph (the issues in red or orange, the line of the issue dashed), and by a diagram of the issue
+and of its fix.</p>
 <table>
 <thead>
 <tr>
@@ -1693,6 +1696,8 @@ the algorithm Fix the road graph issues fixes the issues in this order.</p>
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
 and change the field <code>fix_action</code> (and <code>fix_params</code> if needed) before running the algorithm Fix the road graph issues.</p>
 <h3 id="g01-crossing-edges-without-node">G01: Crossing edges without node<a class="headerlink" href="#g01-crossing-edges-without-node" title="Permanent link">#</a></h3>
+<p><img alt="G01: example of issue" src="../../media/user-guide/graph_checks_g01.jpg" /></p>
+<p><img alt="G01: issue and fix" src="../../media/user-guide/graph_checks_g01.svg" /></p>
 <p>Two edges crossing or touching each other must be split by a node, unless they are not connected,
 for example on a <strong>bridge</strong> or in a <strong>tunnel</strong>: the edges with the field <code>no_intersection_cutting</code> set to <code>True</code>
 are ignored (see <a href="../graph-editing/#edges-which-must-not-be-cut">Edges which must not be cut</a>).</p>
@@ -1728,6 +1733,8 @@ Check the result carefully afterwards.</p>
 <span class="k">WHERE</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G01&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="g02-edge-ending-near-another-edge">G02: Edge ending near another edge<a class="headerlink" href="#g02-edge-ending-near-another-edge" title="Permanent link">#</a></h3>
+<p><img alt="G02: example of issue" src="../../media/user-guide/graph_checks_g02.jpg" /></p>
+<p><img alt="G02: issue and fix" src="../../media/user-guide/graph_checks_g02.svg" /></p>
 <p>A road arriving on another road must be connected to it. In the source data, it often stops
 a few decimeters before the other road, or a little beyond it.</p>
 <p>The check returns one issue for each <strong>free end</strong> of an edge, i.e. an end with no other edge connected to it,
@@ -1764,6 +1771,8 @@ the <code>distance</code>, and the <code>join_type</code>: <code>edge</code> (mi
 <span class="k">WHERE</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G02&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="g03-nodes-close-to-each-other">G03: Nodes close to each other<a class="headerlink" href="#g03-nodes-close-to-each-other" title="Permanent link">#</a></h3>
+<p><img alt="G03: example of issue" src="../../media/user-guide/graph_checks_g03.jpg" /></p>
+<p><img alt="G03: issue and fix" src="../../media/user-guide/graph_checks_g03.svg" /></p>
 <p>Two nodes a few centimeters or decimeters from each other should usually be the same node:
 the roads arriving there are not connected in the graph.</p>
 <p>The check returns one issue for each pair of nodes less than the <strong>tolerance</strong> from each other:
@@ -1781,6 +1790,8 @@ when an edge ends near the start or end point of another edge: they are skipped 
   then delete the other node.</li>
 </ul>
 <h3 id="g04-useless-node">G04: Useless node<a class="headerlink" href="#g04-useless-node" title="Permanent link">#</a></h3>
+<p><img alt="G04: example of issue" src="../../media/user-guide/graph_checks_g04.jpg" /></p>
+<p><img alt="G04: issue and fix" src="../../media/user-guide/graph_checks_g04.svg" /></p>
 <p>A node is useful at a junction, or at the start or end of a road. The source data often contains
 other nodes, for example where the source features of a road were split: these nodes split the road
 into several edges for nothing.</p>
@@ -1802,6 +1813,9 @@ this issue is found by the check of the reversed edges.</p>
 at its crossings with the other edges, which may be bridges, or connect it to the close nodes.
 In this case, the fix returns an error and nothing is changed.</p>
 <h3 id="g05-edges-in-the-opposite-direction-of-the-road">G05: Edges in the opposite direction of the road<a class="headerlink" href="#g05-edges-in-the-opposite-direction-of-the-road" title="Permanent link">#</a></h3>
+<p>The test data does not contain this issue: it has been added for the example.</p>
+<p><img alt="G05: example of issue" src="../../media/user-guide/graph_checks_g05.jpg" /></p>
+<p><img alt="G05: issue and fix" src="../../media/user-guide/graph_checks_g05.svg" /></p>
 <p>The edges of a road must be drawn in the direction of the road, from its first marker to its last one:
 the references (marker and abscissa) and the order of the edges depend on it.</p>
 <p>The check groups the edges of each road in <strong>sequences</strong>: two edges follow each other at a node
@@ -1832,6 +1846,9 @@ in the direction of the road (<code>markers_in_road_direction</code>) and in the
 <span class="k">WHERE</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G05&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="g06-road-with-branches">G06: Road with branches<a class="headerlink" href="#g06-road-with-branches" title="Permanent link">#</a></h3>
+<p>The test data does not contain this issue: it has been added for the example.</p>
+<p><img alt="G06: example of issue" src="../../media/user-guide/graph_checks_g06.jpg" /></p>
+<p><img alt="G06: issue and fix" src="../../media/user-guide/graph_checks_g06.svg" /></p>
 <p>A road must be a line: its edges follow each other, without branches. The ramps of an interchange or of a roundabout,
 or the two carriageways of a road, must have their own road code. Else the order of the edges of the road,
 and so the references, cannot be calculated.</p>
@@ -1844,6 +1861,8 @@ at the node (<code>edge_count</code>), and the ids of the edges of the main line
 for a ramp. Check the main line proposed by the check, especially when the edges are not in the direction of the road
 (check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</p>
 <h3 id="g07-parallel-edges-of-the-same-road">G07: Parallel edges of the same road<a class="headerlink" href="#g07-parallel-edges-of-the-same-road" title="Permanent link">#</a></h3>
+<p><img alt="G07: example of issue" src="../../media/user-guide/graph_checks_g07.jpg" /></p>
+<p><img alt="G07: issue and fix" src="../../media/user-guide/graph_checks_g07.svg" /></p>
 <p>The two carriageways of a road must have their own road code. When they use the same code without being connected,
 the check <a href="#g06-road-with-branches">G06</a> does not find them.</p>
 <p>The check returns one issue, with the severity <code>warning</code>, for each pair of edges of the same road,
@@ -1859,6 +1878,8 @@ The field <code>details</code> gives the <code>distance</code> between the edges
 <p>There is no fix action: give another road code to one of the carriageways. A road which comes back near itself,
 for example a hairpin bend, can also be found: in this case, there is nothing to fix.</p>
 <h3 id="g08-short-edge">G08: Short edge<a class="headerlink" href="#g08-short-edge" title="Permanent link">#</a></h3>
+<p><img alt="G08: example of issue" src="../../media/user-guide/graph_checks_g08.jpg" /></p>
+<p><img alt="G08: issue and fix" src="../../media/user-guide/graph_checks_g08.svg" /></p>
 <p>A very short edge often comes from the digitizing: for example two junctions a few decimeters from each other
 instead of a crossroads, or a small piece of road left at the end of an edge.</p>
 <p>The check returns one issue for each edge shorter than the option <code>min_length</code>, <strong>3 m</strong> by default.
@@ -1878,6 +1899,9 @@ The field <code>details</code> gives the <code>length</code>, the number of othe
 </ul>
 <p>The only edge of a road has no fix action: the road would not have any edge anymore.</p>
 <h3 id="g09-first-marker-not-at-the-start-of-the-road">G09: First marker not at the start of the road<a class="headerlink" href="#g09-first-marker-not-at-the-start-of-the-road" title="Permanent link">#</a></h3>
+<p>The test data does not contain this issue: it has been added for the example.</p>
+<p><img alt="G09: example of issue" src="../../media/user-guide/graph_checks_g09.jpg" /></p>
+<p><img alt="G09: issue and fix" src="../../media/user-guide/graph_checks_g09.svg" /></p>
 <p>The <strong>first marker</strong> of a road is the marker with the lowest code and abscissa: it is often the marker 0,
 but it can be a virtual marker with a higher code. It must be at the <strong>start point of the first edge</strong> of the road,
 the edge without previous edge. When it is a few centimeters after it, the start of the road has no reference.</p>
@@ -1893,6 +1917,8 @@ to the start of the road, its position along the first edge (<code>position_on_e
   for example when the road is in the opposite direction (check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</li>
 </ul>
 <h3 id="g10-markers-not-in-the-order-of-the-road">G10: Markers not in the order of the road<a class="headerlink" href="#g10-markers-not-in-the-order-of-the-road" title="Permanent link">#</a></h3>
+<p><img alt="G10: example of issue" src="../../media/user-guide/graph_checks_g10.jpg" /></p>
+<p><img alt="G10: issue and fix" src="../../media/user-guide/graph_checks_g10.svg" /></p>
 <p>Sorted by code and abscissa, the markers of a road must follow each other along the road:
 else, the references calculated from them are wrong.</p>
 <p>The <strong>position</strong> of each marker along its road is the cumulative length of the road at its closest edge,
