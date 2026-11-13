@@ -2775,6 +2775,116 @@ and the ids of the edges of the main line and of the branches. The line of the i
 The issue must be fixed manually, for example by giving another road code to the edges of the branches.';
 
 
+-- check_graph_short_edges(text[], jsonb)
+CREATE FUNCTION road_graph.check_graph_short_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum length of a short edge
+    min_length real = Coalesce((_options->>'min_length')::real, 3.0);
+    -- Length of an edge reduced to a point: the coordinates are rounded to 10 cm
+    zero_length real = 0.10;
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Short edges, with the number of other edges at their start and end nodes
+    short_edges AS (
+        SELECT
+            e.id, e.road_code, e.start_node, e.end_node, e.geom,
+            ST_Length(e.geom) AS edge_length,
+            (
+                SELECT count(*)
+                FROM road_graph.edges AS o
+                WHERE o.id != e.id
+                AND e.start_node IN (o.start_node, o.end_node)
+            ) AS start_edge_count,
+            (
+                SELECT count(*)
+                FROM road_graph.edges AS o
+                WHERE o.id != e.id
+                AND e.end_node IN (o.start_node, o.end_node)
+            ) AS end_edge_count,
+            (
+                SELECT count(*)
+                FROM road_graph.edges AS o
+                WHERE o.road_code = e.road_code
+            ) AS road_edge_count,
+            -- The edges of the roundabouts, and the edges arriving at a roundabout or leaving it
+            r.road_type = 'roundabout' OR EXISTS (
+                SELECT 1
+                FROM road_graph.edges AS o
+                JOIN road_graph.roads AS ro ON ro.road_code = o.road_code
+                WHERE ro.road_type = 'roundabout'
+                AND o.id != e.id
+                AND ARRAY[o.start_node, o.end_node] && ARRAY[e.start_node, e.end_node]
+            ) AS is_roundabout_edge
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE ST_Length(e.geom) < min_length
+        AND (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
+    ),
+    -- The edges of the roundabouts, or arriving at a roundabout, are often short: they are ignored,
+    -- unless they are reduced to a point.
+    -- The node to keep is the node with the most edges, or else the node with the lowest id
+    issues AS (
+        SELECT
+            s.*,
+            s.edge_length < zero_length AS is_zero_length,
+            CASE
+                WHEN s.start_edge_count > s.end_edge_count THEN True
+                WHEN s.start_edge_count < s.end_edge_count THEN False
+                ELSE s.start_node <= s.end_node
+            END AS keep_start
+        FROM short_edges AS s
+        WHERE NOT s.is_roundabout_edge OR s.edge_length < zero_length
+    )
+    SELECT
+        'G08'::text,
+        'Short edge'::text,
+        CASE WHEN i.is_zero_length THEN 'error' ELSE 'warning' END,
+        i.road_code,
+        ARRAY[i.id],
+        CASE WHEN i.keep_start THEN ARRAY[i.start_node, i.end_node] ELSE ARRAY[i.end_node, i.start_node] END,
+        NULL::integer[],
+        jsonb_build_object(
+            'length', round(i.edge_length::numeric, 2),
+            'start_edge_count', i.start_edge_count,
+            'end_edge_count', i.end_edge_count,
+            'is_roundabout_edge', i.is_roundabout_edge
+        ),
+        -- The only edge of a road is not removed: the road would not have any edge anymore
+        CASE WHEN i.road_edge_count > 1 THEN 'collapse_edge' ELSE NULL END,
+        CASE
+            WHEN i.road_edge_count = 1 THEN NULL
+            ELSE jsonb_build_object(
+                'edge_id', i.id,
+                'keep_node_id', CASE WHEN i.keep_start THEN i.start_node ELSE i.end_node END,
+                'remove_node_id', CASE WHEN i.keep_start THEN i.end_node ELSE i.start_node END
+            )
+        END,
+        ST_LineInterpolatePoint(i.geom, 0.5),
+        i.geom
+    FROM issues AS i
+    ORDER BY 4, i.id
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_short_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_short_edges(_road_codes text[], _options jsonb) IS 'Check G08 run by the function check_graph: find the short edges, often coming from the digitizing,
+for example two junctions a few decimeters from each other.
+
+An issue is returned for each edge shorter than the option min_length (3 m by default).
+The edges of the roundabouts and the edges arriving at a roundabout or leaving it are often short: they are ignored,
+unless they are reduced to a point (less than 10 cm). The severity is error for an edge reduced to a point, else warning.
+The details give the length, the number of other edges at the start and end nodes, and if the edge is near a roundabout.
+
+The issue can be fixed with the action collapse_edge, which deletes the edge and merges its nodes,
+adding its geometry to the next or previous edge of the same road: the node to keep is the node with the most edges, or else the node with the lowest id,
+and is the first node of node_ids. The only edge of a road has no fix action.';
+
+
 -- check_graph_t_junction_gaps(text[], jsonb)
 CREATE FUNCTION road_graph.check_graph_t_junction_gaps(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
     LANGUAGE plpgsql
@@ -3624,6 +3734,155 @@ $$;
 -- FUNCTION editing_survey()
 COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done inside the editing session schema tables.
 It also check that the edited geometries are inside the editing session polygon.';
+
+
+-- fix_graph_collapse_edge(jsonb)
+CREATE FUNCTION road_graph.fix_graph_collapse_edge(_params jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    edge record;
+    keep_node record;
+    remove_node_id integer;
+    extended_edge_id integer;
+BEGIN
+    -- The edge may have been removed or modified by a previous fix
+    SELECT e.*
+    INTO edge
+    FROM road_graph.edges AS e
+    WHERE e.id = (_params->>'edge_id')::integer
+    ;
+    IF edge.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The edge %s does not exist anymore', _params->>'edge_id')
+        );
+    END IF;
+    IF NOT ARRAY[edge.start_node, edge.end_node] @> ARRAY[
+        (_params->>'keep_node_id')::integer, (_params->>'remove_node_id')::integer
+    ] THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The nodes of the edge %s have changed', edge.id)
+        );
+    END IF;
+    IF (SELECT count(*) FROM road_graph.edges AS e WHERE e.road_code = edge.road_code) = 1 THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', format('The edge %s is the only edge of the road %s', edge.id, edge.road_code)
+        );
+    END IF;
+    SELECT n.*
+    INTO keep_node
+    FROM road_graph.nodes AS n
+    WHERE n.id = (_params->>'keep_node_id')::integer
+    ;
+    remove_node_id = (_params->>'remove_node_id')::integer;
+
+    -- The edges extended or moved below run along the short edge and pass near the node to remove:
+    -- the variables prevent the triggers from splitting them at the crossings with the short edge
+    -- and at the node to remove (see after_edge_insert_or_update)
+    PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'yes', true);
+    PERFORM set_config('road.graph.merge.edges.useless.node', remove_node_id::text, true);
+
+    -- The edge of the same road following the short edge at the node to remove, if there is only one,
+    -- is extended with the geometry of the short edge up to the node to keep: the geometry of the road is kept
+    SELECT e.id
+    INTO extended_edge_id
+    FROM road_graph.edges AS e
+    WHERE e.road_code = edge.road_code
+    AND e.id != edge.id
+    AND (
+        (remove_node_id = edge.end_node AND e.start_node = remove_node_id)
+        OR (remove_node_id = edge.start_node AND e.end_node = remove_node_id)
+    )
+    AND (
+        SELECT count(*)
+        FROM road_graph.edges AS x
+        WHERE x.road_code = edge.road_code
+        AND x.id != edge.id
+        AND remove_node_id IN (x.start_node, x.end_node)
+    ) = 1
+    ;
+    IF extended_edge_id IS NOT NULL THEN
+        UPDATE road_graph.edges AS e
+        SET geom = ST_RemoveRepeatedPoints(
+            CASE
+                WHEN remove_node_id = edge.end_node THEN ST_MakeLine(edge.geom, e.geom)
+                ELSE ST_MakeLine(e.geom, edge.geom)
+            END
+        )
+        WHERE e.id = extended_edge_id
+        ;
+    END IF;
+
+    -- Move the start and end points of the other edges of the node to remove to the node to keep,
+    -- for example the edges of the other roads: the triggers use the closest node, i.e. the node to keep
+    UPDATE road_graph.edges AS e
+    SET geom = ST_SetPoint(e.geom, 0, keep_node.geom)
+    WHERE e.start_node = remove_node_id
+    AND e.id != edge.id
+    ;
+    UPDATE road_graph.edges AS e
+    SET geom = ST_SetPoint(e.geom, ST_NPoints(e.geom) - 1, keep_node.geom)
+    WHERE e.end_node = remove_node_id
+    AND e.id != edge.id
+    ;
+    PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'no', true);
+    PERFORM set_config('road.graph.merge.edges.useless.node', '-1', true);
+
+    -- Delete the short edge, then the node to remove if it is not used anymore
+    DELETE FROM road_graph.edges AS e
+    WHERE e.id = edge.id
+    ;
+    DELETE FROM road_graph.nodes AS n
+    WHERE n.id = remove_node_id
+    AND NOT EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        WHERE remove_node_id IN (e.start_node, e.end_node)
+    )
+    ;
+
+    -- Check no edge uses the node to remove anymore.
+    -- If not, the exception cancels the changes of this fix (see fix_graph_issue)
+    IF EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        WHERE remove_node_id IN (e.start_node, e.end_node)
+    ) THEN
+        RAISE EXCEPTION 'The edges of the node % could not be moved to the node %', remove_node_id, keep_node.id;
+    END IF;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format(
+            'The edge %s has been deleted%s, and the edges of the node %s have been moved to the node %s',
+            edge.id,
+            CASE
+                WHEN extended_edge_id IS NULL THEN ''
+                ELSE format(' and its geometry added to the edge %s', extended_edge_id)
+            END,
+            remove_node_id, keep_node.id
+        )
+    );
+END;
+$$;
+
+
+-- FUNCTION fix_graph_collapse_edge(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_collapse_edge(_params jsonb) IS 'Action collapse_edge run by the function fix_graph_issue, to fix the issues of the check G08:
+remove a short edge, by merging its two nodes.
+
+The parameter _params must contain the ids of the edge, of the node to keep and of the node to remove:
+{"edge_id": 12, "keep_node_id": 34, "remove_node_id": 56}.
+The edge of the same road following the short edge at the node to remove is extended with the geometry
+of the short edge up to the node to keep: the geometry of the road is kept. The start and end points
+of the other edges of the node to remove, for example the edges of the other roads, are moved to the node to keep.
+Then the edge and the node to remove are deleted. The only edge of a road is not removed.
+
+It returns a JSON object with the keys status (success, skipped if the edge does not exist anymore
+or its nodes have changed, or error) and message.';
 
 
 -- fix_graph_cut_edges(jsonb)

@@ -231,6 +231,20 @@ and the ids of the edges of the main line and of the branches. The line of the i
 The issue must be fixed manually, for example by giving another road code to the edges of the branches.';
 
 
+-- FUNCTION check_graph_short_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_short_edges(_road_codes text[], _options jsonb) IS 'Check G08 run by the function check_graph: find the short edges, often coming from the digitizing,
+for example two junctions a few decimeters from each other.
+
+An issue is returned for each edge shorter than the option min_length (3 m by default).
+The edges of the roundabouts and the edges arriving at a roundabout or leaving it are often short: they are ignored,
+unless they are reduced to a point (less than 10 cm). The severity is error for an edge reduced to a point, else warning.
+The details give the length, the number of other edges at the start and end nodes, and if the edge is near a roundabout.
+
+The issue can be fixed with the action collapse_edge, which deletes the edge and merges its nodes,
+adding its geometry to the next or previous edge of the same road: the node to keep is the node with the most edges, or else the node with the lowest id,
+and is the first node of node_ids. The only edge of a road has no fix action.';
+
+
 -- FUNCTION check_graph_t_junction_gaps(_road_codes text[], _options jsonb)
 COMMENT ON FUNCTION road_graph.check_graph_t_junction_gaps(_road_codes text[], _options jsonb) IS 'Check G02 run by the function check_graph: find the edges ending near another edge without being connected to it,
 for example a road arriving on another road and stopping a few decimeters before it (T junction).
@@ -281,6 +295,21 @@ COMMENT ON FUNCTION road_graph.drop_editing_session(_editing_session_id integer)
 -- FUNCTION editing_survey()
 COMMENT ON FUNCTION road_graph.editing_survey() IS 'Logs the modifications done inside the editing session schema tables.
 It also check that the edited geometries are inside the editing session polygon.';
+
+
+-- FUNCTION fix_graph_collapse_edge(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_collapse_edge(_params jsonb) IS 'Action collapse_edge run by the function fix_graph_issue, to fix the issues of the check G08:
+remove a short edge, by merging its two nodes.
+
+The parameter _params must contain the ids of the edge, of the node to keep and of the node to remove:
+{"edge_id": 12, "keep_node_id": 34, "remove_node_id": 56}.
+The edge of the same road following the short edge at the node to remove is extended with the geometry
+of the short edge up to the node to keep: the geometry of the road is kept. The start and end points
+of the other edges of the node to remove, for example the edges of the other roads, are moved to the node to keep.
+Then the edge and the node to remove are deleted. The only edge of a road is not removed.
+
+It returns a JSON object with the keys status (success, skipped if the edge does not exist anymore
+or its nodes have changed, or error) and message.';
 
 
 -- FUNCTION fix_graph_cut_edges(_params jsonb)

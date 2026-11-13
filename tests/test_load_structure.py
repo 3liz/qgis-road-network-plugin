@@ -4533,6 +4533,138 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
     assert float(details["parallel_length"]) > 100
 
 
+def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
+    """Check G08: short edges. The edges near a roundabout are ignored.
+    An issue is fixed in an editing session created around it.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Issues of the production schema: the edges are shorter than 3 m.
+    # The only edge of a road has no fix action
+    cursor.execute("""
+        SELECT
+            count(*),
+            bool_and((details->>'length')::numeric < 3),
+            bool_and(
+                (fix_action = 'collapse_edge')
+                = ((SELECT count(*) FROM road_graph.edges AS e WHERE e.road_code = i.road_code) > 1)
+            )
+        FROM road_graph.check_graph(ARRAY['G08']) AS i
+    """)
+    count, all_short, all_fix_actions = cursor.fetchone()
+    assert count > 0
+    assert all_short
+    assert all_fix_actions
+
+    # The minimum length can be changed
+    cursor.execute("""
+        SELECT count(*) FROM road_graph.check_graph(ARRAY['G08'], NULL, '{"G08": {"min_length": 2.2}}')
+    """)
+    assert cursor.fetchone()[0] < count
+
+    # A short edge arriving at a roundabout is ignored
+    cursor.execute("""
+        WITH ring_node AS (
+            SELECT e.start_node AS node_id, a.road_code
+            FROM road_graph.edges AS e
+            JOIN road_graph.roads AS r ON r.road_code = e.road_code AND r.road_type = 'roundabout'
+            JOIN road_graph.edges AS a
+                ON e.start_node IN (a.start_node, a.end_node) AND a.road_code != e.road_code
+            JOIN road_graph.roads AS ar ON ar.road_code = a.road_code AND ar.road_type = 'road'
+            ORDER BY e.id
+            LIMIT 1
+        )
+        INSERT INTO road_graph.edges (road_code, geom)
+        SELECT rn.road_code, ST_MakeLine(ST_Translate(n.geom, 1.5, 1.5), n.geom)
+        FROM ring_node AS rn
+        JOIN road_graph.nodes AS n ON n.id = rn.node_id
+        RETURNING id
+    """)
+    roundabout_edge_id = cursor.fetchone()[0]
+    cursor.execute(
+        "SELECT count(*) FROM road_graph.check_graph(ARRAY['G08']) WHERE edge_ids = ARRAY[%s]::integer[]",
+        (roundabout_edge_id,),
+    )
+    assert cursor.fetchone()[0] == 0
+
+    # Editing session around an issue with a fix action
+    cursor.execute("""
+        WITH issue AS (
+            SELECT geom
+            FROM road_graph.check_graph(ARRAY['G08'])
+            WHERE fix_action IS NOT NULL
+            ORDER BY id
+            LIMIT 1
+        )
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G08 test', 'test', ST_Envelope(ST_Buffer(i.geom, 100))
+        FROM issue AS i
+        RETURNING id
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+    cursor.execute("""
+        SELECT i.fix_params, i.road_code
+        FROM road_graph_editing.check_graph(ARRAY['G08']) AS i
+        JOIN road_graph.editing_sessions AS s ON ST_Intersects(s.geom, i.geom)
+        WHERE s.label = 'G08 test'
+        AND i.fix_action IS NOT NULL
+        ORDER BY i.id
+        LIMIT 1
+    """)
+    params, road_code = cursor.fetchone()
+    road_length_sql = "SELECT sum(ST_Length(geom)) FROM road_graph_editing.edges WHERE road_code = %s"
+    cursor.execute(road_length_sql, (road_code,))
+    road_length = cursor.fetchone()[0]
+    cursor.execute(
+        """
+        SELECT array_agg(e.id ORDER BY e.id)
+        FROM road_graph_editing.edges AS e
+        WHERE %s IN (e.start_node, e.end_node) AND e.id != %s
+        """,
+        (params["remove_node_id"], params["edge_id"]),
+    )
+    moved_edge_ids = cursor.fetchone()[0]
+
+    def fix() -> dict:
+        """Fix the issue in the editing session."""
+        cursor.execute(
+            "SELECT road_graph_editing.fix_graph_issue('collapse_edge', %s)",
+            (json.dumps(params),),
+        )
+        row = cursor.fetchone()
+        assert row is not None
+        return row[0]
+
+    result = fix()
+    assert result["status"] == "success", result
+
+    # The geometry of the short edge has been added to the next or previous edge of the road:
+    # the length of the road has not changed
+    assert "geometry added" in result["message"]
+    cursor.execute(road_length_sql, (road_code,))
+    assert abs(cursor.fetchone()[0] - road_length) < 0.01
+
+    # The edge and the node to remove have been deleted, and the other edges use the node to keep
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE id = %s", (params["edge_id"],))
+    assert cursor.fetchone()[0] == 0
+    cursor.execute("SELECT count(*) FROM road_graph_editing.nodes WHERE id = %s", (params["remove_node_id"],))
+    assert cursor.fetchone()[0] == 0
+    cursor.execute(
+        """
+        SELECT count(*)
+        FROM road_graph_editing.edges AS e
+        WHERE e.id = ANY(%s) AND %s IN (e.start_node, e.end_node)
+        """,
+        (moved_edge_ids, params["keep_node_id"]),
+    )
+    assert cursor.fetchone()[0] == len(moved_edge_ids)
+
+    # The issue is fixed
+    assert fix()["status"] == "skipped"
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

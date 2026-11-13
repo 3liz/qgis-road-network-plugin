@@ -97,6 +97,7 @@ the algorithm Fix the road graph issues fixes the issues in this order.
 | [G05](#g05-edges-in-the-opposite-direction-of-the-road) | Edges in the opposite direction of the road | `reverse_edges` |
 | [G06](#g06-road-with-branches) | Road with branches: more than two edges of the road at a node | manual |
 | [G07](#g07-parallel-edges-of-the-same-road) | Parallel edges of the same road, for example two carriageways | manual |
+| [G08](#g08-short-edge) | Short edge | `collapse_edge` |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -291,6 +292,29 @@ The field `details` gives the `distance` between the edges and the length along 
 
 There is no fix action: give another road code to one of the carriageways. A road which comes back near itself,
 for example a hairpin bend, can also be found: in this case, there is nothing to fix.
+
+### G08: Short edge
+
+A very short edge often comes from the digitizing: for example two junctions a few decimeters from each other
+instead of a crossroads, or a small piece of road left at the end of an edge.
+
+The check returns one issue for each edge shorter than the option `min_length`, **3 m** by default.
+The edges of the **roundabouts**, and the edges arriving at a roundabout or leaving it, are often short:
+they are ignored, unless they are reduced to a point (less than 10 cm, the precision of the coordinates).
+The severity is `error` for an edge reduced to a point, else `warning`.
+The field `details` gives the `length`, the number of other edges at the start and end nodes
+(`start_edge_count` and `end_edge_count`), and `is_roundabout_edge`.
+
+Fix action:
+
+* `collapse_edge`: delete the edge and merge its two nodes into the **node to keep**: the node with the most edges,
+  or else the node with the lowest id, which is the first node of `node_ids`.
+  At the other node, the next or previous edge of the **same road** is extended with the geometry of the short edge
+  up to the node to keep: the geometry and the length of the road are kept.
+  The start and end points of the edges of the **other roads** are moved to the node to keep:
+  their last segment is redirected, by less than the length of the short edge.
+
+The only edge of a road has no fix action: the road would not have any edge anymore.
 
 ## Configuration of the checks
 

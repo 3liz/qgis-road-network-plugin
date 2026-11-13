@@ -29,6 +29,8 @@
   for example ramps using the code of the road, to fix manually
 * **Road graph checks** - G07: parallel edges of the same road, for example two carriageways
   using the same road code, to fix manually
+* **Road graph checks** - G08: short edges, except near the roundabouts, fixed by removing the edge
+  and merging its nodes
 
 ### Fixed
 
