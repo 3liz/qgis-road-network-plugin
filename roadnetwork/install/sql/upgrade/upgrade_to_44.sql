@@ -3535,3 +3535,186 @@ BEGIN
 
 END;
 $_$;
+
+
+-- Nodes trigger: when a node is created or moved less than 50 cm from another node, the two nodes are merged.
+-- The edges which then start and end at the node, for example the edge between the two nodes, are deleted
+
+-- after_node_insert_or_update()
+CREATE OR REPLACE FUNCTION road_graph.after_node_insert_or_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    edge_under_node record;
+    id_new_edge integer;
+    raise_notice text;
+    is_edge_extremity boolean;
+    attached_edge_ids integer[];
+BEGIN
+    -- Trigger disabled by session variable
+    IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- Check if we must log
+    raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
+
+    -- Check if the node is the start or end node of an edge being created or moved
+    -- (see before_edge_insert_or_update and after_edge_insert_or_update)
+    -- The variable is reset at once, so that it is not used by the cascading changes
+    is_edge_extremity = (road_graph.get_current_setting('road.graph.node.edge.extremity', 'no') = 'yes');
+    SET LOCAL road.graph.node.edge.extremity = 'no';
+
+    -- Do nothing if geometry has not changed
+    -- except road.graph.edge.update.touching.node equals yes
+    IF
+        TG_OP = 'UPDATE'
+        AND ST_Equals(NEW.geom, OLD.geom)
+        AND road_graph.get_current_setting('road.graph.edge.update.touching.node', 'no') = 'no'
+    THEN
+        IF raise_notice IN ('info', 'debug') THEN
+            RAISE NOTICE '% AFTER node % n° %, OLD & NEW geometries are equal, return',
+                repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id
+            ;
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    -- Update all upstream edges referenced ids.
+    -- The edges of another node less than 50 cm from this node are attached to this node:
+    -- the two nodes are merged. The ids of the attached edges are kept
+    WITH attached AS (
+        UPDATE road_graph.edges AS t
+        SET start_node = NEW.id
+        WHERE ST_DWithin(NEW.geom, ST_StartPoint(t.geom), 0.50)
+        AND start_node != NEW.id
+        RETURNING t.id
+    )
+    SELECT array_agg(a.id)
+    INTO attached_edge_ids
+    FROM attached AS a
+    ;
+
+    -- Update all downstream edges referenced ids
+    WITH attached AS (
+        UPDATE road_graph.edges AS t
+        SET end_node = NEW.id
+        WHERE ST_DWithin(NEW.geom, ST_EndPoint(t.geom), 0.50)
+        AND end_node != NEW.id
+        RETURNING t.id
+    )
+    SELECT Coalesce(attached_edge_ids, '{}') || Coalesce(array_agg(a.id), '{}')
+    INTO attached_edge_ids
+    FROM attached AS a
+    ;
+
+    -- Update geometry of all upstream edges linked to the node
+    -- We replace the first edge node by the node NEW geometry
+    -- We deactivate the creation of crossing nodes for these updated edges
+    SET LOCAL road.graph.edge.crossing.node.creation.pending = 'yes';
+    UPDATE road_graph.edges AS t
+    SET geom = ST_SetPoint(geom, 0, NEW.geom)
+    WHERE TRUE
+    AND start_node = NEW.id
+    AND NOT ST_Intersects(ST_StartPoint(geom), NEW.geom)
+    ;
+    SET LOCAL road.graph.edge.crossing.node.creation.pending = 'no';
+
+    -- Update geometry of all downstream edges linked to the node
+    -- We replace the last edge node but the node NEW geometry
+    -- We deactivate the creation of crossing nodes for these updated edges
+    SET LOCAL road.graph.edge.crossing.node.creation.pending = 'yes';
+    UPDATE road_graph.edges AS t
+    SET geom = ST_SetPoint(geom, ST_NPoints(geom) - 1, NEW.geom)
+    WHERE True
+    AND end_node = NEW.id
+    AND NOT ST_Intersects(ST_EndPoint(geom), NEW.geom)
+    ;
+    SET LOCAL road.graph.edge.crossing.node.creation.pending = 'no';
+
+    -- Delete the edges which now start and end at this node, and did not before:
+    -- for example the edge between this node and the merged node
+    IF cardinality(attached_edge_ids) > 0 THEN
+        DELETE FROM road_graph.edges AS t
+        WHERE t.id = ANY(attached_edge_ids)
+        AND t.start_node = NEW.id
+        AND t.end_node = NEW.id
+        ;
+    END IF;
+
+    -- Split edges under the node if needed
+    FOR edge_under_node IN
+        SELECT
+            -- we must pass all the fields
+            -- to be able to copy/paste attributes data from the original edge
+            -- when spliting it
+            t.*
+        FROM road_graph.edges AS t
+        WHERE True
+        -- Do not split the edges having the value True in no_intersection_cutting,
+        -- except if the node is the extremity of an edge being created or moved
+        -- (for example a new access road arriving in the middle of a highway edge)
+        AND (
+            NOT Coalesce(t.no_intersection_cutting, False)
+            OR is_edge_extremity
+        )
+        -- edge is close to the node
+        AND ST_DWithin(t.geom, NEW.geom, 0.50)
+        -- but node is far enough from the start and end points
+        AND NOT ST_DWithin(ST_StartPoint(t.geom), NEW.geom, 0.50)
+        AND NOT ST_DWithin(ST_EndPoint(t.geom), NEW.geom, 0.50)
+        ORDER BY t.geom <-> NEW.geom
+    LOOP
+        IF edge_under_node.id IS NOT NULL THEN
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% AFTER NODE % n° % %, found nearby edge % -> should split it',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, ST_AsText(NEW.geom), edge_under_node.id
+                ;
+            END IF;
+            IF raise_notice IN ('debug') THEN
+                RAISE NOTICE 'EDGE TO BE SPLIT';
+                RAISE NOTICE '%', to_json(edge_under_node);
+            END IF;
+
+            SELECT INTO id_new_edge
+                split_edge_by_node
+            FROM road_graph.split_edge_by_node(
+                -- edge
+                edge_under_node,
+                -- node
+                NEW,
+                -- minimum distance from line
+                0.50::real,
+                -- maximum distance from start & end points
+                0.50::real
+            );
+
+            IF raise_notice IN ('info', 'debug') THEN
+                RAISE NOTICE '% AFTER NODE % n° % %, New edge created from split: %',
+                    repeat('    ', pg_trigger_depth()::integer), TG_OP, NEW.id, ST_AsText(NEW.geom), id_new_edge
+                ;
+            END IF;
+        END IF;
+    END LOOP;
+
+    RETURN NEW;
+END;
+$$;
+
+
+-- FUNCTION after_node_insert_or_update()
+COMMENT ON FUNCTION road_graph.after_node_insert_or_update() IS '1. Lors d''une création de Node (automatique via une action sur les tronçons) ou de la modification de la position d''un Node
+(donc lorsque la géométrie change), on met à jour la géométrie des tronçons dont un des sommets (amont ou aval) est rattaché à ce Node,
+et on renseigne les champs start_node et end_node (id des Nodes amont et aval) des tronçons concernés.
+
+2. Lors de la création ou d''une modification de la géométrie d''un tronçon,
+si un des sommets (amont ou aval) du tronçon accroche le segment d''un tronçon existant :
+Ce tronçon existant est coupé en deux (la géométrie du tronçon A est tronquée, un nouveau tronçon B est créé, on récupère les attributs du tronçon A dans le tronçon B).
+Rq :
+- La fonction split_edge_by_node a été créée et est appelée à cet effet
+- La création du Node à cette nouvelle intersection est gérée séparément dans un trigger sur les tronçons
+
+3. Les extrémités des tronçons d''un autre Node situé à moins de 50 cm sont rattachées à ce Node : les deux Nodes sont fusionnés.
+Les tronçons qui commencent et finissent alors à ce Node, par exemple le tronçon qui reliait les deux Nodes, sont supprimés.
+';

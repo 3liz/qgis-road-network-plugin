@@ -4845,6 +4845,76 @@ def test_edge_old_end_node_deleted(rollback_db_connection: psycopg.Connection):
     assert cursor.fetchone()[0] == 0
 
 
+@pytest.mark.parametrize("linked", [False, True])
+def test_node_moved_near_another_node(rollback_db_connection: psycopg.Connection, linked: bool):
+    """When a node is moved less than 50 cm from another node, the two nodes are merged:
+    the edges of the other node are attached to the moved node, and the other node is deleted.
+    If the two nodes were linked by an edge, this edge is deleted.
+    The changes are rolled back at the end of the test.
+
+    :param linked: If the two nodes are linked by an edge
+    """
+    cursor = rollback_db_connection.cursor()
+
+    # Two crossroads, linked by a short edge, or not linked and 100 to 300 m from each other
+    cursor.execute(
+        """
+        WITH crossroads AS (
+            SELECT n.id, n.geom
+            FROM road_graph.nodes AS n
+            JOIN road_graph.edges AS e ON n.id IN (e.start_node, e.end_node)
+            GROUP BY n.id, n.geom
+            HAVING count(e.id) >= 3
+        )
+        SELECT a.id, b.id, l.id
+        FROM crossroads AS a
+        JOIN crossroads AS b ON b.id != a.id
+        LEFT JOIN road_graph.edges AS l
+            ON ARRAY[l.start_node, l.end_node] @> ARRAY[a.id, b.id]
+        WHERE CASE
+            WHEN %(linked)s THEN l.id IS NOT NULL AND ST_Length(l.geom) < 5
+            ELSE l.id IS NULL AND ST_Distance(a.geom, b.geom) BETWEEN 100 AND 300
+        END
+        ORDER BY a.id, b.id
+        LIMIT 1
+        """,
+        {"linked": linked},
+    )
+    node_id, other_node_id, link_id = cursor.fetchone()
+    edges_sql = """
+        SELECT array_agg(e.id ORDER BY e.id)
+        FROM road_graph.edges AS e
+        WHERE %s IN (e.start_node, e.end_node)
+    """
+    cursor.execute(edges_sql, (node_id,))
+    node_edges = cursor.fetchone()[0]
+    cursor.execute(edges_sql, (other_node_id,))
+    other_node_edges = cursor.fetchone()[0]
+
+    # Move the node 30 cm from the other node
+    cursor.execute(
+        """
+        UPDATE road_graph.nodes AS n
+        SET geom = ST_Translate(o.geom, 0.3, 0)
+        FROM road_graph.nodes AS o
+        WHERE n.id = %s AND o.id = %s
+        """,
+        (node_id, other_node_id),
+    )
+
+    # The other node is deleted, and its edges use the node, except the edge linking them, deleted
+    cursor.execute("SELECT count(*) FROM road_graph.nodes WHERE id = %s", (other_node_id,))
+    assert cursor.fetchone()[0] == 0
+    expected_edges = sorted({*node_edges, *other_node_edges} - {link_id})
+    cursor.execute(edges_sql, (node_id,))
+    assert cursor.fetchone()[0] == expected_edges
+    cursor.execute(
+        "SELECT count(*) FROM road_graph.edges WHERE start_node = %s AND end_node = %s",
+        (node_id, node_id),
+    )
+    assert cursor.fetchone()[0] == 0
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

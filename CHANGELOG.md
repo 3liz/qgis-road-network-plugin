@@ -47,6 +47,8 @@
   The migration repairs the edges already reversed
 * **Edges**: when the end point of an edge is moved to another node, its old end node is deleted
   if no edge uses it anymore, like its old start node. Before, it was left without edge
+* **Nodes**: when a node is created or moved less than 50 cm from another node, the two nodes are merged,
+  and the edge linking them, if any, is deleted. Before, this edge was left as a loop on the node
 
 ## 0.6.4 - 2026-11-12
 

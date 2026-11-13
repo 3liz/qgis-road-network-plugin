@@ -1147,6 +1147,7 @@ DECLARE
     id_new_edge integer;
     raise_notice text;
     is_edge_extremity boolean;
+    attached_edge_ids integer[];
 BEGIN
     -- Trigger disabled by session variable
     IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
@@ -1178,18 +1179,32 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- Update all upstream edges referenced ids
-    UPDATE road_graph.edges AS t
-    SET start_node = NEW.id
-    WHERE ST_DWithin(NEW.geom, ST_StartPoint(t.geom), 0.50)
-    AND start_node != NEW.id
+    -- Update all upstream edges referenced ids.
+    -- The edges of another node less than 50 cm from this node are attached to this node:
+    -- the two nodes are merged. The ids of the attached edges are kept
+    WITH attached AS (
+        UPDATE road_graph.edges AS t
+        SET start_node = NEW.id
+        WHERE ST_DWithin(NEW.geom, ST_StartPoint(t.geom), 0.50)
+        AND start_node != NEW.id
+        RETURNING t.id
+    )
+    SELECT array_agg(a.id)
+    INTO attached_edge_ids
+    FROM attached AS a
     ;
 
     -- Update all downstream edges referenced ids
-    UPDATE road_graph.edges AS t
-    SET end_node = NEW.id
-    WHERE ST_DWithin(NEW.geom, ST_EndPoint(t.geom), 0.50)
-    AND end_node != NEW.id
+    WITH attached AS (
+        UPDATE road_graph.edges AS t
+        SET end_node = NEW.id
+        WHERE ST_DWithin(NEW.geom, ST_EndPoint(t.geom), 0.50)
+        AND end_node != NEW.id
+        RETURNING t.id
+    )
+    SELECT Coalesce(attached_edge_ids, '{}') || Coalesce(array_agg(a.id), '{}')
+    INTO attached_edge_ids
+    FROM attached AS a
     ;
 
     -- Update geometry of all upstream edges linked to the node
@@ -1215,6 +1230,16 @@ BEGIN
     AND NOT ST_Intersects(ST_EndPoint(geom), NEW.geom)
     ;
     SET LOCAL road.graph.edge.crossing.node.creation.pending = 'no';
+
+    -- Delete the edges which now start and end at this node, and did not before:
+    -- for example the edge between this node and the merged node
+    IF cardinality(attached_edge_ids) > 0 THEN
+        DELETE FROM road_graph.edges AS t
+        WHERE t.id = ANY(attached_edge_ids)
+        AND t.start_node = NEW.id
+        AND t.end_node = NEW.id
+        ;
+    END IF;
 
     -- Split edges under the node if needed
     FOR edge_under_node IN
@@ -1287,6 +1312,9 @@ Ce tronçon existant est coupé en deux (la géométrie du tronçon A est tronqu
 Rq :
 - La fonction split_edge_by_node a été créée et est appelée à cet effet
 - La création du Node à cette nouvelle intersection est gérée séparément dans un trigger sur les tronçons
+
+3. Les extrémités des tronçons d''un autre Node situé à moins de 50 cm sont rattachées à ce Node : les deux Nodes sont fusionnés.
+Les tronçons qui commencent et finissent alors à ce Node, par exemple le tronçon qui reliait les deux Nodes, sont supprimés.
 ';
 
 

@@ -96,6 +96,9 @@ Ce tronçon existant est coupé en deux (la géométrie du tronçon A est tronqu
 Rq :
 - La fonction split_edge_by_node a été créée et est appelée à cet effet
 - La création du Node à cette nouvelle intersection est gérée séparément dans un trigger sur les tronçons
+
+3. Les extrémités des tronçons d''un autre Node situé à moins de 50 cm sont rattachées à ce Node : les deux Nodes sont fusionnés.
+Les tronçons qui commencent et finissent alors à ce Node, par exemple le tronçon qui reliait les deux Nodes, sont supprimés.
 ';
 
 
