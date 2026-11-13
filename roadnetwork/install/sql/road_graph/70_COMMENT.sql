@@ -274,8 +274,12 @@ extend an edge from its free end to the point to join on another edge.
 The parameter _params must contain the edge id, the side of the free end (start or end),
 the free end and the point to join as EWKT:
 {"edge_id": 12, "side": "end", "point": "SRID=2154;POINT(x y)", "target": "SRID=2154;POINT(x y)"}.
-The point to join is added at the free end of the edge: the triggers move the node of the free end
-to this point, and split the other edge there.
+When the point to join is the start or end point of the other edge, the free end is connected to its node,
+and the node of the free end is deleted. Else, when the free end is less than 50 cm from the other edge,
+the node of the free end is moved to the point to join. Else, the point to join is added at the free end of the edge,
+and the triggers move the node of the free end to this point. In the two last cases, the triggers split the other edge there.
+If the free end is not connected to another edge afterwards, an exception is raised:
+the function fix_graph_issue cancels the changes and returns an error.
 
 It returns a JSON object with the keys status (success, or skipped if the edge does not end at the given point anymore,
 or is already connected there) and message.';

@@ -4013,10 +4013,29 @@ def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest
         connection.executeSql(f"SELECT road_graph.drop_editing_session({editing_session_id})")
 
 
-def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection):
+# Issues of G02 fixed by the tests: the largest gap, and gaps less than 50 cm from the middle
+# of the other edge or from its start or end point. Each case is fixed differently
+T_JUNCTION_GAP_CASES = {
+    "largest": "TRUE ORDER BY (i.details->>'distance')::numeric DESC",
+    "small_edge": (
+        "(i.details->>'distance')::numeric < 0.5 AND i.details->>'join_type' = 'edge' "
+        "ORDER BY (i.details->>'distance')::numeric DESC"
+    ),
+    "small_edge_end": (
+        "(i.details->>'distance')::numeric < 0.5 AND i.details->>'join_type' = 'edge_end' "
+        "ORDER BY (i.details->>'distance')::numeric DESC"
+    ),
+}
+
+
+@pytest.mark.parametrize("case", T_JUNCTION_GAP_CASES.keys())
+def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection, case: str):
     """Check G02: edges ending near another edge without being connected to it.
-    The issues are fixed in an editing session created around the largest gap.
-    The changes are rolled back at the end of the test."""
+    The issue of the given case is fixed in an editing session created around it.
+    The changes are rolled back at the end of the test.
+
+    :param case: The issue to fix, key of T_JUNCTION_GAP_CASES
+    """
     cursor = rollback_db_connection.cursor()
 
     # Issues of the production schema: the distance is lower than the default tolerance of 2 m
@@ -4038,12 +4057,13 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection)
     assert small_count < count
     assert small_max_distance <= 0.5
 
-    # Editing session around the largest gap
-    cursor.execute("""
+    # Editing session around the issue
+    issue_filter = T_JUNCTION_GAP_CASES[case]
+    cursor.execute(f"""
         WITH issue AS (
-            SELECT geom
-            FROM road_graph.check_graph(ARRAY['G02'])
-            ORDER BY (details->>'distance')::numeric DESC
+            SELECT i.geom
+            FROM road_graph.check_graph(ARRAY['G02']) AS i
+            WHERE {issue_filter}
             LIMIT 1
         )
         INSERT INTO road_graph.editing_sessions (label, author, geom)
@@ -4055,15 +4075,15 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection)
     assert row is not None
     cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
 
-    cursor.execute("""
-        SELECT i.fix_params, i.edge_ids, i.node_ids
+    cursor.execute(f"""
+        SELECT i.fix_params, i.details->>'join_type'
         FROM road_graph_editing.check_graph(ARRAY['G02']) AS i
         JOIN road_graph.editing_sessions AS s ON ST_Intersects(s.geom, i.geom)
         WHERE s.label = 'G02 test'
-        ORDER BY (i.details->>'distance')::numeric DESC
+        AND {issue_filter}
         LIMIT 1
     """)
-    params, _edge_ids, node_ids = cursor.fetchone()
+    params, join_type = cursor.fetchone()
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
     edges_count = cursor.fetchone()[0]
 
@@ -4077,23 +4097,30 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection)
     result = fix()
     assert result["status"] == "success", result
 
-    # The node of the free end has been moved to the point to join, and the other edge has been split there
-    cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
-    assert cursor.fetchone()[0] == edges_count + 1
+    # The free end of the edge is on the point to join, and its node is used by other edges:
+    # the other edge has been split there, or the point to join is the start or end point of the other edge
     cursor.execute(
         """
         SELECT
-            ST_Distance(n.geom, ST_GeomFromEWKT(%s)),
-            (SELECT count(*) FROM road_graph_editing.edges AS e WHERE %s IN (e.start_node, e.end_node))
-        FROM road_graph_editing.nodes AS n
-        WHERE n.id = %s
+            ST_Distance(n.geom, ST_GeomFromEWKT(%(target)s)),
+            (SELECT count(*) FROM road_graph_editing.edges AS o WHERE n.id IN (o.start_node, o.end_node))
+        FROM road_graph_editing.edges AS e
+        JOIN road_graph_editing.nodes AS n
+            ON n.id = CASE WHEN %(side)s = 'start' THEN e.start_node ELSE e.end_node END
+        WHERE e.id = %(edge_id)s
         """,
-        (params["target"], node_ids[0], node_ids[0]),
+        params,
     )
     distance, edges_at_node = cursor.fetchone()
-    # The coordinates of the edges are rounded to 10 cm by the triggers
+    # The coordinates of the nodes and edges are rounded to 10 cm by the triggers
     assert distance < 0.1
-    assert edges_at_node == 3
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
+    if join_type == "edge":
+        assert edges_at_node == 3
+        assert cursor.fetchone()[0] == edges_count + 1
+    else:
+        assert edges_at_node >= 2
+        assert cursor.fetchone()[0] == edges_count
 
     # The issue is fixed
     assert fix()["status"] == "skipped"

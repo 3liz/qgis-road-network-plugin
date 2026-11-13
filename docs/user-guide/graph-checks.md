@@ -156,8 +156,15 @@ the `distance`, and the `join_type`: `edge` (middle of the other edge) or `edge_
 
 Fix action:
 
-* `extend_edge`: add the point to join at the free end of the edge. The triggers move the node of the free end
-  to this point, and split the other edge there. Like any edge geometry, the coordinates are rounded to 10 cm.
+* `extend_edge`: connect the free end of the edge to the point to join:
+    * if the point to join is the start or end point of the other edge, the free end is connected to its node,
+      and the node of the free end is deleted,
+    * else, if the free end is less than 50 cm from the other edge, the node of the free end is moved
+      to the point to join,
+    * else, the point to join is added at the free end of the edge, and the node of the free end follows.
+
+  In the two last cases, the triggers split the other edge there.
+  Like any geometry of the road graph, the coordinates are rounded to 10 cm.
 
 ```sql
 -- Find the gaps up to 3 m

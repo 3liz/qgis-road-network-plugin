@@ -3353,9 +3353,15 @@ CREATE FUNCTION road_graph.fix_graph_extend_edge(_params jsonb) RETURNS jsonb
 DECLARE
     -- Maximum distance between two connected edges
     connected_tolerance real = 0.001;
+    -- Distance used by the triggers to reuse an existing node for the start or end point of an edge
+    node_tolerance real = 0.50;
+    -- Precision of the geometries: the coordinates of the nodes and edges are rounded to 10 cm
+    precision_tolerance real = 0.10;
     free_end geometry;
     target geometry;
     edge record;
+    free_node_id integer;
+    target_node record;
 BEGIN
     free_end = ST_GeomFromEWKT(_params->>'point');
     target = ST_GeomFromEWKT(_params->>'target');
@@ -3396,16 +3402,79 @@ BEGIN
             'message', format('The edge %s is already connected at this point', edge.id)
         );
     END IF;
+    free_node_id = CASE WHEN _params->>'side' = 'start' THEN edge.start_node ELSE edge.end_node END;
 
-    -- Add the point to join at the free end of the edge:
-    -- the triggers move the node of the free end to this point, and split the other edge there
-    UPDATE road_graph.edges AS e
-    SET geom = CASE
-        WHEN _params->>'side' = 'start' THEN ST_AddPoint(e.geom, target, 0)
-        ELSE ST_AddPoint(e.geom, target)
-    END
-    WHERE e.id = edge.id
+    -- Existing node at the point to join, for example the start or end point of the other edge
+    SELECT n.id, n.geom
+    INTO target_node
+    FROM road_graph.nodes AS n
+    WHERE ST_DWithin(n.geom, target, precision_tolerance)
+    AND n.id IS DISTINCT FROM free_node_id
+    ORDER BY n.geom <-> target, n.id
+    LIMIT 1
     ;
+
+    IF target_node.id IS NOT NULL THEN
+        -- Connect the free end to this node. If the free end is less than 50 cm from it,
+        -- the free end is replaced by the node: a point added would be too close to the node of the free end,
+        -- which would be used again by the triggers
+        UPDATE road_graph.edges AS e
+        SET geom = CASE
+            WHEN ST_DWithin(free_end, target_node.geom, node_tolerance) AND _params->>'side' = 'start'
+                THEN ST_SetPoint(e.geom, 0, target_node.geom)
+            WHEN ST_DWithin(free_end, target_node.geom, node_tolerance)
+                THEN ST_SetPoint(e.geom, ST_NPoints(e.geom) - 1, target_node.geom)
+            WHEN _params->>'side' = 'start' THEN ST_AddPoint(e.geom, target_node.geom, 0)
+            ELSE ST_AddPoint(e.geom, target_node.geom)
+        END
+        WHERE e.id = edge.id
+        ;
+        -- Delete the node of the free end, which is not used anymore
+        DELETE FROM road_graph.nodes AS n
+        WHERE n.id = free_node_id
+        AND NOT EXISTS (
+            SELECT 1
+            FROM road_graph.edges AS e
+            WHERE n.id IN (e.start_node, e.end_node)
+        )
+        ;
+    ELSIF ST_DWithin(free_end, target, node_tolerance) THEN
+        -- The free end is less than 50 cm from the other edge: move the node of the free end to the point to join.
+        -- The triggers move the free end with the node, and split the other edge at the node.
+        -- The variables force the split even if the node does not move (the point to join is rounded to 10 cm),
+        -- and even if the other edge must not be cut (see after_node_insert_or_update)
+        SET LOCAL road.graph.edge.update.touching.node = 'yes';
+        SET LOCAL road.graph.node.edge.extremity = 'yes';
+        UPDATE road_graph.nodes AS n
+        SET geom = target
+        WHERE n.id = free_node_id
+        ;
+        SET LOCAL road.graph.edge.update.touching.node = 'no';
+        SET LOCAL road.graph.node.edge.extremity = 'no';
+    ELSE
+        -- Add the point to join at the free end of the edge:
+        -- the triggers move the node of the free end to this point, and split the other edge there
+        UPDATE road_graph.edges AS e
+        SET geom = CASE
+            WHEN _params->>'side' = 'start' THEN ST_AddPoint(e.geom, target, 0)
+            ELSE ST_AddPoint(e.geom, target)
+        END
+        WHERE e.id = edge.id
+        ;
+    END IF;
+
+    -- Check the free end is now connected to another edge.
+    -- If not, the exception cancels the changes of this fix (see fix_graph_issue)
+    IF NOT EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        JOIN road_graph.edges AS o
+            ON o.id != e.id
+            AND CASE WHEN _params->>'side' = 'start' THEN e.start_node ELSE e.end_node END IN (o.start_node, o.end_node)
+        WHERE e.id = edge.id
+    ) THEN
+        RAISE EXCEPTION 'The edge % could not be connected to the other edge', edge.id;
+    END IF;
 
     RETURN jsonb_build_object(
         'status', 'success',
@@ -3425,8 +3494,12 @@ extend an edge from its free end to the point to join on another edge.
 The parameter _params must contain the edge id, the side of the free end (start or end),
 the free end and the point to join as EWKT:
 {"edge_id": 12, "side": "end", "point": "SRID=2154;POINT(x y)", "target": "SRID=2154;POINT(x y)"}.
-The point to join is added at the free end of the edge: the triggers move the node of the free end
-to this point, and split the other edge there.
+When the point to join is the start or end point of the other edge, the free end is connected to its node,
+and the node of the free end is deleted. Else, when the free end is less than 50 cm from the other edge,
+the node of the free end is moved to the point to join. Else, the point to join is added at the free end of the edge,
+and the triggers move the node of the free end to this point. In the two last cases, the triggers split the other edge there.
+If the free end is not connected to another edge afterwards, an exception is raised:
+the function fix_graph_issue cancels the changes and returns an error.
 
 It returns a JSON object with the keys status (success, or skipped if the edge does not end at the given point anymore,
 or is already connected there) and message.';
