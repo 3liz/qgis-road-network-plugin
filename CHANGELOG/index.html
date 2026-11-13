@@ -2339,6 +2339,10 @@
   now swaps its start and end nodes, and calculates again its previous and next edges and the references of its road.
   Before, the change was ignored, because the geometry was considered unchanged.
   The migration repairs the edges already reversed</li>
+<li><strong>Edges</strong>: when the end point of an edge is moved to another node, its old end node is deleted
+  if no edge uses it anymore, like its old start node. Before, it was left without edge</li>
+<li><strong>Nodes</strong>: when a node is created or moved less than 50 cm from another node, the two nodes are merged,
+  and the edge linking them, if any, is deleted. Before, this edge was left as a loop on the node</li>
 </ul>
 <h2 id="064-2026-11-12">0.6.4 - 2026-11-12<a class="headerlink" href="#064-2026-11-12" title="Permanent link">#</a></h2>
 <h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>

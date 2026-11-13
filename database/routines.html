@@ -156,7 +156,10 @@
 <ul>
 <li>La fonction split_edge_by_node a été créée et est appelée à cet effet</li>
 <li>La création du Node à cette nouvelle intersection est gérée séparément dans un trigger sur les tronçons</li>
-</ul></td>
+</ul>
+<ol>
+<li>Les extrémités des tronçons d&rsquo;un autre Node situé à moins de 50 cm sont rattachées à ce Node : les deux Nodes sont fusionnés. Les tronçons qui commencent et finissent alors à ce Node, par exemple le tronçon qui reliait les deux Nodes, sont supprimés.</li>
+</ol></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/before_node_delete___66ab78c9.html">before_node_delete()</a></td>
@@ -297,15 +300,6 @@
 <p>The issue must be fixed manually, for example by giving another road code to the edges of the branches.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/update_managed_objects_on_graph_55e0b37b.html">update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>integer</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Updates managed objects geometries or references when the road graph changes. It uses the information stored in the road_graph.managed_objects table. The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/check_graph__checks_text___DEFA_b4ec54af.html">check_graph(_checks text[] DEFAULT NULL::text[], _road_codes text[] DEFAULT NULL::text[], _options jsonb DEFAULT NULL::jsonb)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -316,6 +310,15 @@
 <p>The checks are listed in the table glossary_graph_check of the production schema. All the active checks are run if _checks is NULL, and all the roads are checked if _road_codes is NULL. The parameter _options overrides the default options of the checks stored in this table, with the check code as key: {&ldquo;G02&rdquo;: {&ldquo;tolerance&rdquo;: 2}}.</p>
 <p>Each line gives the check code and title, the severity (error or warning), the road code, the ids of the edges, nodes and markers concerned, some details, the action which can fix the issue with its parameters (NULL if the issue must be fixed manually), a point locating the issue (geom) and, if useful, a line showing it (geom_detail).</p>
 <p>The function can be run on the production schema or on the editing schema: road_graph_editing.check_graph() checks the data of the editing session. The issues must be fixed in an editing session, with the function fix_graph_issue.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/update_managed_objects_on_graph_55e0b37b.html">update_managed_objects_on_graph_change(_schema_name text, _table_name text, _road_codes text[], _impacts jsonb DEFAULT NULL::jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>integer</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Updates managed objects geometries or references when the road graph changes. It uses the information stored in the road_graph.managed_objects table. The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/fix_graph_move_marker__params_j_1e870605.html">fix_graph_move_marker(_params jsonb)</a></td>
@@ -707,17 +710,6 @@
 <p>An issue is returned for each group of consecutive edges in the opposite direction of their sequence. The details give the reason (markers or neighbours), the number of edges and their length, and the number of consecutive markers in the direction of the road and in the opposite direction. The issue can be fixed with the action reverse_edges, which reverses the geometry of the edges.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/check_graph_t_junction_gaps__ro_4f339a80.html">check_graph_t_junction_gaps(_road_codes text[], _options jsonb)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Check G02 run by the function check_graph: find the edges ending near another edge without being connected to it, for example a road arriving on another road and stopping a few decimeters before it (T junction).</p>
-<p>An issue is returned for each free end of an edge (no other edge is connected to it) which is less than the tolerance from another edge: option tolerance, 2 m by default. The edges connected to the opposite end of the edge are ignored, for example its next edge if it is very short, and the edges crossed by the edge near its free end: the edge goes beyond the other edge, which is found by the check G01. When two free ends are close to each other, only one issue is returned.</p>
-<p>The point to join is the closest point of the other edge, or its start or end point if it is less than 50 cm from it. The details give the road codes of the two edges, the distance, and the join type: edge or edge_end. The issue can be fixed with the action extend_edge, which adds the point to join at the free end of the edge.</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/fix_graph_mark_as_bridge__param_9395eed3.html">fix_graph_mark_as_bridge(_params jsonb)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -727,6 +719,17 @@
                                         <td><p>Action mark_as_bridge run by the function fix_graph_issue, to fix the issues of the check G01 when the edges must not be connected, for example on a bridge or in a tunnel.</p>
 <p>It sets the field no_intersection_cutting to True for the edges passing by the crossing point: the given edge if the parameter _params contains edge_id, or else all the edges of edge_ids: {&ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;, &ldquo;edge_ids&rdquo;: [12, 34], &ldquo;edge_id&rdquo;: 12}.</p>
 <p>It returns a JSON object with the keys status (success, or skipped if the edges are already marked) and message.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/check_graph_t_junction_gaps__ro_4f339a80.html">check_graph_t_junction_gaps(_road_codes text[], _options jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Check G02 run by the function check_graph: find the edges ending near another edge without being connected to it, for example a road arriving on another road and stopping a few decimeters before it (T junction).</p>
+<p>An issue is returned for each free end of an edge (no other edge is connected to it) which is less than the tolerance from another edge: option tolerance, 2 m by default. The edges connected to the opposite end of the edge are ignored, for example its next edge if it is very short, and the edges crossed by the edge near its free end: the edge goes beyond the other edge, which is found by the check G01. When two free ends are close to each other, only one issue is returned.</p>
+<p>The point to join is the closest point of the other edge, or its start or end point if it is less than 50 cm from it. The details give the road codes of the two edges, the distance, and the join type: edge or edge_end. The issue can be fixed with the action extend_edge, which adds the point to join at the free end of the edge.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/editing_survey___e14344a2.html">editing_survey()</a></td>

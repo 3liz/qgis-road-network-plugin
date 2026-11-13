@@ -830,7 +830,7 @@ BEGIN
         END IF;
 
         -- Downstream node
-        IF OLD.start_node != NEW.start_node THEN
+        IF OLD.end_node != NEW.end_node THEN
             WITH del AS (
                 DELETE FROM road_graph.nodes
                 WHERE id = OLD.end_node
@@ -1344,12 +1344,16 @@ si un des sommets (amont ou aval) du tronçon accroche le segment d'un tronçon 
 Ce tronçon existant est coupé en deux (la géométrie du tronçon A est tronquée, un nouveau tronçon B est créé, on récupère les attributs du tronçon A dans le tronçon B).
 Rq :
 - La fonction split_edge_by_node a été créée et est appelée à cet effet
-- La création du Node à cette nouvelle intersection est gérée séparément dans un trigger sur les tronçons]]></comment>
+- La création du Node à cette nouvelle intersection est gérée séparément dans un trigger sur les tronçons
+
+3. Les extrémités des tronçons d'un autre Node situé à moins de 50 cm sont rattachées à ce Node : les deux Nodes sont fusionnés.
+Les tronçons qui commencent et finissent alors à ce Node, par exemple le tronçon qui reliait les deux Nodes, sont supprimés.]]></comment>
          <definition language="plpgsql"><![CDATA[DECLARE
     edge_under_node record;
     id_new_edge integer;
     raise_notice text;
     is_edge_extremity boolean;
+    attached_edge_ids integer[];
 BEGIN
     -- Trigger disabled by session variable
     IF road_graph.get_current_setting('road.graph.disable.trigger', '0') = '1'
@@ -1381,18 +1385,32 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- Update all upstream edges referenced ids
-    UPDATE road_graph.edges AS t
-    SET start_node = NEW.id
-    WHERE ST_DWithin(NEW.geom, ST_StartPoint(t.geom), 0.50)
-    AND start_node != NEW.id
+    -- Update all upstream edges referenced ids.
+    -- The edges of another node less than 50 cm from this node are attached to this node:
+    -- the two nodes are merged. The ids of the attached edges are kept
+    WITH attached AS (
+        UPDATE road_graph.edges AS t
+        SET start_node = NEW.id
+        WHERE ST_DWithin(NEW.geom, ST_StartPoint(t.geom), 0.50)
+        AND start_node != NEW.id
+        RETURNING t.id
+    )
+    SELECT array_agg(a.id)
+    INTO attached_edge_ids
+    FROM attached AS a
     ;
 
     -- Update all downstream edges referenced ids
-    UPDATE road_graph.edges AS t
-    SET end_node = NEW.id
-    WHERE ST_DWithin(NEW.geom, ST_EndPoint(t.geom), 0.50)
-    AND end_node != NEW.id
+    WITH attached AS (
+        UPDATE road_graph.edges AS t
+        SET end_node = NEW.id
+        WHERE ST_DWithin(NEW.geom, ST_EndPoint(t.geom), 0.50)
+        AND end_node != NEW.id
+        RETURNING t.id
+    )
+    SELECT Coalesce(attached_edge_ids, '{}') || Coalesce(array_agg(a.id), '{}')
+    INTO attached_edge_ids
+    FROM attached AS a
     ;
 
     -- Update geometry of all upstream edges linked to the node
@@ -1418,6 +1436,16 @@ BEGIN
     AND NOT ST_Intersects(ST_EndPoint(geom), NEW.geom)
     ;
     SET LOCAL road.graph.edge.crossing.node.creation.pending = 'no';
+
+    -- Delete the edges which now start and end at this node, and did not before:
+    -- for example the edge between this node and the merged node
+    IF cardinality(attached_edge_ids) > 0 THEN
+        DELETE FROM road_graph.edges AS t
+        WHERE t.id = ANY(attached_edge_ids)
+        AND t.start_node = NEW.id
+        AND t.end_node = NEW.id
+        ;
+    END IF;
 
     -- Split edges under the node if needed
     FOR edge_under_node IN
@@ -8492,6 +8520,7 @@ The function returns the id of the new created edge or null if the edge has not 
     is_roundabout boolean;
     previous_crossing_node_creation_pending text;
     previous_ref_calc_disabled text;
+    previous_node_already_deleted text;
     split_length_difference float8;
 BEGIN
     -- log level
@@ -8571,6 +8600,12 @@ BEGIN
     previous_ref_calc_disabled = road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no');
     PERFORM set_config('road.graph.edge.ref.calc.disabled', 'yes', true);
 
+    -- The end node of the initial edge is not used by any edge after its update,
+    -- until the new edge is inserted: it must not be deleted by the trigger after_edge_insert_or_update.
+    -- The variable road.graph.node.already.deleted gives the node which must not be deleted
+    previous_node_already_deleted = road_graph.get_current_setting('road.graph.node.already.deleted', '-1');
+    PERFORM set_config('road.graph.node.already.deleted', edge_record.end_node::text, true);
+
     UPDATE road_graph.edges
     SET
         -- Set the geometry
@@ -8583,6 +8618,7 @@ BEGIN
         end_cumulative = (end_cumulative - ST_Length(end_geom))
     WHERE id = edge_record.id
     ;
+    PERFORM set_config('road.graph.node.already.deleted', previous_node_already_deleted, true);
 
     -- Get the object fields minus the PK, upstream node & geometry column
     WITH fields AS (
