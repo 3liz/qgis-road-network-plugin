@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="250" viewBox="0 0 900 250" font-family="Arial, Helvetica, sans-serif">
+  <rect width="900" height="250" fill="#ffffff"/>
+  <line x1="300.0" y1="12" x2="300.0" y2="238" stroke="#e0e0e0" stroke-width="2"/>
+  <line x1="600.0" y1="12" x2="600.0" y2="238" stroke="#e0e0e0" stroke-width="2"/>
+  <text x="150.0" y="28" font-size="15" font-weight="bold" fill="#212121" text-anchor="middle">Issue</text>
+  <polyline points="30.0,130 270.0,130" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="150.0,50 150.0,210" fill="none" stroke="#78909c" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="30.0" cy="130" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="270.0" cy="130" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="150.0" cy="50" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="150.0" cy="210" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <path d="M 143.0 123 L 157.0 137 M 143.0 137 L 157.0 123" stroke="#e53935" stroke-width="3"/>
+  <text x="150.0" y="236" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">the edges cross each other without node</text>
+  <text x="450.0" y="28" font-size="15" font-weight="bold" fill="#212121" text-anchor="middle">cut_edges</text>
+  <polyline points="330.0,130 450.0,130" fill="none" stroke="#1565c0" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="450.0,130 570.0,130" fill="none" stroke="#1565c0" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="450.0,50 450.0,130" fill="none" stroke="#1565c0" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="450.0,130 450.0,210" fill="none" stroke="#1565c0" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="330.0" cy="130" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="570.0" cy="130" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="450.0" cy="50" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="450.0" cy="210" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="450.0" cy="130" r="8" fill="#1565c0" stroke="#0d47a1" stroke-width="2"/>
+  <text x="450.0" y="236" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">a crossroads: the 2 edges are split in 4</text>
+  <text x="750.0" y="28" font-size="15" font-weight="bold" fill="#212121" text-anchor="middle">mark_as_bridge</text>
+  <polyline points="630.0,130 870.0,130" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="750.0,50 750.0,210" fill="none" stroke="#1565c0" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="738.0,112 738.0,148" fill="none" stroke="#424242" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="762.0,112 762.0,148" fill="none" stroke="#424242" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="630.0" cy="130" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="870.0" cy="130" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="750.0" cy="50" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="750.0" cy="210" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <text x="750.0" y="236" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">a bridge: no_intersection_cutting = True</text>
+</svg>

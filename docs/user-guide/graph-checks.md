@@ -88,6 +88,10 @@ Each issue has:
 The checks are numbered in the recommended order of the fixes:
 the algorithm Fix the road graph issues fixes the issues in this order.
 
+Each check below is illustrated by an issue of the test data, displayed with the layers created by the algorithm
+Check the road graph (the issues in red or orange, the line of the issue dashed), and by a diagram of the issue
+and of its fix.
+
 | Code | Issue | Fix |
 |------|-------|-----|
 | [G01](#g01-crossing-edges-without-node) | Edges crossing or touching each other without node | `cut_edges` or `mark_as_bridge` |
@@ -106,6 +110,10 @@ toggle the editing mode of the point layer created by the algorithm Check the ro
 and change the field `fix_action` (and `fix_params` if needed) before running the algorithm Fix the road graph issues.
 
 ### G01: Crossing edges without node
+
+![G01: example of issue](../media/user-guide/graph_checks_g01.jpg)
+
+![G01: issue and fix](../media/user-guide/graph_checks_g01.svg)
 
 Two edges crossing or touching each other must be split by a node, unless they are not connected,
 for example on a **bridge** or in a **tunnel**: the edges with the field `no_intersection_cutting` set to `True`
@@ -142,6 +150,10 @@ WHERE code = 'G01';
 ```
 
 ### G02: Edge ending near another edge
+
+![G02: example of issue](../media/user-guide/graph_checks_g02.jpg)
+
+![G02: issue and fix](../media/user-guide/graph_checks_g02.svg)
 
 A road arriving on another road must be connected to it. In the source data, it often stops
 a few decimeters before the other road, or a little beyond it.
@@ -181,6 +193,10 @@ WHERE code = 'G02';
 
 ### G03: Nodes close to each other
 
+![G03: example of issue](../media/user-guide/graph_checks_g03.jpg)
+
+![G03: issue and fix](../media/user-guide/graph_checks_g03.svg)
+
 Two nodes a few centimeters or decimeters from each other should usually be the same node:
 the roads arriving there are not connected in the graph.
 
@@ -202,6 +218,10 @@ Fix action:
   then delete the other node.
 
 ### G04: Useless node
+
+![G04: example of issue](../media/user-guide/graph_checks_g04.jpg)
+
+![G04: issue and fix](../media/user-guide/graph_checks_g04.svg)
 
 A node is useful at a junction, or at the start or end of a road. The source data often contains
 other nodes, for example where the source features of a road were split: these nodes split the road
@@ -227,6 +247,12 @@ at its crossings with the other edges, which may be bridges, or connect it to th
 In this case, the fix returns an error and nothing is changed.
 
 ### G05: Edges in the opposite direction of the road
+
+The test data does not contain this issue: it has been added for the example.
+
+![G05: example of issue](../media/user-guide/graph_checks_g05.jpg)
+
+![G05: issue and fix](../media/user-guide/graph_checks_g05.svg)
 
 The edges of a road must be drawn in the direction of the road, from its first marker to its last one:
 the references (marker and abscissa) and the order of the edges depend on it.
@@ -262,6 +288,12 @@ WHERE code = 'G05';
 
 ### G06: Road with branches
 
+The test data does not contain this issue: it has been added for the example.
+
+![G06: example of issue](../media/user-guide/graph_checks_g06.jpg)
+
+![G06: issue and fix](../media/user-guide/graph_checks_g06.svg)
+
 A road must be a line: its edges follow each other, without branches. The ramps of an interchange or of a roundabout,
 or the two carriageways of a road, must have their own road code. Else the order of the edges of the road,
 and so the references, cannot be calculated.
@@ -277,6 +309,10 @@ for a ramp. Check the main line proposed by the check, especially when the edges
 (check [G05](#g05-edges-in-the-opposite-direction-of-the-road)).
 
 ### G07: Parallel edges of the same road
+
+![G07: example of issue](../media/user-guide/graph_checks_g07.jpg)
+
+![G07: issue and fix](../media/user-guide/graph_checks_g07.svg)
 
 The two carriageways of a road must have their own road code. When they use the same code without being connected,
 the check [G06](#g06-road-with-branches) does not find them.
@@ -296,6 +332,10 @@ There is no fix action: give another road code to one of the carriageways. A roa
 for example a hairpin bend, can also be found: in this case, there is nothing to fix.
 
 ### G08: Short edge
+
+![G08: example of issue](../media/user-guide/graph_checks_g08.jpg)
+
+![G08: issue and fix](../media/user-guide/graph_checks_g08.svg)
 
 A very short edge often comes from the digitizing: for example two junctions a few decimeters from each other
 instead of a crossroads, or a small piece of road left at the end of an edge.
@@ -320,6 +360,12 @@ The only edge of a road has no fix action: the road would not have any edge anym
 
 ### G09: First marker not at the start of the road
 
+The test data does not contain this issue: it has been added for the example.
+
+![G09: example of issue](../media/user-guide/graph_checks_g09.jpg)
+
+![G09: issue and fix](../media/user-guide/graph_checks_g09.svg)
+
 The **first marker** of a road is the marker with the lowest code and abscissa: it is often the marker 0,
 but it can be a virtual marker with a higher code. It must be at the **start point of the first edge** of the road,
 the edge without previous edge. When it is a few centimeters after it, the start of the road has no reference.
@@ -337,6 +383,10 @@ Fix action:
   for example when the road is in the opposite direction (check [G05](#g05-edges-in-the-opposite-direction-of-the-road)).
 
 ### G10: Markers not in the order of the road
+
+![G10: example of issue](../media/user-guide/graph_checks_g10.jpg)
+
+![G10: issue and fix](../media/user-guide/graph_checks_g10.svg)
 
 Sorted by code and abscissa, the markers of a road must follow each other along the road:
 else, the references calculated from them are wrong.

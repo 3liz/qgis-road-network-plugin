@@ -149,6 +149,7 @@ map-screenshots: start-db
 graph-checks-screenshots: start-db
 	$(UV) pytest tests/test_load_structure.py -k "test_processing_create or test_reset_test_data"
 	$(UV) python .docker/graph_checks_screenshots.py docs/media
+	$(UV) python .docker/graph_checks_diagrams.py docs/media/user-guide
 	$(MAKE) stop-db
 
 #
