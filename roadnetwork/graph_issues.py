@@ -64,6 +64,7 @@ def check_titles() -> dict:
         "G07": tr("Parallel edges of the same road"),
         "G08": tr("Short edge"),
         "G09": tr("First marker not at the start of the road"),
+        "G10": tr("Markers not in the order of the road"),
     }
 
 

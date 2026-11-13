@@ -4752,6 +4752,59 @@ def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
     assert cursor.fetchone()[0] == 0
 
 
+def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
+    """Check G10: markers not in the order of the road. Two markers of a road are swapped.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Issues of the production schema: markers not in the order of the road, without fix action
+    cursor.execute("""
+        SELECT count(*), bool_and(
+            details->>'issue_type' = 'order' AND fix_action IS NULL AND cardinality(marker_ids) = 1
+        )
+        FROM road_graph.check_graph(ARRAY['G10'])
+    """)
+    count, all_order = cursor.fetchone()
+    assert count > 0
+    assert all_order
+
+    # Swap two consecutive real markers of a road whose markers are in order
+    cursor.execute("""
+        SELECT a.road_code, a.id, b.id
+        FROM road_graph.markers AS a
+        JOIN road_graph.markers AS b
+            ON b.road_code = a.road_code AND b.code = a.code + 1 AND b.abscissa = 0 AND NOT b.is_virtual
+        JOIN road_graph.roads AS r ON r.road_code = a.road_code AND r.road_type = 'road'
+        WHERE a.code > 0 AND a.abscissa = 0 AND NOT a.is_virtual
+        AND NOT EXISTS (
+            SELECT 1 FROM road_graph.check_graph(ARRAY['G10']) AS i WHERE i.road_code = a.road_code
+        )
+        ORDER BY a.road_code, a.code
+        LIMIT 1
+    """)
+    road_code, first_id, second_id = cursor.fetchone()
+    cursor.execute(
+        """
+        UPDATE road_graph.markers AS m
+        SET geom = o.geom
+        FROM road_graph.markers AS o
+        WHERE (m.id, o.id) IN ((%s, %s), (%s, %s))
+        """,
+        (first_id, second_id, second_id, first_id),
+    )
+
+    # One of the two markers is not in the order of the road anymore
+    cursor.execute(
+        "SELECT marker_ids, details->>'issue_type' FROM road_graph.check_graph(ARRAY['G10'], %s)",
+        ([road_code],),
+    )
+    issues = cursor.fetchall()
+    assert len(issues) == 1
+    marker_ids, issue_type = issues[0]
+    assert marker_ids[0] in (first_id, second_id)
+    assert issue_type == "order"
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

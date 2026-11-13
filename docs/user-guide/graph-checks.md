@@ -99,6 +99,7 @@ the algorithm Fix the road graph issues fixes the issues in this order.
 | [G07](#g07-parallel-edges-of-the-same-road) | Parallel edges of the same road, for example two carriageways | manual |
 | [G08](#g08-short-edge) | Short edge | `collapse_edge` |
 | [G09](#g09-first-marker-not-at-the-start-of-the-road) | First marker not at the start of the road | `move_marker` |
+| [G10](#g10-markers-not-in-the-order-of-the-road) | Markers not in the order of the road | manual |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -334,6 +335,24 @@ Fix action:
   It is only proposed when the marker is less than the option `tolerance` from the start of the road,
   **1 m** by default. Farther, check the road manually: the marker may be right, and the first edge wrong,
   for example when the road is in the opposite direction (check [G05](#g05-edges-in-the-opposite-direction-of-the-road)).
+
+### G10: Markers not in the order of the road
+
+Sorted by code and abscissa, the markers of a road must follow each other along the road:
+else, the references calculated from them are wrong.
+
+The **position** of each marker along its road is the cumulative length of the road at its closest edge,
+less than the option `marker_tolerance` from it, **50 m** by default. The check keeps the longest sequence
+of markers in the order of the road, two markers being allowed at the same position (1 m tolerance),
+for example a virtual marker and the marker of the next code with the same reference.
+It returns one issue for each other marker (`issue_type`: `order`), and for each marker far from its road
+(`far_from_road`) or whose closest edge has no reference (`edge_without_reference`). The roundabouts are ignored.
+
+The field `details` gives the code, abscissa, type and `position` of the marker, and the code and position
+of the previous and next markers in the order of the road.
+
+There is no fix action: move the marker, or change its code. Fix the issues of the check
+[G05](#g05-edges-in-the-opposite-direction-of-the-road) before: a reversed edge changes the positions of the markers.
 
 ## Configuration of the checks
 

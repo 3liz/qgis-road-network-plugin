@@ -33,6 +33,8 @@
   and merging its nodes
 * **Road graph checks** - G09: first marker of a road not at the start of the road,
   fixed by moving the marker to the start of the road when it is less than 1 m from it
+* **Road graph checks** - G10: markers not in the order of the road, far from the road,
+  or on an edge without reference, to fix manually
 
 ### Fixed
 

@@ -208,6 +208,20 @@ The issue can be fixed with the action move_marker, which moves the marker to th
 when it is less than the option tolerance from it (1 m by default). Else, the issue must be fixed manually.';
 
 
+-- FUNCTION check_graph_markers_order(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_markers_order(_road_codes text[], _options jsonb) IS 'Check G10 run by the function check_graph: find the markers which are not in the order of their road.
+
+The position of each marker along its road is the cumulative length of the road at its closest edge of the road,
+less than the option marker_tolerance from it (50 m by default). Sorted by code and abscissa, the markers must be
+in the order of their position: two markers can be at the same position (1 m tolerance). The longest sequence of markers in the order of the road is kept:
+an issue is returned for each other marker. The roundabouts are ignored.
+An issue is also returned for a marker far from its road, or whose closest edge has no reference.
+
+The details give the type of issue (order, far_from_road or edge_without_reference), the code, abscissa,
+type and position of the marker, and the code and position of the previous and next markers in the order of the road.
+The issue must be fixed manually, by moving the marker or changing its code.';
+
+
 -- FUNCTION check_graph_parallel_edges(_road_codes text[], _options jsonb)
 COMMENT ON FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) IS 'Check G07 run by the function check_graph: find the edges of the same road running parallel to each other,
 for example the two carriageways of a road using the same road code.

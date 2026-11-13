@@ -2434,6 +2434,168 @@ The issue can be fixed with the action move_marker, which moves the marker to th
 when it is less than the option tolerance from it (1 m by default). Else, the issue must be fixed manually.';
 
 
+-- check_graph_markers_order(text[], jsonb)
+CREATE FUNCTION road_graph.check_graph_markers_order(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum distance between a marker and the edges of its road
+    marker_tolerance real = Coalesce((_options->>'marker_tolerance')::real, 50.0);
+    -- Tolerance on the positions of the markers: two markers at the same point can have slightly different positions,
+    -- for example at the end of an edge and at the start of the next edge
+    position_tolerance real = 1.0;
+    road record;
+    -- Markers of the road, sorted by code and abscissa
+    marker_ids_list integer[];
+    marker_codes integer[];
+    marker_abscissas real[];
+    marker_virtuals boolean[];
+    marker_geoms geometry[];
+    marker_edge_ids integer[];
+    marker_positions double precision[];
+    marker_count integer;
+    -- Longest sequence of markers in the order of their position, ending at each marker
+    sequence_lengths integer[];
+    previous_indexes integer[];
+    best_index integer;
+    in_order boolean[];
+    i integer;
+    j integer;
+BEGIN
+    -- Roads with markers, except the roundabouts
+    FOR road IN
+        SELECT DISTINCT m.road_code
+        FROM road_graph.markers AS m
+        JOIN road_graph.roads AS r ON r.road_code = m.road_code
+        WHERE r.road_type != 'roundabout'
+        AND (_road_codes IS NULL OR m.road_code = ANY(_road_codes))
+        ORDER BY m.road_code
+    LOOP
+        -- Markers of the road in the order of their code and abscissa, with their position along the road:
+        -- the cumulative length at their closest edge of the road
+        SELECT
+            array_agg(x.id ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.code ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.abscissa ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.is_virtual ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.geom ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.edge_id ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.position ORDER BY x.code, x.abscissa, x.id)
+        INTO
+            marker_ids_list, marker_codes, marker_abscissas, marker_virtuals,
+            marker_geoms, marker_edge_ids, marker_positions
+        FROM (
+            SELECT
+                m.id, m.code, m.abscissa, m.is_virtual, m.geom,
+                c.id AS edge_id, c.distance,
+                c.start_cumulative + ST_LineLocatePoint(c.geom, m.geom) * ST_Length(c.geom) AS position
+            FROM road_graph.markers AS m
+            LEFT JOIN LATERAL (
+                SELECT e.id, e.geom, e.start_cumulative, ST_Distance(e.geom, m.geom) AS distance
+                FROM road_graph.edges AS e
+                WHERE e.road_code = m.road_code
+                AND ST_DWithin(e.geom, m.geom, marker_tolerance)
+                ORDER BY ST_Distance(e.geom, m.geom), e.id
+                LIMIT 1
+            ) AS c ON True
+            WHERE m.road_code = road.road_code
+        ) AS x
+        ;
+        marker_count = cardinality(marker_ids_list);
+
+        -- Longest sequence of markers whose positions increase with their code and abscissa:
+        -- the markers out of this sequence are not in the order of the road
+        sequence_lengths = array_fill(0, ARRAY[marker_count]);
+        previous_indexes = array_fill(0, ARRAY[marker_count]);
+        in_order = array_fill(False, ARRAY[marker_count]);
+        best_index = 0;
+        FOR i IN 1..marker_count LOOP
+            CONTINUE WHEN marker_positions[i] IS NULL;
+            sequence_lengths[i] = 1;
+            FOR j IN 1..i - 1 LOOP
+                IF marker_positions[j] IS NOT NULL
+                    -- Two markers can be at the same position, for example a virtual marker
+                    -- and the marker of the next code, with the same reference
+                    AND marker_positions[j] <= marker_positions[i] + position_tolerance
+                    AND sequence_lengths[j] + 1 > sequence_lengths[i]
+                THEN
+                    sequence_lengths[i] = sequence_lengths[j] + 1;
+                    previous_indexes[i] = j;
+                END IF;
+            END LOOP;
+            IF best_index = 0 OR sequence_lengths[i] > sequence_lengths[best_index] THEN
+                best_index = i;
+            END IF;
+        END LOOP;
+        i = best_index;
+        WHILE i > 0 LOOP
+            in_order[i] = True;
+            i = previous_indexes[i];
+        END LOOP;
+
+        -- One issue for each marker far from the road, on an edge without reference,
+        -- or out of the order of the road
+        FOR i IN 1..marker_count LOOP
+            CONTINUE WHEN in_order[i];
+            check_code = 'G10';
+            check_title = 'Markers not in the order of the road';
+            severity = 'error';
+            road_code = road.road_code;
+            edge_ids = CASE WHEN marker_edge_ids[i] IS NULL THEN NULL ELSE ARRAY[marker_edge_ids[i]] END;
+            node_ids = NULL;
+            marker_ids = ARRAY[marker_ids_list[i]];
+            details = jsonb_build_object(
+                'issue_type', CASE
+                    WHEN marker_edge_ids[i] IS NULL THEN 'far_from_road'
+                    WHEN marker_positions[i] IS NULL THEN 'edge_without_reference'
+                    ELSE 'order'
+                END,
+                'marker_code', marker_codes[i],
+                'marker_abscissa', marker_abscissas[i],
+                'is_virtual', marker_virtuals[i],
+                'position', round(marker_positions[i]::numeric, 1),
+                -- Previous and next markers by code which are in the order of the road
+                'previous_marker_code', (
+                    SELECT marker_codes[k] FROM generate_series(i - 1, 1, -1) AS k WHERE in_order[k] LIMIT 1
+                ),
+                'previous_marker_position', (
+                    SELECT round(marker_positions[k]::numeric, 1)
+                    FROM generate_series(i - 1, 1, -1) AS k WHERE in_order[k] LIMIT 1
+                ),
+                'next_marker_code', (
+                    SELECT marker_codes[k] FROM generate_series(i + 1, marker_count) AS k WHERE in_order[k] LIMIT 1
+                ),
+                'next_marker_position', (
+                    SELECT round(marker_positions[k]::numeric, 1)
+                    FROM generate_series(i + 1, marker_count) AS k WHERE in_order[k] LIMIT 1
+                )
+            );
+            fix_action = NULL;
+            fix_params = NULL;
+            geom = marker_geoms[i];
+            geom_detail = NULL;
+            RETURN NEXT;
+        END LOOP;
+    END LOOP;
+    RETURN;
+END;
+$$;
+
+
+-- FUNCTION check_graph_markers_order(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_markers_order(_road_codes text[], _options jsonb) IS 'Check G10 run by the function check_graph: find the markers which are not in the order of their road.
+
+The position of each marker along its road is the cumulative length of the road at its closest edge of the road,
+less than the option marker_tolerance from it (50 m by default). Sorted by code and abscissa, the markers must be
+in the order of their position: two markers can be at the same position (1 m tolerance). The longest sequence of markers in the order of the road is kept:
+an issue is returned for each other marker. The roundabouts are ignored.
+An issue is also returned for a marker far from its road, or whose closest edge has no reference.
+
+The details give the type of issue (order, far_from_road or edge_without_reference), the code, abscissa,
+type and position of the marker, and the code and position of the previous and next markers in the order of the road.
+The issue must be fixed manually, by moving the marker or changing its code.';
+
+
 -- check_graph_parallel_edges(text[], jsonb)
 CREATE FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
     LANGUAGE plpgsql
