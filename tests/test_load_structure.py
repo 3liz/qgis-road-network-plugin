@@ -4805,6 +4805,46 @@ def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
     assert issue_type == "order"
 
 
+def test_edge_old_end_node_deleted(rollback_db_connection: psycopg.Connection):
+    """When the end point of an edge is moved to another node, its old end node is deleted
+    if no edge uses it anymore, like its old start node.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Edge whose end node is only used by this edge, and another node 100 to 500 m from its end
+    cursor.execute("""
+        SELECT e.id, e.end_node, n.id
+        FROM road_graph.edges AS e
+        JOIN road_graph.nodes AS en ON en.id = e.end_node
+        JOIN road_graph.nodes AS n
+            ON ST_DWithin(n.geom, en.geom, 500) AND NOT ST_DWithin(n.geom, en.geom, 100)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM road_graph.edges AS o
+            WHERE o.id != e.id AND e.end_node IN (o.start_node, o.end_node)
+        )
+        AND n.id NOT IN (e.start_node, e.end_node)
+        ORDER BY e.id, n.id
+        LIMIT 1
+    """)
+    edge_id, old_end_node, new_end_node = cursor.fetchone()
+
+    # Move the end point of the edge to the other node
+    cursor.execute(
+        """
+        UPDATE road_graph.edges AS e
+        SET geom = ST_SetPoint(e.geom, ST_NPoints(e.geom) - 1, n.geom)
+        FROM road_graph.nodes AS n
+        WHERE e.id = %s AND n.id = %s
+        """,
+        (edge_id, new_end_node),
+    )
+    cursor.execute("SELECT end_node FROM road_graph.edges WHERE id = %s", (edge_id,))
+    assert cursor.fetchone()[0] == new_end_node
+    cursor.execute("SELECT count(*) FROM road_graph.nodes WHERE id = %s", (old_end_node,))
+    assert cursor.fetchone()[0] == 0
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

@@ -621,7 +621,7 @@ BEGIN
         END IF;
 
         -- Downstream node
-        IF OLD.start_node != NEW.start_node THEN
+        IF OLD.end_node != NEW.end_node THEN
             WITH del AS (
                 DELETE FROM road_graph.nodes
                 WHERE id = OLD.end_node
@@ -8373,6 +8373,7 @@ DECLARE
     is_roundabout boolean;
     previous_crossing_node_creation_pending text;
     previous_ref_calc_disabled text;
+    previous_node_already_deleted text;
     split_length_difference float8;
 BEGIN
     -- log level
@@ -8452,6 +8453,12 @@ BEGIN
     previous_ref_calc_disabled = road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no');
     PERFORM set_config('road.graph.edge.ref.calc.disabled', 'yes', true);
 
+    -- The end node of the initial edge is not used by any edge after its update,
+    -- until the new edge is inserted: it must not be deleted by the trigger after_edge_insert_or_update.
+    -- The variable road.graph.node.already.deleted gives the node which must not be deleted
+    previous_node_already_deleted = road_graph.get_current_setting('road.graph.node.already.deleted', '-1');
+    PERFORM set_config('road.graph.node.already.deleted', edge_record.end_node::text, true);
+
     UPDATE road_graph.edges
     SET
         -- Set the geometry
@@ -8464,6 +8471,7 @@ BEGIN
         end_cumulative = (end_cumulative - ST_Length(end_geom))
     WHERE id = edge_record.id
     ;
+    PERFORM set_config('road.graph.node.already.deleted', previous_node_already_deleted, true);
 
     -- Get the object fields minus the PK, upstream node & geometry column
     WITH fields AS (
