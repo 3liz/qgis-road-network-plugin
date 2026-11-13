@@ -254,7 +254,8 @@ The issue can be fixed with the action reverse_edges, which reverses the geometr
 COMMENT ON FUNCTION road_graph.check_graph_road_branches(_road_codes text[], _options jsonb) IS 'Check G06 run by the function check_graph: find the roads with branches, for example the ramps
 or the carriageways of a road using the code of the road.
 
-An issue is returned for each node with more than two edges of the same road. The roundabouts are ignored.
+An issue is returned for each node with more than two edges of the same road. The roundabouts are ignored,
+and the edges starting and ending at the same node.
 The main line of the road at the node is given by the edge arriving at the node and the edge leaving it
 which are the most aligned: the other edges are the branches. The details give the number of edges at the node,
 and the ids of the edges of the main line and of the branches. The line of the issue shows the branches.
@@ -338,6 +339,7 @@ The edge of the same road following the short edge at the node to remove is exte
 of the short edge up to the node to keep: the geometry of the road is kept. The start and end points
 of the other edges of the node to remove, for example the edges of the other roads, are moved to the node to keep.
 Then the edge and the node to remove are deleted. The only edge of a road is not removed.
+An edge starting and ending at the same node, for example an edge reduced to a point after being cut, is only deleted.
 
 It returns a JSON object with the keys status (success, skipped if the edge does not exist anymore
 or its nodes have changed, or error) and message.';
