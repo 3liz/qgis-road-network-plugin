@@ -874,6 +874,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#g04-useless-node" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G04: Useless node
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1356,6 +1367,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#g04-useless-node" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G04: Useless node
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1498,6 +1520,11 @@ the algorithm Fix the road graph issues fixes the issues in this order.</p>
 <td>Nodes close to each other</td>
 <td><code>merge_nodes</code></td>
 </tr>
+<tr>
+<td><a href="#g04-useless-node">G04</a></td>
+<td>Useless node: without edge, or between two edges of the same road</td>
+<td><code>delete_node</code></td>
+</tr>
 </tbody>
 </table>
 <p>To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
@@ -1555,9 +1582,17 @@ if it is less than 50 cm from it. The field <code>details</code> gives the road 
 the <code>distance</code>, and the <code>join_type</code>: <code>edge</code> (middle of the other edge) or <code>edge_end</code>.</p>
 <p>Fix action:</p>
 <ul>
-<li><code>extend_edge</code>: add the point to join at the free end of the edge. The triggers move the node of the free end
-  to this point, and split the other edge there. Like any edge geometry, the coordinates are rounded to 10 cm.</li>
+<li><code>extend_edge</code>: connect the free end of the edge to the point to join:<ul>
+<li>if the point to join is the start or end point of the other edge, the free end is connected to its node,
+  and the node of the free end is deleted,</li>
+<li>else, if the free end is less than 50 cm from the other edge, the node of the free end is moved
+  to the point to join,</li>
+<li>else, the point to join is added at the free end of the edge, and the node of the free end follows.</li>
 </ul>
+</li>
+</ul>
+<p>In the two last cases, the triggers split the other edge there.
+  Like any geometry of the road graph, the coordinates are rounded to 10 cm.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1583,6 +1618,27 @@ when an edge ends near the start or end point of another edge: they are skipped 
 <li><code>merge_nodes</code>: move the start and end points of the edges of the other node to the node to keep,
   then delete the other node.</li>
 </ul>
+<h3 id="g04-useless-node">G04: Useless node<a class="headerlink" href="#g04-useless-node" title="Permanent link">#</a></h3>
+<p>A node is useful at a junction, or at the start or end of a road. The source data often contains
+other nodes, for example where the source features of a road were split: these nodes split the road
+into several edges for nothing.</p>
+<p>The check returns one issue, with the severity <code>warning</code>, for each node:</p>
+<ul>
+<li>without edge (<code>node_type</code>: <code>no_edge</code>), only when all the roads are checked,</li>
+<li>or between two edges of the same road (<code>node_type</code>: <code>two_edges</code>): one edge arrives at the node,
+  and the other one leaves it. Are ignored the edges with different values of <code>no_intersection_cutting</code>,
+  the two edges forming a loop, and the edges crossing each other, for example a loop ramp of an interchange.</li>
+</ul>
+<p>Two edges of the same road arriving both at the node, or leaving it both, are in opposite directions:
+this issue is found by the check of the reversed edges.</p>
+<p>Fix action:</p>
+<ul>
+<li><code>delete_node</code>: delete the node. The triggers merge the two edges into the edge with the lowest id,
+  which keeps its other fields, for example <code>id_source</code>.</li>
+</ul>
+<p>Fix the issues of the checks G01 and G03 before: else the triggers would split the merged edge
+at its crossings with the other edges, which may be bridges, or connect it to the close nodes.
+In this case, the fix returns an error and nothing is changed.</p>
 <h2 id="configuration-of-the-checks">Configuration of the checks<a class="headerlink" href="#configuration-of-the-checks" title="Permanent link">#</a></h2>
 <p>The checks are listed in the table <code>road_graph.glossary_graph_check</code>, with for each check:
 its code, title, severity, function, fix actions and description.
