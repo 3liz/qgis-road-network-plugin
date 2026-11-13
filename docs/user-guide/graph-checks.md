@@ -98,6 +98,7 @@ the algorithm Fix the road graph issues fixes the issues in this order.
 | [G06](#g06-road-with-branches) | Road with branches: more than two edges of the road at a node | manual |
 | [G07](#g07-parallel-edges-of-the-same-road) | Parallel edges of the same road, for example two carriageways | manual |
 | [G08](#g08-short-edge) | Short edge | `collapse_edge` |
+| [G09](#g09-first-marker-not-at-the-start-of-the-road) | First marker not at the start of the road | `move_marker` |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -315,6 +316,24 @@ Fix action:
   their last segment is redirected, by less than the length of the short edge.
 
 The only edge of a road has no fix action: the road would not have any edge anymore.
+
+### G09: First marker not at the start of the road
+
+The **first marker** of a road is the marker with the lowest code and abscissa: it is often the marker 0,
+but it can be a virtual marker with a higher code. It must be at the **start point of the first edge** of the road,
+the edge without previous edge. When it is a few centimeters after it, the start of the road has no reference.
+
+The check returns one issue for each road whose first marker is more than 5 cm from the start of the road.
+The roundabouts are ignored. The severity is `error` if the start of the first edge has no reference, else `warning`.
+The field `details` gives the `marker_code`, `marker_abscissa` and `is_virtual` of the marker, its `distance`
+to the start of the road, its position along the first edge (`position_on_edge`), and `has_start_reference`.
+
+Fix action:
+
+* `move_marker`: move the marker to the start of the road. The references of the road are calculated again.
+  It is only proposed when the marker is less than the option `tolerance` from the start of the road,
+  **1 m** by default. Farther, check the road manually: the marker may be right, and the first edge wrong,
+  for example when the road is in the opposite direction (check [G05](#g05-edges-in-the-opposite-direction-of-the-road)).
 
 ## Configuration of the checks
 

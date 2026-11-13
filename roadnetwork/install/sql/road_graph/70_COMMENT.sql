@@ -191,6 +191,23 @@ which help to find the bridges:
   are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
 
 
+-- FUNCTION check_graph_first_marker(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_first_marker(_road_codes text[], _options jsonb) IS 'Check G09 run by the function check_graph: find the roads whose first marker is not at the start of the road.
+
+The first marker of a road is the marker with the lowest code and abscissa: it is often the marker 0,
+but it can be a virtual marker with a higher code. It must be at the start point of the first edge of the road,
+the edge without previous edge. Else, when the marker is after the start point, the start of the road has no reference.
+The roundabouts are ignored.
+
+An issue is returned for each road whose first marker is more than 5 cm from the start of the road.
+The severity is error if the start of the first edge has no reference, else warning.
+The details give the code, abscissa and type of the marker, its distance to the start of the road,
+its position along the first edge, and if the start of the first edge has a reference.
+
+The issue can be fixed with the action move_marker, which moves the marker to the start of the road,
+when it is less than the option tolerance from it (1 m by default). Else, the issue must be fixed manually.';
+
+
 -- FUNCTION check_graph_parallel_edges(_road_codes text[], _options jsonb)
 COMMENT ON FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) IS 'Check G07 run by the function check_graph: find the edges of the same road running parallel to each other,
 for example the two carriageways of a road using the same road code.
@@ -391,6 +408,18 @@ then the node to remove is deleted.
 
 It returns a JSON object with the keys status (success, skipped if the node to remove does not exist anymore,
 or error if the nodes are linked by an edge) and message.';
+
+
+-- FUNCTION fix_graph_move_marker(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_move_marker(_params jsonb) IS 'Action move_marker run by the function fix_graph_issue, to fix the issues of the check G09:
+move the first marker of a road to the start of the road.
+
+The parameter _params must contain the ids of the marker and of the first edge of the road,
+and the start point of the edge as EWKT: {"marker_id": 12, "edge_id": 34, "point": "SRID=2154;POINT(x y)"}.
+The marker is moved to the start point of the edge: the triggers calculate again the references of the road.
+
+It returns a JSON object with the keys status (success, skipped if the marker does not exist anymore,
+is already at the start of the road, or if the edge does not start at the given point anymore) and message.';
 
 
 -- FUNCTION fix_graph_reverse_edges(_params jsonb)

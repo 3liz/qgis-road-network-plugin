@@ -2339,6 +2339,101 @@ which help to find the bridges:
   are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
 
 
+-- check_graph_first_marker(text[], jsonb)
+CREATE FUNCTION road_graph.check_graph_first_marker(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum distance between the first marker and the start of the road to move the marker automatically
+    tolerance real = Coalesce((_options->>'tolerance')::real, 1.0);
+    -- Distance under which the marker is at the start of the road: the coordinates are rounded to 10 cm
+    start_tolerance real = 0.05;
+BEGIN
+    RETURN QUERY
+    WITH
+    -- First marker of each road, except the roundabouts: the marker with the lowest code and abscissa,
+    -- which can be virtual
+    first_markers AS (
+        SELECT DISTINCT ON (m.road_code)
+            m.id, m.road_code, m.code, m.abscissa, m.is_virtual, m.geom
+        FROM road_graph.markers AS m
+        JOIN road_graph.roads AS r ON r.road_code = m.road_code
+        WHERE r.road_type != 'roundabout'
+        AND (_road_codes IS NULL OR m.road_code = ANY(_road_codes))
+        ORDER BY m.road_code, m.code, m.abscissa, m.id
+    ),
+    -- First edge of each road: the edge without previous edge, with the lowest start cumulative
+    first_edges AS (
+        SELECT DISTINCT ON (e.road_code)
+            e.id, e.road_code, e.geom, e.start_node, e.start_marker
+        FROM road_graph.edges AS e
+        WHERE _road_codes IS NULL OR e.road_code = ANY(_road_codes)
+        ORDER BY e.road_code, (e.previous_edge_id IS NOT NULL), e.start_cumulative NULLS LAST, e.id
+    ),
+    issues AS (
+        SELECT
+            m.id AS marker_id, m.road_code, m.code, m.abscissa, m.is_virtual, m.geom AS marker_geom,
+            e.id AS edge_id, e.start_node, e.start_marker,
+            ST_StartPoint(e.geom) AS start_point,
+            ST_Distance(m.geom, ST_StartPoint(e.geom)) AS distance,
+            -- Position of the marker along the first edge, from its start
+            ST_LineLocatePoint(e.geom, m.geom) * ST_Length(e.geom) AS position
+        FROM first_markers AS m
+        JOIN first_edges AS e ON e.road_code = m.road_code
+        WHERE NOT ST_DWithin(m.geom, ST_StartPoint(e.geom), start_tolerance)
+    )
+    SELECT
+        'G09'::text,
+        'First marker not at the start of the road'::text,
+        -- The start of the first edge has no reference when the marker is after it
+        CASE WHEN i.start_marker IS NULL THEN 'error' ELSE 'warning' END,
+        i.road_code,
+        ARRAY[i.edge_id],
+        ARRAY[i.start_node],
+        ARRAY[i.marker_id],
+        jsonb_build_object(
+            'marker_code', i.code,
+            'marker_abscissa', i.abscissa,
+            'is_virtual', i.is_virtual,
+            'distance', round(i.distance::numeric, 2),
+            'position_on_edge', round(i.position::numeric, 2),
+            'has_start_reference', i.start_marker IS NOT NULL
+        ),
+        CASE WHEN i.distance <= tolerance THEN 'move_marker' ELSE NULL END,
+        CASE
+            WHEN i.distance <= tolerance THEN jsonb_build_object(
+                'marker_id', i.marker_id,
+                'edge_id', i.edge_id,
+                'point', ST_AsEWKT(i.start_point)
+            )
+            ELSE NULL
+        END,
+        i.marker_geom,
+        ST_MakeLine(i.marker_geom, i.start_point)
+    FROM issues AS i
+    ORDER BY 4
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_first_marker(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_first_marker(_road_codes text[], _options jsonb) IS 'Check G09 run by the function check_graph: find the roads whose first marker is not at the start of the road.
+
+The first marker of a road is the marker with the lowest code and abscissa: it is often the marker 0,
+but it can be a virtual marker with a higher code. It must be at the start point of the first edge of the road,
+the edge without previous edge. Else, when the marker is after the start point, the start of the road has no reference.
+The roundabouts are ignored.
+
+An issue is returned for each road whose first marker is more than 5 cm from the start of the road.
+The severity is error if the start of the first edge has no reference, else warning.
+The details give the code, abscissa and type of the marker, its distance to the start of the road,
+its position along the first edge, and if the start of the first edge has a reference.
+
+The issue can be fixed with the action move_marker, which moves the marker to the start of the road,
+when it is less than the option tolerance from it (1 m by default). Else, the issue must be fixed manually.';
+
+
 -- check_graph_parallel_edges(text[], jsonb)
 CREATE FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
     LANGUAGE plpgsql
@@ -4470,6 +4565,75 @@ then the node to remove is deleted.
 
 It returns a JSON object with the keys status (success, skipped if the node to remove does not exist anymore,
 or error if the nodes are linked by an edge) and message.';
+
+
+-- fix_graph_move_marker(jsonb)
+CREATE FUNCTION road_graph.fix_graph_move_marker(_params jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    marker record;
+    edge record;
+BEGIN
+    -- The marker and the edge may have been modified by a previous fix
+    SELECT m.*
+    INTO marker
+    FROM road_graph.markers AS m
+    WHERE m.id = (_params->>'marker_id')::integer
+    ;
+    IF marker.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The marker %s does not exist anymore', _params->>'marker_id')
+        );
+    END IF;
+    SELECT e.*
+    INTO edge
+    FROM road_graph.edges AS e
+    WHERE e.id = (_params->>'edge_id')::integer
+    AND e.road_code = marker.road_code
+    AND ST_DWithin(ST_StartPoint(e.geom), ST_GeomFromEWKT(_params->>'point'), 0.01)
+    ;
+    IF edge.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The edge %s does not start anymore at the given point', _params->>'edge_id')
+        );
+    END IF;
+    IF ST_DWithin(marker.geom, ST_StartPoint(edge.geom), 0.01) THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The marker %s is already at the start of the road', marker.id)
+        );
+    END IF;
+
+    -- Move the marker to the start of the edge: the triggers calculate again the references of the road
+    UPDATE road_graph.markers AS m
+    SET geom = ST_StartPoint(edge.geom)
+    WHERE m.id = marker.id
+    ;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format(
+            'The marker %s of the road %s has been moved by %s m to the start of the road',
+            marker.code, marker.road_code, round(ST_Distance(marker.geom, ST_StartPoint(edge.geom))::numeric, 2)
+        )
+    );
+END;
+$$;
+
+
+-- FUNCTION fix_graph_move_marker(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_move_marker(_params jsonb) IS 'Action move_marker run by the function fix_graph_issue, to fix the issues of the check G09:
+move the first marker of a road to the start of the road.
+
+The parameter _params must contain the ids of the marker and of the first edge of the road,
+and the start point of the edge as EWKT: {"marker_id": 12, "edge_id": 34, "point": "SRID=2154;POINT(x y)"}.
+The marker is moved to the start point of the edge: the triggers calculate again the references of the road.
+
+It returns a JSON object with the keys status (success, skipped if the marker does not exist anymore,
+is already at the start of the road, or if the edge does not start at the given point anymore) and message.';
 
 
 -- fix_graph_reverse_edges(jsonb)

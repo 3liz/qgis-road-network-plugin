@@ -31,6 +31,8 @@
   using the same road code, to fix manually
 * **Road graph checks** - G08: short edges, except near the roundabouts, fixed by removing the edge
   and merging its nodes
+* **Road graph checks** - G09: first marker of a road not at the start of the road,
+  fixed by moving the marker to the start of the road when it is less than 1 m from it
 
 ### Fixed
 

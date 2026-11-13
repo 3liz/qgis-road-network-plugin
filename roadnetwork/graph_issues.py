@@ -63,6 +63,7 @@ def check_titles() -> dict:
         "G06": tr("Road with branches"),
         "G07": tr("Parallel edges of the same road"),
         "G08": tr("Short edge"),
+        "G09": tr("First marker not at the start of the road"),
     }
 
 
@@ -79,6 +80,7 @@ def fix_action_labels() -> dict:
         "delete_node": tr("Delete the node and merge its edges"),
         "reverse_edges": tr("Reverse the edges"),
         "collapse_edge": tr("Remove the edge and merge its nodes"),
+        "move_marker": tr("Move the marker to the start of the road"),
     }
 
 

@@ -4665,6 +4665,93 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
     assert fix()["status"] == "skipped"
 
 
+def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
+    """Check G09: first marker of a road not at the start of the road.
+    The marker 0 of a road is moved after the start of the road in an editing session, then fixed.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # In the test data, the first marker of the roads is at the start of the roads
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G09'])")
+    assert cursor.fetchone()[0] == 0
+
+    # Editing session around the start of a road whose first marker is the marker 0
+    cursor.execute("""
+        SELECT e.road_code, e.id, m.id
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code AND r.road_type = 'road'
+        JOIN road_graph.markers AS m ON m.road_code = e.road_code AND m.code = 0 AND m.abscissa = 0
+        WHERE e.previous_edge_id IS NULL
+        AND e.start_cumulative = 0
+        AND ST_Length(e.geom) > 50
+        ORDER BY e.id
+        LIMIT 1
+    """)
+    road_code, edge_id, marker_id = cursor.fetchone()
+    cursor.execute(
+        """
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G09 test', 'test', ST_Envelope(ST_Buffer(ST_StartPoint(e.geom), 100))
+        FROM road_graph.edges AS e
+        WHERE e.id = %s
+        RETURNING id
+        """,
+        (edge_id,),
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+
+    # Move the marker 0.6 m after the start of the road: the start of the road has no reference anymore
+    cursor.execute(
+        """
+        UPDATE road_graph_editing.markers AS m
+        SET geom = ST_LineInterpolatePoint(e.geom, 0.6 / ST_Length(e.geom))
+        FROM road_graph_editing.edges AS e
+        WHERE m.id = %s AND e.id = %s
+        """,
+        (marker_id, edge_id),
+    )
+    cursor.execute(
+        """
+        SELECT severity, edge_ids, marker_ids, details, fix_action, fix_params
+        FROM road_graph_editing.check_graph(ARRAY['G09'], %s)
+        """,
+        ([road_code],),
+    )
+    issues = cursor.fetchall()
+    assert len(issues) == 1
+    severity, edge_ids, marker_ids, details, fix_action, params = issues[0]
+    assert severity == "error"
+    assert edge_ids == [edge_id]
+    assert marker_ids == [marker_id]
+    assert not details["has_start_reference"]
+    assert fix_action == "move_marker"
+
+    def fix() -> dict:
+        """Fix the issue in the editing session."""
+        cursor.execute(
+            "SELECT road_graph_editing.fix_graph_issue('move_marker', %s)",
+            (json.dumps(params),),
+        )
+        row = cursor.fetchone()
+        assert row is not None
+        return row[0]
+
+    result = fix()
+    assert result["status"] == "success", result
+
+    # The marker is at the start of the road, which has references again
+    cursor.execute(
+        "SELECT start_marker, start_abscissa FROM road_graph_editing.edges WHERE id = %s",
+        (edge_id,),
+    )
+    assert cursor.fetchone() == (0, 0)
+    assert fix()["status"] == "skipped"
+    cursor.execute("SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G09'], %s)", ([road_code],))
+    assert cursor.fetchone()[0] == 0
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.
