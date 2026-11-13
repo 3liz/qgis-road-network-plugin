@@ -204,6 +204,18 @@ The details give the road codes of the two edges, the distance, and the join typ
 The issue can be fixed with the action extend_edge, which adds the point to join at the free end of the edge.';
 
 
+-- FUNCTION check_graph_useless_nodes(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_useless_nodes(_road_codes text[], _options jsonb) IS 'Check G04 run by the function check_graph: find the useless nodes, which can be deleted.
+
+An issue is returned for each node without edge (only when all the roads are checked),
+and for each node between two edges of the same road which can be merged: one edge arrives at the node
+and the other one leaves it, with the same value of no_intersection_cutting, they do not form a loop,
+and they only touch each other at the node.
+The details give the node type (no_edge or two_edges) and the road code of the edges.
+
+The issue can be fixed with the action delete_node, which deletes the node: the triggers merge the two edges.';
+
+
 -- FUNCTION clean_digitized_roundabout(_road_code text)
 COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
 * delete the edges inside the roundabout
@@ -238,6 +250,21 @@ A node is created at this point, or the existing node less than 50 cm from it is
 and the triggers split the edges passing there.
 
 It returns a JSON object with the keys status (success, or skipped if no edge must be split at this point) and message.';
+
+
+-- FUNCTION fix_graph_delete_node(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_delete_node(_params jsonb) IS 'Action delete_node run by the function fix_graph_issue, to fix the issues of the check G04:
+delete a useless node.
+
+The parameter _params must contain the id of the node: {"node_id": 12}.
+A node without edge is deleted. A node between two edges of the same road is deleted
+if one edge arrives at the node and the other one leaves it: the trigger before_node_delete merges the two edges
+into the edge with the lowest id. If the merged edge is not between the start node of the first edge
+and the end node of the second edge, for example because it has been split at a crossing with another edge,
+an exception is raised: the function fix_graph_issue cancels the changes and returns an error.
+
+It returns a JSON object with the keys status (success, skipped if the node does not exist anymore
+or is not useless anymore, or error) and message.';
 
 
 -- FUNCTION fix_graph_extend_edge(_params jsonb)

@@ -21,6 +21,8 @@
 * **Road graph checks** - G02: edges ending near another edge without being connected to it (T junction),
   fixed by extending the edge to the other edge, which is split there
 * **Road graph checks** - G03: nodes close to each other, fixed by merging them
+* **Road graph checks** - G04: useless nodes, without edge or between two edges of the same road,
+  fixed by deleting the node, which merges the two edges
 
 ### Fixed
 

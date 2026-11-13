@@ -93,6 +93,7 @@ the algorithm Fix the road graph issues fixes the issues in this order.
 | [G01](#g01-crossing-edges-without-node) | Edges crossing or touching each other without node | `cut_edges` or `mark_as_bridge` |
 | [G02](#g02-edge-ending-near-another-edge) | Edge ending near another edge without being connected (T junction) | `extend_edge` |
 | [G03](#g03-nodes-close-to-each-other) | Nodes close to each other | `merge_nodes` |
+| [G04](#g04-useless-node) | Useless node: without edge, or between two edges of the same road | `delete_node` |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -186,6 +187,31 @@ Fix action:
 
 * `merge_nodes`: move the start and end points of the edges of the other node to the node to keep,
   then delete the other node.
+
+### G04: Useless node
+
+A node is useful at a junction, or at the start or end of a road. The source data often contains
+other nodes, for example where the source features of a road were split: these nodes split the road
+into several edges for nothing.
+
+The check returns one issue, with the severity `warning`, for each node:
+
+* without edge (`node_type`: `no_edge`), only when all the roads are checked,
+* or between two edges of the same road (`node_type`: `two_edges`): one edge arrives at the node,
+  and the other one leaves it. Are ignored the edges with different values of `no_intersection_cutting`,
+  the two edges forming a loop, and the edges crossing each other, for example a loop ramp of an interchange.
+
+Two edges of the same road arriving both at the node, or leaving it both, are in opposite directions:
+this issue is found by the check of the reversed edges.
+
+Fix action:
+
+* `delete_node`: delete the node. The triggers merge the two edges into the edge with the lowest id,
+  which keeps its other fields, for example `id_source`.
+
+Fix the issues of the checks G01 and G03 before: else the triggers would split the merged edge
+at its crossings with the other edges, which may be bridges, or connect it to the close nodes.
+In this case, the fix returns an error and nothing is changed.
 
 ## Configuration of the checks
 

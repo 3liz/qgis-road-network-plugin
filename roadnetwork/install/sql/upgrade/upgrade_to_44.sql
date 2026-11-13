@@ -10,6 +10,7 @@
 -- * G01: Crossing edges without node
 -- * G02: Edge ending near another edge without being connected
 -- * G03: Nodes close to each other
+-- * G04: Useless node
 
 -- glossary_graph_check
 CREATE TABLE IF NOT EXISTS road_graph.glossary_graph_check (
@@ -89,7 +90,16 @@ ON CONFLICT (code) DO UPDATE SET
 ;
 
 INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
-VALUES ('G03', 'Nodes close to each other', 'error', 'check_graph_close_nodes', '{merge_nodes}', '{"tolerance": 1}', 'Nodes less than the tolerance from each other, which should be the same node. The nodes linked by an edge are ignored. Option: tolerance, in meters. Fix: merge_nodes moves the edges of the node with the highest id to the other node, then deletes it.')
+VALUES ('G03', 'Nodes close to each other', 'error', 'check_graph_close_nodes', '{merge_nodes}', '{"tolerance": 1}', 'Nodes less than the tolerance from each other, which should be the same node. The nodes linked by an edge are ignored. Option: tolerance, in meters. Fix: merge_nodes moves the edges of the other node to the node with the most edges, or else to the node with the lowest id, then deletes the other node.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G04', 'Useless node', 'warning', 'check_graph_useless_nodes', '{delete_node}', '{}', 'Node without edge, or node between two edges of the same road which can be merged: one edge arrives at the node and the other one leaves it, with the same value of no_intersection_cutting. Fix: delete_node deletes the node, and the triggers merge the two edges into the edge with the lowest id.')
 ON CONFLICT (code) DO UPDATE SET
     title = EXCLUDED.title,
     severity = EXCLUDED.severity,
@@ -525,6 +535,89 @@ The details give the road codes of the two edges, the distance, and the join typ
 The issue can be fixed with the action extend_edge, which adds the point to join at the free end of the edge.';
 
 
+-- check_graph_useless_nodes(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_useless_nodes(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Nodes with their edges. An edge starting and ending at the node (loop)
+    -- is not counted as an edge arriving at or leaving the node
+    nodes AS (
+        SELECT
+            n.id, n.geom,
+            count(e.id) AS edge_count,
+            array_agg(e.id ORDER BY e.id) FILTER (WHERE e.id IS NOT NULL) AS node_edge_ids,
+            array_agg(DISTINCT e.road_code) FILTER (WHERE e.road_code IS NOT NULL) AS node_road_codes,
+            count(e.id) FILTER (WHERE e.end_node = n.id AND e.start_node != n.id) AS arriving_count,
+            count(e.id) FILTER (WHERE e.start_node = n.id AND e.end_node != n.id) AS leaving_count,
+            (array_agg(e.geom) FILTER (WHERE e.end_node = n.id AND e.start_node != n.id))[1] AS arriving_geom,
+            (array_agg(e.geom) FILTER (WHERE e.start_node = n.id AND e.end_node != n.id))[1] AS leaving_geom,
+            count(DISTINCT Coalesce(e.no_intersection_cutting, False)) AS cutting_count,
+            count(DISTINCT CASE WHEN e.start_node = n.id THEN e.end_node ELSE e.start_node END) AS other_node_count
+        FROM road_graph.nodes AS n
+        LEFT JOIN road_graph.edges AS e
+            ON n.id IN (e.start_node, e.end_node)
+        GROUP BY n.id, n.geom
+    ),
+    -- Nodes without edge, only when all the roads are checked,
+    -- and nodes between two edges of the same road which can be merged:
+    -- one edge arrives at the node and the other one leaves it,
+    -- with the same value of no_intersection_cutting, they do not form a loop,
+    -- and they only touch each other at the node: for example a loop ramp crossing itself cannot be merged
+    issues AS (
+        SELECT
+            nd.*,
+            CASE WHEN nd.edge_count = 0 THEN 'no_edge' ELSE 'two_edges' END AS node_type
+        FROM nodes AS nd
+        WHERE (nd.edge_count = 0 AND _road_codes IS NULL)
+        OR (
+            nd.edge_count = 2
+            AND cardinality(nd.node_road_codes) = 1
+            AND nd.arriving_count = 1
+            AND nd.leaving_count = 1
+            AND nd.cutting_count = 1
+            AND nd.other_node_count = 2
+            AND ST_Touches(nd.arriving_geom, nd.leaving_geom)
+            AND (_road_codes IS NULL OR nd.node_road_codes && _road_codes)
+        )
+    )
+    SELECT
+        'G04'::text,
+        'Useless node'::text,
+        'warning'::text,
+        i.node_road_codes[1],
+        i.node_edge_ids,
+        ARRAY[i.id],
+        NULL::integer[],
+        jsonb_build_object(
+            'node_type', i.node_type,
+            'road_codes', to_jsonb(Coalesce(i.node_road_codes, '{}'::text[]))
+        ),
+        'delete_node'::text,
+        jsonb_build_object('node_id', i.id),
+        i.geom,
+        NULL::geometry
+    FROM issues AS i
+    ORDER BY 4, i.id
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_useless_nodes(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_useless_nodes(_road_codes text[], _options jsonb) IS 'Check G04 run by the function check_graph: find the useless nodes, which can be deleted.
+
+An issue is returned for each node without edge (only when all the roads are checked),
+and for each node between two edges of the same road which can be merged: one edge arrives at the node
+and the other one leaves it, with the same value of no_intersection_cutting, they do not form a loop,
+and they only touch each other at the node.
+The details give the node type (no_edge or two_edges) and the road code of the edges.
+
+The issue can be fixed with the action delete_node, which deletes the node: the triggers merge the two edges.';
+
+
 -- fix_graph_cut_edges(jsonb)
 CREATE OR REPLACE FUNCTION road_graph.fix_graph_cut_edges(_params jsonb) RETURNS jsonb
     LANGUAGE plpgsql
@@ -597,6 +690,144 @@ A node is created at this point, or the existing node less than 50 cm from it is
 and the triggers split the edges passing there.
 
 It returns a JSON object with the keys status (success, or skipped if no edge must be split at this point) and message.';
+
+
+-- fix_graph_delete_node(jsonb)
+CREATE OR REPLACE FUNCTION road_graph.fix_graph_delete_node(_params jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    node record;
+    edges_data record;
+    kept_edge record;
+BEGIN
+    -- The node may have been deleted by a previous fix
+    SELECT n.*
+    INTO node
+    FROM road_graph.nodes AS n
+    WHERE n.id = (_params->>'node_id')::integer
+    ;
+    IF node.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The node %s does not exist anymore', _params->>'node_id')
+        );
+    END IF;
+
+    -- Edges of the node: the edge arriving at the node and the edge leaving it
+    SELECT
+        count(e.id) AS edge_count,
+        count(DISTINCT e.road_code) AS road_code_count,
+        count(DISTINCT Coalesce(e.no_intersection_cutting, False)) AS cutting_count,
+        (array_agg(e.id) FILTER (WHERE e.end_node = node.id AND e.start_node != node.id))[1] AS arriving_edge_id,
+        (array_agg(e.start_node) FILTER (WHERE e.end_node = node.id AND e.start_node != node.id))[1] AS start_node_id,
+        (array_agg(e.geom) FILTER (WHERE e.end_node = node.id AND e.start_node != node.id))[1] AS arriving_geom,
+        (array_agg(e.id) FILTER (WHERE e.start_node = node.id AND e.end_node != node.id))[1] AS leaving_edge_id,
+        (array_agg(e.end_node) FILTER (WHERE e.start_node = node.id AND e.end_node != node.id))[1] AS end_node_id,
+        (array_agg(e.geom) FILTER (WHERE e.start_node = node.id AND e.end_node != node.id))[1] AS leaving_geom
+    INTO edges_data
+    FROM road_graph.edges AS e
+    WHERE node.id IN (e.start_node, e.end_node)
+    ;
+
+    -- Node without edge: delete it
+    IF edges_data.edge_count = 0 THEN
+        DELETE FROM road_graph.nodes AS n
+        WHERE n.id = node.id
+        ;
+        RETURN jsonb_build_object(
+            'status', 'success',
+            'message', format('The node %s without edge has been deleted', node.id)
+        );
+    END IF;
+
+    -- The node may have been connected to other edges by a previous fix
+    IF NOT (
+        edges_data.edge_count = 2
+        AND edges_data.road_code_count = 1
+        AND edges_data.cutting_count = 1
+        AND edges_data.arriving_edge_id IS NOT NULL
+        AND edges_data.leaving_edge_id IS NOT NULL
+        AND edges_data.start_node_id != edges_data.end_node_id
+    ) THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The node %s is not useless anymore', node.id)
+        );
+    END IF;
+
+    -- The two edges must only touch each other at the node:
+    -- an edge crossing the other one cannot be merged
+    IF NOT ST_Touches(edges_data.arriving_geom, edges_data.leaving_geom) THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', format(
+                'The edges %s and %s cross each other and cannot be merged: fix the issues of the check G01 first',
+                edges_data.arriving_edge_id, edges_data.leaving_edge_id
+            )
+        );
+    END IF;
+
+    -- Delete the node: the trigger before_node_delete merges the two edges into the edge with the lowest id
+    -- An error of the triggers, for example a node still used by an edge, cancels the changes of this fix
+    BEGIN
+        DELETE FROM road_graph.nodes AS n
+        WHERE n.id = node.id
+        ;
+    EXCEPTION WHEN foreign_key_violation THEN
+        RAISE EXCEPTION
+            'The edges % and % cannot be merged: fix the issues of the checks G01 and G03 first',
+            edges_data.arriving_edge_id, edges_data.leaving_edge_id
+        ;
+    END;
+
+    -- Check the merged edge goes from the start node of the arriving edge to the end node of the leaving edge.
+    -- If not, for example if the merged edge has been split by the triggers at a crossing or near another node,
+    -- the exception cancels the changes of this fix (see fix_graph_issue)
+    SELECT e.*
+    INTO kept_edge
+    FROM road_graph.edges AS e
+    WHERE e.id IN (edges_data.arriving_edge_id, edges_data.leaving_edge_id)
+    ;
+    IF kept_edge.id IS NULL
+        OR (
+            SELECT count(*)
+            FROM road_graph.edges AS e
+            WHERE e.id IN (edges_data.arriving_edge_id, edges_data.leaving_edge_id)
+        ) != 1
+        OR kept_edge.start_node IS DISTINCT FROM edges_data.start_node_id
+        OR kept_edge.end_node IS DISTINCT FROM edges_data.end_node_id
+    THEN
+        RAISE EXCEPTION
+            'The edges % and % cannot be merged without other changes of the graph, for example because they cross other edges or pass near other nodes: fix the issues of the checks G01 and G03 first',
+            edges_data.arriving_edge_id, edges_data.leaving_edge_id
+        ;
+    END IF;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format(
+            'The node %s has been deleted, and the edges %s and %s have been merged into the edge %s',
+            node.id, edges_data.arriving_edge_id, edges_data.leaving_edge_id, kept_edge.id
+        )
+    );
+END;
+$$;
+
+
+-- FUNCTION fix_graph_delete_node(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_delete_node(_params jsonb) IS 'Action delete_node run by the function fix_graph_issue, to fix the issues of the check G04:
+delete a useless node.
+
+The parameter _params must contain the id of the node: {"node_id": 12}.
+A node without edge is deleted. A node between two edges of the same road is deleted
+if one edge arrives at the node and the other one leaves it: the trigger before_node_delete merges the two edges
+into the edge with the lowest id. If the merged edge is not between the start node of the first edge
+and the end node of the second edge, for example because it has been split at a crossing with another edge,
+an exception is raised: the function fix_graph_issue cancels the changes and returns an error.
+
+It returns a JSON object with the keys status (success, skipped if the node does not exist anymore
+or is not useless anymore, or error) and message.';
 
 
 -- fix_graph_extend_edge(jsonb)

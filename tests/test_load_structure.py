@@ -4111,7 +4111,7 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
     cursor = rollback_db_connection.cursor()
 
     # Issues of the production schema: the distance is lower than the default tolerance of 1 m,
-    # and the node to keep is the first node: the node with the most edges, or else the node with the lowest id
+    # and the node to keep is the first node: the node with the most edges, or else the lowest id
     cursor.execute("""
         WITH node_edges AS (
             SELECT n.id, count(e.id) AS edge_count
@@ -4122,7 +4122,10 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
         SELECT count(*), max((details->>'distance')::numeric)::float, bool_and(fix_action = 'merge_nodes'),
             bool_and(
                 (fix_params->>'keep_node_id')::integer = node_ids[1]
-                AND (k.edge_count > r.edge_count OR (k.edge_count = r.edge_count AND node_ids[1] < node_ids[2]))
+                AND (
+                    k.edge_count > r.edge_count
+                    OR (k.edge_count = r.edge_count AND node_ids[1] < node_ids[2])
+                )
             )
         FROM road_graph.check_graph(ARRAY['G03']) AS i
         JOIN node_edges AS k ON k.id = i.node_ids[1]
@@ -4239,3 +4242,168 @@ def test_edge_update_keeps_closest_node(rollback_db_connection: psycopg.Connecti
         WHERE CASE WHEN t.is_start THEN e.start_node ELSE e.end_node END = t.node_id
     """)
     assert cursor.fetchone()[0] == count
+
+
+def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
+    """Check G04: useless nodes, without edge or between two edges of the same road.
+    The issues are fixed in an editing session created around one of them.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Issues of the production schema: nodes between two edges of the same road, with the action delete_node
+    cursor.execute("""
+        SELECT count(*), bool_and(fix_action = 'delete_node'), bool_and(severity = 'warning'),
+            bool_and(details->>'node_type' = 'two_edges' AND cardinality(edge_ids) = 2)
+        FROM road_graph.check_graph(ARRAY['G04'])
+    """)
+    count, all_delete, all_warning, all_two_edges = cursor.fetchone()
+    assert count > 0
+    assert all_delete
+    assert all_warning
+    assert all_two_edges
+
+    # A node without edge is found only when all the roads are checked
+    cursor.execute("""
+        INSERT INTO road_graph.nodes (geom)
+        SELECT ST_Translate(ST_Centroid(ST_Extent(geom)), 0, 50000) FROM road_graph.edges
+        RETURNING id
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    orphan_id = row[0]
+    cursor.execute(
+        """
+        SELECT details->>'node_type', road_code FROM road_graph.check_graph(ARRAY['G04'])
+        WHERE node_ids = ARRAY[%s]::integer[]
+        """,
+        (orphan_id,),
+    )
+    assert cursor.fetchall() == [("no_edge", None)]
+    cursor.execute(
+        """
+        SELECT count(*) FROM road_graph.check_graph(ARRAY['G04'], ARRAY['D163'])
+        WHERE node_ids = ARRAY[%s]::integer[]
+        """,
+        (orphan_id,),
+    )
+    assert cursor.fetchone()[0] == 0
+
+    # Editing session around an issue whose edges have no issue of the previous checks:
+    # the edges crossing other edges cannot be merged before fixing the issues of G01
+    cursor.execute("""
+        WITH issue AS (
+            SELECT i.geom
+            FROM road_graph.check_graph(ARRAY['G04']) AS i
+            WHERE i.road_code IS NOT NULL
+            AND NOT EXISTS (
+                SELECT 1
+                FROM road_graph.check_graph(ARRAY['G01', 'G02', 'G03']) AS o
+                WHERE o.edge_ids && i.edge_ids
+            )
+            ORDER BY i.id
+            LIMIT 1
+        )
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G04 test', 'test', ST_Envelope(ST_Buffer(i.geom, 100))
+        FROM issue AS i
+        RETURNING id
+    """)
+    row = cursor.fetchone()
+    assert row is not None
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+
+    # Issue of the editing session, with the start node of its first edge and the end node of its second edge
+    cursor.execute("""
+        SELECT i.fix_params, i.edge_ids, a.start_node, b.end_node, ST_Length(a.geom) + ST_Length(b.geom)
+        FROM road_graph_editing.check_graph(ARRAY['G04']) AS i
+        JOIN road_graph.editing_sessions AS s ON ST_Intersects(s.geom, i.geom)
+        JOIN road_graph_editing.edges AS a ON a.id = ANY(i.edge_ids) AND a.end_node = i.node_ids[1]
+        JOIN road_graph_editing.edges AS b ON b.id = ANY(i.edge_ids) AND b.start_node = i.node_ids[1]
+        WHERE s.label = 'G04 test'
+        ORDER BY i.id
+        LIMIT 1
+    """)
+    params, edge_ids, start_node, end_node, length = cursor.fetchone()
+
+    def fix() -> dict:
+        """Fix the issue in the editing session."""
+        cursor.execute("SELECT road_graph_editing.fix_graph_issue('delete_node', %s)", (json.dumps(params),))
+        row = cursor.fetchone()
+        assert row is not None
+        return row[0]
+
+    result = fix()
+    assert result["status"] == "success", result
+
+    # The node has been deleted, and the edges merged into the edge with the lowest id,
+    # from the start node of the first edge to the end node of the second edge
+    cursor.execute("SELECT count(*) FROM road_graph_editing.nodes WHERE id = %s", (params["node_id"],))
+    assert cursor.fetchone()[0] == 0
+    cursor.execute(
+        "SELECT id, start_node, end_node, ST_Length(geom) FROM road_graph_editing.edges WHERE id = ANY(%s)",
+        (edge_ids,),
+    )
+    rows = cursor.fetchall()
+    assert len(rows) == 1
+    assert rows[0][0] == min(edge_ids)
+    assert rows[0][1:3] == (start_node, end_node)
+    assert abs(rows[0][3] - length) < 0.01
+
+    # The issue is fixed
+    assert fix()["status"] == "skipped"
+    cursor.execute(
+        """
+        SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G04'])
+        WHERE node_ids = ARRAY[%s]::integer[]
+        """,
+        (params["node_id"],),
+    )
+    assert cursor.fetchone()[0] == 0
+
+
+def test_check_graph_useless_nodes_crossing_edges(rollback_db_connection: psycopg.Connection):
+    """Check G04: the useless node of two edges crossing other edges cannot be deleted
+    before fixing the issues of the check G01: the triggers would split the merged edge at the crossings.
+    The error cancels the changes of the fix. The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Issue whose edges cross other edges, and editing session around it
+    cursor.execute("""
+        SELECT i.fix_params, i.edge_ids
+        FROM road_graph.check_graph(ARRAY['G04']) AS i
+        WHERE EXISTS (
+            SELECT 1
+            FROM road_graph.check_graph(ARRAY['G01']) AS o
+            WHERE o.edge_ids && i.edge_ids
+        )
+        ORDER BY i.id
+        LIMIT 1
+    """)
+    params, edge_ids = cursor.fetchone()
+    cursor.execute(
+        """
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G04 error test', 'test', ST_Envelope(ST_Buffer(n.geom, 100))
+        FROM road_graph.nodes AS n
+        WHERE n.id = %s
+        RETURNING id
+        """,
+        (params["node_id"],),
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
+    edge_count = cursor.fetchone()[0]
+
+    # The fix returns an error, and the node and the edges are unchanged
+    cursor.execute("SELECT road_graph_editing.fix_graph_issue('delete_node', %s)", (json.dumps(params),))
+    result = cursor.fetchone()[0]
+    assert result["status"] == "error", result
+    assert "G01" in result["message"]
+    cursor.execute("SELECT count(*) FROM road_graph_editing.nodes WHERE id = %s", (params["node_id"],))
+    assert cursor.fetchone()[0] == 1
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE id = ANY(%s)", (edge_ids,))
+    assert cursor.fetchone()[0] == 2
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
+    assert cursor.fetchone()[0] == edge_count
