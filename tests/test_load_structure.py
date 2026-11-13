@@ -4468,6 +4468,71 @@ def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
     assert fix_action is None
 
 
+def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
+    """Check G07: parallel edges of the same road. A carriageway parallel to an edge is added,
+    with the code of the road. The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Issues of the production schema: the edges are parallel along at least 10 m,
+    # less than 30 m from each other
+    cursor.execute("""
+        SELECT
+            count(*),
+            bool_and((details->>'parallel_length')::numeric >= 10 AND (details->>'distance')::numeric <= 30),
+            bool_and(fix_action IS NULL AND severity = 'warning')
+        FROM road_graph.check_graph(ARRAY['G07'])
+    """)
+    count, all_parallel, all_manual = cursor.fetchone()
+    assert all_parallel
+    assert all_manual
+
+    # The minimum length can be changed
+    cursor.execute("""
+        SELECT count(*) FROM road_graph.check_graph(ARRAY['G07'], NULL, '{"G07": {"min_length": 5000}}')
+    """)
+    assert cursor.fetchone()[0] < count or count == 0
+
+    # Add a carriageway 15 m from an edge of a road, with the code of the road
+    cursor.execute("""
+        SELECT e.id, e.road_code
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type = 'road'
+        AND ST_Length(e.geom) > 200
+        -- Almost straight edge: its offset curve is a simple line
+        AND ST_Length(e.geom) < 1.01 * ST_Distance(ST_StartPoint(e.geom), ST_EndPoint(e.geom))
+        ORDER BY e.id
+        LIMIT 1
+    """)
+    edge_id, road_code = cursor.fetchone()
+    cursor.execute(
+        """
+        INSERT INTO road_graph.edges (road_code, geom)
+        SELECT e.road_code, ST_LineSubstring(ST_OffsetCurve(e.geom, 15), 0.2, 0.8)
+        FROM road_graph.edges AS e
+        WHERE e.id = %s
+        RETURNING id
+        """,
+        (edge_id,),
+    )
+    carriageway_id = cursor.fetchone()[0]
+
+    # One issue for the two edges
+    cursor.execute(
+        """
+        SELECT details
+        FROM road_graph.check_graph(ARRAY['G07'], %s)
+        WHERE edge_ids = %s::integer[]
+        """,
+        ([road_code], [edge_id, carriageway_id]),
+    )
+    issues = cursor.fetchall()
+    assert len(issues) == 1
+    details = issues[0][0]
+    assert abs(float(details["distance"]) - 15) < 0.2
+    assert float(details["parallel_length"]) > 100
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

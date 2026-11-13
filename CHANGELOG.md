@@ -27,6 +27,8 @@
   or the direction of the neighbour edges, fixed by reversing them
 * **Road graph checks** - G06: roads with branches, i.e. more than two edges of the road at a node,
   for example ramps using the code of the road, to fix manually
+* **Road graph checks** - G07: parallel edges of the same road, for example two carriageways
+  using the same road code, to fix manually
 
 ### Fixed
 

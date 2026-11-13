@@ -2339,6 +2339,96 @@ which help to find the bridges:
   are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
 
 
+-- check_graph_parallel_edges(text[], jsonb)
+CREATE FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum distance between two parallel edges
+    tolerance real = Coalesce((_options->>'tolerance')::real, 30.0);
+    -- Minimum length along which the two edges are parallel
+    min_length real = Coalesce((_options->>'min_length')::real, 10.0);
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Pairs of edges of the same road less than the tolerance from each other, not connected by a node,
+    -- and the parts of each edge less than the tolerance from the other edge.
+    -- The roundabouts are ignored
+    pairs AS (
+        SELECT
+            a.road_code, a.id AS a_id, b.id AS b_id, a.geom AS a_geom, b.geom AS b_geom,
+            ST_Distance(a.geom, b.geom) AS distance,
+            -- The parts are segmentized, to locate their points along the other edge
+            ST_Segmentize(ST_Intersection(a.geom, ST_Buffer(b.geom, tolerance)), 2) AS a_part,
+            ST_Segmentize(ST_Intersection(b.geom, ST_Buffer(a.geom, tolerance)), 2) AS b_part
+        FROM road_graph.edges AS a
+        JOIN road_graph.edges AS b
+            ON b.road_code = a.road_code
+            AND b.id > a.id
+            AND ST_DWithin(a.geom, b.geom, tolerance)
+        JOIN road_graph.roads AS r
+            ON r.road_code = a.road_code
+        WHERE r.road_type != 'roundabout'
+        AND (_road_codes IS NULL OR a.road_code = ANY(_road_codes))
+        AND NOT (ARRAY[a.start_node, a.end_node] && ARRAY[b.start_node, b.end_node])
+    ),
+    -- Length of the other edge along which each part runs: the parts of two edges which only approach each other,
+    -- for example the edges of a road on both sides of a roundabout, run along a very short length of the other edge
+    spans AS (
+        SELECT
+            p.*,
+            (
+                SELECT (max(ST_LineLocatePoint(p.b_geom, d.geom)) - min(ST_LineLocatePoint(p.b_geom, d.geom)))
+                    * ST_Length(p.b_geom)
+                FROM ST_DumpPoints(p.a_part) AS d
+            ) AS a_span,
+            (
+                SELECT (max(ST_LineLocatePoint(p.a_geom, d.geom)) - min(ST_LineLocatePoint(p.a_geom, d.geom)))
+                    * ST_Length(p.a_geom)
+                FROM ST_DumpPoints(p.b_part) AS d
+            ) AS b_span
+        FROM pairs AS p
+        WHERE ST_Length(p.a_part) >= min_length
+        AND ST_Length(p.b_part) >= min_length
+    )
+    SELECT
+        'G07'::text,
+        'Parallel edges of the same road'::text,
+        'warning'::text,
+        s.road_code,
+        ARRAY[s.a_id, s.b_id],
+        NULL::integer[],
+        NULL::integer[],
+        jsonb_build_object(
+            'distance', round(s.distance::numeric, 2),
+            'parallel_length', round(least(s.a_span, s.b_span)::numeric, 1)
+        ),
+        NULL::text,
+        NULL::jsonb,
+        ST_ClosestPoint(s.a_geom, s.b_geom),
+        ST_Collect(s.a_part, s.b_part)
+    FROM spans AS s
+    WHERE s.a_span >= min_length
+    AND s.b_span >= min_length
+    ORDER BY 4, s.a_id, s.b_id
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_parallel_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) IS 'Check G07 run by the function check_graph: find the edges of the same road running parallel to each other,
+for example the two carriageways of a road using the same road code.
+
+An issue is returned for each pair of edges of the same road, not connected by a node, which run along each other
+less than the option tolerance from each other (30 m by default), along at least the option min_length (10 m by default).
+The edges which only approach each other, for example on both sides of a roundabout, are ignored. The roundabouts are ignored.
+The details give the distance between the edges and the length along which they are parallel.
+The line of the issue shows the parallel parts of the edges.
+
+The issue must be fixed manually, for example by giving another road code to one of the carriageways.';
+
+
 -- check_graph_reversed_edges(text[], jsonb)
 CREATE FUNCTION road_graph.check_graph_reversed_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
     LANGUAGE plpgsql

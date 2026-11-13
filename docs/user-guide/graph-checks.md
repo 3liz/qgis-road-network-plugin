@@ -96,6 +96,7 @@ the algorithm Fix the road graph issues fixes the issues in this order.
 | [G04](#g04-useless-node) | Useless node: without edge, or between two edges of the same road | `delete_node` |
 | [G05](#g05-edges-in-the-opposite-direction-of-the-road) | Edges in the opposite direction of the road | `reverse_edges` |
 | [G06](#g06-road-with-branches) | Road with branches: more than two edges of the road at a node | manual |
+| [G07](#g07-parallel-edges-of-the-same-road) | Parallel edges of the same road, for example two carriageways | manual |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -271,6 +272,25 @@ at the node (`edge_count`), and the ids of the edges of the main line (`main_edg
 There is no fix action: give another road code to the edges of the branches, for example a new road
 for a ramp. Check the main line proposed by the check, especially when the edges are not in the direction of the road
 (check [G05](#g05-edges-in-the-opposite-direction-of-the-road)).
+
+### G07: Parallel edges of the same road
+
+The two carriageways of a road must have their own road code. When they use the same code without being connected,
+the check [G06](#g06-road-with-branches) does not find them.
+
+The check returns one issue, with the severity `warning`, for each pair of edges of the same road,
+not connected by a node, which **run along each other**:
+
+* less than the option `tolerance` from each other, **30 m** by default,
+* along at least the option `min_length`, **10 m** by default.
+
+The edges which only approach each other are ignored, for example the edges of a road on both sides of a roundabout:
+each edge must run along the other one on at least the minimum length. The roundabouts are ignored.
+The field `details` gives the `distance` between the edges and the length along which they are parallel
+(`parallel_length`). The line of the issue shows the parallel parts of the edges.
+
+There is no fix action: give another road code to one of the carriageways. A road which comes back near itself,
+for example a hairpin bend, can also be found: in this case, there is nothing to fix.
 
 ## Configuration of the checks
 

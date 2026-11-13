@@ -61,6 +61,7 @@ def check_titles() -> dict:
         "G04": tr("Useless node"),
         "G05": tr("Edges in the opposite direction of the road"),
         "G06": tr("Road with branches"),
+        "G07": tr("Parallel edges of the same road"),
     }
 
 

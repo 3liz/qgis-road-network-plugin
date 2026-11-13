@@ -191,6 +191,19 @@ which help to find the bridges:
   are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
 
 
+-- FUNCTION check_graph_parallel_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) IS 'Check G07 run by the function check_graph: find the edges of the same road running parallel to each other,
+for example the two carriageways of a road using the same road code.
+
+An issue is returned for each pair of edges of the same road, not connected by a node, which run along each other
+less than the option tolerance from each other (30 m by default), along at least the option min_length (10 m by default).
+The edges which only approach each other, for example on both sides of a roundabout, are ignored. The roundabouts are ignored.
+The details give the distance between the edges and the length along which they are parallel.
+The line of the issue shows the parallel parts of the edges.
+
+The issue must be fixed manually, for example by giving another road code to one of the carriageways.';
+
+
 -- FUNCTION check_graph_reversed_edges(_road_codes text[], _options jsonb)
 COMMENT ON FUNCTION road_graph.check_graph_reversed_edges(_road_codes text[], _options jsonb) IS 'Check G05 run by the function check_graph: find the edges in the opposite direction of their road.
 
