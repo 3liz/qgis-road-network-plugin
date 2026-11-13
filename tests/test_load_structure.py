@@ -4329,6 +4329,95 @@ def test_edge_reversed_geometry(rollback_db_connection: psycopg.Connection):
     assert cursor.fetchall() == markers
 
 
+def test_check_graph_reversed_edges(rollback_db_connection: psycopg.Connection):
+    """Check G05: edges in the opposite direction of their road.
+    Two consecutive edges of a road are reversed in an editing session, then fixed.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # The test data does not contain reversed edges
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G05'])")
+    assert cursor.fetchone()[0] == 0
+
+    # Two consecutive edges in the middle of a road, and an editing session around the road
+    cursor.execute("""
+        SELECT e.road_code, e.id, n.id
+        FROM road_graph.edges AS e
+        JOIN road_graph.edges AS n ON n.id = e.next_edge_id
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type = 'road'
+        AND e.previous_edge_id IS NOT NULL
+        AND n.next_edge_id IS NOT NULL
+        ORDER BY e.id
+        LIMIT 1
+    """)
+    road_code, first_id, second_id = cursor.fetchone()
+    cursor.execute(
+        """
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G05 test', 'test', ST_Envelope(ST_Buffer(ST_Collect(e.geom), 100))
+        FROM road_graph.edges AS e
+        WHERE e.road_code = %s
+        RETURNING id
+        """,
+        (road_code,),
+    )
+    row = cursor.fetchone()
+    assert row is not None
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
+    road_edges_sql = """
+        SELECT
+            e.id, e.start_node, e.end_node, e.previous_edge_id, e.next_edge_id,
+            e.start_marker, round(e.start_abscissa::numeric, 1),
+            e.end_marker, round(e.end_abscissa::numeric, 1)
+        FROM road_graph_editing.edges AS e
+        WHERE e.road_code = %s
+        ORDER BY e.id
+    """
+    cursor.execute(road_edges_sql, (road_code,))
+    road_edges = cursor.fetchall()
+
+    # Reverse the two edges: one issue is found for them
+    cursor.execute(
+        "UPDATE road_graph_editing.edges SET geom = ST_Reverse(geom) WHERE id = ANY(%s)",
+        ([first_id, second_id],),
+    )
+    cursor.execute(
+        """
+        SELECT edge_ids, details->>'reason', fix_params
+        FROM road_graph_editing.check_graph(ARRAY['G05'], %s)
+        """,
+        ([road_code],),
+    )
+    issues = cursor.fetchall()
+    assert len(issues) == 1
+    edge_ids, reason, params = issues[0]
+    assert edge_ids == [first_id, second_id]
+    assert reason == "markers"
+
+    def fix() -> dict:
+        """Fix the issue in the editing session."""
+        cursor.execute(
+            "SELECT road_graph_editing.fix_graph_issue('reverse_edges', %s)",
+            (json.dumps(params),),
+        )
+        row = cursor.fetchone()
+        assert row is not None
+        return row[0]
+
+    result = fix()
+    assert result["status"] == "success", result
+
+    # The edges of the road are back to their original nodes, neighbours and references
+    cursor.execute(road_edges_sql, (road_code,))
+    assert cursor.fetchall() == road_edges
+
+    # The issue is fixed
+    assert fix()["status"] == "skipped"
+    cursor.execute("SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G05'], %s)", ([road_code],))
+    assert cursor.fetchone()[0] == 0
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

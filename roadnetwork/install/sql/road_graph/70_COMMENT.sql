@@ -191,6 +191,21 @@ which help to find the bridges:
   are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
 
 
+-- FUNCTION check_graph_reversed_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_reversed_edges(_road_codes text[], _options jsonb) IS 'Check G05 run by the function check_graph: find the edges in the opposite direction of their road.
+
+The edges of a road are grouped in sequences: two edges follow each other at a node where there are only
+these two edges of the road. The direction of each sequence is given by the order of the markers of the road
+located along it (less than the option marker_tolerance from it, 10 m by default), or else by the direction
+of most of the length of its edges. The markers of the roundabouts are not used.
+The direction of the edges is given by their geometry, not by their start and end nodes.
+
+An issue is returned for each group of consecutive edges in the opposite direction of their sequence.
+The details give the reason (markers or neighbours), the number of edges and their length,
+and the number of consecutive markers in the direction of the road and in the opposite direction.
+The issue can be fixed with the action reverse_edges, which reverses the geometry of the edges.';
+
+
 -- FUNCTION check_graph_t_junction_gaps(_road_codes text[], _options jsonb)
 COMMENT ON FUNCTION road_graph.check_graph_t_junction_gaps(_road_codes text[], _options jsonb) IS 'Check G02 run by the function check_graph: find the edges ending near another edge without being connected to it,
 for example a road arriving on another road and stopping a few decimeters before it (T junction).
@@ -322,6 +337,18 @@ then the node to remove is deleted.
 
 It returns a JSON object with the keys status (success, skipped if the node to remove does not exist anymore,
 or error if the nodes are linked by an edge) and message.';
+
+
+-- FUNCTION fix_graph_reverse_edges(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_reverse_edges(_params jsonb) IS 'Action reverse_edges run by the function fix_graph_issue, to fix the issues of the check G05:
+reverse the edges in the opposite direction of their road.
+
+The parameter _params must contain the ids of the edges: {"edge_ids": [12, 34]}.
+Only the edges still found by the check G05 are reversed, one by one: the triggers swap their start and end nodes,
+and calculate again their previous and next edges and the references of their road.
+
+It returns a JSON object with the keys status (success, skipped if the edges are not in the opposite direction
+of their road anymore, or error) and message.';
 
 
 -- FUNCTION get_current_setting(setting_name text, default_value text)

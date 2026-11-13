@@ -23,6 +23,8 @@
 * **Road graph checks** - G03: nodes close to each other, fixed by merging them
 * **Road graph checks** - G04: useless nodes, without edge or between two edges of the same road,
   fixed by deleting the node, which merges the two edges
+* **Road graph checks** - G05: edges in the opposite direction of their road, found with the order of the markers
+  or the direction of the neighbour edges, fixed by reversing them
 
 ### Fixed
 

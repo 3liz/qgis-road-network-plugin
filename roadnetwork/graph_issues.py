@@ -59,6 +59,7 @@ def check_titles() -> dict:
         "G02": tr("Edge ending near another edge without being connected"),
         "G03": tr("Nodes close to each other"),
         "G04": tr("Useless node"),
+        "G05": tr("Edges in the opposite direction of the road"),
     }
 
 
@@ -73,6 +74,7 @@ def fix_action_labels() -> dict:
         "extend_edge": tr("Extend the edge to the other edge"),
         "merge_nodes": tr("Merge the nodes"),
         "delete_node": tr("Delete the node and merge its edges"),
+        "reverse_edges": tr("Reverse the edges"),
     }
 
 

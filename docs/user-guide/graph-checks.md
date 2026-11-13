@@ -94,6 +94,7 @@ the algorithm Fix the road graph issues fixes the issues in this order.
 | [G02](#g02-edge-ending-near-another-edge) | Edge ending near another edge without being connected (T junction) | `extend_edge` |
 | [G03](#g03-nodes-close-to-each-other) | Nodes close to each other | `merge_nodes` |
 | [G04](#g04-useless-node) | Useless node: without edge, or between two edges of the same road | `delete_node` |
+| [G05](#g05-edges-in-the-opposite-direction-of-the-road) | Edges in the opposite direction of the road | `reverse_edges` |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -219,6 +220,40 @@ Fix action:
 Fix the issues of the checks G01 and G03 before: else the triggers would split the merged edge
 at its crossings with the other edges, which may be bridges, or connect it to the close nodes.
 In this case, the fix returns an error and nothing is changed.
+
+### G05: Edges in the opposite direction of the road
+
+The edges of a road must be drawn in the direction of the road, from its first marker to its last one:
+the references (marker and abscissa) and the order of the edges depend on it.
+
+The check groups the edges of each road in **sequences**: two edges follow each other at a node
+where there are only these two edges of the road. The **direction of a sequence** is given:
+
+* by the order of the **markers** of the road located along it (`reason`: `markers`),
+  less than the option `marker_tolerance` from it, **10 m** by default,
+* or else, without enough markers, by the direction of most of the length of its edges (`reason`: `neighbours`).
+
+The markers of the roundabouts are not used, and the roundabouts, whose edges form a ring, are not checked.
+The direction of an edge is given by its geometry, not by its fields `start_node` and `end_node`.
+
+The check returns one issue for each group of consecutive edges in the opposite direction of their sequence.
+A whole road drawn in the opposite direction of its markers is also found.
+The field `details` gives the `reason`, the number of edges and their length, and the number of consecutive markers
+in the direction of the road (`markers_in_road_direction`) and in the opposite direction.
+
+Fix action:
+
+* `reverse_edges`: reverse the geometry of the edges. The triggers swap their start and end nodes,
+  and calculate again their previous and next edges and the references of the road.
+
+A geometry can also be reversed manually, for example with the QGIS tool `Reverse Line`.
+
+```sql
+-- Use the markers up to 20 m from the edges
+UPDATE road_graph.glossary_graph_check
+SET default_options = default_options || '{"marker_tolerance": 20}'
+WHERE code = 'G05';
+```
 
 ## Configuration of the checks
 

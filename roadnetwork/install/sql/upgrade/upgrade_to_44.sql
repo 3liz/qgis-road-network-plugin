@@ -11,6 +11,7 @@
 -- * G02: Edge ending near another edge without being connected
 -- * G03: Nodes close to each other
 -- * G04: Useless node
+-- * G05: Edges in the opposite direction of the road
 
 -- glossary_graph_check
 CREATE TABLE IF NOT EXISTS road_graph.glossary_graph_check (
@@ -100,6 +101,15 @@ ON CONFLICT (code) DO UPDATE SET
 ;
 INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
 VALUES ('G04', 'Useless node', 'warning', 'check_graph_useless_nodes', '{delete_node}', '{}', 'Node without edge, or node between two edges of the same road which can be merged: one edge arrives at the node and the other one leaves it, with the same value of no_intersection_cutting. Fix: delete_node deletes the node, and the triggers merge the two edges into the edge with the lowest id.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G05', 'Edges in the opposite direction of the road', 'error', 'check_graph_reversed_edges', '{reverse_edges}', '{"marker_tolerance": 10}', 'Edges in the opposite direction of their road. The edges of a road following each other are grouped in sequences, whose direction is given by the order of the markers along them (option marker_tolerance, in meters), or else by the direction of most of their length. Fix: reverse_edges reverses the geometry of the edges, and the triggers swap their start and end nodes.')
 ON CONFLICT (code) DO UPDATE SET
     title = EXCLUDED.title,
     severity = EXCLUDED.severity,
@@ -401,6 +411,243 @@ which help to find the bridges:
 * crossing: the edges cross each other, maybe on a bridge or in a tunnel. The fix action is given by the option
   crossing_fix_action of the check, NULL by default: it must be chosen for each issue, cut_edges if the roads
   are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
+
+
+-- check_graph_reversed_edges(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_reversed_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum distance between a marker and the edges of its road
+    marker_tolerance real = Coalesce((_options->>'marker_tolerance')::real, 10.0);
+BEGIN
+    RETURN QUERY
+    WITH RECURSIVE
+    -- Edges of the checked roads
+    road_edges AS MATERIALIZED (
+        SELECT
+            e.id, e.road_code, e.geom,
+            ST_Length(e.geom) AS edge_length,
+            r.road_type = 'roundabout' AS is_roundabout,
+            -- Nodes of the start and end points of the edge.
+            -- The geometry gives the direction of the edge: the start and end nodes
+            -- may have not been swapped when the geometry has been reversed
+            CASE WHEN ST_DWithin(ST_StartPoint(e.geom), sn.geom, 0.01) THEN e.start_node ELSE e.end_node END
+                AS first_node,
+            CASE WHEN ST_DWithin(ST_StartPoint(e.geom), sn.geom, 0.01) THEN e.end_node ELSE e.start_node END
+                AS last_node
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r
+            ON r.road_code = e.road_code
+        JOIN road_graph.nodes AS sn
+            ON sn.id = e.start_node
+        WHERE (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
+        -- The loops cannot be in the opposite direction of their neighbours
+        AND e.start_node != e.end_node
+    ),
+    -- Start and end points of the edges, with the number of edges of the road at their node
+    edge_ends AS MATERIALIZED (
+        SELECT
+            x.*,
+            count(*) OVER (PARTITION BY x.road_code, x.node_id) AS node_edge_count
+        FROM (
+            SELECT e.id, e.road_code, e.first_node AS node_id, True AS is_first
+            FROM road_edges AS e
+            UNION ALL
+            SELECT e.id, e.road_code, e.last_node AS node_id, False AS is_first
+            FROM road_edges AS e
+        ) AS x
+    ),
+    -- Walks along the sequences of edges of a road following each other:
+    -- two edges follow each other at a node where there are only these two edges of the road.
+    -- A walk starts from an end of a sequence (a node with one edge or more than two edges of the road),
+    -- and follows the next edges. Each edge is walked in its direction (is_forward) or not
+    walks AS (
+        SELECT
+            x.id AS walk_id, x.is_first AS is_walk_forward,
+            x.id, x.is_first AS is_forward,
+            1 AS edge_order, 0::double precision AS start_position,
+            -- Node by which the walk leaves the edge
+            CASE WHEN x.is_first THEN e.last_node ELSE e.first_node END AS exit_node,
+            ARRAY[x.id] AS walked_ids
+        FROM edge_ends AS x
+        JOIN road_edges AS e
+            ON e.id = x.id
+        WHERE x.node_edge_count != 2
+        UNION ALL
+        SELECT
+            w.walk_id, w.is_walk_forward,
+            n.id, n.is_first,
+            w.edge_order + 1,
+            w.start_position + p.edge_length,
+            CASE WHEN n.is_first THEN e.last_node ELSE e.first_node END,
+            w.walked_ids || n.id
+        FROM walks AS w
+        JOIN road_edges AS p
+            ON p.id = w.id
+        JOIN edge_ends AS n
+            ON n.road_code = p.road_code
+            AND n.node_id = w.exit_node
+            AND n.node_edge_count = 2
+            AND n.id != w.id
+        JOIN road_edges AS e
+            ON e.id = n.id
+        WHERE NOT n.id = ANY(w.walked_ids)
+    ),
+    -- Each sequence is walked from its two ends: keep the walk starting from the edge with the lowest id,
+    -- or for a sequence of one edge, the walk in the direction of the edge
+    walk_ends AS (
+        SELECT
+            w.walk_id, w.is_walk_forward,
+            (array_agg(w.id ORDER BY w.edge_order DESC))[1] AS last_id
+        FROM walks AS w
+        GROUP BY w.walk_id, w.is_walk_forward
+    ),
+    sequence_edges AS MATERIALIZED (
+        SELECT
+            w.walk_id AS sequence_id, w.id, w.is_forward, w.edge_order, w.start_position,
+            e.road_code, e.geom, e.edge_length, e.is_roundabout
+        FROM walks AS w
+        JOIN walk_ends AS we
+            ON we.walk_id = w.walk_id
+            AND we.is_walk_forward = w.is_walk_forward
+        JOIN road_edges AS e
+            ON e.id = w.id
+        WHERE we.walk_id < we.last_id
+        OR (we.walk_id = we.last_id AND we.is_walk_forward)
+    ),
+    -- Position of the markers of the road along the sequences, in the direction of the walk,
+    -- from their closest edge of the sequence. The markers of the roundabouts are not used
+    marker_positions AS (
+        SELECT
+            se.sequence_id, m.id AS marker_id, m.code, m.abscissa,
+            se.start_position + se.edge_length * CASE
+                WHEN se.is_forward THEN ST_LineLocatePoint(se.geom, m.geom)
+                ELSE 1 - ST_LineLocatePoint(se.geom, m.geom)
+            END AS position
+        FROM road_graph.markers AS m
+        -- Closest edge of the road, found with the spatial index of the edges
+        JOIN LATERAL (
+            SELECT e.id
+            FROM road_graph.edges AS e
+            WHERE e.road_code = m.road_code
+            AND ST_DWithin(e.geom, m.geom, marker_tolerance)
+            ORDER BY ST_Distance(e.geom, m.geom), e.id
+            LIMIT 1
+        ) AS c ON True
+        JOIN sequence_edges AS se
+            ON se.id = c.id
+            AND NOT se.is_roundabout
+        WHERE _road_codes IS NULL OR m.road_code = ANY(_road_codes)
+    ),
+    -- Consecutive markers by code and abscissa: they must be in the direction of the road
+    marker_pairs AS (
+        SELECT
+            p.sequence_id,
+            p.position < lead(p.position) OVER w AS is_increasing,
+            p.position > lead(p.position) OVER w AS is_decreasing
+        FROM marker_positions AS p
+        WINDOW w AS (PARTITION BY p.sequence_id ORDER BY p.code, p.abscissa)
+    ),
+    marker_votes AS (
+        SELECT
+            mp.sequence_id,
+            count(*) FILTER (WHERE mp.is_increasing) AS increasing_count,
+            count(*) FILTER (WHERE mp.is_decreasing) AS decreasing_count
+        FROM marker_pairs AS mp
+        GROUP BY mp.sequence_id
+    ),
+    -- Direction of each sequence: the direction of most of the consecutive markers,
+    -- or else the direction of most of the length of the edges.
+    -- The edges in the other direction are reversed
+    sequence_directions AS (
+        SELECT
+            s.sequence_id,
+            -- Number of consecutive markers in the direction of the road, and in the opposite direction
+            CASE
+                WHEN Coalesce(v.increasing_count, 0) >= Coalesce(v.decreasing_count, 0)
+                    THEN Coalesce(v.increasing_count, 0)
+                ELSE v.decreasing_count
+            END AS increasing_count,
+            CASE
+                WHEN Coalesce(v.increasing_count, 0) >= Coalesce(v.decreasing_count, 0)
+                    THEN Coalesce(v.decreasing_count, 0)
+                ELSE v.increasing_count
+            END AS decreasing_count,
+            CASE
+                WHEN Coalesce(v.increasing_count, 0) != Coalesce(v.decreasing_count, 0) THEN 'markers'
+                ELSE 'neighbours'
+            END AS reason,
+            CASE
+                WHEN Coalesce(v.increasing_count, 0) > Coalesce(v.decreasing_count, 0) THEN True
+                WHEN Coalesce(v.increasing_count, 0) < Coalesce(v.decreasing_count, 0) THEN False
+                -- Without markers, the walk is in the direction of the road
+                -- if most of the length of the edges is in the direction of the walk
+                ELSE s.forward_length >= s.backward_length
+            END AS is_walk_in_road_direction
+        FROM (
+            SELECT
+                se.sequence_id,
+                Coalesce(sum(se.edge_length) FILTER (WHERE se.is_forward), 0) AS forward_length,
+                Coalesce(sum(se.edge_length) FILTER (WHERE NOT se.is_forward), 0) AS backward_length
+            FROM sequence_edges AS se
+            GROUP BY se.sequence_id
+        ) AS s
+        LEFT JOIN marker_votes AS v
+            ON v.sequence_id = s.sequence_id
+    ),
+    -- Reversed edges, and groups of consecutive reversed edges along each sequence: one issue for each group
+    reversed_edges AS (
+        SELECT
+            se.*, d.reason, d.increasing_count, d.decreasing_count,
+            -- Order of the edge in the direction of the road
+            CASE WHEN d.is_walk_in_road_direction THEN se.edge_order ELSE - se.edge_order END AS road_order,
+            se.edge_order - row_number() OVER (PARTITION BY se.sequence_id ORDER BY se.edge_order) AS group_number
+        FROM sequence_edges AS se
+        JOIN sequence_directions AS d
+            ON d.sequence_id = se.sequence_id
+        WHERE se.is_forward != d.is_walk_in_road_direction
+    )
+    SELECT
+        'G05'::text,
+        'Edges in the opposite direction of the road'::text,
+        'error'::text,
+        r.road_code,
+        array_agg(r.id ORDER BY r.road_order),
+        NULL::integer[],
+        NULL::integer[],
+        jsonb_build_object(
+            'reason', min(r.reason),
+            'edge_count', count(*),
+            'length', round(sum(r.edge_length)::numeric, 1),
+            'markers_in_road_direction', max(r.increasing_count),
+            'markers_in_opposite_direction', max(r.decreasing_count)
+        ),
+        'reverse_edges'::text,
+        jsonb_build_object('edge_ids', array_agg(r.id ORDER BY r.road_order)),
+        ST_LineInterpolatePoint((array_agg(r.geom ORDER BY r.road_order))[1], 0.5),
+        ST_LineMerge(ST_Collect(r.geom))
+    FROM reversed_edges AS r
+    GROUP BY r.road_code, r.sequence_id, r.group_number
+    ORDER BY 4, min(r.id)
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_reversed_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_reversed_edges(_road_codes text[], _options jsonb) IS 'Check G05 run by the function check_graph: find the edges in the opposite direction of their road.
+
+The edges of a road are grouped in sequences: two edges follow each other at a node where there are only
+these two edges of the road. The direction of each sequence is given by the order of the markers of the road
+located along it (less than the option marker_tolerance from it, 10 m by default), or else by the direction
+of most of the length of its edges. The markers of the roundabouts are not used.
+The direction of the edges is given by their geometry, not by their start and end nodes.
+
+An issue is returned for each group of consecutive edges in the opposite direction of their sequence.
+The details give the reason (markers or neighbours), the number of edges and their length,
+and the number of consecutive markers in the direction of the road and in the opposite direction.
+The issue can be fixed with the action reverse_edges, which reverses the geometry of the edges.';
 
 
 -- check_graph_t_junction_gaps(text[], jsonb)
@@ -1203,6 +1450,91 @@ then the node to remove is deleted.
 
 It returns a JSON object with the keys status (success, skipped if the node to remove does not exist anymore,
 or error if the nodes are linked by an edge) and message.';
+
+
+-- fix_graph_reverse_edges(jsonb)
+CREATE OR REPLACE FUNCTION road_graph.fix_graph_reverse_edges(_params jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    issue_edge_ids integer[];
+    road_codes text[];
+    reversed_ids integer[];
+    reversed_edge_id integer;
+BEGIN
+    -- Edges given by the issue
+    SELECT array_agg(x::integer)
+    INTO issue_edge_ids
+    FROM jsonb_array_elements_text(_params->'edge_ids') AS x
+    ;
+    IF issue_edge_ids IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', 'The parameter edge_ids is needed'
+        );
+    END IF;
+
+    -- The edges still in the opposite direction of their road:
+    -- the edges may have been reversed, split or merged by a previous fix
+    SELECT array_agg(DISTINCT e.road_code)
+    INTO road_codes
+    FROM road_graph.edges AS e
+    WHERE e.id = ANY(issue_edge_ids)
+    ;
+    SELECT array_agg(DISTINCT x ORDER BY x)
+    INTO reversed_ids
+    FROM road_graph.check_graph_reversed_edges(road_codes, NULL) AS i,
+    unnest(i.edge_ids) AS x
+    WHERE x = ANY(issue_edge_ids)
+    ;
+    IF reversed_ids IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format(
+                'The edges %s are not in the opposite direction of their road anymore',
+                array_to_string(issue_edge_ids, ', ')
+            )
+        );
+    END IF;
+
+    -- Reverse the edges one by one: the triggers swap the start and end nodes of each edge,
+    -- and calculate again its previous and next edges and the references of its road
+    FOREACH reversed_edge_id IN ARRAY reversed_ids LOOP
+        UPDATE road_graph.edges AS e
+        SET geom = ST_Reverse(e.geom)
+        WHERE e.id = reversed_edge_id
+        ;
+    END LOOP;
+
+    -- Check the edges are now in the direction of their road.
+    -- If not, the exception cancels the changes of this fix (see fix_graph_issue)
+    IF EXISTS (
+        SELECT 1
+        FROM road_graph.check_graph_reversed_edges(road_codes, NULL) AS i
+        WHERE i.edge_ids && reversed_ids
+    ) THEN
+        RAISE EXCEPTION 'The edges % are still in the opposite direction of their road after being reversed',
+            array_to_string(reversed_ids, ', ');
+    END IF;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format('The edges %s have been reversed', array_to_string(reversed_ids, ', '))
+    );
+END;
+$$;
+
+
+-- FUNCTION fix_graph_reverse_edges(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_reverse_edges(_params jsonb) IS 'Action reverse_edges run by the function fix_graph_issue, to fix the issues of the check G05:
+reverse the edges in the opposite direction of their road.
+
+The parameter _params must contain the ids of the edges: {"edge_ids": [12, 34]}.
+Only the edges still found by the check G05 are reversed, one by one: the triggers swap their start and end nodes,
+and calculate again their previous and next edges and the references of their road.
+
+It returns a JSON object with the keys status (success, skipped if the edges are not in the opposite direction
+of their road anymore, or error) and message.';
 
 
 -- get_or_create_edge_node(geometry, boolean)
