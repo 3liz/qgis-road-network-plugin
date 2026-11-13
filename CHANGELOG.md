@@ -25,6 +25,8 @@
   fixed by deleting the node, which merges the two edges
 * **Road graph checks** - G05: edges in the opposite direction of their road, found with the order of the markers
   or the direction of the neighbour edges, fixed by reversing them
+* **Road graph checks** - G06: roads with branches, i.e. more than two edges of the road at a node,
+  for example ramps using the code of the road, to fix manually
 
 ### Fixed
 

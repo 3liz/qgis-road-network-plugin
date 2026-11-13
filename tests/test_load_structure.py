@@ -4418,6 +4418,56 @@ def test_check_graph_reversed_edges(rollback_db_connection: psycopg.Connection):
     assert cursor.fetchone()[0] == 0
 
 
+def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
+    """Check G06: roads with branches. A branch is added to a road, with the code of the road.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # The test data does not contain roads with branches
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G06'])")
+    assert cursor.fetchone()[0] == 0
+
+    # Add a branch at the node between two edges of a road
+    cursor.execute("""
+        SELECT e.road_code, e.end_node, e.id, e.next_edge_id
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type = 'road'
+        AND e.next_edge_id IS NOT NULL
+        ORDER BY e.id
+        LIMIT 1
+    """)
+    road_code, node_id, arriving_id, leaving_id = cursor.fetchone()
+    cursor.execute(
+        """
+        INSERT INTO road_graph.edges (road_code, geom)
+        SELECT %s, ST_MakeLine(n.geom, ST_Translate(n.geom, 80, 120))
+        FROM road_graph.nodes AS n
+        WHERE n.id = %s
+        RETURNING id
+        """,
+        (road_code, node_id),
+    )
+    branch_id = cursor.fetchone()[0]
+
+    # One issue at the node, without fix action: the branch is the new edge
+    cursor.execute(
+        """
+        SELECT edge_ids, node_ids, details, fix_action
+        FROM road_graph.check_graph(ARRAY['G06'], %s)
+        """,
+        ([road_code],),
+    )
+    issues = cursor.fetchall()
+    assert len(issues) == 1
+    edge_ids, node_ids, details, fix_action = issues[0]
+    assert sorted(edge_ids) == sorted([arriving_id, leaving_id, branch_id])
+    assert node_ids == [node_id]
+    assert details["main_edge_ids"] == [arriving_id, leaving_id]
+    assert details["branch_edge_ids"] == [branch_id]
+    assert fix_action is None
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

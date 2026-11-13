@@ -206,6 +206,18 @@ and the number of consecutive markers in the direction of the road and in the op
 The issue can be fixed with the action reverse_edges, which reverses the geometry of the edges.';
 
 
+-- FUNCTION check_graph_road_branches(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_road_branches(_road_codes text[], _options jsonb) IS 'Check G06 run by the function check_graph: find the roads with branches, for example the ramps
+or the carriageways of a road using the code of the road.
+
+An issue is returned for each node with more than two edges of the same road. The roundabouts are ignored.
+The main line of the road at the node is given by the edge arriving at the node and the edge leaving it
+which are the most aligned: the other edges are the branches. The details give the number of edges at the node,
+and the ids of the edges of the main line and of the branches. The line of the issue shows the branches.
+
+The issue must be fixed manually, for example by giving another road code to the edges of the branches.';
+
+
 -- FUNCTION check_graph_t_junction_gaps(_road_codes text[], _options jsonb)
 COMMENT ON FUNCTION road_graph.check_graph_t_junction_gaps(_road_codes text[], _options jsonb) IS 'Check G02 run by the function check_graph: find the edges ending near another edge without being connected to it,
 for example a road arriving on another road and stopping a few decimeters before it (T junction).

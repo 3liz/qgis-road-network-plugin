@@ -95,6 +95,7 @@ the algorithm Fix the road graph issues fixes the issues in this order.
 | [G03](#g03-nodes-close-to-each-other) | Nodes close to each other | `merge_nodes` |
 | [G04](#g04-useless-node) | Useless node: without edge, or between two edges of the same road | `delete_node` |
 | [G05](#g05-edges-in-the-opposite-direction-of-the-road) | Edges in the opposite direction of the road | `reverse_edges` |
+| [G06](#g06-road-with-branches) | Road with branches: more than two edges of the road at a node | manual |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -254,6 +255,22 @@ UPDATE road_graph.glossary_graph_check
 SET default_options = default_options || '{"marker_tolerance": 20}'
 WHERE code = 'G05';
 ```
+
+### G06: Road with branches
+
+A road must be a line: its edges follow each other, without branches. The ramps of an interchange or of a roundabout,
+or the two carriageways of a road, must have their own road code. Else the order of the edges of the road,
+and so the references, cannot be calculated.
+
+The check returns one issue for each node with **more than two edges of the same road**. The roundabouts are ignored.
+The **main line** of the road at the node is given by the edge arriving at the node and the edge leaving it
+which are the most aligned: the other edges are the **branches**. The field `details` gives the number of edges
+at the node (`edge_count`), and the ids of the edges of the main line (`main_edge_ids`) and of the branches
+(`branch_edge_ids`). The line of the issue shows the branches.
+
+There is no fix action: give another road code to the edges of the branches, for example a new road
+for a ramp. Check the main line proposed by the check, especially when the edges are not in the direction of the road
+(check [G05](#g05-edges-in-the-opposite-direction-of-the-road)).
 
 ## Configuration of the checks
 

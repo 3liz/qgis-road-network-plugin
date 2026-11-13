@@ -2576,6 +2576,115 @@ and the number of consecutive markers in the direction of the road and in the op
 The issue can be fixed with the action reverse_edges, which reverses the geometry of the edges.';
 
 
+-- check_graph_road_branches(text[], jsonb)
+CREATE FUNCTION road_graph.check_graph_road_branches(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Start and end points of the edges of the roads, except the roundabouts
+    edge_ends AS (
+        SELECT e.id, e.road_code, e.start_node AS node_id, e.geom
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type != 'roundabout'
+        AND (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
+        UNION
+        SELECT e.id, e.road_code, e.end_node AS node_id, e.geom
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type != 'roundabout'
+        AND (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
+    ),
+    -- Nodes with more than two edges of the same road: the road has branches
+    branch_nodes AS (
+        SELECT x.road_code, x.node_id, array_agg(x.id ORDER BY x.id) AS node_edge_ids
+        FROM edge_ends AS x
+        GROUP BY x.road_code, x.node_id
+        HAVING count(*) > 2
+    ),
+    -- Direction of the edges at the node: the azimuth of the edges arriving at the node at their end,
+    -- and of the edges leaving the node at their start, given by their geometry
+    node_edges AS (
+        SELECT
+            b.road_code, b.node_id, n.geom AS node_geom, x.id, x.geom,
+            ST_DWithin(ST_EndPoint(x.geom), n.geom, 0.01) AS is_arriving,
+            ST_DWithin(ST_StartPoint(x.geom), n.geom, 0.01) AS is_leaving,
+            ST_Azimuth(ST_PointN(x.geom, ST_NPoints(x.geom) - 1), ST_EndPoint(x.geom)) AS end_azimuth,
+            ST_Azimuth(ST_StartPoint(x.geom), ST_PointN(x.geom, 2)) AS start_azimuth
+        FROM branch_nodes AS b
+        JOIN road_graph.nodes AS n ON n.id = b.node_id
+        JOIN edge_ends AS x ON x.road_code = b.road_code AND x.node_id = b.node_id
+    ),
+    -- Main line of the road at the node: the edge arriving at the node and the edge leaving it
+    -- which are the most aligned. The other edges are the branches
+    main_lines AS (
+        SELECT DISTINCT ON (a.road_code, a.node_id)
+            a.road_code, a.node_id, a.id AS arriving_id, l.id AS leaving_id
+        FROM node_edges AS a
+        JOIN node_edges AS l
+            ON l.road_code = a.road_code
+            AND l.node_id = a.node_id
+            AND l.id != a.id
+        WHERE a.is_arriving AND l.is_leaving
+        -- Deflection angle between the two edges, from 0 (aligned) to pi
+        ORDER BY
+            a.road_code, a.node_id,
+            abs(mod((l.start_azimuth - a.end_azimuth + 3 * pi())::numeric, (2 * pi())::numeric) - pi()),
+            a.id, l.id
+    )
+    SELECT
+        'G06'::text,
+        'Road with branches'::text,
+        'error'::text,
+        b.road_code,
+        b.node_edge_ids,
+        ARRAY[b.node_id],
+        NULL::integer[],
+        jsonb_build_object(
+            'edge_count', cardinality(b.node_edge_ids),
+            'main_edge_ids', CASE
+                WHEN m.arriving_id IS NULL THEN '[]'::jsonb
+                ELSE jsonb_build_array(m.arriving_id, m.leaving_id)
+            END,
+            'branch_edge_ids', (
+                SELECT jsonb_agg(x ORDER BY x)
+                FROM unnest(b.node_edge_ids) AS x
+                WHERE x IS DISTINCT FROM m.arriving_id AND x IS DISTINCT FROM m.leaving_id
+            )
+        ),
+        NULL::text,
+        NULL::jsonb,
+        n.geom,
+        (
+            SELECT ST_Collect(e.geom ORDER BY e.id)
+            FROM road_graph.edges AS e
+            WHERE e.id = ANY(b.node_edge_ids)
+            AND e.id IS DISTINCT FROM m.arriving_id
+            AND e.id IS DISTINCT FROM m.leaving_id
+        )
+    FROM branch_nodes AS b
+    JOIN road_graph.nodes AS n ON n.id = b.node_id
+    LEFT JOIN main_lines AS m ON m.road_code = b.road_code AND m.node_id = b.node_id
+    ORDER BY 4, b.node_id
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_road_branches(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_road_branches(_road_codes text[], _options jsonb) IS 'Check G06 run by the function check_graph: find the roads with branches, for example the ramps
+or the carriageways of a road using the code of the road.
+
+An issue is returned for each node with more than two edges of the same road. The roundabouts are ignored.
+The main line of the road at the node is given by the edge arriving at the node and the edge leaving it
+which are the most aligned: the other edges are the branches. The details give the number of edges at the node,
+and the ids of the edges of the main line and of the branches. The line of the issue shows the branches.
+
+The issue must be fixed manually, for example by giving another road code to the edges of the branches.';
+
+
 -- check_graph_t_junction_gaps(text[], jsonb)
 CREATE FUNCTION road_graph.check_graph_t_junction_gaps(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
     LANGUAGE plpgsql
