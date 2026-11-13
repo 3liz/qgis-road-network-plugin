@@ -29,6 +29,10 @@
 * **Edges**: when an edge is created or modified, its start and end points use the **closest node**
   less than 50 cm from them, instead of the node with the lowest id. Before, modifying any vertex of an edge
   could connect it to another node close to its start or end node
+* **Edges**: reversing the geometry of an edge, for example with the QGIS tool `Reverse Line`,
+  now swaps its start and end nodes, and calculates again its previous and next edges and the references of its road.
+  Before, the change was ignored, because the geometry was considered unchanged.
+  The migration repairs the edges already reversed
 
 ## 0.6.4 - 2026-11-12
 

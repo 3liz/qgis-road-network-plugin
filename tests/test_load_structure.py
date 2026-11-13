@@ -4271,6 +4271,64 @@ def test_edge_update_keeps_closest_node(rollback_db_connection: psycopg.Connecti
     assert cursor.fetchone()[0] == count
 
 
+def test_edge_reversed_geometry(rollback_db_connection: psycopg.Connection):
+    """When the geometry of an edge is only reversed, the triggers swap its start and end nodes,
+    calculate again its previous and next edges and the references of its road.
+    Reversing it again gives back the original edges.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Edge in the middle of a road, and the edges of its road before the change
+    cursor.execute("""
+        SELECT e.id, e.road_code, e.start_node, e.end_node, e.previous_edge_id, e.next_edge_id
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type = 'road'
+        AND e.previous_edge_id IS NOT NULL
+        AND e.next_edge_id IS NOT NULL
+        ORDER BY e.id
+        LIMIT 1
+    """)
+    edge_id, road_code, start_node, end_node, previous_edge_id, next_edge_id = cursor.fetchone()
+    road_edges_sql = """
+        SELECT
+            e.id, e.start_node, e.end_node, e.previous_edge_id, e.next_edge_id,
+            e.start_marker, e.start_abscissa, e.end_marker, e.end_abscissa,
+            round(e.start_cumulative::numeric, 1)
+        FROM road_graph.edges AS e
+        WHERE e.road_code = %s
+        ORDER BY e.id
+    """
+    cursor.execute(road_edges_sql, (road_code,))
+    road_edges = cursor.fetchall()
+    markers_sql = """
+        SELECT m.id, ST_AsText(m.geom) FROM road_graph.markers AS m WHERE m.road_code = %s ORDER BY m.id
+    """
+    cursor.execute(markers_sql, (road_code,))
+    markers = cursor.fetchall()
+
+    # Reverse the edge: its nodes are swapped. It does not follow its previous and next edges anymore
+    cursor.execute("UPDATE road_graph.edges SET geom = ST_Reverse(geom) WHERE id = %s", (edge_id,))
+    cursor.execute(
+        "SELECT start_node, end_node, previous_edge_id, next_edge_id FROM road_graph.edges WHERE id = %s",
+        (edge_id,),
+    )
+    assert cursor.fetchone() == (end_node, start_node, None, None)
+    cursor.execute(
+        "SELECT next_edge_id FROM road_graph.edges WHERE id = %s UNION ALL "
+        "SELECT previous_edge_id FROM road_graph.edges WHERE id = %s",
+        (previous_edge_id, next_edge_id),
+    )
+    assert [row[0] for row in cursor.fetchall()] == [None, None]
+
+    # Reverse it again: the edges and the markers of the road are back to their original values
+    cursor.execute("UPDATE road_graph.edges SET geom = ST_Reverse(geom) WHERE id = %s", (edge_id,))
+    cursor.execute(road_edges_sql, (road_code,))
+    assert cursor.fetchall() == road_edges
+    cursor.execute(markers_sql, (road_code,))
+    assert cursor.fetchall() == markers
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

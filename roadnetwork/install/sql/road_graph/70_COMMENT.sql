@@ -108,6 +108,8 @@ Additionally, during the creation of an edge, if the road code is provided and n
 we automatically create one at the start of the edge.
 During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point,
 we move marker 0 to this new starting point.
+When the geometry of an edge is only reversed, its start and end nodes are swapped,
+its previous and next edges are calculated again, and the marker 0 is not moved.
 Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge
 based on its geometry and position on the road.
 ';

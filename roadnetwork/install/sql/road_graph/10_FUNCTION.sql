@@ -652,6 +652,29 @@ BEGIN
     -- Do not calculate them for each updated neighbour edge
     previous_ref_calc_disabled = road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no');
     PERFORM set_config('road.graph.edge.ref.calc.disabled', 'yes', true);
+    -- When the geometry has only been reversed, the edges of the road which referenced this edge
+    -- as their next or previous edge do not follow it anymore: their reference to this edge is removed,
+    -- and their trigger calculates again their next or previous edge
+    IF TG_OP = 'UPDATE'
+        AND NOT is_roundabout
+        AND ST_Equals(NEW.geom, OLD.geom) IS TRUE
+        AND NOT ST_OrderingEquals(NEW.geom, OLD.geom)
+    THEN
+        UPDATE road_graph.edges AS e
+        SET next_edge_id = NULL
+        WHERE e.road_code = NEW.road_code
+        AND e.id != NEW.id
+        AND e.next_edge_id = NEW.id
+        AND e.id IS DISTINCT FROM NEW.previous_edge_id
+        ;
+        UPDATE road_graph.edges AS e
+        SET previous_edge_id = NULL
+        WHERE e.road_code = NEW.road_code
+        AND e.id != NEW.id
+        AND e.previous_edge_id = NEW.id
+        AND e.id IS DISTINCT FROM NEW.next_edge_id
+        ;
+    END IF;
     -- previous edge id
     IF (TG_OP = 'INSERT' AND NEW.previous_edge_id IS NOT NULL AND NOT is_roundabout)
         OR (TG_OP = 'UPDATE' AND NEW.previous_edge_id != Coalesce(OLD.previous_edge_id, -1) AND NOT is_roundabout)
@@ -944,7 +967,8 @@ BEGIN
         IF TG_OP = 'INSERT'
         OR (
             TG_OP = 'UPDATE' AND (
-                NOT ST_Equals(OLD.geom, NEW.geom)
+                -- The references are also calculated when the geometry has only been reversed
+                NOT ST_OrderingEquals(OLD.geom, NEW.geom)
                 OR Coalesce(OLD.previous_edge_id, -1) != NEW.previous_edge_id
                 OR Coalesce(OLD.next_edge_id, -1) != NEW.next_edge_id
             )
@@ -1284,6 +1308,7 @@ DECLARE
     edge_road record;
     is_roundabout boolean;
     has_changed_road_code boolean;
+    is_reversed boolean;
 	v_sqlstate text;
 	v_message text;
 	v_context text;
@@ -1340,13 +1365,34 @@ BEGIN
         END IF;
     END IF;
 
+    -- For UPDATE, check if the geometry has only been reversed.
+    -- ST_Equals does not take the direction into account: ST_OrderingEquals is used below
+    -- to detect any change of the geometry, including its direction
+    is_reversed = (
+        TG_OP = 'UPDATE'
+        AND ST_Equals(NEW.geom, OLD.geom) IS TRUE
+        AND NOT ST_OrderingEquals(NEW.geom, OLD.geom)
+    );
+    -- The previous and next edges of a reversed edge must be calculated again,
+    -- unless they have been given
+    IF is_reversed AND NOT is_roundabout AND NOT has_changed_road_code THEN
+        IF Coalesce(OLD.previous_edge_id, -1) = Coalesce(NEW.previous_edge_id, -1) THEN
+            NEW.previous_edge_id = NULL;
+        END IF;
+        IF Coalesce(OLD.next_edge_id, -1) = Coalesce(NEW.next_edge_id, -1) THEN
+            NEW.next_edge_id = NULL;
+        END IF;
+    END IF;
+
     -- Create missing nodes if necessary
     -- start & end point
     start_point = ST_StartPoint(NEW.geom);
     end_point = ST_EndPoint(NEW.geom);
 
+    -- The nodes are also searched when the geometry has only been reversed:
+    -- the start and end nodes are then swapped
     IF TG_OP = 'INSERT'
-    OR (TG_OP = 'UPDATE' AND NOT ST_Equals(NEW.geom, OLD.geom) AND NEW.geom IS NOT NULL)
+    OR (TG_OP = 'UPDATE' AND NOT ST_OrderingEquals(NEW.geom, OLD.geom) AND NEW.geom IS NOT NULL)
     THEN
 
         -- Get the nodes closer than 0.5 m from the start and end points, and use them.
@@ -1417,6 +1463,9 @@ BEGIN
                 FROM road_graph.edges AS e
                 WHERE e.road_code = NEW.road_code
                 AND e.end_node = NEW.start_node
+                -- not the edge itself, whose old row is still in the table, for example when it is reversed
+                AND e.id != NEW.id
+                ORDER BY e.id
                 LIMIT 1
             );
         END IF;
@@ -1427,6 +1476,9 @@ BEGIN
                 FROM road_graph.edges AS e
                 WHERE e.road_code = NEW.road_code
                 AND e.start_node = NEW.end_node
+                -- not the edge itself, whose old row is still in the table, for example when it is reversed
+                AND e.id != NEW.id
+                ORDER BY e.id
                 LIMIT 1
             );
         END IF;
@@ -1435,9 +1487,11 @@ BEGIN
     -- Move marker 0 if needed
     -- If the first edge of the road has changed
     -- move it to the start_point of the changed geometry
+    -- The marker 0 is not moved when the geometry has only been reversed: it stays at the start of the road
     IF TG_OP = 'UPDATE'
         AND NOT is_roundabout
         AND NOT has_changed_road_code
+        AND NOT is_reversed
         AND OLD.start_abscissa = 0 AND NEW.start_abscissa = 0
         AND OLD.start_cumulative = 0 AND NEW.start_cumulative = 0
         AND OLD.start_marker = 0 AND NEW.start_marker = 0
@@ -1471,14 +1525,14 @@ BEGIN
     IF TG_OP = 'UPDATE' THEN
         references_calculated_after = (
             (
-                NOT ST_Equals(OLD.geom, NEW.geom)
+                NOT ST_OrderingEquals(OLD.geom, NEW.geom)
                 OR Coalesce(OLD.previous_edge_id, -1) != NEW.previous_edge_id
                 OR Coalesce(OLD.next_edge_id, -1) != NEW.next_edge_id
             ) IS TRUE
             AND road_graph.get_current_setting('road.graph.edge.ref.calc.disabled', 'no') = 'no'
         );
         references_unchanged = (
-            ST_Equals(OLD.geom, NEW.geom) IS TRUE
+            ST_OrderingEquals(OLD.geom, NEW.geom) IS TRUE
             AND OLD.road_code = NEW.road_code
             AND (
                 NEW.start_marker, NEW.start_abscissa, NEW.start_cumulative,
@@ -1539,6 +1593,8 @@ Additionally, during the creation of an edge, if the road code is provided and n
 we automatically create one at the start of the edge.
 During the modification of an edge, if the starting point of the edge is modified and the marker 0 of the road is positioned at this starting point,
 we move marker 0 to this new starting point.
+When the geometry of an edge is only reversed, its start and end nodes are swapped,
+its previous and next edges are calculated again, and the marker 0 is not moved.
 Finally, we calculate the references (marker, abscissa, cumulative) for the start and end of the edge
 based on its geometry and position on the road.
 ';
