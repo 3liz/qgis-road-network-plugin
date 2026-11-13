@@ -635,13 +635,15 @@
                                         <td><p>Clean a roundabout digitized by QGIS circle tool: * delete the edges inside the roundabout * remove the circle node added add 12 o&rsquo;clock * add a marker for this roundabout if not already present</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/create_queries_from_editing_ses_6aa2bef3.html">create_queries_from_editing_session(_editing_session_id integer)</a></td>
+                                        <td><a href="routines/check_graph_markers_order__road_bc2ddc2b.html">check_graph_markers_order(_road_codes text[], _options jsonb)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
                                         <td>false</td>
-                                        <td>TABLE(sql_text text)</td>
+                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
                                         <td>INVOKER</td>
-                                        <td><p>Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session</p></td>
+                                        <td><p>Check G10 run by the function check_graph: find the markers which are not in the order of their road.</p>
+<p>The position of each marker along its road is the cumulative length of the road at its closest edge of the road, less than the option marker_tolerance from it (50 m by default). Sorted by code and abscissa, the markers must be in the order of their position: two markers can be at the same position (1 m tolerance). The longest sequence of markers in the order of the road is kept: an issue is returned for each other marker. The roundabouts are ignored. An issue is also returned for a marker far from its road, or whose closest edge has no reference.</p>
+<p>The details give the type of issue (order, far_from_road or edge_without_reference), the code, abscissa, type and position of the marker, and the code and position of the previous and next markers in the order of the road. The issue must be fixed manually, by moving the marker or changing its code.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/fix_graph_cut_edges__params_jso_73b952f4.html">fix_graph_cut_edges(_params jsonb)</a></td>
@@ -653,6 +655,15 @@
                                         <td><p>Action cut_edges run by the function fix_graph_issue, to fix the issues of the check G01: split the edges crossing each other at the given point.</p>
 <p>The parameter _params must contain the crossing point as EWKT: {&ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;}. A node is created at this point, or the existing node less than 50 cm from it is used, and the triggers split the edges passing there.</p>
 <p>It returns a JSON object with the keys status (success, or skipped if no edge must be split at this point) and message.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/create_queries_from_editing_ses_6aa2bef3.html">create_queries_from_editing_session(_editing_session_id integer)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(sql_text text)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/fix_graph_extend_edge__params_j_b9e4f76b.html">fix_graph_extend_edge(_params jsonb)</a></td>

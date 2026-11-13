@@ -940,6 +940,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#g10-markers-not-in-the-order-of-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G10: Markers not in the order of the road
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1488,6 +1499,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#g10-markers-not-in-the-order-of-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G10: Markers not in the order of the road
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1659,6 +1681,11 @@ the algorithm Fix the road graph issues fixes the issues in this order.</p>
 <td><a href="#g09-first-marker-not-at-the-start-of-the-road">G09</a></td>
 <td>First marker not at the start of the road</td>
 <td><code>move_marker</code></td>
+</tr>
+<tr>
+<td><a href="#g10-markers-not-in-the-order-of-the-road">G10</a></td>
+<td>Markers not in the order of the road</td>
+<td>manual</td>
 </tr>
 </tbody>
 </table>
@@ -1865,6 +1892,19 @@ to the start of the road, its position along the first edge (<code>position_on_e
   <strong>1 m</strong> by default. Farther, check the road manually: the marker may be right, and the first edge wrong,
   for example when the road is in the opposite direction (check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</li>
 </ul>
+<h3 id="g10-markers-not-in-the-order-of-the-road">G10: Markers not in the order of the road<a class="headerlink" href="#g10-markers-not-in-the-order-of-the-road" title="Permanent link">#</a></h3>
+<p>Sorted by code and abscissa, the markers of a road must follow each other along the road:
+else, the references calculated from them are wrong.</p>
+<p>The <strong>position</strong> of each marker along its road is the cumulative length of the road at its closest edge,
+less than the option <code>marker_tolerance</code> from it, <strong>50 m</strong> by default. The check keeps the longest sequence
+of markers in the order of the road, two markers being allowed at the same position (1 m tolerance),
+for example a virtual marker and the marker of the next code with the same reference.
+It returns one issue for each other marker (<code>issue_type</code>: <code>order</code>), and for each marker far from its road
+(<code>far_from_road</code>) or whose closest edge has no reference (<code>edge_without_reference</code>). The roundabouts are ignored.</p>
+<p>The field <code>details</code> gives the code, abscissa, type and <code>position</code> of the marker, and the code and position
+of the previous and next markers in the order of the road.</p>
+<p>There is no fix action: move the marker, or change its code. Fix the issues of the check
+<a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a> before: a reversed edge changes the positions of the markers.</p>
 <h2 id="configuration-of-the-checks">Configuration of the checks<a class="headerlink" href="#configuration-of-the-checks" title="Permanent link">#</a></h2>
 <p>The checks are listed in the table <code>road_graph.glossary_graph_check</code>, with for each check:
 its code, title, severity, function, fix actions and description.
