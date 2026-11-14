@@ -3518,7 +3518,8 @@ def test_get_managed_object_geometry_from_references(rollback_db_connection: psy
 
 
 def test_functions_search_path(rollback_db_connection: psycopg.Connection):
-    """Check the search_path set as property of the functions, in the production and editing schemas.
+    """Check the search_path and the other settings set as property of the functions,
+    in the production and editing schemas.
     The functions called from outside the plugin must work even if the search_path of the caller
     does not contain public, where PostGIS is installed.
     The schema road_graph must not be in the search_path of the functions installed in the editing schema,
@@ -3529,7 +3530,10 @@ def test_functions_search_path(rollback_db_connection: psycopg.Connection):
     expected = {
         # Functions called from outside the plugin, which only read data
         "calculate_managed_object_references": "search_path=public",
-        "check_graph": "search_path=public",
+        # The checks of the road graph are not compiled by the JIT: PostGIS functions have high costs,
+        # which trigger the JIT compilation of short queries
+        "check_graph": "search_path=public | jit=off",
+        "fix_graph_issue": "jit=off",
         "get_managed_object_geometry_from_references": "search_path=public",
         "get_merged_geom_from_table_and_ids": "search_path=public",
         "get_reference_from_point": "search_path=public",

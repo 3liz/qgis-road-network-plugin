@@ -172,6 +172,7 @@ ON CONFLICT (code) DO UPDATE SET
 CREATE OR REPLACE FUNCTION road_graph.check_graph(_checks text[] DEFAULT NULL::text[], _road_codes text[] DEFAULT NULL::text[], _options jsonb DEFAULT NULL::jsonb) RETURNS TABLE(id integer, check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
     LANGUAGE plpgsql
     SET search_path TO 'public'
+    SET jit TO 'off'
     AS $_$
 DECLARE
     unknown_checks text[];
@@ -255,26 +256,12 @@ DECLARE
 BEGIN
     RETURN QUERY
     WITH
-    -- Nodes with their edges
-    nodes AS (
-        SELECT
-            n.id, n.geom,
-            array_agg(e.id ORDER BY e.id) FILTER (WHERE e.id IS NOT NULL) AS node_edge_ids,
-            array_agg(DISTINCT e.road_code) FILTER (WHERE e.road_code IS NOT NULL) AS node_road_codes
-        FROM road_graph.nodes AS n
-        LEFT JOIN road_graph.edges AS e
-            ON n.id IN (e.start_node, e.end_node)
-        GROUP BY n.id, n.geom
-    ),
-    -- Pairs of close nodes, not linked by an edge: a short edge is found by another check
-    pairs AS (
-        SELECT
-            a.id AS a_id, b.id AS b_id,
-            a.geom AS a_geom, b.geom AS b_geom,
-            Coalesce(a.node_edge_ids, '{}') AS a_edge_ids, Coalesce(b.node_edge_ids, '{}') AS b_edge_ids,
-            Coalesce(a.node_road_codes, '{}') || Coalesce(b.node_road_codes, '{}') AS pair_road_codes
-        FROM nodes AS a
-        JOIN nodes AS b
+    -- Pairs of close nodes, not linked by an edge: a short edge is found by another check.
+    -- The pairs are found in the nodes table, to use its spatial index
+    close_nodes AS (
+        SELECT a.id AS a_id, b.id AS b_id, a.geom AS a_geom, b.geom AS b_geom
+        FROM road_graph.nodes AS a
+        JOIN road_graph.nodes AS b
             ON a.id < b.id
             AND ST_DWithin(a.geom, b.geom, tolerance)
         WHERE NOT EXISTS (
@@ -283,6 +270,24 @@ BEGIN
             WHERE (e.start_node = a.id AND e.end_node = b.id)
             OR (e.start_node = b.id AND e.end_node = a.id)
         )
+    ),
+    -- Edges and road codes of the nodes of the pairs
+    pairs AS (
+        SELECT
+            c.*,
+            Coalesce(ae.edge_ids, '{}') AS a_edge_ids, Coalesce(be.edge_ids, '{}') AS b_edge_ids,
+            Coalesce(ae.road_codes, '{}') || Coalesce(be.road_codes, '{}') AS pair_road_codes
+        FROM close_nodes AS c
+        CROSS JOIN LATERAL (
+            SELECT array_agg(e.id ORDER BY e.id) AS edge_ids, array_agg(DISTINCT e.road_code) AS road_codes
+            FROM road_graph.edges AS e
+            WHERE c.a_id IN (e.start_node, e.end_node)
+        ) AS ae
+        CROSS JOIN LATERAL (
+            SELECT array_agg(e.id ORDER BY e.id) AS edge_ids, array_agg(DISTINCT e.road_code) AS road_codes
+            FROM road_graph.edges AS e
+            WHERE c.b_id IN (e.start_node, e.end_node)
+        ) AS be
     ),
     -- Node to keep: the node with the most edges, so that the fewest edges are moved,
     -- or else the node with the lowest id (the first node of the pair), i.e. the oldest node
@@ -858,11 +863,12 @@ BEGIN
     -- Walks along the sequences of edges of a road following each other:
     -- two edges follow each other at a node where there are only these two edges of the road.
     -- A walk starts from an end of a sequence (a node with one edge or more than two edges of the road),
-    -- and follows the next edges. Each edge is walked in its direction (is_forward) or not
+    -- and follows the next edges. Each edge is walked in its direction (is_forward) or not.
+    -- The walk carries the road code and the length of the edge, to join the next edge directly
     walks AS (
         SELECT
             x.id AS walk_id, x.is_first AS is_walk_forward,
-            x.id, x.is_first AS is_forward,
+            x.id, x.road_code, e.edge_length, x.is_first AS is_forward,
             1 AS edge_order, 0::double precision AS start_position,
             -- Node by which the walk leaves the edge
             CASE WHEN x.is_first THEN e.last_node ELSE e.first_node END AS exit_node,
@@ -874,16 +880,14 @@ BEGIN
         UNION ALL
         SELECT
             w.walk_id, w.is_walk_forward,
-            n.id, n.is_first,
+            n.id, n.road_code, e.edge_length, n.is_first,
             w.edge_order + 1,
-            w.start_position + p.edge_length,
+            w.start_position + w.edge_length,
             CASE WHEN n.is_first THEN e.last_node ELSE e.first_node END,
             w.walked_ids || n.id
         FROM walks AS w
-        JOIN road_edges AS p
-            ON p.id = w.id
         JOIN edge_ends AS n
-            ON n.road_code = p.road_code
+            ON n.road_code = w.road_code
             AND n.node_id = w.exit_node
             AND n.node_edge_count = 2
             AND n.id != w.id
@@ -2022,6 +2026,7 @@ or is already connected there) and message.';
 -- fix_graph_issue(text, jsonb)
 CREATE OR REPLACE FUNCTION road_graph.fix_graph_issue(_fix_action text, _params jsonb) RETURNS jsonb
     LANGUAGE plpgsql
+    SET jit TO 'off'
     AS $_$
 DECLARE
     schema_name text;
