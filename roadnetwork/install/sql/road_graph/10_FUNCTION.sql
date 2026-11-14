@@ -2201,7 +2201,9 @@ BEGIN
             CASE WHEN keep_a THEN p.a_id ELSE p.b_id END AS keep_id,
             CASE WHEN keep_a THEN p.a_geom ELSE p.b_geom END AS keep_geom,
             CASE WHEN keep_a THEN p.b_id ELSE p.a_id END AS remove_id,
-            CASE WHEN keep_a THEN p.b_geom ELSE p.a_geom END AS remove_geom
+            CASE WHEN keep_a THEN p.b_geom ELSE p.a_geom END AS remove_geom,
+            -- Road code of the issue: the first road code of the edges of the two nodes
+            (SELECT min(c) FROM unnest(p.pair_road_codes) AS c) AS issue_road_code
         FROM pairs AS p,
         LATERAL (SELECT cardinality(p.a_edge_ids) >= cardinality(p.b_edge_ids) AS keep_a) AS k
         WHERE _road_codes IS NULL OR p.pair_road_codes && _road_codes
@@ -2210,7 +2212,7 @@ BEGIN
         'G03'::text,
         'Nodes close to each other'::text,
         'error'::text,
-        (SELECT min(c) FROM unnest(i.pair_road_codes) AS c),
+        i.issue_road_code,
         (SELECT array_agg(DISTINCT x ORDER BY x) FROM unnest(i.a_edge_ids || i.b_edge_ids) AS x),
         ARRAY[i.keep_id, i.remove_id],
         NULL::integer[],
@@ -2226,7 +2228,7 @@ BEGIN
         i.keep_geom,
         CASE WHEN ST_Equals(i.a_geom, i.b_geom) THEN NULL ELSE ST_MakeLine(i.remove_geom, i.keep_geom) END
     FROM issues AS i
-    ORDER BY 4, i.a_id, i.b_id
+    ORDER BY i.issue_road_code, i.a_id, i.b_id
     ;
 END;
 $$;
@@ -2256,7 +2258,8 @@ DECLARE
     crossing_fix_action text = Nullif(_options->>'crossing_fix_action', '');
 BEGIN
     IF crossing_fix_action NOT IN ('cut_edges', 'mark_as_bridge') THEN
-        RAISE EXCEPTION 'The option crossing_fix_action of the check G01 must be cut_edges or mark_as_bridge, not %',
+        RAISE EXCEPTION
+            'The option crossing_fix_action of the check G01 must be cut_edges or mark_as_bridge, not %',
             crossing_fix_action;
     END IF;
 
@@ -2282,27 +2285,26 @@ BEGIN
             OR b.road_code = ANY(_road_codes)
         )
     ),
+    -- Is the point at the start or end of each edge
+    ends AS (
+        SELECT
+            c.*,
+            ST_DWithin(c.point, ST_StartPoint(c.a_geom), tolerance)
+                OR ST_DWithin(c.point, ST_EndPoint(c.a_geom), tolerance) AS is_a_end,
+            ST_DWithin(c.point, ST_StartPoint(c.b_geom), tolerance)
+                OR ST_DWithin(c.point, ST_EndPoint(c.b_geom), tolerance) AS is_b_end
+        FROM crossings AS c
+    ),
     -- Keep the points which are not at the start or end of both edges:
     -- at least one of the edges must be split there.
     -- If the point is at the start or end of one edge, the edges touch each other: they are surely connected.
     -- Else they cross each other, maybe on a bridge
     issues AS (
         SELECT
-            c.*,
-            (
-                ST_DWithin(c.point, ST_StartPoint(c.a_geom), tolerance)
-                OR ST_DWithin(c.point, ST_EndPoint(c.a_geom), tolerance)
-                OR ST_DWithin(c.point, ST_StartPoint(c.b_geom), tolerance)
-                OR ST_DWithin(c.point, ST_EndPoint(c.b_geom), tolerance)
-            ) AS is_touching
-        FROM crossings AS c
-        WHERE (
-            NOT ST_DWithin(c.point, ST_StartPoint(c.a_geom), tolerance)
-            AND NOT ST_DWithin(c.point, ST_EndPoint(c.a_geom), tolerance)
-        ) OR (
-            NOT ST_DWithin(c.point, ST_StartPoint(c.b_geom), tolerance)
-            AND NOT ST_DWithin(c.point, ST_EndPoint(c.b_geom), tolerance)
-        )
+            e.*,
+            e.is_a_end OR e.is_b_end AS is_touching
+        FROM ends AS e
+        WHERE NOT (e.is_a_end AND e.is_b_end)
     ),
     -- Direction of each edge at the crossing point, from its points 1 m before and after,
     -- to get the angle between the edges: it helps to find the bridges
@@ -2310,14 +2312,17 @@ BEGIN
         SELECT
             i.*,
             degrees(ST_Azimuth(
-                ST_LineInterpolatePoint(i.a_geom, greatest(ST_LineLocatePoint(i.a_geom, i.point) - 1 / ST_Length(i.a_geom), 0)),
-                ST_LineInterpolatePoint(i.a_geom, least(ST_LineLocatePoint(i.a_geom, i.point) + 1 / ST_Length(i.a_geom), 1))
+                ST_LineInterpolatePoint(i.a_geom, greatest(a.position - 1 / ST_Length(i.a_geom), 0)),
+                ST_LineInterpolatePoint(i.a_geom, least(a.position + 1 / ST_Length(i.a_geom), 1))
             )) AS a_azimuth,
             degrees(ST_Azimuth(
-                ST_LineInterpolatePoint(i.b_geom, greatest(ST_LineLocatePoint(i.b_geom, i.point) - 1 / ST_Length(i.b_geom), 0)),
-                ST_LineInterpolatePoint(i.b_geom, least(ST_LineLocatePoint(i.b_geom, i.point) + 1 / ST_Length(i.b_geom), 1))
+                ST_LineInterpolatePoint(i.b_geom, greatest(b.position - 1 / ST_Length(i.b_geom), 0)),
+                ST_LineInterpolatePoint(i.b_geom, least(b.position + 1 / ST_Length(i.b_geom), 1))
             )) AS b_azimuth
-        FROM issues AS i
+        FROM issues AS i,
+        -- Position of the crossing point along each edge, from 0 to 1
+        LATERAL (SELECT ST_LineLocatePoint(i.a_geom, i.point) AS position) AS a,
+        LATERAL (SELECT ST_LineLocatePoint(i.b_geom, i.point) AS position) AS b
     )
     SELECT
         'G01'::text,
@@ -2403,6 +2408,7 @@ BEGIN
         WHERE _road_codes IS NULL OR e.road_code = ANY(_road_codes)
         ORDER BY e.road_code, (e.previous_edge_id IS NOT NULL), e.start_cumulative NULLS LAST, e.id
     ),
+    -- First markers which are not at the start of the first edge of their road
     issues AS (
         SELECT
             m.id AS marker_id, m.road_code, m.code, m.abscissa, m.is_virtual, m.geom AS marker_geom,
@@ -2444,7 +2450,7 @@ BEGIN
         i.marker_geom,
         ST_MakeLine(i.marker_geom, i.start_point)
     FROM issues AS i
-    ORDER BY 4
+    ORDER BY i.road_code
     ;
 END;
 $$;
@@ -2474,8 +2480,8 @@ CREATE FUNCTION road_graph.check_graph_markers_order(_road_codes text[], _option
 DECLARE
     -- Maximum distance between a marker and the edges of its road
     marker_tolerance real = Coalesce((_options->>'marker_tolerance')::real, 50.0);
-    -- Tolerance on the positions of the markers: two markers at the same point can have slightly different positions,
-    -- for example at the end of an edge and at the start of the next edge
+    -- Tolerance on the positions of the markers: two markers at the same point can have
+    -- slightly different positions, for example at the end of an edge and at the start of the next edge
     position_tolerance real = 1.0;
     road record;
     -- Markers of the road, sorted by code and abscissa
@@ -2492,6 +2498,9 @@ DECLARE
     previous_indexes integer[];
     best_index integer;
     in_order boolean[];
+    -- Previous and next markers in the order of the road, around a marker out of this order
+    previous_index integer;
+    next_index integer;
     i integer;
     j integer;
 BEGIN
@@ -2570,6 +2579,8 @@ BEGIN
         -- or out of the order of the road
         FOR i IN 1..marker_count LOOP
             CONTINUE WHEN in_order[i];
+            previous_index = (SELECT k FROM generate_series(i - 1, 1, -1) AS k WHERE in_order[k] LIMIT 1);
+            next_index = (SELECT k FROM generate_series(i + 1, marker_count) AS k WHERE in_order[k] LIMIT 1);
             check_code = 'G10';
             check_title = 'Markers not in the order of the road';
             severity = 'error';
@@ -2588,20 +2599,10 @@ BEGIN
                 'is_virtual', marker_virtuals[i],
                 'position', round(marker_positions[i]::numeric, 1),
                 -- Previous and next markers by code which are in the order of the road
-                'previous_marker_code', (
-                    SELECT marker_codes[k] FROM generate_series(i - 1, 1, -1) AS k WHERE in_order[k] LIMIT 1
-                ),
-                'previous_marker_position', (
-                    SELECT round(marker_positions[k]::numeric, 1)
-                    FROM generate_series(i - 1, 1, -1) AS k WHERE in_order[k] LIMIT 1
-                ),
-                'next_marker_code', (
-                    SELECT marker_codes[k] FROM generate_series(i + 1, marker_count) AS k WHERE in_order[k] LIMIT 1
-                ),
-                'next_marker_position', (
-                    SELECT round(marker_positions[k]::numeric, 1)
-                    FROM generate_series(i + 1, marker_count) AS k WHERE in_order[k] LIMIT 1
-                )
+                'previous_marker_code', marker_codes[previous_index],
+                'previous_marker_position', round(marker_positions[previous_index]::numeric, 1),
+                'next_marker_code', marker_codes[next_index],
+                'next_marker_position', round(marker_positions[next_index]::numeric, 1)
             );
             fix_action = NULL;
             fix_params = NULL;
@@ -2662,8 +2663,9 @@ BEGIN
         AND (_road_codes IS NULL OR a.road_code = ANY(_road_codes))
         AND NOT (ARRAY[a.start_node, a.end_node] && ARRAY[b.start_node, b.end_node])
     ),
-    -- Length of the other edge along which each part runs: the parts of two edges which only approach each other,
-    -- for example the edges of a road on both sides of a roundabout, run along a very short length of the other edge
+    -- Length of the other edge along which each part runs: the parts of two edges which only approach
+    -- each other, for example the edges of a road on both sides of a roundabout,
+    -- run along a very short length of the other edge
     spans AS (
         SELECT
             p.*,
@@ -2700,7 +2702,7 @@ BEGIN
     FROM spans AS s
     WHERE s.a_span >= min_length
     AND s.b_span >= min_length
-    ORDER BY 4, s.a_id, s.b_id
+    ORDER BY s.road_code, s.a_id, s.b_id
     ;
 END;
 $$;
@@ -2799,8 +2801,7 @@ BEGIN
             ON e.id = n.id
         WHERE NOT n.id = ANY(w.walked_ids)
     ),
-    -- Each sequence is walked from its two ends: keep the walk starting from the edge with the lowest id,
-    -- or for a sequence of one edge, the walk in the direction of the edge
+    -- Last edge of each walk
     walk_ends AS (
         SELECT
             w.walk_id, w.is_walk_forward,
@@ -2808,6 +2809,8 @@ BEGIN
         FROM walks AS w
         GROUP BY w.walk_id, w.is_walk_forward
     ),
+    -- Edges of each sequence. Each sequence is walked from its two ends: keep the walk starting
+    -- from the edge with the lowest id, or for a sequence of one edge, the walk in the direction of the edge
     sequence_edges AS MATERIALIZED (
         SELECT
             w.walk_id AS sequence_id, w.id, w.is_forward, w.edge_order, w.start_position,
@@ -2854,6 +2857,7 @@ BEGIN
         FROM marker_positions AS p
         WINDOW w AS (PARTITION BY p.sequence_id ORDER BY p.code, p.abscissa)
     ),
+    -- Number of consecutive markers in the direction of the walk, and in the opposite direction
     marker_votes AS (
         SELECT
             mp.sequence_id,
@@ -2869,16 +2873,8 @@ BEGIN
         SELECT
             s.sequence_id,
             -- Number of consecutive markers in the direction of the road, and in the opposite direction
-            CASE
-                WHEN Coalesce(v.increasing_count, 0) >= Coalesce(v.decreasing_count, 0)
-                    THEN Coalesce(v.increasing_count, 0)
-                ELSE v.decreasing_count
-            END AS increasing_count,
-            CASE
-                WHEN Coalesce(v.increasing_count, 0) >= Coalesce(v.decreasing_count, 0)
-                    THEN Coalesce(v.decreasing_count, 0)
-                ELSE v.increasing_count
-            END AS decreasing_count,
+            greatest(Coalesce(v.increasing_count, 0), Coalesce(v.decreasing_count, 0)) AS increasing_count,
+            least(Coalesce(v.increasing_count, 0), Coalesce(v.decreasing_count, 0)) AS decreasing_count,
             CASE
                 WHEN Coalesce(v.increasing_count, 0) != Coalesce(v.decreasing_count, 0) THEN 'markers'
                 ELSE 'neighbours'
@@ -2907,7 +2903,8 @@ BEGIN
             se.*, d.reason, d.increasing_count, d.decreasing_count,
             -- Order of the edge in the direction of the road
             CASE WHEN d.is_walk_in_road_direction THEN se.edge_order ELSE - se.edge_order END AS road_order,
-            se.edge_order - row_number() OVER (PARTITION BY se.sequence_id ORDER BY se.edge_order) AS group_number
+            se.edge_order - row_number() OVER (PARTITION BY se.sequence_id ORDER BY se.edge_order)
+                AS group_number
         FROM sequence_edges AS se
         JOIN sequence_directions AS d
             ON d.sequence_id = se.sequence_id
@@ -2934,7 +2931,7 @@ BEGIN
         ST_LineMerge(ST_Collect(r.geom))
     FROM reversed_edges AS r
     GROUP BY r.road_code, r.sequence_id, r.group_number
-    ORDER BY 4, min(r.id)
+    ORDER BY r.road_code, min(r.id)
     ;
 END;
 $$;
@@ -2972,7 +2969,7 @@ BEGIN
         WHERE r.road_type != 'roundabout'
         AND e.start_node != e.end_node
         AND (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
-        UNION
+        UNION ALL
         SELECT e.id, e.road_code, e.end_node AS node_id, e.geom
         FROM road_graph.edges AS e
         JOIN road_graph.roads AS r ON r.road_code = e.road_code
@@ -3050,7 +3047,7 @@ BEGIN
     FROM branch_nodes AS b
     JOIN road_graph.nodes AS n ON n.id = b.node_id
     LEFT JOIN main_lines AS m ON m.road_code = b.road_code AND m.node_id = b.node_id
-    ORDER BY 4, b.node_id
+    ORDER BY b.road_code, b.node_id
     ;
 END;
 $$;
@@ -3159,7 +3156,7 @@ BEGIN
         ST_LineInterpolatePoint(i.geom, 0.5),
         i.geom
     FROM issues AS i
-    ORDER BY 4, i.id
+    ORDER BY i.road_code, i.id
     ;
 END;
 $$;
@@ -3331,7 +3328,8 @@ BEGIN
             (array_agg(e.geom) FILTER (WHERE e.end_node = n.id AND e.start_node != n.id))[1] AS arriving_geom,
             (array_agg(e.geom) FILTER (WHERE e.start_node = n.id AND e.end_node != n.id))[1] AS leaving_geom,
             count(DISTINCT Coalesce(e.no_intersection_cutting, False)) AS cutting_count,
-            count(DISTINCT CASE WHEN e.start_node = n.id THEN e.end_node ELSE e.start_node END) AS other_node_count
+            count(DISTINCT CASE WHEN e.start_node = n.id THEN e.end_node ELSE e.start_node END)
+                AS other_node_count
         FROM road_graph.nodes AS n
         LEFT JOIN road_graph.edges AS e
             ON n.id IN (e.start_node, e.end_node)
@@ -3376,7 +3374,7 @@ BEGIN
         i.geom,
         NULL::geometry
     FROM issues AS i
-    ORDER BY 4, i.id
+    ORDER BY i.node_road_codes[1], i.id
     ;
 END;
 $$;
@@ -4074,7 +4072,9 @@ BEGIN
         ;
         RETURN jsonb_build_object(
             'status', 'success',
-            'message', format('The edge %s starting and ending at the node %s has been deleted', edge.id, edge.start_node)
+            'message', format(
+                'The edge %s starting and ending at the node %s has been deleted', edge.id, edge.start_node
+            )
         );
     END IF;
 
@@ -4288,19 +4288,25 @@ BEGIN
         );
     END IF;
 
-    -- Edges of the node: the edge arriving at the node and the edge leaving it
+    -- Edges of the node: the edge arriving at the node and the edge leaving it.
+    -- An edge starting and ending at the node (loop) is neither arriving nor leaving
     SELECT
         count(e.id) AS edge_count,
         count(DISTINCT e.road_code) AS road_code_count,
         count(DISTINCT Coalesce(e.no_intersection_cutting, False)) AS cutting_count,
-        (array_agg(e.id) FILTER (WHERE e.end_node = node.id AND e.start_node != node.id))[1] AS arriving_edge_id,
-        (array_agg(e.start_node) FILTER (WHERE e.end_node = node.id AND e.start_node != node.id))[1] AS start_node_id,
-        (array_agg(e.geom) FILTER (WHERE e.end_node = node.id AND e.start_node != node.id))[1] AS arriving_geom,
-        (array_agg(e.id) FILTER (WHERE e.start_node = node.id AND e.end_node != node.id))[1] AS leaving_edge_id,
-        (array_agg(e.end_node) FILTER (WHERE e.start_node = node.id AND e.end_node != node.id))[1] AS end_node_id,
-        (array_agg(e.geom) FILTER (WHERE e.start_node = node.id AND e.end_node != node.id))[1] AS leaving_geom
+        (array_agg(e.id) FILTER (WHERE x.is_arriving))[1] AS arriving_edge_id,
+        (array_agg(e.start_node) FILTER (WHERE x.is_arriving))[1] AS start_node_id,
+        (array_agg(e.geom) FILTER (WHERE x.is_arriving))[1] AS arriving_geom,
+        (array_agg(e.id) FILTER (WHERE x.is_leaving))[1] AS leaving_edge_id,
+        (array_agg(e.end_node) FILTER (WHERE x.is_leaving))[1] AS end_node_id,
+        (array_agg(e.geom) FILTER (WHERE x.is_leaving))[1] AS leaving_geom
     INTO edges_data
-    FROM road_graph.edges AS e
+    FROM road_graph.edges AS e,
+    LATERAL (
+        SELECT
+            e.end_node = node.id AND e.start_node != node.id AS is_arriving,
+            e.start_node = node.id AND e.end_node != node.id AS is_leaving
+    ) AS x
     WHERE node.id IN (e.start_node, e.end_node)
     ;
 
@@ -4336,7 +4342,8 @@ BEGIN
         RETURN jsonb_build_object(
             'status', 'error',
             'message', format(
-                'The edges %s and %s cross each other and cannot be merged: fix the issues of the check G01 first',
+                'The edges %s and %s cross each other and cannot be merged: '
+                || 'fix the issues of the check G01 first',
                 edges_data.arriving_edge_id, edges_data.leaving_edge_id
             )
         );
@@ -4358,22 +4365,22 @@ BEGIN
     -- Check the merged edge goes from the start node of the arriving edge to the end node of the leaving edge.
     -- If not, for example if the merged edge has been split by the triggers at a crossing or near another node,
     -- the exception cancels the changes of this fix (see fix_graph_issue)
-    SELECT e.*
+    SELECT e.id, e.start_node, e.end_node, count(*) OVER () AS edge_count
     INTO kept_edge
     FROM road_graph.edges AS e
     WHERE e.id IN (edges_data.arriving_edge_id, edges_data.leaving_edge_id)
+    LIMIT 1
     ;
     IF kept_edge.id IS NULL
-        OR (
-            SELECT count(*)
-            FROM road_graph.edges AS e
-            WHERE e.id IN (edges_data.arriving_edge_id, edges_data.leaving_edge_id)
-        ) != 1
+        OR kept_edge.edge_count != 1
         OR kept_edge.start_node IS DISTINCT FROM edges_data.start_node_id
         OR kept_edge.end_node IS DISTINCT FROM edges_data.end_node_id
     THEN
+        -- The message is split in string constants on separate lines, which are concatenated
         RAISE EXCEPTION
-            'The edges % and % cannot be merged without other changes of the graph, for example because they cross other edges or pass near other nodes: fix the issues of the checks G01 and G03 first',
+            'The edges % and % cannot be merged without other changes of the graph, '
+            'for example because they cross other edges or pass near other nodes: '
+            'fix the issues of the checks G01 and G03 first',
             edges_data.arriving_edge_id, edges_data.leaving_edge_id
         ;
     END IF;
@@ -4528,7 +4535,8 @@ BEGIN
         FROM road_graph.edges AS e
         JOIN road_graph.edges AS o
             ON o.id != e.id
-            AND CASE WHEN _params->>'side' = 'start' THEN e.start_node ELSE e.end_node END IN (o.start_node, o.end_node)
+            AND CASE WHEN _params->>'side' = 'start' THEN e.start_node ELSE e.end_node END
+                IN (o.start_node, o.end_node)
         WHERE e.id = edge.id
     ) THEN
         RAISE EXCEPTION 'The edge % could not be connected to the other edge', edge.id;
@@ -4584,7 +4592,8 @@ BEGIN
     IF schema_name = 'road_graph' THEN
         RETURN jsonb_build_object(
             'status', 'error',
-            'message', 'The road graph issues must be fixed in an editing session, with the function road_graph_editing.fix_graph_issue'
+            'message', 'The road graph issues must be fixed in an editing session, '
+                || 'with the function road_graph_editing.fix_graph_issue'
         );
     END IF;
 
@@ -4674,7 +4683,10 @@ BEGIN
 
     RETURN jsonb_build_object(
         'status', 'success',
-        'message', format('The field no_intersection_cutting has been set to True for the edges %s', array_to_string(marked_ids, ', '))
+        'message', format(
+            'The field no_intersection_cutting has been set to True for the edges %s',
+            array_to_string(marked_ids, ', ')
+        )
     );
 END;
 $$;
@@ -4856,6 +4868,7 @@ CREATE FUNCTION road_graph.fix_graph_reverse_edges(_params jsonb) RETURNS jsonb
 DECLARE
     issue_edge_ids integer[];
     road_codes text[];
+    check_options jsonb;
     reversed_ids integer[];
     reversed_edge_id integer;
 BEGIN
@@ -4871,6 +4884,13 @@ BEGIN
         );
     END IF;
 
+    -- Options of the check G05 set by the administrator, to find the reversed edges like the check
+    SELECT g.default_options
+    INTO check_options
+    FROM "road_graph".glossary_graph_check AS g
+    WHERE g.code = 'G05'
+    ;
+
     -- The edges still in the opposite direction of their road:
     -- the edges may have been reversed, split or merged by a previous fix
     SELECT array_agg(DISTINCT e.road_code)
@@ -4880,7 +4900,7 @@ BEGIN
     ;
     SELECT array_agg(DISTINCT x ORDER BY x)
     INTO reversed_ids
-    FROM road_graph.check_graph_reversed_edges(road_codes, NULL) AS i,
+    FROM road_graph.check_graph_reversed_edges(road_codes, check_options) AS i,
     unnest(i.edge_ids) AS x
     WHERE x = ANY(issue_edge_ids)
     ;
@@ -4907,7 +4927,7 @@ BEGIN
     -- If not, the exception cancels the changes of this fix (see fix_graph_issue)
     IF EXISTS (
         SELECT 1
-        FROM road_graph.check_graph_reversed_edges(road_codes, NULL) AS i
+        FROM road_graph.check_graph_reversed_edges(road_codes, check_options) AS i
         WHERE i.edge_ids && reversed_ids
     ) THEN
         RAISE EXCEPTION 'The edges % are still in the opposite direction of their road after being reversed',
