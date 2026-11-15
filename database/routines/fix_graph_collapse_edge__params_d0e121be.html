@@ -85,7 +85,7 @@
                         </div>
                         <!-- /.box-header -->
                         <div class="box-body clearfix">
-                            <p><p>Action collapse_edge run by the function fix_graph_issue, to fix the issues of the check G08: remove a short edge, by merging its two nodes.</p>
+                            <p><p>Action collapse_edge run by the function fix_graph_issue, to fix the issues of the check G09: remove a short edge, by merging its two nodes.</p>
 <p>The parameter _params must contain the ids of the edge, of the node to keep and of the node to remove: {&ldquo;edge_id&rdquo;: 12, &ldquo;keep_node_id&rdquo;: 34, &ldquo;remove_node_id&rdquo;: 56}. The edge of the same road following the short edge at the node to remove is extended with the geometry of the short edge up to the node to keep: the geometry of the road is kept. The start and end points of the other edges of the node to remove, for example the edges of the other roads, are moved to the node to keep. Then the edge and the node to remove are deleted. The only edge of a road is not removed. An edge starting and ending at the same node, for example an edge reduced to a point after being cut, is only deleted.</p>
 <p>It returns a JSON object with the keys status (success, skipped if the edge does not exist anymore or its nodes have changed, or error) and message.</p></p>
                         </div>

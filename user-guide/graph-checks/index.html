@@ -897,10 +897,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g06-road-with-branches" class="md-nav__link">
+  <a href="#g06-previous-and-next-edges-inconsistent-with-the-geometry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G06: Road with branches
+        G06: Previous and next edges inconsistent with the geometry
       
     </span>
   </a>
@@ -908,10 +908,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g07-parallel-edges-of-the-same-road" class="md-nav__link">
+  <a href="#g07-road-with-branches" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G07: Parallel edges of the same road
+        G07: Road with branches
       
     </span>
   </a>
@@ -919,10 +919,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g08-short-edge" class="md-nav__link">
+  <a href="#g08-parallel-edges-of-the-same-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G08: Short edge
+        G08: Parallel edges of the same road
       
     </span>
   </a>
@@ -930,10 +930,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g09-first-marker-not-at-the-start-of-the-road" class="md-nav__link">
+  <a href="#g09-short-edge" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G09: First marker not at the start of the road
+        G09: Short edge
       
     </span>
   </a>
@@ -941,10 +941,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g10-markers-not-in-the-order-of-the-road" class="md-nav__link">
+  <a href="#g10-first-marker-not-at-the-start-of-the-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G10: Markers not in the order of the road
+        G10: First marker not at the start of the road
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g11-markers-not-in-the-order-of-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G11: Markers not in the order of the road
       
     </span>
   </a>
@@ -1456,10 +1467,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g06-road-with-branches" class="md-nav__link">
+  <a href="#g06-previous-and-next-edges-inconsistent-with-the-geometry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G06: Road with branches
+        G06: Previous and next edges inconsistent with the geometry
       
     </span>
   </a>
@@ -1467,10 +1478,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g07-parallel-edges-of-the-same-road" class="md-nav__link">
+  <a href="#g07-road-with-branches" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G07: Parallel edges of the same road
+        G07: Road with branches
       
     </span>
   </a>
@@ -1478,10 +1489,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g08-short-edge" class="md-nav__link">
+  <a href="#g08-parallel-edges-of-the-same-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G08: Short edge
+        G08: Parallel edges of the same road
       
     </span>
   </a>
@@ -1489,10 +1500,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g09-first-marker-not-at-the-start-of-the-road" class="md-nav__link">
+  <a href="#g09-short-edge" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G09: First marker not at the start of the road
+        G09: Short edge
       
     </span>
   </a>
@@ -1500,10 +1511,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#g10-markers-not-in-the-order-of-the-road" class="md-nav__link">
+  <a href="#g10-first-marker-not-at-the-start-of-the-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G10: Markers not in the order of the road
+        G10: First marker not at the start of the road
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g11-markers-not-in-the-order-of-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G11: Markers not in the order of the road
       
     </span>
   </a>
@@ -1664,27 +1686,32 @@ the algorithm Fix the road graph issues fixes the issues in this order.</p>
 <td><code>reverse_edges</code></td>
 </tr>
 <tr>
-<td><a href="#g06-road-with-branches">G06</a></td>
+<td><a href="#g06-previous-and-next-edges-inconsistent-with-the-geometry">G06</a></td>
+<td>Previous and next edges inconsistent with the geometry</td>
+<td><code>relink_edges</code></td>
+</tr>
+<tr>
+<td><a href="#g07-road-with-branches">G07</a></td>
 <td>Road with branches: more than two edges of the road at a node</td>
 <td>manual</td>
 </tr>
 <tr>
-<td><a href="#g07-parallel-edges-of-the-same-road">G07</a></td>
+<td><a href="#g08-parallel-edges-of-the-same-road">G08</a></td>
 <td>Parallel edges of the same road, for example two carriageways</td>
 <td>manual</td>
 </tr>
 <tr>
-<td><a href="#g08-short-edge">G08</a></td>
+<td><a href="#g09-short-edge">G09</a></td>
 <td>Short edge</td>
 <td><code>collapse_edge</code></td>
 </tr>
 <tr>
-<td><a href="#g09-first-marker-not-at-the-start-of-the-road">G09</a></td>
+<td><a href="#g10-first-marker-not-at-the-start-of-the-road">G10</a></td>
 <td>First marker not at the start of the road</td>
 <td><code>move_marker</code></td>
 </tr>
 <tr>
-<td><a href="#g10-markers-not-in-the-order-of-the-road">G10</a></td>
+<td><a href="#g11-markers-not-in-the-order-of-the-road">G11</a></td>
 <td>Markers not in the order of the road</td>
 <td>manual</td>
 </tr>
@@ -1837,8 +1864,30 @@ in the direction of the road (<code>markers_in_road_direction</code>) and in the
 <span class="k">SET</span><span class="w"> </span><span class="n">default_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">default_options</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;{&quot;marker_tolerance&quot;: 20}&#39;</span>
 <span class="k">WHERE</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G05&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="g06-road-with-branches">G06: Road with branches<a class="headerlink" href="#g06-road-with-branches" title="Permanent link">#</a></h3>
+<h3 id="g06-previous-and-next-edges-inconsistent-with-the-geometry">G06: Previous and next edges inconsistent with the geometry<a class="headerlink" href="#g06-previous-and-next-edges-inconsistent-with-the-geometry" title="Permanent link">#</a></h3>
 <p><img alt="G06: issue and fix" src="../../media/user-guide/graph_checks_g06.svg" /></p>
+<p>The fields <code>previous_edge_id</code> and <code>next_edge_id</code> of the edges give the <strong>order of the edges</strong> of the road,
+used to calculate the references. They are set by the triggers, but can be wrong after an import,
+or after modifications made without the triggers. The references of the whole road are then wrong.</p>
+<p>The check returns one issue for each road with edges whose next edge:</p>
+<ul>
+<li>does not start at the end node of the edge, whereas another edge of the road starts there,</li>
+<li>or is connected to another edge, or to the edge in the opposite direction.</li>
+</ul>
+<p>The previous edge is checked the same way. The other links, across a gap of the road, for example on both sides
+of a roundabout, are kept. The roundabouts are ignored. The field <code>details</code> gives the number of edges and,
+for each edge, its previous and next edges (<code>previous_edge_id</code>, <code>next_edge_id</code>) and the expected ones
+(<code>expected_previous_edge_id</code>, <code>expected_next_edge_id</code>).</p>
+<p>Fix action:</p>
+<ul>
+<li><code>relink_edges</code>: set the expected previous and next edges of the road: the edges connected by the nodes,
+  or no link. Then the references of the road are calculated again.</li>
+</ul>
+<p>Fix the issues of the checks <a href="#g03-nodes-close-to-each-other">G03</a> and
+<a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a> before: two close nodes or a reversed edge
+break the links. The next checks use the order of the edges.</p>
+<h3 id="g07-road-with-branches">G07: Road with branches<a class="headerlink" href="#g07-road-with-branches" title="Permanent link">#</a></h3>
+<p><img alt="G07: issue and fix" src="../../media/user-guide/graph_checks_g07.svg" /></p>
 <p>A road must be a line: its edges follow each other, without branches. The ramps of an interchange or of a roundabout,
 or the two carriageways of a road, must have their own road code. Else the order of the edges of the road,
 and so the references, cannot be calculated.</p>
@@ -1850,10 +1899,10 @@ at the node (<code>edge_count</code>), and the ids of the edges of the main line
 <p>There is no fix action: give another road code to the edges of the branches, for example a new road
 for a ramp. Check the main line proposed by the check, especially when the edges are not in the direction of the road
 (check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</p>
-<h3 id="g07-parallel-edges-of-the-same-road">G07: Parallel edges of the same road<a class="headerlink" href="#g07-parallel-edges-of-the-same-road" title="Permanent link">#</a></h3>
-<p><img alt="G07: issue and fix" src="../../media/user-guide/graph_checks_g07.svg" /></p>
+<h3 id="g08-parallel-edges-of-the-same-road">G08: Parallel edges of the same road<a class="headerlink" href="#g08-parallel-edges-of-the-same-road" title="Permanent link">#</a></h3>
+<p><img alt="G08: issue and fix" src="../../media/user-guide/graph_checks_g08.svg" /></p>
 <p>The two carriageways of a road must have their own road code. When they use the same code without being connected,
-the check <a href="#g06-road-with-branches">G06</a> does not find them.</p>
+the check <a href="#g07-road-with-branches">G07</a> does not find them.</p>
 <p>The check returns one issue, with the severity <code>warning</code>, for each pair of edges of the same road,
 not connected by a node, which <strong>run along each other</strong>:</p>
 <ul>
@@ -1866,8 +1915,8 @@ The field <code>details</code> gives the <code>distance</code> between the edges
 (<code>parallel_length</code>). The line of the issue shows the parallel parts of the edges.</p>
 <p>There is no fix action: give another road code to one of the carriageways. A road which comes back near itself,
 for example a hairpin bend, can also be found: in this case, there is nothing to fix.</p>
-<h3 id="g08-short-edge">G08: Short edge<a class="headerlink" href="#g08-short-edge" title="Permanent link">#</a></h3>
-<p><img alt="G08: issue and fix" src="../../media/user-guide/graph_checks_g08.svg" /></p>
+<h3 id="g09-short-edge">G09: Short edge<a class="headerlink" href="#g09-short-edge" title="Permanent link">#</a></h3>
+<p><img alt="G09: issue and fix" src="../../media/user-guide/graph_checks_g09.svg" /></p>
 <p>A very short edge often comes from the digitizing: for example two junctions a few decimeters from each other
 instead of a crossroads, or a small piece of road left at the end of an edge.</p>
 <p>The check returns one issue for each edge shorter than the option <code>min_length</code>, <strong>3 m</strong> by default.
@@ -1886,8 +1935,8 @@ The field <code>details</code> gives the <code>length</code>, the number of othe
   their last segment is redirected, by less than the length of the short edge.</li>
 </ul>
 <p>The only edge of a road has no fix action: the road would not have any edge anymore.</p>
-<h3 id="g09-first-marker-not-at-the-start-of-the-road">G09: First marker not at the start of the road<a class="headerlink" href="#g09-first-marker-not-at-the-start-of-the-road" title="Permanent link">#</a></h3>
-<p><img alt="G09: issue and fix" src="../../media/user-guide/graph_checks_g09.svg" /></p>
+<h3 id="g10-first-marker-not-at-the-start-of-the-road">G10: First marker not at the start of the road<a class="headerlink" href="#g10-first-marker-not-at-the-start-of-the-road" title="Permanent link">#</a></h3>
+<p><img alt="G10: issue and fix" src="../../media/user-guide/graph_checks_g10.svg" /></p>
 <p>The <strong>first marker</strong> of a road is the marker with the lowest code and abscissa: it is often the marker 0,
 but it can be a virtual marker with a higher code. It must be at the <strong>start point of the first edge</strong> of the road,
 the edge without previous edge. When it is a few centimeters after it, the start of the road has no reference.</p>
@@ -1902,8 +1951,8 @@ to the start of the road, its position along the first edge (<code>position_on_e
   <strong>1 m</strong> by default. Farther, check the road manually: the marker may be right, and the first edge wrong,
   for example when the road is in the opposite direction (check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</li>
 </ul>
-<h3 id="g10-markers-not-in-the-order-of-the-road">G10: Markers not in the order of the road<a class="headerlink" href="#g10-markers-not-in-the-order-of-the-road" title="Permanent link">#</a></h3>
-<p><img alt="G10: issue and fix" src="../../media/user-guide/graph_checks_g10.svg" /></p>
+<h3 id="g11-markers-not-in-the-order-of-the-road">G11: Markers not in the order of the road<a class="headerlink" href="#g11-markers-not-in-the-order-of-the-road" title="Permanent link">#</a></h3>
+<p><img alt="G11: issue and fix" src="../../media/user-guide/graph_checks_g11.svg" /></p>
 <p>Sorted by code and abscissa, the markers of a road must follow each other along the road:
 else, the references calculated from them are wrong.</p>
 <p>The <strong>position</strong> of each marker along its road is the cumulative length of the road at its closest edge,

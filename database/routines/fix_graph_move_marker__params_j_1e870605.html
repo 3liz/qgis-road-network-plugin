@@ -85,7 +85,7 @@
                         </div>
                         <!-- /.box-header -->
                         <div class="box-body clearfix">
-                            <p><p>Action move_marker run by the function fix_graph_issue, to fix the issues of the check G09: move the first marker of a road to the start of the road.</p>
+                            <p><p>Action move_marker run by the function fix_graph_issue, to fix the issues of the check G10: move the first marker of a road to the start of the road.</p>
 <p>The parameter _params must contain the ids of the marker and of the first edge of the road, and the start point of the edge as EWKT: {&ldquo;marker_id&rdquo;: 12, &ldquo;edge_id&rdquo;: 34, &ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;}. The marker is moved to the start point of the edge: the triggers calculate again the references of the road.</p>
 <p>It returns a JSON object with the keys status (success, skipped if the marker does not exist anymore, is already at the start of the road, or if the edge does not start at the given point anymore) and message.</p></p>
                         </div>
