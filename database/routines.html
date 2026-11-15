@@ -387,7 +387,9 @@
                                         <td>false</td>
                                         <td>geometry</td>
                                         <td>INVOKER</td>
-                                        <td><p>Reorder the parts of the given road MULTILINESTRING based on the graph. For each part, the references of the start &amp; end points is calculated, which helps to reorder the parts. We also reverse the geometry if needed (since the ST_OffsetCurve sometimes does not respect the node order)</p></td>
+                                        <td><p>Reorder the parts of the given road MULTILINESTRING based on the graph.</p>
+<p>For each part, the position of its start and end points along the road is given by the order of their closest edge of the road, and by their location along this edge: the parts are ordered by these positions, and reversed if needed (since the ST_OffsetCurve sometimes does not respect the node order). The references of the points are not calculated, which is much faster. The function is not compiled by the JIT: the high costs of the PostGIS functions trigger it, which is slower here.</p>
+<p>The geometry is returned untouched if a part is more than 50 m from the road.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/update_managed_object_linked_ge_a13184cd.html">update_managed_object_linked_geometries()</a></td>
@@ -504,6 +506,15 @@
 <p>Only the edges downstream of the edge closest to the marker, or to its old position, are updated.</p></td>
                                     </tr>
                                     <tr>
+                                        <td><a href="routines/get_downstream_multilinestring__b24d02d7.html">get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>jsonb</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.</p></td>
+                                    </tr>
+                                    <tr>
                                         <td><a href="routines/check_graph_first_marker__road__f2f4cc1c.html">check_graph_first_marker(_road_codes text[], _options jsonb)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -514,15 +525,6 @@
 <p>The first marker of a road is the marker with the lowest code and abscissa: it is often the marker 0, but it can be a virtual marker with a higher code. It must be at the start point of the first edge of the road, the edge without previous edge. Else, when the marker is after the start point, the start of the road has no reference. The roundabouts are ignored.</p>
 <p>An issue is returned for each road whose first marker is more than 5 cm from the start of the road. The severity is error if the start of the first edge has no reference, else warning. The details give the code, abscissa and type of the marker, its distance to the start of the road, its position along the first edge, and if the start of the first edge has a reference.</p>
 <p>The issue can be fixed with the action move_marker, which moves the marker to the start of the road, when it is less than the option tolerance from it (1 m by default). Else, the issue must be fixed manually.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/get_downstream_multilinestring__b24d02d7.html">get_downstream_multilinestring_from_reference(_road_code text, _marker_code integer, _abscissa real)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>jsonb</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Returns a JSON object with the given references and the MULTILINESTRING downstream road from given references to the road end.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/fix_graph_delete_node__params_j_f7695897.html">fix_graph_delete_node(_params jsonb)</a></td>
