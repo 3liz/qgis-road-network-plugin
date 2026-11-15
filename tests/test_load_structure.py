@@ -65,6 +65,17 @@ TABLES_FOR_CURRENT_VERSION = [
 ]
 
 
+def fetch_one(cursor: psycopg.Cursor) -> tuple:
+    """Fetch the next row of a cursor, failing the test if there is none.
+
+    :param cursor: The cursor of an executed query
+    :return: The fetched row
+    """
+    row = cursor.fetchone()
+    assert row is not None
+    return row
+
+
 def test_processing_create(db_schema: str, db_connection: psycopg.Connection, processing_provider: Provider):
     """Test the processing algorithm for creating the database structure."""
 
@@ -2726,7 +2737,10 @@ def test_merge_table_linestring_features(rollback_db_connection: psycopg.Connect
     cursor.execute("""
         SELECT road_graph.split_table_linestring_feature_by_point(
             'managed', 'demo_safety_barriers', 3,
-            (SELECT ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4) FROM managed.demo_safety_barriers WHERE id = 3)
+            (
+                SELECT ST_LineInterpolatePoint(ST_GeometryN(geom, 1), 0.4)
+                FROM managed.demo_safety_barriers WHERE id = 3
+            )
         )->>'status'
     """)
     row = cursor.fetchone()
@@ -3869,12 +3883,12 @@ def test_check_graph_crossing_edges(rollback_db_connection: psycopg.Connection):
 
     # Crossing edges connected: a node is created and the two edges are split
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
-    edges_count = cursor.fetchone()[0]
+    edges_count = fetch_one(cursor)[0]
     result = fix("cut_edges", crossing[0][1])
     assert result["status"] == "success", result
     assert "new node" in result["message"]
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
-    assert cursor.fetchone()[0] == edges_count + 2
+    assert fetch_one(cursor)[0] == edges_count + 2
 
     # Crossing edges on a bridge: only the given edge is marked
     params = dict(crossing[1][1], edge_id=crossing[1][2][0])
@@ -3894,7 +3908,7 @@ def test_check_graph_crossing_edges(rollback_db_connection: psycopg.Connection):
 
     # The production schema is not modified
     cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G01'])")
-    assert cursor.fetchone()[0] == sum(counts.values())
+    assert fetch_one(cursor)[0] == sum(counts.values())
 
 
 def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest.MonkeyPatch):
@@ -4047,7 +4061,7 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection,
         SELECT count(*), max((details->>'distance')::numeric)::float, bool_and(fix_action = 'extend_edge')
         FROM road_graph.check_graph(ARRAY['G02'])
     """)
-    count, max_distance, all_extend = cursor.fetchone()
+    count, max_distance, all_extend = fetch_one(cursor)
     assert count > 0
     assert max_distance <= 2
     assert all_extend
@@ -4057,7 +4071,7 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection,
         SELECT count(*), max((details->>'distance')::numeric)::float
         FROM road_graph.check_graph(ARRAY['G02'], NULL, '{"G02": {"tolerance": 0.5}}')
     """)
-    small_count, small_max_distance = cursor.fetchone()
+    small_count, small_max_distance = fetch_one(cursor)
     assert small_count < count
     assert small_max_distance <= 0.5
 
@@ -4087,9 +4101,9 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection,
         AND {issue_filter}
         LIMIT 1
     """)
-    params, join_type = cursor.fetchone()
+    params, join_type = fetch_one(cursor)
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
-    edges_count = cursor.fetchone()[0]
+    edges_count = fetch_one(cursor)[0]
 
     def fix() -> dict:
         """Fix the issue in the editing session."""
@@ -4115,16 +4129,16 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection,
         """,
         params,
     )
-    distance, edges_at_node = cursor.fetchone()
+    distance, edges_at_node = fetch_one(cursor)
     # The coordinates of the nodes and edges are rounded to 10 cm by the triggers
     assert distance < 0.1
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
     if join_type == "edge":
         assert edges_at_node == 3
-        assert cursor.fetchone()[0] == edges_count + 1
+        assert fetch_one(cursor)[0] == edges_count + 1
     else:
         assert edges_at_node >= 2
-        assert cursor.fetchone()[0] == edges_count
+        assert fetch_one(cursor)[0] == edges_count
 
     # The issue is fixed
     assert fix()["status"] == "skipped"
@@ -4132,7 +4146,7 @@ def test_check_graph_t_junction_gaps(rollback_db_connection: psycopg.Connection,
         "SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G02']) WHERE fix_params->>'point' = %s",
         (params["point"],),
     )
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
 
 def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
@@ -4162,7 +4176,7 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
         JOIN node_edges AS k ON k.id = i.node_ids[1]
         JOIN node_edges AS r ON r.id = i.node_ids[2]
     """)
-    count, max_distance, all_merge, keep_first = cursor.fetchone()
+    count, max_distance, all_merge, keep_first = fetch_one(cursor)
     assert count > 0
     assert max_distance <= 1
     assert all_merge
@@ -4172,7 +4186,7 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
     cursor.execute("""
         SELECT count(*) FROM road_graph.check_graph(ARRAY['G03'], NULL, '{"G03": {"tolerance": 0.15}}')
     """)
-    assert cursor.fetchone()[0] < count
+    assert fetch_one(cursor)[0] < count
 
     # Editing session around an issue
     cursor.execute("""
@@ -4196,7 +4210,7 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
         ORDER BY i.id
         LIMIT 1
     """)
-    params, edge_ids = cursor.fetchone()
+    params, edge_ids = fetch_one(cursor)
 
     def fix() -> dict:
         """Fix the issue in the editing session."""
@@ -4213,7 +4227,7 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
         "SELECT count(*) FROM road_graph_editing.nodes WHERE id = %s",
         (params["remove_node_id"],),
     )
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
     cursor.execute(
         """
         SELECT count(*)
@@ -4222,7 +4236,7 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
         """,
         (edge_ids, params["keep_node_id"]),
     )
-    assert cursor.fetchone()[0] == len(edge_ids)
+    assert fetch_one(cursor)[0] == len(edge_ids)
 
     # The issue is fixed
     assert fix()["status"] == "skipped"
@@ -4233,7 +4247,7 @@ def test_check_graph_close_nodes(rollback_db_connection: psycopg.Connection):
         """,
         (str(params["remove_node_id"]),),
     )
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
 
 def test_edge_update_keeps_closest_node(rollback_db_connection: psycopg.Connection):
@@ -4253,7 +4267,7 @@ def test_edge_update_keeps_closest_node(rollback_db_connection: psycopg.Connecti
             ON n.node_id IN (e.start_node, e.end_node)
     """)
     cursor.execute("SELECT count(*) FROM test_close_node_edges")
-    count = cursor.fetchone()[0]
+    count = fetch_one(cursor)[0]
     assert count > 0
 
     # Modify only the vertices between the start and end points of these edges
@@ -4272,7 +4286,7 @@ def test_edge_update_keeps_closest_node(rollback_db_connection: psycopg.Connecti
             ON e.id = t.edge_id
         WHERE CASE WHEN t.is_start THEN e.start_node ELSE e.end_node END = t.node_id
     """)
-    assert cursor.fetchone()[0] == count
+    assert fetch_one(cursor)[0] == count
 
 
 def test_edge_reversed_geometry(rollback_db_connection: psycopg.Connection):
@@ -4293,7 +4307,7 @@ def test_edge_reversed_geometry(rollback_db_connection: psycopg.Connection):
         ORDER BY e.id
         LIMIT 1
     """)
-    edge_id, road_code, start_node, end_node, previous_edge_id, next_edge_id = cursor.fetchone()
+    edge_id, road_code, start_node, end_node, previous_edge_id, next_edge_id = fetch_one(cursor)
     road_edges_sql = """
         SELECT
             e.id, e.start_node, e.end_node, e.previous_edge_id, e.next_edge_id,
@@ -4341,7 +4355,7 @@ def test_check_graph_reversed_edges(rollback_db_connection: psycopg.Connection):
 
     # The test data does not contain reversed edges
     cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G05'])")
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
     # Two consecutive edges in the middle of a road, and an editing session around the road
     cursor.execute("""
@@ -4355,7 +4369,7 @@ def test_check_graph_reversed_edges(rollback_db_connection: psycopg.Connection):
         ORDER BY e.id
         LIMIT 1
     """)
-    road_code, first_id, second_id = cursor.fetchone()
+    road_code, first_id, second_id = fetch_one(cursor)
     cursor.execute(
         """
         INSERT INTO road_graph.editing_sessions (label, author, geom)
@@ -4419,7 +4433,7 @@ def test_check_graph_reversed_edges(rollback_db_connection: psycopg.Connection):
     # The issue is fixed
     assert fix()["status"] == "skipped"
     cursor.execute("SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G05'], %s)", ([road_code],))
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
 
 def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
@@ -4429,7 +4443,7 @@ def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
 
     # The test data does not contain roads with branches
     cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G06'])")
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
     # Add a branch at the node between two edges of a road
     cursor.execute("""
@@ -4441,7 +4455,7 @@ def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
         ORDER BY e.id
         LIMIT 1
     """)
-    road_code, node_id, arriving_id, leaving_id = cursor.fetchone()
+    road_code, node_id, arriving_id, leaving_id = fetch_one(cursor)
     cursor.execute(
         """
         INSERT INTO road_graph.edges (road_code, geom)
@@ -4452,7 +4466,7 @@ def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
         """,
         (road_code, node_id),
     )
-    branch_id = cursor.fetchone()[0]
+    branch_id = fetch_one(cursor)[0]
 
     # One issue at the node, without fix action: the branch is the new edge
     cursor.execute(
@@ -4486,7 +4500,7 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
             bool_and(fix_action IS NULL AND severity = 'warning')
         FROM road_graph.check_graph(ARRAY['G07'])
     """)
-    count, all_parallel, all_manual = cursor.fetchone()
+    count, all_parallel, all_manual = fetch_one(cursor)
     assert all_parallel
     assert all_manual
 
@@ -4494,7 +4508,7 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
     cursor.execute("""
         SELECT count(*) FROM road_graph.check_graph(ARRAY['G07'], NULL, '{"G07": {"min_length": 5000}}')
     """)
-    assert cursor.fetchone()[0] < count or count == 0
+    assert fetch_one(cursor)[0] < count or count == 0
 
     # Add a carriageway 15 m from an edge of a road, with the code of the road
     cursor.execute("""
@@ -4508,7 +4522,7 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
         ORDER BY e.id
         LIMIT 1
     """)
-    edge_id, road_code = cursor.fetchone()
+    edge_id, road_code = fetch_one(cursor)
     cursor.execute(
         """
         INSERT INTO road_graph.edges (road_code, geom)
@@ -4519,7 +4533,7 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
         """,
         (edge_id,),
     )
-    carriageway_id = cursor.fetchone()[0]
+    carriageway_id = fetch_one(cursor)[0]
 
     # One issue for the two edges
     cursor.execute(
@@ -4555,7 +4569,7 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
             )
         FROM road_graph.check_graph(ARRAY['G08']) AS i
     """)
-    count, all_short, all_fix_actions = cursor.fetchone()
+    count, all_short, all_fix_actions = fetch_one(cursor)
     assert count > 0
     assert all_short
     assert all_fix_actions
@@ -4564,7 +4578,7 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
     cursor.execute("""
         SELECT count(*) FROM road_graph.check_graph(ARRAY['G08'], NULL, '{"G08": {"min_length": 2.2}}')
     """)
-    assert cursor.fetchone()[0] < count
+    assert fetch_one(cursor)[0] < count
 
     # A short edge arriving at a roundabout is ignored
     cursor.execute("""
@@ -4584,12 +4598,12 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
         JOIN road_graph.nodes AS n ON n.id = rn.node_id
         RETURNING id
     """)
-    roundabout_edge_id = cursor.fetchone()[0]
+    roundabout_edge_id = fetch_one(cursor)[0]
     cursor.execute(
         "SELECT count(*) FROM road_graph.check_graph(ARRAY['G08']) WHERE edge_ids = ARRAY[%s]::integer[]",
         (roundabout_edge_id,),
     )
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
     # Editing session around an issue with a fix action
     cursor.execute("""
@@ -4617,10 +4631,10 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
         ORDER BY i.id
         LIMIT 1
     """)
-    params, road_code = cursor.fetchone()
+    params, road_code = fetch_one(cursor)
     road_length_sql = "SELECT sum(ST_Length(geom)) FROM road_graph_editing.edges WHERE road_code = %s"
     cursor.execute(road_length_sql, (road_code,))
-    road_length = cursor.fetchone()[0]
+    road_length = fetch_one(cursor)[0]
     cursor.execute(
         """
         SELECT array_agg(e.id ORDER BY e.id)
@@ -4629,7 +4643,7 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
         """,
         (params["remove_node_id"], params["edge_id"]),
     )
-    moved_edge_ids = cursor.fetchone()[0]
+    moved_edge_ids = fetch_one(cursor)[0]
 
     def fix() -> dict:
         """Fix the issue in the editing session."""
@@ -4648,13 +4662,13 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
     # the length of the road has not changed
     assert "geometry added" in result["message"]
     cursor.execute(road_length_sql, (road_code,))
-    assert abs(cursor.fetchone()[0] - road_length) < 0.01
+    assert abs(fetch_one(cursor)[0] - road_length) < 0.01
 
     # The edge and the node to remove have been deleted, and the other edges use the node to keep
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE id = %s", (params["edge_id"],))
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
     cursor.execute("SELECT count(*) FROM road_graph_editing.nodes WHERE id = %s", (params["remove_node_id"],))
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
     cursor.execute(
         """
         SELECT count(*)
@@ -4663,7 +4677,7 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
         """,
         (moved_edge_ids, params["keep_node_id"]),
     )
-    assert cursor.fetchone()[0] == len(moved_edge_ids)
+    assert fetch_one(cursor)[0] == len(moved_edge_ids)
 
     # The issue is fixed
     assert fix()["status"] == "skipped"
@@ -4677,7 +4691,7 @@ def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
 
     # In the test data, the first marker of the roads is at the start of the roads
     cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G09'])")
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
     # Editing session around the start of a road whose first marker is the marker 0
     cursor.execute("""
@@ -4691,7 +4705,7 @@ def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
         ORDER BY e.id
         LIMIT 1
     """)
-    road_code, edge_id, marker_id = cursor.fetchone()
+    road_code, edge_id, marker_id = fetch_one(cursor)
     cursor.execute(
         """
         INSERT INTO road_graph.editing_sessions (label, author, geom)
@@ -4753,7 +4767,7 @@ def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
     assert cursor.fetchone() == (0, 0)
     assert fix()["status"] == "skipped"
     cursor.execute("SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G09'], %s)", ([road_code],))
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
 
 def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
@@ -4768,7 +4782,7 @@ def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
         )
         FROM road_graph.check_graph(ARRAY['G10'])
     """)
-    count, all_order = cursor.fetchone()
+    count, all_order = fetch_one(cursor)
     assert count > 0
     assert all_order
 
@@ -4786,7 +4800,7 @@ def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
         ORDER BY a.road_code, a.code
         LIMIT 1
     """)
-    road_code, first_id, second_id = cursor.fetchone()
+    road_code, first_id, second_id = fetch_one(cursor)
     cursor.execute(
         """
         UPDATE road_graph.markers AS m
@@ -4831,7 +4845,7 @@ def test_edge_old_end_node_deleted(rollback_db_connection: psycopg.Connection):
         ORDER BY e.id, n.id
         LIMIT 1
     """)
-    edge_id, old_end_node, new_end_node = cursor.fetchone()
+    edge_id, old_end_node, new_end_node = fetch_one(cursor)
 
     # Move the end point of the edge to the other node
     cursor.execute(
@@ -4844,9 +4858,9 @@ def test_edge_old_end_node_deleted(rollback_db_connection: psycopg.Connection):
         (edge_id, new_end_node),
     )
     cursor.execute("SELECT end_node FROM road_graph.edges WHERE id = %s", (edge_id,))
-    assert cursor.fetchone()[0] == new_end_node
+    assert fetch_one(cursor)[0] == new_end_node
     cursor.execute("SELECT count(*) FROM road_graph.nodes WHERE id = %s", (old_end_node,))
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
 
 @pytest.mark.parametrize("linked", [False, True])
@@ -4884,16 +4898,16 @@ def test_node_moved_near_another_node(rollback_db_connection: psycopg.Connection
         """,
         {"linked": linked},
     )
-    node_id, other_node_id, link_id = cursor.fetchone()
+    node_id, other_node_id, link_id = fetch_one(cursor)
     edges_sql = """
         SELECT array_agg(e.id ORDER BY e.id)
         FROM road_graph.edges AS e
         WHERE %s IN (e.start_node, e.end_node)
     """
     cursor.execute(edges_sql, (node_id,))
-    node_edges = cursor.fetchone()[0]
+    node_edges = fetch_one(cursor)[0]
     cursor.execute(edges_sql, (other_node_id,))
-    other_node_edges = cursor.fetchone()[0]
+    other_node_edges = fetch_one(cursor)[0]
 
     # Move the node 30 cm from the other node
     cursor.execute(
@@ -4908,15 +4922,15 @@ def test_node_moved_near_another_node(rollback_db_connection: psycopg.Connection
 
     # The other node is deleted, and its edges use the node, except the edge linking them, deleted
     cursor.execute("SELECT count(*) FROM road_graph.nodes WHERE id = %s", (other_node_id,))
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
     expected_edges = sorted({*node_edges, *other_node_edges} - {link_id})
     cursor.execute(edges_sql, (node_id,))
-    assert cursor.fetchone()[0] == expected_edges
+    assert fetch_one(cursor)[0] == expected_edges
     cursor.execute(
         "SELECT count(*) FROM road_graph.edges WHERE start_node = %s AND end_node = %s",
         (node_id, node_id),
     )
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
 
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
@@ -4931,7 +4945,7 @@ def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
             bool_and(details->>'node_type' = 'two_edges' AND cardinality(edge_ids) = 2)
         FROM road_graph.check_graph(ARRAY['G04'])
     """)
-    count, all_delete, all_warning, all_two_edges = cursor.fetchone()
+    count, all_delete, all_warning, all_two_edges = fetch_one(cursor)
     assert count > 0
     assert all_delete
     assert all_warning
@@ -4961,7 +4975,7 @@ def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
         """,
         (orphan_id,),
     )
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
     # Editing session around an issue whose edges have no issue of the previous checks:
     # the edges crossing other edges cannot be merged before fixing the issues of G01
@@ -4998,7 +5012,7 @@ def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
         ORDER BY i.id
         LIMIT 1
     """)
-    params, edge_ids, start_node, end_node, length = cursor.fetchone()
+    params, edge_ids, start_node, end_node, length = fetch_one(cursor)
 
     def fix() -> dict:
         """Fix the issue in the editing session."""
@@ -5013,7 +5027,7 @@ def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     # The node has been deleted, and the edges merged into the edge with the lowest id,
     # from the start node of the first edge to the end node of the second edge
     cursor.execute("SELECT count(*) FROM road_graph_editing.nodes WHERE id = %s", (params["node_id"],))
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
     cursor.execute(
         "SELECT id, start_node, end_node, ST_Length(geom) FROM road_graph_editing.edges WHERE id = ANY(%s)",
         (edge_ids,),
@@ -5033,7 +5047,7 @@ def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
         """,
         (params["node_id"],),
     )
-    assert cursor.fetchone()[0] == 0
+    assert fetch_one(cursor)[0] == 0
 
 
 def test_check_graph_useless_nodes_crossing_edges(rollback_db_connection: psycopg.Connection):
@@ -5054,7 +5068,7 @@ def test_check_graph_useless_nodes_crossing_edges(rollback_db_connection: psycop
         ORDER BY i.id
         LIMIT 1
     """)
-    params, edge_ids = cursor.fetchone()
+    params, edge_ids = fetch_one(cursor)
     cursor.execute(
         """
         INSERT INTO road_graph.editing_sessions (label, author, geom)
@@ -5069,16 +5083,16 @@ def test_check_graph_useless_nodes_crossing_edges(rollback_db_connection: psycop
     assert row is not None
     cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
-    edge_count = cursor.fetchone()[0]
+    edge_count = fetch_one(cursor)[0]
 
     # The fix returns an error, and the node and the edges are unchanged
     cursor.execute("SELECT road_graph_editing.fix_graph_issue('delete_node', %s)", (json.dumps(params),))
-    result = cursor.fetchone()[0]
+    result = fetch_one(cursor)[0]
     assert result["status"] == "error", result
     assert "G01" in result["message"]
     cursor.execute("SELECT count(*) FROM road_graph_editing.nodes WHERE id = %s", (params["node_id"],))
-    assert cursor.fetchone()[0] == 1
+    assert fetch_one(cursor)[0] == 1
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE id = ANY(%s)", (edge_ids,))
-    assert cursor.fetchone()[0] == 2
+    assert fetch_one(cursor)[0] == 2
     cursor.execute("SELECT count(*) FROM road_graph_editing.edges")
-    assert cursor.fetchone()[0] == edge_count
+    assert fetch_one(cursor)[0] == edge_count

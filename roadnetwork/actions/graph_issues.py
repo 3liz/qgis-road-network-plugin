@@ -38,7 +38,7 @@ from ..graph_issues import (
 )
 from ..plugin_tools.i18n import tr
 from ..processing.tools import get_connection_name
-from .tools import display_error_message, display_message
+from .tools import display_error_message, display_message, quote_literal
 
 
 def get_issue(layer_id: str, issue_id: int, action_name: str) -> Optional[tuple]:
@@ -167,11 +167,13 @@ def choose_graph_issue_fix(layer_id: str, issue_id: int):
     if not connection:
         display_error_message(action_name, tr("The PostgreSQL connection has not been found"))
         return
-    code = feature["check_code"].replace("'", "''")
     try:
+        # The check code is quoted as a SQL literal
         data = connection.executeSql(
-            "SELECT array_to_string(fix_actions, ',') "
-            f"FROM \"road_graph\".glossary_graph_check WHERE code = '{code}'"
+            "SELECT array_to_string(fix_actions, ',') "  # nosec B608
+            "FROM \"road_graph\".glossary_graph_check WHERE code = {}".format(
+                quote_literal(feature["check_code"])
+            )
         )
     except QgsProviderConnectionException as e:
         display_error_message(action_name, str(e))
