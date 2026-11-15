@@ -618,9 +618,14 @@ It returns a JSON object with the keys status (success or error) and message.';
 
 -- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
 COMMENT ON FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) IS 'Reorder the parts of the given road MULTILINESTRING based on the graph.
-For each part, the references of the start & end points is calculated, which helps to reorder the parts.
-We also reverse the geometry if needed (since the ST_OffsetCurve sometimes does not respect the node order)
-';
+
+For each part, the position of its start and end points along the road is given by the order of their closest edge
+of the road, and by their location along this edge: the parts are ordered by these positions, and reversed
+if needed (since the ST_OffsetCurve sometimes does not respect the node order).
+The references of the points are not calculated, which is much faster.
+The function is not compiled by the JIT: the high costs of the PostGIS functions trigger it, which is slower here.
+
+The geometry is returned untouched if a part is more than 50 m from the road.';
 
 
 -- FUNCTION split_edge_by_node(edge_record record, node_record record, minimum_distance_from_linestring real, maximum_distance_from_start_end_points real)

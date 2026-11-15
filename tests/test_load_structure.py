@@ -3548,6 +3548,7 @@ def test_functions_search_path(rollback_db_connection: psycopg.Connection):
         # which trigger the JIT compilation of short queries
         "check_graph": "search_path=public | jit=off",
         "fix_graph_issue": "jit=off",
+        "reorder_multilinestring_parts": "jit=off",
         "get_managed_object_geometry_from_references": "search_path=public",
         "get_merged_geom_from_table_and_ids": "search_path=public",
         "get_reference_from_point": "search_path=public",
@@ -5028,6 +5029,45 @@ def test_references_updated_downstream(rollback_db_connection: psycopg.Connectio
     cursor.execute("SELECT road_graph.update_edge_references('D613', NULL)")
     cursor.execute(references_sql)
     assert cursor.fetchall() == references
+
+
+def test_road_substring_parts_order(rollback_db_connection: psycopg.Connection):
+    """The parts of a line calculated from references, with an offset, follow the direction of the road:
+    each part from its start to its end, and the parts one after the other.
+    The order is checked with the references of the start and end points of the parts."""
+    cursor = rollback_db_connection.cursor()
+
+    # Line of the road D100 between the markers 1 and 4, 3 m on the right: it has several parts
+    cursor.execute("""
+        SELECT
+            (p).path[1],
+            road_graph.get_reference_from_point(ST_StartPoint((p).geom), 'D100'),
+            road_graph.get_reference_from_point(ST_EndPoint((p).geom), 'D100')
+        FROM (
+            SELECT ST_Dump(ST_GeomFromGeoJSON(
+                road_graph.get_road_substring_from_references('D100', 1, 0, 4, 0, 3, 'right')->>'geom'
+            )) AS p
+        ) AS x
+        ORDER BY 1
+    """)
+    parts = cursor.fetchall()
+    assert len(parts) > 1
+
+    def position(reference: dict) -> float:
+        """Position of a point along the road, from its references.
+
+        :param reference: The references of the point
+        :return: The marker code multiplied by 100 000, plus the abscissa
+        """
+        return reference["marker_code"] * 100000 + float(reference["abscissa"])
+
+    # Each part goes in the direction of the road, and starts after the end of the previous part
+    previous_end = None
+    for _index, start, end in parts:
+        assert position(start) <= position(end)
+        if previous_end is not None:
+            assert previous_end <= position(start) + 1
+        previous_end = position(end)
 
 
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):

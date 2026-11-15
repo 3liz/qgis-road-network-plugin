@@ -13,6 +13,11 @@
   For example on a road of 118 km with 135 edges: 1 s instead of 1.6 s for a vertex moved in the middle of the road,
   and 0.3 s near its end. The edges upstream are not rewritten anymore, which also lightens the editing sessions.
   The function `update_edge_references` has a new parameter `_from_edge_ids` (migration `upgrade_to_45.sql`)
+* **SQL**: faster calculation of the lines from their references (`get_road_substring_from_references`),
+  for example for the managed objects with the update policy `geometry`: the parts of a line with an offset
+  are ordered along the road with the order of the edges, instead of the references of their start and end points.
+  The lines are the same, and a line with several parts is calculated 28 times faster: on the test data,
+  22 s instead of 48 s for 4,000 lines (migration `upgrade_to_45.sql`)
 
 ## 0.7.0 - 2026-11-15
 

@@ -960,3 +960,105 @@ $$;
 COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete() IS 'Update road edges references after a marker has been created, updated or deleted.
 
 Only the edges downstream of the edge closest to the marker, or to its old position, are updated.';
+
+
+-- Parts of the lines calculated from references: they are ordered along the road with the order of the edges,
+-- instead of the references of their start and end points. For example, 0.4 s instead of 10 s
+-- for 480 lines with several parts. The results are the same
+
+-- reorder_multilinestring_parts(geometry, text)
+CREATE OR REPLACE FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) RETURNS geometry
+    LANGUAGE plpgsql
+    SET jit TO 'off'
+    AS $$
+DECLARE
+    _result_multilinestring geometry(MULTILINESTRING, 2154);
+BEGIN
+
+    -- Return untouched geometry if road code is not given
+    IF _road_code IS NULL OR trim(_road_code) = '' THEN
+        RETURN _multilinestring;
+    END IF;
+
+    -- Return untouched geometry if NULL or not a MultiLineString
+    IF Coalesce(ST_GeometryType(_multilinestring), '') != 'ST_MultiLineString' THEN
+        RETURN _multilinestring;
+    END IF;
+
+    -- Return untouched geometry if there is only one part
+    IF ST_NumGeometries(_multilinestring) <= 1 THEN
+        RETURN _multilinestring;
+    END IF;
+
+    BEGIN
+        -- Reorder the geometry parts
+        WITH
+        -- Order of the edges of the road, in the direction of the road
+        ordered_edges AS MATERIALIZED (
+            SELECT o.id, min(o.edge_order) AS edge_order
+            FROM road_graph.get_ordered_edges(_road_code, -1, 'downstream') AS o
+            GROUP BY o.id
+        ),
+        -- Split the multilinestring into parts
+        parts AS (
+            SELECT (ST_Dump(_multilinestring)).geom
+        ),
+        -- Position of the start and end points of each part along the road:
+        -- the order of the closest edge of the road, plus the location of the point along this edge, from 0 to 1.
+        -- It increases in the direction of the road, without calculating the references of the points
+        positions AS (
+            SELECT
+                p.geom,
+                (
+                    SELECT o.edge_order + ST_LineLocatePoint(e.geom, ST_StartPoint(p.geom))
+                    FROM road_graph.edges AS e
+                    JOIN ordered_edges AS o ON o.id = e.id
+                    WHERE e.road_code = _road_code
+                    AND ST_DWithin(e.geom, ST_StartPoint(p.geom), 50)
+                    ORDER BY ST_Distance(e.geom, ST_StartPoint(p.geom)), o.edge_order
+                    LIMIT 1
+                ) AS start_position,
+                (
+                    SELECT o.edge_order + ST_LineLocatePoint(e.geom, ST_EndPoint(p.geom))
+                    FROM road_graph.edges AS e
+                    JOIN ordered_edges AS o ON o.id = e.id
+                    WHERE e.road_code = _road_code
+                    AND ST_DWithin(e.geom, ST_EndPoint(p.geom), 50)
+                    ORDER BY ST_Distance(e.geom, ST_EndPoint(p.geom)), o.edge_order
+                    LIMIT 1
+                ) AS end_position
+            FROM parts AS p
+        )
+        -- Reassemble the parts in the order of their position along the road,
+        -- and reverse the parts in the opposite direction of the road
+        SELECT INTO _result_multilinestring
+            ST_Multi(
+                ST_Collect(
+                    CASE WHEN p.start_position > p.end_position THEN ST_Reverse(p.geom) ELSE p.geom END
+                    ORDER BY least(p.start_position, p.end_position)
+                )
+            )
+        FROM positions AS p
+        -- No result if a part is far from the road: the geometry is returned untouched
+        HAVING bool_and(p.start_position IS NOT NULL AND p.end_position IS NOT NULL)
+        ;
+    EXCEPTION WHEN OTHERS THEN
+        _result_multilinestring = _multilinestring;
+    END;
+
+    RETURN Coalesce(_result_multilinestring, _multilinestring);
+
+END;
+$$;
+
+
+-- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
+COMMENT ON FUNCTION road_graph.reorder_multilinestring_parts(_multilinestring geometry, _road_code text) IS 'Reorder the parts of the given road MULTILINESTRING based on the graph.
+
+For each part, the position of its start and end points along the road is given by the order of their closest edge
+of the road, and by their location along this edge: the parts are ordered by these positions, and reversed
+if needed (since the ST_OffsetCurve sometimes does not respect the node order).
+The references of the points are not calculated, which is much faster.
+The function is not compiled by the JIT: the high costs of the PostGIS functions trigger it, which is slower here.
+
+The geometry is returned untouched if a part is more than 50 m from the road.';
