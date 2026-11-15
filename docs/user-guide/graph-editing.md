@@ -228,9 +228,10 @@ cumulative distance, and a greater abscissa if it is located before the next mar
 See [Example: impacts of a graph modification](managed-objects.md#example-impacts-of-a-graph-modification).
 
 !!! note
-    The references of the edges are recalculated for the **whole road** after a modification of its geometry
-    or of its markers: on a long road, for example a road of 100 km with more than 100 edges,
-    each modification can take a few seconds.
+    After a modification of the geometry of a road or of its markers, the references are only calculated again
+    for the edges **downstream** of the modification: a modification near the end of a long road is faster
+    than a modification near its start. For example, on a road of 118 km with 135 edges, moving a vertex
+    takes about 1.5 s near the start of the road, and 0.3 s near its end.
 
 ## How to edit the data in QGIS
 

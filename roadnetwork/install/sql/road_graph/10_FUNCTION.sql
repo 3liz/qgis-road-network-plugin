@@ -494,8 +494,9 @@ BEGIN
                 update_edge_references_result::text
             ;
         END IF;
+        -- Only from the previous edge, or else the next edge, of the deleted edge
         SELECT INTO update_edge_references_result
-            road_graph.update_edge_references(OLD.road_code, NULL)
+            road_graph.update_edge_references(OLD.road_code, NULL, ARRAY[OLD.previous_edge_id, OLD.next_edge_id])
         ;
 
     END IF;
@@ -982,8 +983,17 @@ BEGIN
                         update_edge_references_result::text
                     ;
                 END IF;
+                -- Only from the edge, or from its previous edge, whose end point may have moved with the node
                 SELECT INTO update_edge_references_result
-                    road_graph.update_edge_references(NEW.road_code, NULL)
+                    road_graph.update_edge_references(
+                        NEW.road_code,
+                        NULL,
+                        ARRAY[
+                            NEW.id,
+                            NEW.previous_edge_id,
+                            CASE WHEN TG_OP = 'UPDATE' THEN OLD.previous_edge_id END
+                        ]
+                    )
                 ;
             END IF;
         END IF;
@@ -1101,8 +1111,30 @@ BEGIN
                 update_edge_references_result::text
             ;
         END IF;
+        -- Only from the edge closest to the marker, or to its old position on the same road,
+        -- or from the previous edge of this edge, whose end point can be at the marker.
+        -- All the edges of a roundabout are updated: their order starts at the marker
         SELECT INTO update_edge_references_result
-            road_graph.update_edge_references(NEW.road_code, NULL)
+            road_graph.update_edge_references(
+                NEW.road_code,
+                NULL,
+                CASE WHEN is_roundabout THEN NULL ELSE ARRAY(
+                    SELECT unnest(ARRAY[c.id, c.previous_edge_id])
+                    FROM unnest(ARRAY[
+                        NEW.geom,
+                        CASE WHEN TG_OP = 'UPDATE' AND OLD.road_code = NEW.road_code THEN OLD.geom END
+                    ]) AS p(geom)
+                    CROSS JOIN LATERAL (
+                        SELECT e.id, e.previous_edge_id
+                        FROM road_graph.edges AS e
+                        WHERE e.road_code = NEW.road_code
+                        AND ST_DWithin(e.geom, p.geom, 50)
+                        ORDER BY ST_Distance(e.geom, p.geom), e.id
+                        LIMIT 1
+                    ) AS c
+                    WHERE p.geom IS NOT NULL
+                ) END
+            )
         ;
     END IF;
 
@@ -1120,8 +1152,25 @@ BEGIN
                 update_edge_references_result::text
             ;
         END IF;
+        -- Only from the edge closest to the old position of the marker, or from its previous edge.
+        -- The OLD road can be a roundabout: in this case, all its edges are updated
         SELECT INTO update_edge_references_result
-            road_graph.update_edge_references(OLD.road_code, NULL)
+            road_graph.update_edge_references(
+                OLD.road_code,
+                NULL,
+                CASE WHEN (SELECT r.road_type FROM road_graph.roads AS r WHERE r.road_code = OLD.road_code) = 'roundabout'
+                THEN NULL ELSE ARRAY(
+                    SELECT unnest(ARRAY[c.id, c.previous_edge_id])
+                    FROM (
+                        SELECT e.id, e.previous_edge_id
+                        FROM road_graph.edges AS e
+                        WHERE e.road_code = OLD.road_code
+                        AND ST_DWithin(e.geom, OLD.geom, 50)
+                        ORDER BY ST_Distance(e.geom, OLD.geom), e.id
+                        LIMIT 1
+                    ) AS c
+                ) END
+            )
         ;
     END IF;
 
@@ -1135,7 +1184,9 @@ $$;
 
 
 -- FUNCTION after_marker_insert_or_update_or_delete()
-COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete() IS 'Update road edges references after a marker has been created, updated or deleted.';
+COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete() IS 'Update road edges references after a marker has been created, updated or deleted.
+
+Only the edges downstream of the edge closest to the marker, or to its old position, are updated.';
 
 
 -- after_node_insert_or_update()
@@ -9122,8 +9173,8 @@ depending on the value of the _toggle parameter
 ';
 
 
--- update_edge_references(text, integer[])
-CREATE FUNCTION road_graph.update_edge_references(_road_code text DEFAULT NULL::text, _edge_ids integer[] DEFAULT NULL::integer[]) RETURNS boolean
+-- update_edge_references(text, integer[], integer[])
+CREATE FUNCTION road_graph.update_edge_references(_road_code text DEFAULT NULL::text, _edge_ids integer[] DEFAULT NULL::integer[], _from_edge_ids integer[] DEFAULT NULL::integer[]) RETURNS boolean
     LANGUAGE plpgsql
     AS $$
 DECLARE
@@ -9132,6 +9183,7 @@ DECLARE
     _set_config text;
     _use_cache boolean;
     raise_notice text;
+    from_edge_order integer;
 BEGIN
     -- Check if we must log
     raise_notice = road_graph.get_current_setting('road.graph.raise.notice', 'no');
@@ -9160,6 +9212,34 @@ BEGIN
     IF _road_code IS NOT NULL THEN
         SELECT road_graph.build_road_cached_objects(_road_code)
         INTO _run_build_cache;
+    END IF;
+
+    -- Only the edges downstream of the given edges are updated: the references of a point
+    -- only depend on the geometry of the road upstream of it. The first edge is the given edge
+    -- with the lowest order in the road, stored in the cache. The edges without order,
+    -- for example after a gap without next edge, are also updated.
+    -- All the edges of the road are updated if none of the given edges has an order
+    IF _from_edge_ids IS NOT NULL AND _road_code IS NOT NULL AND _use_cache THEN
+        SELECT min((r.edge_orders->>(f.id::text))::integer)
+        INTO from_edge_order
+        FROM road_cache AS r, unnest(_from_edge_ids) AS f(id)
+        WHERE r.road_code = _road_code
+        ;
+        IF from_edge_order IS NOT NULL THEN
+            SELECT array_agg(e.id)
+            INTO _edge_ids
+            FROM road_graph.edges AS e, road_cache AS r
+            WHERE e.road_code = _road_code
+            AND r.road_code = _road_code
+            AND (_edge_ids IS NULL OR e.id = ANY(_edge_ids))
+            AND Coalesce((r.edge_orders->>(e.id::text))::integer >= from_edge_order, True)
+            ;
+            -- No edge to update
+            IF _edge_ids IS NULL THEN
+                PERFORM set_config('road.graph.disable.trigger', '0'::text, true);
+                RETURN True;
+            END IF;
+        END IF;
     END IF;
 
     -- Get edges references
@@ -9204,11 +9284,16 @@ END;
 $$;
 
 
--- FUNCTION update_edge_references(_road_code text, _edge_ids integer[])
-COMMENT ON FUNCTION road_graph.update_edge_references(_road_code text, _edge_ids integer[]) IS 'Find the edges corresponding to the optionaly given _road_code and _edges_ids
+-- FUNCTION update_edge_references(_road_code text, _edge_ids integer[], _from_edge_ids integer[])
+COMMENT ON FUNCTION road_graph.update_edge_references(_road_code text, _edge_ids integer[], _from_edge_ids integer[]) IS 'Find the edges corresponding to the optionaly given _road_code and _edges_ids
 and calculate their start and end points references.
 This method calculates the road cached objects to speed of the process
-for big roads with many edges
+for big roads with many edges.
+
+If _from_edge_ids is given with _road_code, only the edges downstream of the most upstream of these edges are updated,
+including this edge: the references of a point only depend on the geometry of the road upstream of it.
+The edges without order in the road, for example after a gap without next edge, are also updated.
+All the edges are updated if none of the given edges is found in the order of the road.
 ';
 
 

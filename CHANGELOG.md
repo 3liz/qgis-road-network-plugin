@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 45)
+
+### Changed
+
+* **SQL**: faster editing of long roads: after a modification of an edge or of a marker, the triggers only calculate
+  again the references of the edges downstream of the modification, instead of all the edges of the road.
+  For example on a road of 118 km with 135 edges: 1 s instead of 1.6 s for a vertex moved in the middle of the road,
+  and 0.3 s near its end. The edges upstream are not rewritten anymore, which also lightens the editing sessions.
+  The function `update_edge_references` has a new parameter `_from_edge_ids` (migration `upgrade_to_45.sql`)
+
 ## 0.7.0 - 2026-11-15
 
 ### Summary

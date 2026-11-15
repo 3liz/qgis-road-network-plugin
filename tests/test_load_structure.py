@@ -4933,6 +4933,103 @@ def test_node_moved_near_another_node(rollback_db_connection: psycopg.Connection
     assert fetch_one(cursor)[0] == 0
 
 
+# Modifications of the road D613, around its edge EDGE (70th edge of the road),
+# for the test of the references calculated only downstream of the modification
+DOWNSTREAM_REFERENCES_EDITS = {
+    "move_vertex": """
+        UPDATE road_graph.edges
+        SET geom = ST_SetPoint(geom, 1, ST_Translate(ST_PointN(geom, 2), 8, 8))
+        WHERE id = EDGE
+    """,
+    "crossing_edge": """
+        INSERT INTO road_graph.edges (road_code, geom)
+        SELECT 'D72', ST_MakeLine(ST_Translate(p, -60, -60), ST_Translate(p, 60, 60))
+        FROM (SELECT ST_LineInterpolatePoint(geom, 0.5) AS p FROM road_graph.edges WHERE id = EDGE) AS x
+    """,
+    "delete_edge": "DELETE FROM road_graph.edges WHERE id = EDGE",
+    "move_marker": """
+        UPDATE road_graph.markers AS m
+        SET geom = ST_LineInterpolatePoint(e.geom, 0.5)
+        FROM road_graph.edges AS e
+        WHERE e.id = EDGE
+        AND m.id = (
+            SELECT k.id FROM road_graph.markers AS k
+            WHERE k.road_code = 'D613' AND NOT k.is_virtual
+            ORDER BY k.geom <-> e.geom
+            LIMIT 1
+        )
+    """,
+    "insert_marker": """
+        INSERT INTO road_graph.markers (road_code, code, abscissa, is_virtual, geom)
+        SELECT 'D613', e.start_marker, 999, True, ST_LineInterpolatePoint(e.geom, 0.5)
+        FROM road_graph.edges AS e
+        WHERE e.id = EDGE
+    """,
+    "delete_marker": """
+        DELETE FROM road_graph.markers
+        WHERE id = (
+            SELECT k.id FROM road_graph.markers AS k, road_graph.edges AS e
+            WHERE e.id = EDGE AND k.road_code = 'D613' AND NOT k.is_virtual
+            ORDER BY k.geom <-> e.geom
+            LIMIT 1
+        )
+    """,
+}
+
+
+@pytest.mark.parametrize("edit", DOWNSTREAM_REFERENCES_EDITS.keys())
+def test_references_updated_downstream(rollback_db_connection: psycopg.Connection, edit: str):
+    """After a modification of an edge or a marker, the triggers only calculate again the references
+    of the edges downstream of the modification. The references must be the same as the ones calculated
+    for all the edges of the road. The changes are rolled back at the end of the test.
+
+    :param edit: The modification of the road, key of DOWNSTREAM_REFERENCES_EDITS
+    """
+    cursor = rollback_db_connection.cursor()
+
+    # References of all the edges of the road calculated again first:
+    # some references of the test data have been calculated by an older version
+    cursor.execute("SELECT road_graph.update_edge_references('D613', NULL)")
+    cursor.execute("""
+        SELECT o.id
+        FROM road_graph.get_ordered_edges('D613', -1, 'downstream') AS o
+        WHERE o.edge_order = 70
+    """)
+    edge_id = fetch_one(cursor)[0]
+
+    references_sql = """
+        SELECT
+            e.id, e.start_marker, round(e.start_abscissa::numeric, 1), round(e.start_cumulative::numeric, 1),
+            e.end_marker, round(e.end_abscissa::numeric, 1), round(e.end_cumulative::numeric, 1)
+        FROM road_graph.edges AS e
+        WHERE e.road_code = 'D613'
+        ORDER BY e.id
+    """
+
+    # Physical location of the first edge of the road: it changes if the row is updated
+    first_edge_sql = """
+        SELECT e.ctid::text
+        FROM road_graph.get_ordered_edges('D613', -1, 'downstream') AS o
+        JOIN road_graph.edges AS e ON e.id = o.id
+        WHERE o.edge_order = 1
+    """
+    cursor.execute(first_edge_sql)
+    first_edge_location = fetch_one(cursor)[0]
+
+    # Modification: the triggers calculate the references of the edges downstream of it,
+    # and do not update the first edge of the road
+    cursor.execute(DOWNSTREAM_REFERENCES_EDITS[edit].replace("EDGE", str(edge_id)))
+    cursor.execute(references_sql)
+    references = cursor.fetchall()
+    cursor.execute(first_edge_sql)
+    assert fetch_one(cursor)[0] == first_edge_location
+
+    # Same references as the ones calculated for all the edges
+    cursor.execute("SELECT road_graph.update_edge_references('D613', NULL)")
+    cursor.execute(references_sql)
+    assert cursor.fetchall() == references
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.

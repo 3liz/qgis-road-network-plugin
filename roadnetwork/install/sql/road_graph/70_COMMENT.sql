@@ -82,7 +82,9 @@ seulement pour les edges de même niveau
 
 
 -- FUNCTION after_marker_insert_or_update_or_delete()
-COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete() IS 'Update road edges references after a marker has been created, updated or deleted.';
+COMMENT ON FUNCTION road_graph.after_marker_insert_or_update_or_delete() IS 'Update road edges references after a marker has been created, updated or deleted.
+
+Only the edges downstream of the edge closest to the marker, or to its old position, are updated.';
 
 
 -- FUNCTION after_node_insert_or_update()
@@ -651,11 +653,16 @@ depending on the value of the _toggle parameter
 ';
 
 
--- FUNCTION update_edge_references(_road_code text, _edge_ids integer[])
-COMMENT ON FUNCTION road_graph.update_edge_references(_road_code text, _edge_ids integer[]) IS 'Find the edges corresponding to the optionaly given _road_code and _edges_ids
+-- FUNCTION update_edge_references(_road_code text, _edge_ids integer[], _from_edge_ids integer[])
+COMMENT ON FUNCTION road_graph.update_edge_references(_road_code text, _edge_ids integer[], _from_edge_ids integer[]) IS 'Find the edges corresponding to the optionaly given _road_code and _edges_ids
 and calculate their start and end points references.
 This method calculates the road cached objects to speed of the process
-for big roads with many edges
+for big roads with many edges.
+
+If _from_edge_ids is given with _road_code, only the edges downstream of the most upstream of these edges are updated,
+including this edge: the references of a point only depend on the geometry of the road upstream of it.
+The edges without order in the road, for example after a gap without next edge, are also updated.
+All the edges are updated if none of the given edges is found in the order of the road.
 ';
 
 
