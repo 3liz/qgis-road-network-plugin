@@ -2,9 +2,26 @@
 
 ## Unreleased
 
+## 0.7.0 - 2026-11-15
+
+### Summary
+
+**Highlights**
+
+* **Road graph checks**: ten checks find the issues of the road graph, for example after an import:
+  crossing edges without node, T junctions not connected, close nodes, useless nodes, reversed edges,
+  roads with branches, parallel edges, short edges and markers issues. Most of them can be fixed automatically
+  in an editing session, in batch or with a right click on the issue in QGIS
+  (see the page [Check and fix the road graph](https://docs.3liz.org/qgis-road-network-plugin/user-guide/graph-checks/))
+* **Edges and nodes**: several fixes of the triggers keeping the road graph consistent when an edge is reversed,
+  when an edge or a node is moved near another node, or when the end of an edge is moved
+
 **Upgrade notes**
 
-* Run the algorithm `Upgrade database structure` to upgrade the database (migration 44)
+* Run the algorithm `Upgrade database structure` to upgrade the database (migration 44).
+  It repairs the edges whose geometry has been reversed without swapping their start and end nodes
+* After the upgrade, run the algorithm `Check the road graph` on the production schema to get an overview
+  of the issues of the road graph, then fix them in an editing session
 
 ### Added
 
@@ -35,6 +52,7 @@
   fixed by moving the marker to the start of the road when it is less than 1 m from it
 * **Road graph checks** - G10: markers not in the order of the road, far from the road,
   or on an edge without reference, to fix manually
+* **Documentation**: new page `Check and fix the road graph`, with a diagram of each check and of its fix
 
 ### Fixed
 
@@ -49,6 +67,7 @@
   if no edge uses it anymore, like its old start node. Before, it was left without edge
 * **Nodes**: when a node is created or moved less than 50 cm from another node, the two nodes are merged,
   and the edge linking them, if any, is deleted. Before, this edge was left as a loop on the node
+
 
 ## 0.6.4 - 2026-11-12
 
