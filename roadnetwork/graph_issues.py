@@ -60,11 +60,12 @@ def check_titles() -> dict:
         "G03": tr("Nodes close to each other"),
         "G04": tr("Useless node"),
         "G05": tr("Edges in the opposite direction of the road"),
-        "G06": tr("Road with branches"),
-        "G07": tr("Parallel edges of the same road"),
-        "G08": tr("Short edge"),
-        "G09": tr("First marker not at the start of the road"),
-        "G10": tr("Markers not in the order of the road"),
+        "G06": tr("Previous and next edges inconsistent with the geometry"),
+        "G07": tr("Road with branches"),
+        "G08": tr("Parallel edges of the same road"),
+        "G09": tr("Short edge"),
+        "G10": tr("First marker not at the start of the road"),
+        "G11": tr("Markers not in the order of the road"),
     }
 
 
@@ -82,6 +83,7 @@ def fix_action_labels() -> dict:
         "reverse_edges": tr("Reverse the edges"),
         "collapse_edge": tr("Remove the edge and merge its nodes"),
         "move_marker": tr("Move the marker to the start of the road"),
+        "relink_edges": tr("Set the previous and next edges from the geometry"),
     }
 
 

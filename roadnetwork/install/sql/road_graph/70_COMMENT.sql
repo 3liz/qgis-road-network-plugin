@@ -196,8 +196,24 @@ which help to find the bridges:
   are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
 
 
+-- FUNCTION check_graph_edge_links(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_edge_links(_road_codes text[], _options jsonb) IS 'Check G06 run by the function check_graph: find the edges whose previous or next edge contradicts the geometry.
+
+The previous and next edges (fields previous_edge_id and next_edge_id) give the order of the edges of the road,
+used to calculate the references. The next edge of an edge is wrong when it does not start at the end node
+of the edge, whereas another edge of the road starts there, or when it is connected to another edge,
+or to the edge in the opposite direction. The previous edge is checked the same way. The other links,
+across a gap of the road, for example on both sides of a roundabout, are kept. The roundabouts are ignored.
+The expected link is the connected edge, or no link: a gap between two close nodes is fixed by the check G03.
+
+An issue is returned for each road. The details give the number of edges and, for each edge,
+its previous and next edges and the expected ones.
+The issue can be fixed with the action relink_edges, which sets the expected previous and next edges
+of the road, then calculates again the references of the road.';
+
+
 -- FUNCTION check_graph_first_marker(_road_codes text[], _options jsonb)
-COMMENT ON FUNCTION road_graph.check_graph_first_marker(_road_codes text[], _options jsonb) IS 'Check G09 run by the function check_graph: find the roads whose first marker is not at the start of the road.
+COMMENT ON FUNCTION road_graph.check_graph_first_marker(_road_codes text[], _options jsonb) IS 'Check G10 run by the function check_graph: find the roads whose first marker is not at the start of the road.
 
 The first marker of a road is the marker with the lowest code and abscissa: it is often the marker 0,
 but it can be a virtual marker with a higher code. It must be at the start point of the first edge of the road,
@@ -214,7 +230,7 @@ when it is less than the option tolerance from it (1 m by default). Else, the is
 
 
 -- FUNCTION check_graph_markers_order(_road_codes text[], _options jsonb)
-COMMENT ON FUNCTION road_graph.check_graph_markers_order(_road_codes text[], _options jsonb) IS 'Check G10 run by the function check_graph: find the markers which are not in the order of their road.
+COMMENT ON FUNCTION road_graph.check_graph_markers_order(_road_codes text[], _options jsonb) IS 'Check G11 run by the function check_graph: find the markers which are not in the order of their road.
 
 The position of each marker along its road is the cumulative length of the road at its closest edge of the road,
 less than the option marker_tolerance from it (50 m by default). Sorted by code and abscissa, the markers must be
@@ -228,7 +244,7 @@ The issue must be fixed manually, by moving the marker or changing its code.';
 
 
 -- FUNCTION check_graph_parallel_edges(_road_codes text[], _options jsonb)
-COMMENT ON FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) IS 'Check G07 run by the function check_graph: find the edges of the same road running parallel to each other,
+COMMENT ON FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) IS 'Check G08 run by the function check_graph: find the edges of the same road running parallel to each other,
 for example the two carriageways of a road using the same road code.
 
 An issue is returned for each pair of edges of the same road, not connected by a node, which run along each other
@@ -256,7 +272,7 @@ The issue can be fixed with the action reverse_edges, which reverses the geometr
 
 
 -- FUNCTION check_graph_road_branches(_road_codes text[], _options jsonb)
-COMMENT ON FUNCTION road_graph.check_graph_road_branches(_road_codes text[], _options jsonb) IS 'Check G06 run by the function check_graph: find the roads with branches, for example the ramps
+COMMENT ON FUNCTION road_graph.check_graph_road_branches(_road_codes text[], _options jsonb) IS 'Check G07 run by the function check_graph: find the roads with branches, for example the ramps
 or the carriageways of a road using the code of the road.
 
 An issue is returned for each node with more than two edges of the same road. The roundabouts are ignored,
@@ -269,7 +285,7 @@ The issue must be fixed manually, for example by giving another road code to the
 
 
 -- FUNCTION check_graph_short_edges(_road_codes text[], _options jsonb)
-COMMENT ON FUNCTION road_graph.check_graph_short_edges(_road_codes text[], _options jsonb) IS 'Check G08 run by the function check_graph: find the short edges, often coming from the digitizing,
+COMMENT ON FUNCTION road_graph.check_graph_short_edges(_road_codes text[], _options jsonb) IS 'Check G09 run by the function check_graph: find the short edges, often coming from the digitizing,
 for example two junctions a few decimeters from each other.
 
 An issue is returned for each edge shorter than the option min_length (3 m by default).
@@ -335,7 +351,7 @@ It also check that the edited geometries are inside the editing session polygon.
 
 
 -- FUNCTION fix_graph_collapse_edge(_params jsonb)
-COMMENT ON FUNCTION road_graph.fix_graph_collapse_edge(_params jsonb) IS 'Action collapse_edge run by the function fix_graph_issue, to fix the issues of the check G08:
+COMMENT ON FUNCTION road_graph.fix_graph_collapse_edge(_params jsonb) IS 'Action collapse_edge run by the function fix_graph_issue, to fix the issues of the check G09:
 remove a short edge, by merging its two nodes.
 
 The parameter _params must contain the ids of the edge, of the node to keep and of the node to remove:
@@ -432,7 +448,7 @@ or error if the nodes are linked by an edge) and message.';
 
 
 -- FUNCTION fix_graph_move_marker(_params jsonb)
-COMMENT ON FUNCTION road_graph.fix_graph_move_marker(_params jsonb) IS 'Action move_marker run by the function fix_graph_issue, to fix the issues of the check G09:
+COMMENT ON FUNCTION road_graph.fix_graph_move_marker(_params jsonb) IS 'Action move_marker run by the function fix_graph_issue, to fix the issues of the check G10:
 move the first marker of a road to the start of the road.
 
 The parameter _params must contain the ids of the marker and of the first edge of the road,
@@ -441,6 +457,18 @@ The marker is moved to the start point of the edge: the triggers calculate again
 
 It returns a JSON object with the keys status (success, skipped if the marker does not exist anymore,
 is already at the start of the road, or if the edge does not start at the given point anymore) and message.';
+
+
+-- FUNCTION fix_graph_relink_edges(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_relink_edges(_params jsonb) IS 'Action relink_edges run by the function fix_graph_issue, to fix the issues of the check G06:
+set the previous and next edges of the edges of a road from the geometry.
+
+The parameter _params must contain the road code: {"road_code": "D12"}.
+The wrong links of the road are found again with the check G06, then the expected previous and next edges are set,
+and the references of the road are calculated again.
+
+It returns a JSON object with the keys status (success, skipped if the links are consistent with the geometry,
+or error) and message.';
 
 
 -- FUNCTION fix_graph_reverse_edges(_params jsonb)

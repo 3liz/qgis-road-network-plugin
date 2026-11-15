@@ -6,8 +6,16 @@
 
 * Run the algorithm `Upgrade database structure` to upgrade the database (migration 45)
 
+### Added
+
+* **Road graph checks** - G06: previous and next edges inconsistent with the geometry, which give a wrong order
+  of the edges of the road and wrong references, fixed by setting them from the nodes (migration `upgrade_to_45.sql`)
+
 ### Changed
 
+* **Road graph checks**: the checks are numbered in the order of their fixes. The new check G06 is fixed after G05
+  and before the checks using the order of the edges: the checks G06 to G10 of the version 0.7.0 become G07 to G11.
+  Their options set in the table `glossary_graph_check` are kept (migration `upgrade_to_45.sql`)
 * **SQL**: faster editing of long roads: after a modification of an edge or of a marker, the triggers only calculate
   again the references of the edges downstream of the modification, instead of all the edges of the road.
   For example on a road of 118 km with 135 edges: 1 s instead of 1.6 s for a vertex moved in the middle of the road,

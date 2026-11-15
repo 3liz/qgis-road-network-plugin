@@ -1062,3 +1062,1084 @@ The references of the points are not calculated, which is much faster.
 The function is not compiled by the JIT: the high costs of the PostGIS functions trigger it, which is slower here.
 
 The geometry is returned untouched if a part is more than 50 m from the road.';
+
+
+-- Check G06: previous and next edges inconsistent with the geometry.
+-- They give the order of the edges of the road, used to calculate the references.
+-- The checks are numbered in the order of their fixes: this check must be fixed after G05,
+-- and before the checks using the order of the edges. The checks G06 to G10 become G07 to G11.
+-- Their codes are changed first, to keep the options set by the administrator
+
+UPDATE road_graph.glossary_graph_check
+SET code = 'renumbered_' || code
+WHERE code IN ('G06', 'G07', 'G08', 'G09', 'G10')
+;
+UPDATE road_graph.glossary_graph_check
+SET code = CASE code
+    WHEN 'renumbered_G06' THEN 'G07'
+    WHEN 'renumbered_G07' THEN 'G08'
+    WHEN 'renumbered_G08' THEN 'G09'
+    WHEN 'renumbered_G09' THEN 'G10'
+    WHEN 'renumbered_G10' THEN 'G11'
+END
+WHERE code LIKE 'renumbered_%'
+;
+
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G06', 'Previous and next edges inconsistent with the geometry', 'error', 'check_graph_edge_links', '{relink_edges}', '{}', 'Edges whose previous or next edge contradicts the geometry: the linked edge is not connected to the edge whereas another edge of the road is, or it is connected to another edge. The links across a gap of the road are kept. The roundabouts are ignored. Fix: relink_edges sets the previous and next edges from the geometry, then calculates again the references of the road.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G07', 'Road with branches', 'error', 'check_graph_road_branches', '{}', '{}', 'Node with more than two edges of the same road, for example the ramps or the carriageways of a road using the code of the road. The roundabouts are ignored. The branches are the edges which are not the most aligned edges arriving at the node and leaving it. Fix: manual, for example by giving another road code to the edges of the branches.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G08', 'Parallel edges of the same road', 'warning', 'check_graph_parallel_edges', '{}', '{"tolerance": 30, "min_length": 10}', 'Edges of the same road, not connected by a node, running along each other less than the tolerance from each other along at least the minimum length, for example the two carriageways of a road using the same road code. The edges which only approach each other, for example on both sides of a roundabout, and the roundabouts are ignored. Options: tolerance and min_length, in meters. Fix: manual, for example by giving another road code to one of the carriageways.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G09', 'Short edge', 'warning', 'check_graph_short_edges', '{collapse_edge}', '{"min_length": 3}', 'Edge shorter than the minimum length, for example two junctions a few decimeters from each other. The edges of the roundabouts and the edges arriving at a roundabout or leaving it are ignored, unless they are reduced to a point. Option: min_length, in meters. Fix: collapse_edge deletes the edge and merges its nodes: its geometry is added to the next or previous edge of the same road, and the other edges of the removed node are moved to the kept node. The only edge of a road has no fix action.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G10', 'First marker not at the start of the road', 'error', 'check_graph_first_marker', '{move_marker}', '{"tolerance": 1}', 'First marker of a road (lowest code and abscissa, which can be virtual) not at the start point of the first edge of the road. When the marker is after the start point, the start of the road has no reference. The roundabouts are ignored. Option: tolerance, in meters. Fix: move_marker moves the marker to the start of the road, if it is less than the tolerance from it.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+INSERT INTO road_graph.glossary_graph_check (code, title, severity, function_name, fix_actions, default_options, description)
+VALUES ('G11', 'Markers not in the order of the road', 'error', 'check_graph_markers_order', '{}', '{"marker_tolerance": 50}', 'Markers whose position along their road is not in the order of their code and abscissa. The longest sequence of markers in the order of the road is kept, and the other markers are returned. Also returns the markers far from their road (option marker_tolerance, in meters), or whose closest edge has no reference. The roundabouts are ignored. Fix: manual, by moving the marker or changing its code.')
+ON CONFLICT (code) DO UPDATE SET
+    title = EXCLUDED.title,
+    severity = EXCLUDED.severity,
+    function_name = EXCLUDED.function_name,
+    fix_actions = EXCLUDED.fix_actions,
+    description = EXCLUDED.description
+;
+
+
+-- check_graph_edge_links(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_edge_links(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Edges of the checked roads, except the roundabouts, whose order starts at their marker,
+    -- and the edges starting and ending at the same node
+    road_edges AS MATERIALIZED (
+        SELECT e.id, e.road_code, e.start_node, e.end_node, e.previous_edge_id, e.next_edge_id, e.geom
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type != 'roundabout'
+        AND e.start_node != e.end_node
+        AND (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
+    ),
+    -- Edges connected to each edge by the nodes: the only edge of the road starting at its end node,
+    -- and the only edge of the road ending at its start node. NULL if there is none, or several (branches)
+    connected AS MATERIALIZED (
+        SELECT
+            e.*,
+            (
+                SELECT CASE WHEN count(*) = 1 THEN min(n.id) END
+                FROM road_edges AS n
+                WHERE n.road_code = e.road_code
+                AND n.start_node = e.end_node
+                AND n.id != e.id
+            ) AS connected_next_id,
+            (
+                SELECT CASE WHEN count(*) = 1 THEN min(p.id) END
+                FROM road_edges AS p
+                WHERE p.road_code = e.road_code
+                AND p.end_node = e.start_node
+                AND p.id != e.id
+            ) AS connected_previous_id
+        FROM road_edges AS e
+    ),
+    -- Next and previous edges contradicting the geometry:
+    -- * another edge of the road is connected to the edge,
+    -- * or the linked edge is connected to another edge, or connected to the edge in the opposite direction.
+    -- The other links, across a gap of the road, for example on both sides of a roundabout, are kept
+    wrong_links AS (
+        SELECT
+            c.*,
+            c.next_edge_id IS DISTINCT FROM c.connected_next_id AND (
+                c.connected_next_id IS NOT NULL
+                OR n.connected_previous_id IS NOT NULL
+                OR n.connected_next_id = c.id
+            ) AS is_next_wrong,
+            c.previous_edge_id IS DISTINCT FROM c.connected_previous_id AND (
+                c.connected_previous_id IS NOT NULL
+                OR p.connected_next_id IS NOT NULL
+                OR p.connected_previous_id = c.id
+            ) AS is_previous_wrong
+        FROM connected AS c
+        LEFT JOIN connected AS n ON n.id = c.next_edge_id
+        LEFT JOIN connected AS p ON p.id = c.previous_edge_id
+    ),
+    -- Edges with a wrong link, and their expected links: the connected edges, or no link
+    issues AS (
+        SELECT
+            w.*,
+            CASE WHEN w.is_next_wrong THEN w.connected_next_id ELSE w.next_edge_id END AS expected_next_id,
+            CASE WHEN w.is_previous_wrong THEN w.connected_previous_id ELSE w.previous_edge_id END
+                AS expected_previous_id
+        FROM wrong_links AS w
+        WHERE w.is_next_wrong OR w.is_previous_wrong
+    )
+    -- One issue for each road
+    SELECT
+        'G06'::text,
+        'Previous and next edges inconsistent with the geometry'::text,
+        'error'::text,
+        i.road_code,
+        array_agg(i.id ORDER BY i.id),
+        NULL::integer[],
+        NULL::integer[],
+        jsonb_build_object(
+            'edge_count', count(*),
+            'links', jsonb_agg(
+                jsonb_build_object(
+                    'edge_id', i.id,
+                    'previous_edge_id', i.previous_edge_id,
+                    'next_edge_id', i.next_edge_id,
+                    'expected_previous_edge_id', i.expected_previous_id,
+                    'expected_next_edge_id', i.expected_next_id
+                )
+                ORDER BY i.id
+            )
+        ),
+        'relink_edges'::text,
+        jsonb_build_object('road_code', i.road_code),
+        ST_LineInterpolatePoint((array_agg(i.geom ORDER BY i.id))[1], 0.5),
+        ST_Multi(ST_Collect(i.geom ORDER BY i.id))
+    FROM issues AS i
+    GROUP BY i.road_code
+    ORDER BY i.road_code
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_edge_links(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_edge_links(_road_codes text[], _options jsonb) IS 'Check G06 run by the function check_graph: find the edges whose previous or next edge contradicts the geometry.
+
+The previous and next edges (fields previous_edge_id and next_edge_id) give the order of the edges of the road,
+used to calculate the references. The next edge of an edge is wrong when it does not start at the end node
+of the edge, whereas another edge of the road starts there, or when it is connected to another edge,
+or to the edge in the opposite direction. The previous edge is checked the same way. The other links,
+across a gap of the road, for example on both sides of a roundabout, are kept. The roundabouts are ignored.
+The expected link is the connected edge, or no link: a gap between two close nodes is fixed by the check G03.
+
+An issue is returned for each road. The details give the number of edges and, for each edge,
+its previous and next edges and the expected ones.
+The issue can be fixed with the action relink_edges, which sets the expected previous and next edges
+of the road, then calculates again the references of the road.';
+
+
+-- fix_graph_relink_edges(jsonb)
+CREATE OR REPLACE FUNCTION road_graph.fix_graph_relink_edges(_params jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    issue record;
+    link record;
+    relinked_ids integer[];
+BEGIN
+    IF _params->>'road_code' IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', 'The parameter road_code is needed'
+        );
+    END IF;
+
+    -- Wrong links of the road, found again: they may have been fixed by a previous fix
+    SELECT i.*
+    INTO issue
+    FROM road_graph.check_graph_edge_links(ARRAY[_params->>'road_code'], NULL) AS i
+    ;
+    IF issue.road_code IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format(
+                'The previous and next edges of the road %s are consistent with the geometry', _params->>'road_code'
+            )
+        );
+    END IF;
+
+    -- Set the expected previous and next edges. The references are not calculated by the triggers
+    -- after each update, but once for the whole road at the end
+    PERFORM set_config('road.graph.edge.ref.calc.disabled', 'yes', true);
+    FOR link IN
+        SELECT
+            (l->>'edge_id')::integer AS edge_id,
+            (l->>'expected_previous_edge_id')::integer AS previous_edge_id,
+            (l->>'expected_next_edge_id')::integer AS next_edge_id
+        FROM jsonb_array_elements(issue.details->'links') AS l
+    LOOP
+        UPDATE road_graph.edges AS e
+        SET previous_edge_id = link.previous_edge_id, next_edge_id = link.next_edge_id
+        WHERE e.id = link.edge_id
+        AND (e.previous_edge_id, e.next_edge_id) IS DISTINCT FROM (link.previous_edge_id, link.next_edge_id)
+        ;
+        relinked_ids = relinked_ids || link.edge_id;
+    END LOOP;
+    PERFORM set_config('road.graph.edge.ref.calc.disabled', 'no', true);
+    PERFORM road_graph.update_edge_references(issue.road_code, NULL);
+
+    -- Check the links are now consistent with the geometry.
+    -- If not, the exception cancels the changes of this fix (see fix_graph_issue)
+    IF EXISTS (SELECT 1 FROM road_graph.check_graph_edge_links(ARRAY[issue.road_code], NULL)) THEN
+        RAISE EXCEPTION
+            'The previous and next edges of the road % are still inconsistent with the geometry: '
+            'fix the issues of the checks G05 and G07 first',
+            issue.road_code;
+    END IF;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format(
+            'The previous and next edges of the edges %s of the road %s have been set from the geometry',
+            array_to_string(relinked_ids, ', '), issue.road_code
+        )
+    );
+END;
+$$;
+
+
+-- FUNCTION fix_graph_relink_edges(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_relink_edges(_params jsonb) IS 'Action relink_edges run by the function fix_graph_issue, to fix the issues of the check G06:
+set the previous and next edges of the edges of a road from the geometry.
+
+The parameter _params must contain the road code: {"road_code": "D12"}.
+The wrong links of the road are found again with the check G06, then the expected previous and next edges are set,
+and the references of the road are calculated again.
+
+It returns a JSON object with the keys status (success, skipped if the links are consistent with the geometry,
+or error) and message.';
+
+
+-- Functions of the renumbered checks: check code in their result, and in their comment
+
+-- check_graph_first_marker(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_first_marker(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum distance between the first marker and the start of the road to move the marker automatically
+    tolerance real = Coalesce((_options->>'tolerance')::real, 1.0);
+    -- Distance under which the marker is at the start of the road: the coordinates are rounded to 10 cm
+    start_tolerance real = 0.05;
+BEGIN
+    RETURN QUERY
+    WITH
+    -- First marker of each road, except the roundabouts: the marker with the lowest code and abscissa,
+    -- which can be virtual
+    first_markers AS (
+        SELECT DISTINCT ON (m.road_code)
+            m.id, m.road_code, m.code, m.abscissa, m.is_virtual, m.geom
+        FROM road_graph.markers AS m
+        JOIN road_graph.roads AS r ON r.road_code = m.road_code
+        WHERE r.road_type != 'roundabout'
+        AND (_road_codes IS NULL OR m.road_code = ANY(_road_codes))
+        ORDER BY m.road_code, m.code, m.abscissa, m.id
+    ),
+    -- First edge of each road: the edge without previous edge, with the lowest start cumulative
+    first_edges AS (
+        SELECT DISTINCT ON (e.road_code)
+            e.id, e.road_code, e.geom, e.start_node, e.start_marker
+        FROM road_graph.edges AS e
+        WHERE _road_codes IS NULL OR e.road_code = ANY(_road_codes)
+        ORDER BY e.road_code, (e.previous_edge_id IS NOT NULL), e.start_cumulative NULLS LAST, e.id
+    ),
+    -- First markers which are not at the start of the first edge of their road
+    issues AS (
+        SELECT
+            m.id AS marker_id, m.road_code, m.code, m.abscissa, m.is_virtual, m.geom AS marker_geom,
+            e.id AS edge_id, e.start_node, e.start_marker,
+            ST_StartPoint(e.geom) AS start_point,
+            ST_Distance(m.geom, ST_StartPoint(e.geom)) AS distance,
+            -- Position of the marker along the first edge, from its start
+            ST_LineLocatePoint(e.geom, m.geom) * ST_Length(e.geom) AS position
+        FROM first_markers AS m
+        JOIN first_edges AS e ON e.road_code = m.road_code
+        WHERE NOT ST_DWithin(m.geom, ST_StartPoint(e.geom), start_tolerance)
+    )
+    SELECT
+        'G10'::text,
+        'First marker not at the start of the road'::text,
+        -- The start of the first edge has no reference when the marker is after it
+        CASE WHEN i.start_marker IS NULL THEN 'error' ELSE 'warning' END,
+        i.road_code,
+        ARRAY[i.edge_id],
+        ARRAY[i.start_node],
+        ARRAY[i.marker_id],
+        jsonb_build_object(
+            'marker_code', i.code,
+            'marker_abscissa', i.abscissa,
+            'is_virtual', i.is_virtual,
+            'distance', round(i.distance::numeric, 2),
+            'position_on_edge', round(i.position::numeric, 2),
+            'has_start_reference', i.start_marker IS NOT NULL
+        ),
+        CASE WHEN i.distance <= tolerance THEN 'move_marker' ELSE NULL END,
+        CASE
+            WHEN i.distance <= tolerance THEN jsonb_build_object(
+                'marker_id', i.marker_id,
+                'edge_id', i.edge_id,
+                'point', ST_AsEWKT(i.start_point)
+            )
+            ELSE NULL
+        END,
+        i.marker_geom,
+        ST_MakeLine(i.marker_geom, i.start_point)
+    FROM issues AS i
+    ORDER BY i.road_code
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_first_marker(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_first_marker(_road_codes text[], _options jsonb) IS 'Check G10 run by the function check_graph: find the roads whose first marker is not at the start of the road.
+
+The first marker of a road is the marker with the lowest code and abscissa: it is often the marker 0,
+but it can be a virtual marker with a higher code. It must be at the start point of the first edge of the road,
+the edge without previous edge. Else, when the marker is after the start point, the start of the road has no reference.
+The roundabouts are ignored.
+
+An issue is returned for each road whose first marker is more than 5 cm from the start of the road.
+The severity is error if the start of the first edge has no reference, else warning.
+The details give the code, abscissa and type of the marker, its distance to the start of the road,
+its position along the first edge, and if the start of the first edge has a reference.
+
+The issue can be fixed with the action move_marker, which moves the marker to the start of the road,
+when it is less than the option tolerance from it (1 m by default). Else, the issue must be fixed manually.';
+
+
+-- check_graph_markers_order(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_markers_order(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum distance between a marker and the edges of its road
+    marker_tolerance real = Coalesce((_options->>'marker_tolerance')::real, 50.0);
+    -- Tolerance on the positions of the markers: two markers at the same point can have
+    -- slightly different positions, for example at the end of an edge and at the start of the next edge
+    position_tolerance real = 1.0;
+    road record;
+    -- Markers of the road, sorted by code and abscissa
+    marker_ids_list integer[];
+    marker_codes integer[];
+    marker_abscissas real[];
+    marker_virtuals boolean[];
+    marker_geoms geometry[];
+    marker_edge_ids integer[];
+    marker_positions double precision[];
+    marker_count integer;
+    -- Longest sequence of markers in the order of their position, ending at each marker
+    sequence_lengths integer[];
+    previous_indexes integer[];
+    best_index integer;
+    in_order boolean[];
+    -- Previous and next markers in the order of the road, around a marker out of this order
+    previous_index integer;
+    next_index integer;
+    i integer;
+    j integer;
+BEGIN
+    -- Roads with markers, except the roundabouts
+    FOR road IN
+        SELECT DISTINCT m.road_code
+        FROM road_graph.markers AS m
+        JOIN road_graph.roads AS r ON r.road_code = m.road_code
+        WHERE r.road_type != 'roundabout'
+        AND (_road_codes IS NULL OR m.road_code = ANY(_road_codes))
+        ORDER BY m.road_code
+    LOOP
+        -- Markers of the road in the order of their code and abscissa, with their position along the road:
+        -- the cumulative length at their closest edge of the road
+        SELECT
+            array_agg(x.id ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.code ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.abscissa ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.is_virtual ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.geom ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.edge_id ORDER BY x.code, x.abscissa, x.id),
+            array_agg(x.position ORDER BY x.code, x.abscissa, x.id)
+        INTO
+            marker_ids_list, marker_codes, marker_abscissas, marker_virtuals,
+            marker_geoms, marker_edge_ids, marker_positions
+        FROM (
+            SELECT
+                m.id, m.code, m.abscissa, m.is_virtual, m.geom,
+                c.id AS edge_id, c.distance,
+                c.start_cumulative + ST_LineLocatePoint(c.geom, m.geom) * ST_Length(c.geom) AS position
+            FROM road_graph.markers AS m
+            LEFT JOIN LATERAL (
+                SELECT e.id, e.geom, e.start_cumulative, ST_Distance(e.geom, m.geom) AS distance
+                FROM road_graph.edges AS e
+                WHERE e.road_code = m.road_code
+                AND ST_DWithin(e.geom, m.geom, marker_tolerance)
+                ORDER BY ST_Distance(e.geom, m.geom), e.id
+                LIMIT 1
+            ) AS c ON True
+            WHERE m.road_code = road.road_code
+        ) AS x
+        ;
+        marker_count = cardinality(marker_ids_list);
+
+        -- Longest sequence of markers whose positions increase with their code and abscissa:
+        -- the markers out of this sequence are not in the order of the road
+        sequence_lengths = array_fill(0, ARRAY[marker_count]);
+        previous_indexes = array_fill(0, ARRAY[marker_count]);
+        in_order = array_fill(False, ARRAY[marker_count]);
+        best_index = 0;
+        FOR i IN 1..marker_count LOOP
+            CONTINUE WHEN marker_positions[i] IS NULL;
+            sequence_lengths[i] = 1;
+            FOR j IN 1..i - 1 LOOP
+                IF marker_positions[j] IS NOT NULL
+                    -- Two markers can be at the same position, for example a virtual marker
+                    -- and the marker of the next code, with the same reference
+                    AND marker_positions[j] <= marker_positions[i] + position_tolerance
+                    AND sequence_lengths[j] + 1 > sequence_lengths[i]
+                THEN
+                    sequence_lengths[i] = sequence_lengths[j] + 1;
+                    previous_indexes[i] = j;
+                END IF;
+            END LOOP;
+            IF best_index = 0 OR sequence_lengths[i] > sequence_lengths[best_index] THEN
+                best_index = i;
+            END IF;
+        END LOOP;
+        i = best_index;
+        WHILE i > 0 LOOP
+            in_order[i] = True;
+            i = previous_indexes[i];
+        END LOOP;
+
+        -- One issue for each marker far from the road, on an edge without reference,
+        -- or out of the order of the road
+        FOR i IN 1..marker_count LOOP
+            CONTINUE WHEN in_order[i];
+            previous_index = (SELECT k FROM generate_series(i - 1, 1, -1) AS k WHERE in_order[k] LIMIT 1);
+            next_index = (SELECT k FROM generate_series(i + 1, marker_count) AS k WHERE in_order[k] LIMIT 1);
+            check_code = 'G11';
+            check_title = 'Markers not in the order of the road';
+            severity = 'error';
+            road_code = road.road_code;
+            edge_ids = CASE WHEN marker_edge_ids[i] IS NULL THEN NULL ELSE ARRAY[marker_edge_ids[i]] END;
+            node_ids = NULL;
+            marker_ids = ARRAY[marker_ids_list[i]];
+            details = jsonb_build_object(
+                'issue_type', CASE
+                    WHEN marker_edge_ids[i] IS NULL THEN 'far_from_road'
+                    WHEN marker_positions[i] IS NULL THEN 'edge_without_reference'
+                    ELSE 'order'
+                END,
+                'marker_code', marker_codes[i],
+                'marker_abscissa', marker_abscissas[i],
+                'is_virtual', marker_virtuals[i],
+                'position', round(marker_positions[i]::numeric, 1),
+                -- Previous and next markers by code which are in the order of the road
+                'previous_marker_code', marker_codes[previous_index],
+                'previous_marker_position', round(marker_positions[previous_index]::numeric, 1),
+                'next_marker_code', marker_codes[next_index],
+                'next_marker_position', round(marker_positions[next_index]::numeric, 1)
+            );
+            fix_action = NULL;
+            fix_params = NULL;
+            geom = marker_geoms[i];
+            geom_detail = NULL;
+            RETURN NEXT;
+        END LOOP;
+    END LOOP;
+    RETURN;
+END;
+$$;
+
+
+-- FUNCTION check_graph_markers_order(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_markers_order(_road_codes text[], _options jsonb) IS 'Check G11 run by the function check_graph: find the markers which are not in the order of their road.
+
+The position of each marker along its road is the cumulative length of the road at its closest edge of the road,
+less than the option marker_tolerance from it (50 m by default). Sorted by code and abscissa, the markers must be
+in the order of their position: two markers can be at the same position (1 m tolerance). The longest sequence of markers in the order of the road is kept:
+an issue is returned for each other marker. The roundabouts are ignored.
+An issue is also returned for a marker far from its road, or whose closest edge has no reference.
+
+The details give the type of issue (order, far_from_road or edge_without_reference), the code, abscissa,
+type and position of the marker, and the code and position of the previous and next markers in the order of the road.
+The issue must be fixed manually, by moving the marker or changing its code.';
+
+
+-- check_graph_parallel_edges(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum distance between two parallel edges
+    tolerance real = Coalesce((_options->>'tolerance')::real, 30.0);
+    -- Minimum length along which the two edges are parallel
+    min_length real = Coalesce((_options->>'min_length')::real, 10.0);
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Pairs of edges of the same road less than the tolerance from each other, not connected by a node,
+    -- and the parts of each edge less than the tolerance from the other edge.
+    -- The roundabouts are ignored
+    pairs AS (
+        SELECT
+            a.road_code, a.id AS a_id, b.id AS b_id, a.geom AS a_geom, b.geom AS b_geom,
+            ST_Distance(a.geom, b.geom) AS distance,
+            -- The parts are segmentized, to locate their points along the other edge
+            ST_Segmentize(ST_Intersection(a.geom, ST_Buffer(b.geom, tolerance)), 2) AS a_part,
+            ST_Segmentize(ST_Intersection(b.geom, ST_Buffer(a.geom, tolerance)), 2) AS b_part
+        FROM road_graph.edges AS a
+        JOIN road_graph.edges AS b
+            ON b.road_code = a.road_code
+            AND b.id > a.id
+            AND ST_DWithin(a.geom, b.geom, tolerance)
+        JOIN road_graph.roads AS r
+            ON r.road_code = a.road_code
+        WHERE r.road_type != 'roundabout'
+        AND (_road_codes IS NULL OR a.road_code = ANY(_road_codes))
+        AND NOT (ARRAY[a.start_node, a.end_node] && ARRAY[b.start_node, b.end_node])
+    ),
+    -- Length of the other edge along which each part runs: the parts of two edges which only approach
+    -- each other, for example the edges of a road on both sides of a roundabout,
+    -- run along a very short length of the other edge
+    spans AS (
+        SELECT
+            p.*,
+            (
+                SELECT (max(ST_LineLocatePoint(p.b_geom, d.geom)) - min(ST_LineLocatePoint(p.b_geom, d.geom)))
+                    * ST_Length(p.b_geom)
+                FROM ST_DumpPoints(p.a_part) AS d
+            ) AS a_span,
+            (
+                SELECT (max(ST_LineLocatePoint(p.a_geom, d.geom)) - min(ST_LineLocatePoint(p.a_geom, d.geom)))
+                    * ST_Length(p.a_geom)
+                FROM ST_DumpPoints(p.b_part) AS d
+            ) AS b_span
+        FROM pairs AS p
+        WHERE ST_Length(p.a_part) >= min_length
+        AND ST_Length(p.b_part) >= min_length
+    )
+    SELECT
+        'G08'::text,
+        'Parallel edges of the same road'::text,
+        'warning'::text,
+        s.road_code,
+        ARRAY[s.a_id, s.b_id],
+        NULL::integer[],
+        NULL::integer[],
+        jsonb_build_object(
+            'distance', round(s.distance::numeric, 2),
+            'parallel_length', round(least(s.a_span, s.b_span)::numeric, 1)
+        ),
+        NULL::text,
+        NULL::jsonb,
+        ST_ClosestPoint(s.a_geom, s.b_geom),
+        ST_Collect(s.a_part, s.b_part)
+    FROM spans AS s
+    WHERE s.a_span >= min_length
+    AND s.b_span >= min_length
+    ORDER BY s.road_code, s.a_id, s.b_id
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_parallel_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_parallel_edges(_road_codes text[], _options jsonb) IS 'Check G08 run by the function check_graph: find the edges of the same road running parallel to each other,
+for example the two carriageways of a road using the same road code.
+
+An issue is returned for each pair of edges of the same road, not connected by a node, which run along each other
+less than the option tolerance from each other (30 m by default), along at least the option min_length (10 m by default).
+The edges which only approach each other, for example on both sides of a roundabout, are ignored. The roundabouts are ignored.
+The details give the distance between the edges and the length along which they are parallel.
+The line of the issue shows the parallel parts of the edges.
+
+The issue must be fixed manually, for example by giving another road code to one of the carriageways.';
+
+
+-- check_graph_road_branches(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_road_branches(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Start and end points of the edges of the roads, except the roundabouts.
+    -- The edges starting and ending at the same node (loops) are ignored:
+    -- the short ones are found by the check of the short edges
+    edge_ends AS (
+        SELECT e.id, e.road_code, e.start_node AS node_id, e.geom
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type != 'roundabout'
+        AND e.start_node != e.end_node
+        AND (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
+        UNION ALL
+        SELECT e.id, e.road_code, e.end_node AS node_id, e.geom
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE r.road_type != 'roundabout'
+        AND e.start_node != e.end_node
+        AND (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
+    ),
+    -- Nodes with more than two edges of the same road: the road has branches
+    branch_nodes AS (
+        SELECT x.road_code, x.node_id, array_agg(x.id ORDER BY x.id) AS node_edge_ids
+        FROM edge_ends AS x
+        GROUP BY x.road_code, x.node_id
+        HAVING count(*) > 2
+    ),
+    -- Direction of the edges at the node: the azimuth of the edges arriving at the node at their end,
+    -- and of the edges leaving the node at their start, given by their geometry
+    node_edges AS (
+        SELECT
+            b.road_code, b.node_id, n.geom AS node_geom, x.id, x.geom,
+            ST_DWithin(ST_EndPoint(x.geom), n.geom, 0.01) AS is_arriving,
+            ST_DWithin(ST_StartPoint(x.geom), n.geom, 0.01) AS is_leaving,
+            ST_Azimuth(ST_PointN(x.geom, ST_NPoints(x.geom) - 1), ST_EndPoint(x.geom)) AS end_azimuth,
+            ST_Azimuth(ST_StartPoint(x.geom), ST_PointN(x.geom, 2)) AS start_azimuth
+        FROM branch_nodes AS b
+        JOIN road_graph.nodes AS n ON n.id = b.node_id
+        JOIN edge_ends AS x ON x.road_code = b.road_code AND x.node_id = b.node_id
+    ),
+    -- Main line of the road at the node: the edge arriving at the node and the edge leaving it
+    -- which are the most aligned. The other edges are the branches
+    main_lines AS (
+        SELECT DISTINCT ON (a.road_code, a.node_id)
+            a.road_code, a.node_id, a.id AS arriving_id, l.id AS leaving_id
+        FROM node_edges AS a
+        JOIN node_edges AS l
+            ON l.road_code = a.road_code
+            AND l.node_id = a.node_id
+            AND l.id != a.id
+        WHERE a.is_arriving AND l.is_leaving
+        -- Deflection angle between the two edges, from 0 (aligned) to pi
+        ORDER BY
+            a.road_code, a.node_id,
+            abs(mod((l.start_azimuth - a.end_azimuth + 3 * pi())::numeric, (2 * pi())::numeric) - pi()),
+            a.id, l.id
+    )
+    SELECT
+        'G07'::text,
+        'Road with branches'::text,
+        'error'::text,
+        b.road_code,
+        b.node_edge_ids,
+        ARRAY[b.node_id],
+        NULL::integer[],
+        jsonb_build_object(
+            'edge_count', cardinality(b.node_edge_ids),
+            'main_edge_ids', CASE
+                WHEN m.arriving_id IS NULL THEN '[]'::jsonb
+                ELSE jsonb_build_array(m.arriving_id, m.leaving_id)
+            END,
+            'branch_edge_ids', (
+                SELECT jsonb_agg(x ORDER BY x)
+                FROM unnest(b.node_edge_ids) AS x
+                WHERE x IS DISTINCT FROM m.arriving_id AND x IS DISTINCT FROM m.leaving_id
+            )
+        ),
+        NULL::text,
+        NULL::jsonb,
+        n.geom,
+        (
+            SELECT ST_Collect(e.geom ORDER BY e.id)
+            FROM road_graph.edges AS e
+            WHERE e.id = ANY(b.node_edge_ids)
+            AND e.id IS DISTINCT FROM m.arriving_id
+            AND e.id IS DISTINCT FROM m.leaving_id
+        )
+    FROM branch_nodes AS b
+    JOIN road_graph.nodes AS n ON n.id = b.node_id
+    LEFT JOIN main_lines AS m ON m.road_code = b.road_code AND m.node_id = b.node_id
+    ORDER BY b.road_code, b.node_id
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_road_branches(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_road_branches(_road_codes text[], _options jsonb) IS 'Check G07 run by the function check_graph: find the roads with branches, for example the ramps
+or the carriageways of a road using the code of the road.
+
+An issue is returned for each node with more than two edges of the same road. The roundabouts are ignored,
+and the edges starting and ending at the same node.
+The main line of the road at the node is given by the edge arriving at the node and the edge leaving it
+which are the most aligned: the other edges are the branches. The details give the number of edges at the node,
+and the ids of the edges of the main line and of the branches. The line of the issue shows the branches.
+
+The issue must be fixed manually, for example by giving another road code to the edges of the branches.';
+
+
+-- check_graph_short_edges(text[], jsonb)
+CREATE OR REPLACE FUNCTION road_graph.check_graph_short_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    -- Maximum length of a short edge
+    min_length real = Coalesce((_options->>'min_length')::real, 3.0);
+    -- Length of an edge reduced to a point: the coordinates are rounded to 10 cm
+    zero_length real = 0.10;
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Short edges, with the number of other edges at their start and end nodes
+    short_edges AS (
+        SELECT
+            e.id, e.road_code, e.start_node, e.end_node, e.geom,
+            ST_Length(e.geom) AS edge_length,
+            (
+                SELECT count(*)
+                FROM road_graph.edges AS o
+                WHERE o.id != e.id
+                AND e.start_node IN (o.start_node, o.end_node)
+            ) AS start_edge_count,
+            (
+                SELECT count(*)
+                FROM road_graph.edges AS o
+                WHERE o.id != e.id
+                AND e.end_node IN (o.start_node, o.end_node)
+            ) AS end_edge_count,
+            (
+                SELECT count(*)
+                FROM road_graph.edges AS o
+                WHERE o.road_code = e.road_code
+            ) AS road_edge_count,
+            -- The edges of the roundabouts, and the edges arriving at a roundabout or leaving it
+            r.road_type = 'roundabout' OR EXISTS (
+                SELECT 1
+                FROM road_graph.edges AS o
+                JOIN road_graph.roads AS ro ON ro.road_code = o.road_code
+                WHERE ro.road_type = 'roundabout'
+                AND o.id != e.id
+                AND ARRAY[o.start_node, o.end_node] && ARRAY[e.start_node, e.end_node]
+            ) AS is_roundabout_edge
+        FROM road_graph.edges AS e
+        JOIN road_graph.roads AS r ON r.road_code = e.road_code
+        WHERE ST_Length(e.geom) < min_length
+        AND (_road_codes IS NULL OR e.road_code = ANY(_road_codes))
+    ),
+    -- The edges of the roundabouts, or arriving at a roundabout, are often short: they are ignored,
+    -- unless they are reduced to a point.
+    -- The node to keep is the node with the most edges, or else the node with the lowest id
+    issues AS (
+        SELECT
+            s.*,
+            s.edge_length < zero_length AS is_zero_length,
+            CASE
+                WHEN s.start_edge_count > s.end_edge_count THEN True
+                WHEN s.start_edge_count < s.end_edge_count THEN False
+                ELSE s.start_node <= s.end_node
+            END AS keep_start
+        FROM short_edges AS s
+        WHERE NOT s.is_roundabout_edge OR s.edge_length < zero_length
+    )
+    SELECT
+        'G09'::text,
+        'Short edge'::text,
+        CASE WHEN i.is_zero_length THEN 'error' ELSE 'warning' END,
+        i.road_code,
+        ARRAY[i.id],
+        CASE WHEN i.keep_start THEN ARRAY[i.start_node, i.end_node] ELSE ARRAY[i.end_node, i.start_node] END,
+        NULL::integer[],
+        jsonb_build_object(
+            'length', round(i.edge_length::numeric, 2),
+            'start_edge_count', i.start_edge_count,
+            'end_edge_count', i.end_edge_count,
+            'is_roundabout_edge', i.is_roundabout_edge
+        ),
+        -- The only edge of a road is not removed: the road would not have any edge anymore
+        CASE WHEN i.road_edge_count > 1 THEN 'collapse_edge' ELSE NULL END,
+        CASE
+            WHEN i.road_edge_count = 1 THEN NULL
+            ELSE jsonb_build_object(
+                'edge_id', i.id,
+                'keep_node_id', CASE WHEN i.keep_start THEN i.start_node ELSE i.end_node END,
+                'remove_node_id', CASE WHEN i.keep_start THEN i.end_node ELSE i.start_node END
+            )
+        END,
+        ST_LineInterpolatePoint(i.geom, 0.5),
+        i.geom
+    FROM issues AS i
+    ORDER BY i.road_code, i.id
+    ;
+END;
+$$;
+
+
+-- FUNCTION check_graph_short_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_short_edges(_road_codes text[], _options jsonb) IS 'Check G09 run by the function check_graph: find the short edges, often coming from the digitizing,
+for example two junctions a few decimeters from each other.
+
+An issue is returned for each edge shorter than the option min_length (3 m by default).
+The edges of the roundabouts and the edges arriving at a roundabout or leaving it are often short: they are ignored,
+unless they are reduced to a point (less than 10 cm). The severity is error for an edge reduced to a point, else warning.
+The details give the length, the number of other edges at the start and end nodes, and if the edge is near a roundabout.
+
+The issue can be fixed with the action collapse_edge, which deletes the edge and merges its nodes,
+adding its geometry to the next or previous edge of the same road: the node to keep is the node with the most edges, or else the node with the lowest id,
+and is the first node of node_ids. The only edge of a road has no fix action.';
+
+
+-- fix_graph_collapse_edge(jsonb)
+CREATE OR REPLACE FUNCTION road_graph.fix_graph_collapse_edge(_params jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    edge record;
+    keep_node record;
+    remove_node_id integer;
+    extended_edge_id integer;
+BEGIN
+    -- The edge may have been removed or modified by a previous fix
+    SELECT e.*
+    INTO edge
+    FROM road_graph.edges AS e
+    WHERE e.id = (_params->>'edge_id')::integer
+    ;
+    IF edge.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The edge %s does not exist anymore', _params->>'edge_id')
+        );
+    END IF;
+    IF NOT ARRAY[edge.start_node, edge.end_node] @> ARRAY[
+        (_params->>'keep_node_id')::integer, (_params->>'remove_node_id')::integer
+    ] THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The nodes of the edge %s have changed', edge.id)
+        );
+    END IF;
+    IF (SELECT count(*) FROM road_graph.edges AS e WHERE e.road_code = edge.road_code) = 1 THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', format('The edge %s is the only edge of the road %s', edge.id, edge.road_code)
+        );
+    END IF;
+    -- An edge starting and ending at the same node, for example an edge reduced to a point
+    -- after being cut, is only deleted
+    IF edge.start_node = edge.end_node THEN
+        DELETE FROM road_graph.edges AS e
+        WHERE e.id = edge.id
+        ;
+        RETURN jsonb_build_object(
+            'status', 'success',
+            'message', format(
+                'The edge %s starting and ending at the node %s has been deleted', edge.id, edge.start_node
+            )
+        );
+    END IF;
+
+    SELECT n.*
+    INTO keep_node
+    FROM road_graph.nodes AS n
+    WHERE n.id = (_params->>'keep_node_id')::integer
+    ;
+    remove_node_id = (_params->>'remove_node_id')::integer;
+
+    -- The edges extended or moved below run along the short edge and pass near the node to remove:
+    -- the variables prevent the triggers from splitting them at the crossings with the short edge
+    -- and at the node to remove (see after_edge_insert_or_update)
+    PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'yes', true);
+    PERFORM set_config('road.graph.merge.edges.useless.node', remove_node_id::text, true);
+
+    -- The edge of the same road following the short edge at the node to remove, if there is only one,
+    -- is extended with the geometry of the short edge up to the node to keep: the geometry of the road is kept
+    SELECT e.id
+    INTO extended_edge_id
+    FROM road_graph.edges AS e
+    WHERE e.road_code = edge.road_code
+    AND e.id != edge.id
+    AND (
+        (remove_node_id = edge.end_node AND e.start_node = remove_node_id)
+        OR (remove_node_id = edge.start_node AND e.end_node = remove_node_id)
+    )
+    AND (
+        SELECT count(*)
+        FROM road_graph.edges AS x
+        WHERE x.road_code = edge.road_code
+        AND x.id != edge.id
+        AND remove_node_id IN (x.start_node, x.end_node)
+    ) = 1
+    ;
+    IF extended_edge_id IS NOT NULL THEN
+        UPDATE road_graph.edges AS e
+        SET geom = ST_RemoveRepeatedPoints(
+            CASE
+                WHEN remove_node_id = edge.end_node THEN ST_MakeLine(edge.geom, e.geom)
+                ELSE ST_MakeLine(e.geom, edge.geom)
+            END
+        )
+        WHERE e.id = extended_edge_id
+        ;
+    END IF;
+
+    -- Move the start and end points of the other edges of the node to remove to the node to keep,
+    -- for example the edges of the other roads: the triggers use the closest node, i.e. the node to keep
+    UPDATE road_graph.edges AS e
+    SET geom = ST_SetPoint(e.geom, 0, keep_node.geom)
+    WHERE e.start_node = remove_node_id
+    AND e.id != edge.id
+    ;
+    UPDATE road_graph.edges AS e
+    SET geom = ST_SetPoint(e.geom, ST_NPoints(e.geom) - 1, keep_node.geom)
+    WHERE e.end_node = remove_node_id
+    AND e.id != edge.id
+    ;
+    PERFORM set_config('road.graph.edge.crossing.node.creation.pending', 'no', true);
+    PERFORM set_config('road.graph.merge.edges.useless.node', '-1', true);
+
+    -- Delete the short edge, then the node to remove if it is not used anymore
+    DELETE FROM road_graph.edges AS e
+    WHERE e.id = edge.id
+    ;
+    DELETE FROM road_graph.nodes AS n
+    WHERE n.id = remove_node_id
+    AND NOT EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        WHERE remove_node_id IN (e.start_node, e.end_node)
+    )
+    ;
+
+    -- Check no edge uses the node to remove anymore.
+    -- If not, the exception cancels the changes of this fix (see fix_graph_issue)
+    IF EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        WHERE remove_node_id IN (e.start_node, e.end_node)
+    ) THEN
+        RAISE EXCEPTION 'The edges of the node % could not be moved to the node %', remove_node_id, keep_node.id;
+    END IF;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format(
+            'The edge %s has been deleted%s, and the edges of the node %s have been moved to the node %s',
+            edge.id,
+            CASE
+                WHEN extended_edge_id IS NULL THEN ''
+                ELSE format(' and its geometry added to the edge %s', extended_edge_id)
+            END,
+            remove_node_id, keep_node.id
+        )
+    );
+END;
+$$;
+
+
+-- FUNCTION fix_graph_collapse_edge(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_collapse_edge(_params jsonb) IS 'Action collapse_edge run by the function fix_graph_issue, to fix the issues of the check G09:
+remove a short edge, by merging its two nodes.
+
+The parameter _params must contain the ids of the edge, of the node to keep and of the node to remove:
+{"edge_id": 12, "keep_node_id": 34, "remove_node_id": 56}.
+The edge of the same road following the short edge at the node to remove is extended with the geometry
+of the short edge up to the node to keep: the geometry of the road is kept. The start and end points
+of the other edges of the node to remove, for example the edges of the other roads, are moved to the node to keep.
+Then the edge and the node to remove are deleted. The only edge of a road is not removed.
+An edge starting and ending at the same node, for example an edge reduced to a point after being cut, is only deleted.
+
+It returns a JSON object with the keys status (success, skipped if the edge does not exist anymore
+or its nodes have changed, or error) and message.';
+
+
+-- fix_graph_move_marker(jsonb)
+CREATE OR REPLACE FUNCTION road_graph.fix_graph_move_marker(_params jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    marker record;
+    edge record;
+BEGIN
+    -- The marker and the edge may have been modified by a previous fix
+    SELECT m.*
+    INTO marker
+    FROM road_graph.markers AS m
+    WHERE m.id = (_params->>'marker_id')::integer
+    ;
+    IF marker.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The marker %s does not exist anymore', _params->>'marker_id')
+        );
+    END IF;
+    SELECT e.*
+    INTO edge
+    FROM road_graph.edges AS e
+    WHERE e.id = (_params->>'edge_id')::integer
+    AND e.road_code = marker.road_code
+    AND ST_DWithin(ST_StartPoint(e.geom), ST_GeomFromEWKT(_params->>'point'), 0.01)
+    ;
+    IF edge.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The edge %s does not start anymore at the given point', _params->>'edge_id')
+        );
+    END IF;
+    IF ST_DWithin(marker.geom, ST_StartPoint(edge.geom), 0.01) THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The marker %s is already at the start of the road', marker.id)
+        );
+    END IF;
+
+    -- Move the marker to the start of the edge: the triggers calculate again the references of the road
+    UPDATE road_graph.markers AS m
+    SET geom = ST_StartPoint(edge.geom)
+    WHERE m.id = marker.id
+    ;
+
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format(
+            'The marker %s of the road %s has been moved by %s m to the start of the road',
+            marker.code, marker.road_code, round(ST_Distance(marker.geom, ST_StartPoint(edge.geom))::numeric, 2)
+        )
+    );
+END;
+$$;
+
+
+-- FUNCTION fix_graph_move_marker(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_move_marker(_params jsonb) IS 'Action move_marker run by the function fix_graph_issue, to fix the issues of the check G10:
+move the first marker of a road to the start of the road.
+
+The parameter _params must contain the ids of the marker and of the first edge of the road,
+and the start point of the edge as EWKT: {"marker_id": 12, "edge_id": 34, "point": "SRID=2154;POINT(x y)"}.
+The marker is moved to the start point of the edge: the triggers calculate again the references of the road.
+
+It returns a JSON object with the keys status (success, skipped if the marker does not exist anymore,
+is already at the start of the road, or if the edge does not start at the given point anymore) and message.';

@@ -344,6 +344,31 @@ def g06() -> str:
 
     :return: The SVG of the diagram
     """
+    issue, fixed = panels("Issue", "relink_edges")
+    for p in (issue, fixed):
+        for x1, x2 in ((30, 160), (160, 290), (290, 420)):
+            p.line([(x1, 160), (x2, 160)], GREY, arrow=True)
+        for x in (30, 160, 290, 420):
+            p.node(x, 160)
+        for x, label in ((95, "e1"), (225, "e2"), (355, "e3")):
+            p.text(x, 185, label, 13, MUTED)
+    link(issue, 95, 355, 160, 95, ISSUE)
+    issue.text(225, 58, "next edge of e1 = e3", 12.5, ISSUE, weight="bold")
+    link(fixed, 95, 225, 160, 60, FIXED)
+    link(fixed, 225, 355, 160, 60, FIXED)
+    fixed.text(225, 80, "next edge of e1 = e2, next edge of e2 = e3", 12.5, FIXED, weight="bold")
+    issue.text(225, 215, "the next edge of e1 does not start at its end node,")
+    issue.text(225, 233, "whereas e2 starts there: the order of the road is wrong")
+    fixed.text(225, 215, "the previous and next edges are set from the nodes,")
+    fixed.text(225, 233, "then the references of the road are calculated again")
+    return diagram([issue, fixed])
+
+
+def g07() -> str:
+    """Diagram of the check G07.
+
+    :return: The SVG of the diagram
+    """
     issue, fixed = panels("Issue", "Manual fix")
     for p in (issue, fixed):
         p.line([(40, 150), (225, 150)], GREY, arrow=True)
@@ -364,8 +389,8 @@ def g06() -> str:
     return diagram([issue, fixed])
 
 
-def g07() -> str:
-    """Diagram of the check G07.
+def g08() -> str:
+    """Diagram of the check G08.
 
     :return: The SVG of the diagram
     """
@@ -387,8 +412,8 @@ def g07() -> str:
     return diagram([issue, fixed])
 
 
-def g08() -> str:
-    """Diagram of the check G08.
+def g09() -> str:
+    """Diagram of the check G09.
 
     :return: The SVG of the diagram
     """
@@ -417,8 +442,8 @@ def g08() -> str:
     return diagram([issue, fixed])
 
 
-def g09() -> str:
-    """Diagram of the check G09.
+def g10() -> str:
+    """Diagram of the check G10.
 
     :return: The SVG of the diagram
     """
@@ -440,8 +465,8 @@ def g09() -> str:
     return diagram([issue, fixed])
 
 
-def g10() -> str:
-    """Diagram of the check G10.
+def g11() -> str:
+    """Diagram of the check G11.
 
     :return: The SVG of the diagram
     """
@@ -464,6 +489,28 @@ def g10() -> str:
     return diagram([issue, fixed])
 
 
+def link(p: Panel, x1: float, x2: float, y: float, height: float, color: str):
+    """Add a curved arrow above the road, from an edge to its next edge.
+
+    :param p: The panel
+    :param x1: The horizontal position of the edge, in the panel
+    :param x2: The horizontal position of the next edge, in the panel
+    :param y: The vertical position of the road
+    :param height: The height of the curve above the road
+    :param color: The color of the arrow
+    """
+    x1, x2 = p.x0 + x1, p.x0 + x2
+    top = y - height
+    p.items.append(
+        f'<path d="M {x1} {y - 12} C {x1} {top}, {x2} {top}, {x2} {y - 12}" '
+        f'fill="none" stroke="{color}" stroke-width="2"/>'
+    )
+    p.items.append(
+        f'<path d="M {x2 - 5} {y - 22} L {x2} {y - 11} L {x2 + 5} {y - 22} z" '
+        f'fill="{color}" stroke="{color}"/>'
+    )
+
+
 def main() -> int:
     """Write the diagrams in the directory given as argument.
 
@@ -481,6 +528,7 @@ def main() -> int:
         ("g08", g08),
         ("g09", g09),
         ("g10", g10),
+        ("g11", g11),
     ):
         (output_dir / f"graph_checks_{name}.svg").write_text(function())
     return 0

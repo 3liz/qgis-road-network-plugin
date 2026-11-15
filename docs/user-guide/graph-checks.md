@@ -97,11 +97,12 @@ Each check below is illustrated by a diagram of the issue and of its fix.
 | [G03](#g03-nodes-close-to-each-other) | Nodes close to each other | `merge_nodes` |
 | [G04](#g04-useless-node) | Useless node: without edge, or between two edges of the same road | `delete_node` |
 | [G05](#g05-edges-in-the-opposite-direction-of-the-road) | Edges in the opposite direction of the road | `reverse_edges` |
-| [G06](#g06-road-with-branches) | Road with branches: more than two edges of the road at a node | manual |
-| [G07](#g07-parallel-edges-of-the-same-road) | Parallel edges of the same road, for example two carriageways | manual |
-| [G08](#g08-short-edge) | Short edge | `collapse_edge` |
-| [G09](#g09-first-marker-not-at-the-start-of-the-road) | First marker not at the start of the road | `move_marker` |
-| [G10](#g10-markers-not-in-the-order-of-the-road) | Markers not in the order of the road | manual |
+| [G06](#g06-previous-and-next-edges-inconsistent-with-the-geometry) | Previous and next edges inconsistent with the geometry | `relink_edges` |
+| [G07](#g07-road-with-branches) | Road with branches: more than two edges of the road at a node | manual |
+| [G08](#g08-parallel-edges-of-the-same-road) | Parallel edges of the same road, for example two carriageways | manual |
+| [G09](#g09-short-edge) | Short edge | `collapse_edge` |
+| [G10](#g10-first-marker-not-at-the-start-of-the-road) | First marker not at the start of the road | `move_marker` |
+| [G11](#g11-markers-not-in-the-order-of-the-road) | Markers not in the order of the road | manual |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -272,9 +273,36 @@ SET default_options = default_options || '{"marker_tolerance": 20}'
 WHERE code = 'G05';
 ```
 
-### G06: Road with branches
+### G06: Previous and next edges inconsistent with the geometry
 
 ![G06: issue and fix](../media/user-guide/graph_checks_g06.svg)
+
+The fields `previous_edge_id` and `next_edge_id` of the edges give the **order of the edges** of the road,
+used to calculate the references. They are set by the triggers, but can be wrong after an import,
+or after modifications made without the triggers. The references of the whole road are then wrong.
+
+The check returns one issue for each road with edges whose next edge:
+
+* does not start at the end node of the edge, whereas another edge of the road starts there,
+* or is connected to another edge, or to the edge in the opposite direction.
+
+The previous edge is checked the same way. The other links, across a gap of the road, for example on both sides
+of a roundabout, are kept. The roundabouts are ignored. The field `details` gives the number of edges and,
+for each edge, its previous and next edges (`previous_edge_id`, `next_edge_id`) and the expected ones
+(`expected_previous_edge_id`, `expected_next_edge_id`).
+
+Fix action:
+
+* `relink_edges`: set the expected previous and next edges of the road: the edges connected by the nodes,
+  or no link. Then the references of the road are calculated again.
+
+Fix the issues of the checks [G03](#g03-nodes-close-to-each-other) and
+[G05](#g05-edges-in-the-opposite-direction-of-the-road) before: two close nodes or a reversed edge
+break the links. The next checks use the order of the edges.
+
+### G07: Road with branches
+
+![G07: issue and fix](../media/user-guide/graph_checks_g07.svg)
 
 A road must be a line: its edges follow each other, without branches. The ramps of an interchange or of a roundabout,
 or the two carriageways of a road, must have their own road code. Else the order of the edges of the road,
@@ -290,12 +318,12 @@ There is no fix action: give another road code to the edges of the branches, for
 for a ramp. Check the main line proposed by the check, especially when the edges are not in the direction of the road
 (check [G05](#g05-edges-in-the-opposite-direction-of-the-road)).
 
-### G07: Parallel edges of the same road
+### G08: Parallel edges of the same road
 
-![G07: issue and fix](../media/user-guide/graph_checks_g07.svg)
+![G08: issue and fix](../media/user-guide/graph_checks_g08.svg)
 
 The two carriageways of a road must have their own road code. When they use the same code without being connected,
-the check [G06](#g06-road-with-branches) does not find them.
+the check [G07](#g07-road-with-branches) does not find them.
 
 The check returns one issue, with the severity `warning`, for each pair of edges of the same road,
 not connected by a node, which **run along each other**:
@@ -311,9 +339,9 @@ The field `details` gives the `distance` between the edges and the length along 
 There is no fix action: give another road code to one of the carriageways. A road which comes back near itself,
 for example a hairpin bend, can also be found: in this case, there is nothing to fix.
 
-### G08: Short edge
+### G09: Short edge
 
-![G08: issue and fix](../media/user-guide/graph_checks_g08.svg)
+![G09: issue and fix](../media/user-guide/graph_checks_g09.svg)
 
 A very short edge often comes from the digitizing: for example two junctions a few decimeters from each other
 instead of a crossroads, or a small piece of road left at the end of an edge.
@@ -336,9 +364,9 @@ Fix action:
 
 The only edge of a road has no fix action: the road would not have any edge anymore.
 
-### G09: First marker not at the start of the road
+### G10: First marker not at the start of the road
 
-![G09: issue and fix](../media/user-guide/graph_checks_g09.svg)
+![G10: issue and fix](../media/user-guide/graph_checks_g10.svg)
 
 The **first marker** of a road is the marker with the lowest code and abscissa: it is often the marker 0,
 but it can be a virtual marker with a higher code. It must be at the **start point of the first edge** of the road,
@@ -356,9 +384,9 @@ Fix action:
   **1 m** by default. Farther, check the road manually: the marker may be right, and the first edge wrong,
   for example when the road is in the opposite direction (check [G05](#g05-edges-in-the-opposite-direction-of-the-road)).
 
-### G10: Markers not in the order of the road
+### G11: Markers not in the order of the road
 
-![G10: issue and fix](../media/user-guide/graph_checks_g10.svg)
+![G11: issue and fix](../media/user-guide/graph_checks_g11.svg)
 
 Sorted by code and abscissa, the markers of a road must follow each other along the road:
 else, the references calculated from them are wrong.

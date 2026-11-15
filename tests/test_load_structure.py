@@ -4438,12 +4438,12 @@ def test_check_graph_reversed_edges(rollback_db_connection: psycopg.Connection):
 
 
 def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
-    """Check G06: roads with branches. A branch is added to a road, with the code of the road.
+    """Check G07: roads with branches. A branch is added to a road, with the code of the road.
     The changes are rolled back at the end of the test."""
     cursor = rollback_db_connection.cursor()
 
     # The test data does not contain roads with branches
-    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G06'])")
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G07'])")
     assert fetch_one(cursor)[0] == 0
 
     # Add a branch at the node between two edges of a road
@@ -4473,7 +4473,7 @@ def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
     cursor.execute(
         """
         SELECT edge_ids, node_ids, details, fix_action
-        FROM road_graph.check_graph(ARRAY['G06'], %s)
+        FROM road_graph.check_graph(ARRAY['G07'], %s)
         """,
         ([road_code],),
     )
@@ -4488,7 +4488,7 @@ def test_check_graph_road_branches(rollback_db_connection: psycopg.Connection):
 
 
 def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
-    """Check G07: parallel edges of the same road. A carriageway parallel to an edge is added,
+    """Check G08: parallel edges of the same road. A carriageway parallel to an edge is added,
     with the code of the road. The changes are rolled back at the end of the test."""
     cursor = rollback_db_connection.cursor()
 
@@ -4499,7 +4499,7 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
             count(*),
             bool_and((details->>'parallel_length')::numeric >= 10 AND (details->>'distance')::numeric <= 30),
             bool_and(fix_action IS NULL AND severity = 'warning')
-        FROM road_graph.check_graph(ARRAY['G07'])
+        FROM road_graph.check_graph(ARRAY['G08'])
     """)
     count, all_parallel, all_manual = fetch_one(cursor)
     assert all_parallel
@@ -4507,7 +4507,7 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
 
     # The minimum length can be changed
     cursor.execute("""
-        SELECT count(*) FROM road_graph.check_graph(ARRAY['G07'], NULL, '{"G07": {"min_length": 5000}}')
+        SELECT count(*) FROM road_graph.check_graph(ARRAY['G08'], NULL, '{"G08": {"min_length": 5000}}')
     """)
     assert fetch_one(cursor)[0] < count or count == 0
 
@@ -4540,7 +4540,7 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
     cursor.execute(
         """
         SELECT details
-        FROM road_graph.check_graph(ARRAY['G07'], %s)
+        FROM road_graph.check_graph(ARRAY['G08'], %s)
         WHERE edge_ids = %s::integer[]
         """,
         ([road_code], [edge_id, carriageway_id]),
@@ -4553,7 +4553,7 @@ def test_check_graph_parallel_edges(rollback_db_connection: psycopg.Connection):
 
 
 def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
-    """Check G08: short edges. The edges near a roundabout are ignored.
+    """Check G09: short edges. The edges near a roundabout are ignored.
     An issue is fixed in an editing session created around it.
     The changes are rolled back at the end of the test."""
     cursor = rollback_db_connection.cursor()
@@ -4568,7 +4568,7 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
                 (fix_action = 'collapse_edge')
                 = ((SELECT count(*) FROM road_graph.edges AS e WHERE e.road_code = i.road_code) > 1)
             )
-        FROM road_graph.check_graph(ARRAY['G08']) AS i
+        FROM road_graph.check_graph(ARRAY['G09']) AS i
     """)
     count, all_short, all_fix_actions = fetch_one(cursor)
     assert count > 0
@@ -4577,7 +4577,7 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
 
     # The minimum length can be changed
     cursor.execute("""
-        SELECT count(*) FROM road_graph.check_graph(ARRAY['G08'], NULL, '{"G08": {"min_length": 2.2}}')
+        SELECT count(*) FROM road_graph.check_graph(ARRAY['G09'], NULL, '{"G09": {"min_length": 2.2}}')
     """)
     assert fetch_one(cursor)[0] < count
 
@@ -4601,7 +4601,7 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
     """)
     roundabout_edge_id = fetch_one(cursor)[0]
     cursor.execute(
-        "SELECT count(*) FROM road_graph.check_graph(ARRAY['G08']) WHERE edge_ids = ARRAY[%s]::integer[]",
+        "SELECT count(*) FROM road_graph.check_graph(ARRAY['G09']) WHERE edge_ids = ARRAY[%s]::integer[]",
         (roundabout_edge_id,),
     )
     assert fetch_one(cursor)[0] == 0
@@ -4610,13 +4610,13 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
     cursor.execute("""
         WITH issue AS (
             SELECT geom
-            FROM road_graph.check_graph(ARRAY['G08'])
+            FROM road_graph.check_graph(ARRAY['G09'])
             WHERE fix_action IS NOT NULL
             ORDER BY id
             LIMIT 1
         )
         INSERT INTO road_graph.editing_sessions (label, author, geom)
-        SELECT 'G08 test', 'test', ST_Envelope(ST_Buffer(i.geom, 100))
+        SELECT 'G09 test', 'test', ST_Envelope(ST_Buffer(i.geom, 100))
         FROM issue AS i
         RETURNING id
     """)
@@ -4625,9 +4625,9 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
     cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (row[0],))
     cursor.execute("""
         SELECT i.fix_params, i.road_code
-        FROM road_graph_editing.check_graph(ARRAY['G08']) AS i
+        FROM road_graph_editing.check_graph(ARRAY['G09']) AS i
         JOIN road_graph.editing_sessions AS s ON ST_Intersects(s.geom, i.geom)
-        WHERE s.label = 'G08 test'
+        WHERE s.label = 'G09 test'
         AND i.fix_action IS NOT NULL
         ORDER BY i.id
         LIMIT 1
@@ -4685,13 +4685,13 @@ def test_check_graph_short_edges(rollback_db_connection: psycopg.Connection):
 
 
 def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
-    """Check G09: first marker of a road not at the start of the road.
+    """Check G10: first marker of a road not at the start of the road.
     The marker 0 of a road is moved after the start of the road in an editing session, then fixed.
     The changes are rolled back at the end of the test."""
     cursor = rollback_db_connection.cursor()
 
     # In the test data, the first marker of the roads is at the start of the roads
-    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G09'])")
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G10'])")
     assert fetch_one(cursor)[0] == 0
 
     # Editing session around the start of a road whose first marker is the marker 0
@@ -4710,7 +4710,7 @@ def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
     cursor.execute(
         """
         INSERT INTO road_graph.editing_sessions (label, author, geom)
-        SELECT 'G09 test', 'test', ST_Envelope(ST_Buffer(ST_StartPoint(e.geom), 100))
+        SELECT 'G10 test', 'test', ST_Envelope(ST_Buffer(ST_StartPoint(e.geom), 100))
         FROM road_graph.edges AS e
         WHERE e.id = %s
         RETURNING id
@@ -4734,7 +4734,7 @@ def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
     cursor.execute(
         """
         SELECT severity, edge_ids, marker_ids, details, fix_action, fix_params
-        FROM road_graph_editing.check_graph(ARRAY['G09'], %s)
+        FROM road_graph_editing.check_graph(ARRAY['G10'], %s)
         """,
         ([road_code],),
     )
@@ -4767,12 +4767,12 @@ def test_check_graph_first_marker(rollback_db_connection: psycopg.Connection):
     )
     assert cursor.fetchone() == (0, 0)
     assert fix()["status"] == "skipped"
-    cursor.execute("SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G09'], %s)", ([road_code],))
+    cursor.execute("SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G10'], %s)", ([road_code],))
     assert fetch_one(cursor)[0] == 0
 
 
 def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
-    """Check G10: markers not in the order of the road. Two markers of a road are swapped.
+    """Check G11: markers not in the order of the road. Two markers of a road are swapped.
     The changes are rolled back at the end of the test."""
     cursor = rollback_db_connection.cursor()
 
@@ -4781,7 +4781,7 @@ def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
         SELECT count(*), bool_and(
             details->>'issue_type' = 'order' AND fix_action IS NULL AND cardinality(marker_ids) = 1
         )
-        FROM road_graph.check_graph(ARRAY['G10'])
+        FROM road_graph.check_graph(ARRAY['G11'])
     """)
     count, all_order = fetch_one(cursor)
     assert count > 0
@@ -4796,7 +4796,7 @@ def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
         JOIN road_graph.roads AS r ON r.road_code = a.road_code AND r.road_type = 'road'
         WHERE a.code > 0 AND a.abscissa = 0 AND NOT a.is_virtual
         AND NOT EXISTS (
-            SELECT 1 FROM road_graph.check_graph(ARRAY['G10']) AS i WHERE i.road_code = a.road_code
+            SELECT 1 FROM road_graph.check_graph(ARRAY['G11']) AS i WHERE i.road_code = a.road_code
         )
         ORDER BY a.road_code, a.code
         LIMIT 1
@@ -4814,7 +4814,7 @@ def test_check_graph_markers_order(rollback_db_connection: psycopg.Connection):
 
     # One of the two markers is not in the order of the road anymore
     cursor.execute(
-        "SELECT marker_ids, details->>'issue_type' FROM road_graph.check_graph(ARRAY['G10'], %s)",
+        "SELECT marker_ids, details->>'issue_type' FROM road_graph.check_graph(ARRAY['G11'], %s)",
         ([road_code],),
     )
     issues = cursor.fetchall()
@@ -5068,6 +5068,94 @@ def test_road_substring_parts_order(rollback_db_connection: psycopg.Connection):
         if previous_end is not None:
             assert previous_end <= position(start) + 1
         previous_end = position(end)
+
+
+def test_check_graph_edge_links(rollback_db_connection: psycopg.Connection):
+    """Check G06: previous and next edges inconsistent with the geometry.
+    In an editing session, an edge of a road is linked to the edge after its next edge,
+    then the issue is fixed.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # The test data has no issue
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G06'])")
+    assert fetch_one(cursor)[0] == 0
+
+    # Three consecutive edges of a road, and an editing session around the road
+    cursor.execute("""
+        SELECT a.road_code, a.id, b.id, c.id
+        FROM road_graph.edges AS a
+        JOIN road_graph.edges AS b ON b.id = a.next_edge_id AND b.start_node = a.end_node
+        JOIN road_graph.edges AS c ON c.id = b.next_edge_id AND c.start_node = b.end_node
+        JOIN road_graph.roads AS r ON r.road_code = a.road_code AND r.road_type = 'road'
+        ORDER BY a.id
+        LIMIT 1
+    """)
+    road_code, first_id, second_id, third_id = fetch_one(cursor)
+    cursor.execute(
+        """
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G06 test', 'test', ST_Envelope(ST_Buffer(ST_Collect(e.geom), 100))
+        FROM road_graph.edges AS e
+        WHERE e.road_code = %s
+        RETURNING id
+        """,
+        (road_code,),
+    )
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (fetch_one(cursor)[0],))
+    cursor.execute("SELECT road_graph_editing.update_edge_references(%s, NULL)", (road_code,))
+    references_sql = """
+        SELECT
+            e.id, e.previous_edge_id, e.next_edge_id,
+            e.start_marker, round(e.start_abscissa::numeric, 1),
+            e.end_marker, round(e.end_abscissa::numeric, 1)
+        FROM road_graph_editing.edges AS e
+        WHERE e.road_code = %s
+        ORDER BY e.id
+    """
+    cursor.execute(references_sql, (road_code,))
+    road_edges = cursor.fetchall()
+
+    # The first edge is linked to the third edge, without the triggers
+    cursor.execute("SET LOCAL road.graph.disable.trigger = '1'")
+    cursor.execute(
+        "UPDATE road_graph_editing.edges SET next_edge_id = %s WHERE id = %s",
+        (third_id, first_id),
+    )
+    cursor.execute(
+        "UPDATE road_graph_editing.edges SET previous_edge_id = %s WHERE id = %s",
+        (first_id, third_id),
+    )
+    cursor.execute("SET LOCAL road.graph.disable.trigger = '0'")
+
+    # One issue for the road, with the expected links
+    cursor.execute(
+        "SELECT edge_ids, details, fix_params FROM road_graph_editing.check_graph(ARRAY['G06'], %s)",
+        ([road_code],),
+    )
+    issues = cursor.fetchall()
+    assert len(issues) == 1
+    edge_ids, details, params = issues[0]
+    assert edge_ids == sorted([first_id, third_id])
+    expected = {link["edge_id"]: link for link in details["links"]}
+    assert expected[first_id]["expected_next_edge_id"] == second_id
+    assert expected[third_id]["expected_previous_edge_id"] == second_id
+
+    def fix() -> dict:
+        """Fix the issue in the editing session."""
+        cursor.execute(
+            "SELECT road_graph_editing.fix_graph_issue('relink_edges', %s)",
+            (json.dumps(params),),
+        )
+        return fetch_one(cursor)[0]
+
+    result = fix()
+    assert result["status"] == "success", result
+
+    # The links and the references of the road are back to their original values
+    cursor.execute(references_sql, (road_code,))
+    assert cursor.fetchall() == road_edges
+    assert fix()["status"] == "skipped"
 
 
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
