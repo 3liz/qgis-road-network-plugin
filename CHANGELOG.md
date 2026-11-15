@@ -2,9 +2,21 @@
 
 ## Unreleased
 
+## 0.7.1 - 2026-11-15
+
+### Summary
+
+**Highlights**
+
+* **Performance**: faster editing of long roads, the references being only calculated again downstream
+  of a modification, and faster calculation of the lines of the managed objects from their references
+* **Road graph checks**: new check G06 finding the previous and next edges inconsistent with the geometry,
+  which give wrong references to the whole road. The checks are now numbered in the order of their fixes
+
 **Upgrade notes**
 
 * Run the algorithm `Upgrade database structure` to upgrade the database (migration 45)
+* The checks G06 to G10 of the version 0.7.0 become G07 to G11, with their options
 
 ### Added
 
@@ -26,6 +38,7 @@
   are ordered along the road with the order of the edges, instead of the references of their start and end points.
   The lines are the same, and a line with several parts is calculated 28 times faster: on the test data,
   22 s instead of 48 s for 4,000 lines (migration `upgrade_to_45.sql`)
+
 
 ## 0.7.0 - 2026-11-15
 
