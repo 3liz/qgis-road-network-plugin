@@ -389,4 +389,4 @@ class IssuesLayerPostProcessor(QgsProcessingLayerPostProcessorInterface):
 
 
 # The post processors must be kept alive until the layers are loaded
-POST_PROCESSORS = []
+POST_PROCESSORS: list[IssuesLayerPostProcessor] = []
