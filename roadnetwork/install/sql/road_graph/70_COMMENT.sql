@@ -196,6 +196,19 @@ which help to find the bridges:
   are connected, or mark_as_bridge, which sets no_intersection_cutting to True for the edges.';
 
 
+-- FUNCTION check_graph_duplicate_edges(_road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.check_graph_duplicate_edges(_road_codes text[], _options jsonb) IS 'Check G12 run by the function check_graph: find the duplicate edges, for example after a copy of an edge.
+
+Two edges are duplicates when they have the same end nodes, in the same or the opposite direction,
+and the same geometry: their Hausdorff distance is less than the option tolerance (0.5 m by default).
+
+An issue is returned for each kept edge, the edge with the lowest id, with its duplicates.
+The details give the kept edge, the duplicate edges, their road codes and the length of the kept edge.
+
+The issue can be fixed with the action delete_duplicate_edges, which deletes the duplicates.
+The duplicates of another road have no fix action: they must be checked manually.';
+
+
 -- FUNCTION check_graph_edge_links(_road_codes text[], _options jsonb)
 COMMENT ON FUNCTION road_graph.check_graph_edge_links(_road_codes text[], _options jsonb) IS 'Check G06 run by the function check_graph: find the edges whose previous or next edge contradicts the geometry.
 
@@ -378,6 +391,18 @@ A node is created at this point, or the existing node less than 50 cm from it is
 and the triggers split the edges passing there.
 
 It returns a JSON object with the keys status (success, or skipped if no edge must be split at this point) and message.';
+
+
+-- FUNCTION fix_graph_delete_duplicate_edges(_params jsonb)
+COMMENT ON FUNCTION road_graph.fix_graph_delete_duplicate_edges(_params jsonb) IS 'Action delete_duplicate_edges run by the function fix_graph_issue, to fix the issues of the check G12:
+delete the duplicates of an edge.
+
+The parameters give the kept edge, the duplicate edges and the tolerance:
+{"edge_id": 12, "duplicate_edge_ids": [13, 14], "tolerance": 0.5}.
+Only the edges which are still duplicates of the kept edge, with the same road code, are deleted, one by one:
+the trigger after_edge_delete links the previous and next edges of each deleted edge.
+
+It returns a JSON object with the keys status (success, skipped if there is no duplicate anymore, or error) and message.';
 
 
 -- FUNCTION fix_graph_delete_node(_params jsonb)

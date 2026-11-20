@@ -77,6 +77,7 @@ def check_titles() -> dict:
         "G09": tr("Short edge"),
         "G10": tr("First marker not at the start of the road"),
         "G11": tr("Markers not in the order of the road"),
+        "G12": tr("Duplicate edges"),
     }
 
 
@@ -95,6 +96,7 @@ def fix_action_labels() -> dict:
         "collapse_edge": tr("Remove the edge and merge its nodes"),
         "move_marker": tr("Move the marker to the start of the road"),
         "relink_edges": tr("Set the previous and next edges from the geometry"),
+        "delete_duplicate_edges": tr("Delete the duplicate edges"),
     }
 
 

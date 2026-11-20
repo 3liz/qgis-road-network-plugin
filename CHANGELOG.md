@@ -4,6 +4,7 @@
 
 ### Added
 
+* **Road graph checks**: new check G12, duplicate edges, with an automatic fix
 * **Documentation**: translation on Transifex, with a language selector (French for now)
 
 ### Changed

@@ -5463,6 +5463,119 @@ def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     assert fetch_one(cursor)[0] == 0
 
 
+def test_check_graph_duplicate_edges(rollback_db_connection: psycopg.Connection):
+    """Check G12: duplicate edges. In an editing session, an edge of a road is copied
+    in the chain of the road, and another edge is copied with another road code.
+    The first issue is fixed, the second one has no fix action.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # The test data has no issue
+    cursor.execute("SELECT count(*) FROM road_graph.check_graph(ARRAY['G12'])")
+    assert fetch_one(cursor)[0] == 0
+
+    # Three consecutive edges of a road, and an editing session around the road
+    cursor.execute("""
+        SELECT a.road_code, a.id, b.id, c.id
+        FROM road_graph.edges AS a
+        JOIN road_graph.edges AS b ON b.id = a.next_edge_id AND b.start_node = a.end_node
+        JOIN road_graph.edges AS c ON c.id = b.next_edge_id AND c.start_node = b.end_node
+        JOIN road_graph.roads AS r ON r.road_code = a.road_code AND r.road_type = 'road'
+        ORDER BY a.id
+        LIMIT 1
+    """)
+    road_code, first_id, second_id, third_id = fetch_one(cursor)
+    cursor.execute(
+        """
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G12 test', 'test', ST_Envelope(ST_Buffer(ST_Collect(e.geom), 100))
+        FROM road_graph.edges AS e
+        WHERE e.road_code = %s
+        RETURNING id
+        """,
+        (road_code,),
+    )
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (fetch_one(cursor)[0],))
+    cursor.execute(
+        "SELECT road_code FROM road_graph_editing.roads WHERE road_code != %s LIMIT 1",
+        (road_code,),
+    )
+    other_road_code = fetch_one(cursor)[0]
+
+    # Copies of the second edge, between the first and second edges in the chain of the road,
+    # and of the third edge, with another road code, without the triggers
+    cursor.execute("SET LOCAL road.graph.disable.trigger = '1'")
+    cursor.execute(
+        """
+        INSERT INTO road_graph_editing.edges (
+            road_code, start_node, end_node, previous_edge_id, next_edge_id, geom
+        )
+        SELECT road_code, start_node, end_node, %s, id, geom
+        FROM road_graph_editing.edges
+        WHERE id = %s
+        RETURNING id
+        """,
+        (first_id, second_id),
+    )
+    copy_id = fetch_one(cursor)[0]
+    links_sql = "UPDATE road_graph_editing.edges SET {} = %s WHERE id = %s"
+    cursor.execute(links_sql.format("next_edge_id"), (copy_id, first_id))
+    cursor.execute(links_sql.format("previous_edge_id"), (copy_id, second_id))
+    cursor.execute(
+        """
+        INSERT INTO road_graph_editing.edges (road_code, start_node, end_node, geom)
+        SELECT %s, end_node, start_node, ST_Reverse(geom)
+        FROM road_graph_editing.edges
+        WHERE id = %s
+        RETURNING id
+        """,
+        (other_road_code, third_id),
+    )
+    other_copy_id = fetch_one(cursor)[0]
+    cursor.execute("SET LOCAL road.graph.disable.trigger = '0'")
+
+    # Two issues: the copy of the same road can be deleted, the copy of another road must be checked manually
+    cursor.execute(
+        """
+        SELECT road_code, edge_ids, fix_action, fix_params
+        FROM road_graph_editing.check_graph(ARRAY['G12'], %s)
+        ORDER BY edge_ids
+        """,
+        ([road_code],),
+    )
+    issues = {row[1][0]: row for row in cursor.fetchall()}
+    assert sorted(issues.keys()) == sorted([second_id, third_id])
+    assert issues[second_id][0:3] == (road_code, [second_id, copy_id], "delete_duplicate_edges")
+    assert issues[third_id][0:3] == (None, [third_id, other_copy_id], None)
+
+    def fix() -> dict:
+        """Fix the issue of the copy of the same road in the editing session."""
+        cursor.execute(
+            "SELECT road_graph_editing.fix_graph_issue('delete_duplicate_edges', %s)",
+            (json.dumps(issues[second_id][3]),),
+        )
+        return fetch_one(cursor)[0]
+
+    # The copy is deleted, and the first and second edges are linked again
+    result = fix()
+    assert result["status"] == "success", result
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE id = %s", (copy_id,))
+    assert fetch_one(cursor)[0] == 0
+    cursor.execute(
+        "SELECT next_edge_id FROM road_graph_editing.edges WHERE id = %s",
+        (first_id,),
+    )
+    assert fetch_one(cursor)[0] == second_id
+    cursor.execute(
+        "SELECT previous_edge_id FROM road_graph_editing.edges WHERE id = %s",
+        (second_id,),
+    )
+    assert fetch_one(cursor)[0] == first_id
+    cursor.execute("SELECT count(*) FROM road_graph_editing.check_graph(ARRAY['G06'], %s)", ([road_code],))
+    assert fetch_one(cursor)[0] == 0
+    assert fix()["status"] == "skipped"
+
+
 def test_check_graph_useless_nodes_crossing_edges(rollback_db_connection: psycopg.Connection):
     """Check G04: the useless node of two edges crossing other edges cannot be deleted
     before fixing the issues of the check G01: the triggers would split the merged edge at the crossings.

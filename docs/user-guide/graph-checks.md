@@ -115,6 +115,7 @@ Each check below is illustrated by a diagram of the issue and of its fix.
 | [G09](#g09-short-edge) | Short edge | `collapse_edge` |
 | [G10](#g10-first-marker-not-at-the-start-of-the-road) | First marker not at the start of the road | `move_marker` |
 | [G11](#g11-markers-not-in-the-order-of-the-road) | Markers not in the order of the road | manual |
+| [G12](#g12-duplicate-edges) | Duplicate edges, for example after a copy of an edge | `delete_duplicate_edges` |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
 toggle the editing mode of the point layer created by the algorithm Check the road graph,
@@ -415,6 +416,25 @@ of the previous and next markers in the order of the road.
 
 There is no fix action: move the marker, or change its code. Fix the issues of the check
 [G05](#g05-edges-in-the-opposite-direction-of-the-road) before: a reversed edge changes the positions of the markers.
+
+### G12: Duplicate edges
+
+![G12: issue and fix](../media/user-guide/graph_checks_g12.svg)
+
+Two edges are **duplicates** when they have the same end nodes, in the same or the opposite direction,
+and the same geometry: their Hausdorff distance is less than the option `tolerance`, **0.5 m** by default.
+It happens for example after a copy of an edge. The duplicates also create issues
+[G07](#g07-road-with-branches), and often [G06](#g06-previous-and-next-edges-inconsistent-with-the-geometry):
+although this check is numbered last, fix its issues first.
+
+The check returns one issue for each edge with duplicates: the kept edge is the edge with the lowest id.
+The field `details` gives the `kept_edge_id`, the `duplicate_edge_ids`, their `road_codes` and the `length`.
+
+Fix action:
+
+* `delete_duplicate_edges`: delete the duplicates, one by one: the previous and next edges of each deleted edge
+  are linked together. It is only proposed when all the edges have the same road. The duplicates of another road,
+  for example a common section of two roads drawn twice, must be checked manually.
 
 ## Configuration of the checks
 

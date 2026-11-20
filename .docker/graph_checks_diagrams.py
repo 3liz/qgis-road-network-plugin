@@ -528,6 +528,34 @@ def g11() -> str:
     return diagram([issue, fixed])
 
 
+def g12() -> str:
+    """Diagram of the check G12.
+
+    :return: The SVG of the diagram
+    """
+    issue, fixed = panels("Issue", "delete_duplicate_edges")
+    for p in (issue, fixed):
+        p.line([(30, 140), (120, 140)], GREY, arrow=True)
+        p.line([(330, 140), (420, 140)], GREY, arrow=True)
+        p.text(75, 165, "D12", 13, MUTED)
+        p.text(375, 165, "D12", 13, MUTED)
+    # Issue: the edge e2 and its copy e3, drawn side by side to be seen
+    issue.line([(120, 132), (330, 132)], GREY, arrow=True)
+    issue.line([(120, 150), (330, 150)], ISSUE, 5, "8,5")
+    issue.text(225, 120, "e2", 13, MUTED)
+    issue.text(225, 172, "e3", 13, ISSUE, weight="bold")
+    # Fixed: only e2 is kept
+    fixed.line([(120, 140), (330, 140)], FIXED, arrow=True)
+    fixed.text(225, 128, "e2", 13, FIXED, weight="bold")
+    for p in (issue, fixed):
+        for x in (30, 120, 330, 420):
+            p.node(x, 140)
+    issue.text(225, 205, "e2 and e3 have the same nodes and the same geometry,")
+    issue.text(225, 223, "for example after a copy of the edge")
+    fixed.text(225, 205, "the duplicate e3 is deleted:")
+    fixed.text(225, 223, "the previous and next edges are linked to e2")
+    return diagram([issue, fixed])
+
 def link(p: Panel, x1: float, x2: float, y: float, height: float, color: str):
     """Add a curved arrow above the road, from an edge to its next edge.
 
@@ -579,6 +607,7 @@ def main() -> int:
         ("g09", g09),
         ("g10", g10),
         ("g11", g11),
+        ("g12", g12),
     ):
         content = function()
         if args.output_dir:
