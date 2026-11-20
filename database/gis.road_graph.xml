@@ -71,6 +71,8 @@
          <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="code" nullable="false" remarks="Code of the check, e.g. G01. The checks are numbered in the recommended order of the fixes." size="2147483647" type="text" typeCode="12">
             <child column="unique_code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="editing_sessions"/>
             <child column="code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="glossary_road_class"/>
+            <child column="check_code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="graph_issues"/>
+            <child column="road_code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="graph_issues"/>
             <child column="road_class_code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="roads"/>
             <child column="road_code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="roads"/>
             <child column="road_code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="v_road_without_zero_marker"/>
@@ -105,6 +107,39 @@
          <index name="glossary_road_class_label_key" unique="true">
             <column ascending="true" name="label"/>
          </index>
+      </table>
+      <table name="graph_issues" remarks="Issues of the road graph found by the checks, stored in the editing session only (road_graph_editing.graph_issues) by the function refresh_graph_issues. The table is emptied when the data is copied to a new editing session, and when the editing session is merged or dropped. The table of the production schema is not used." schema="road_graph" type="TABLE">
+         <column autoUpdated="true" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Unique identifier of the issue. It is kept while the issue is found again by the checks." size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="check_code" nullable="false" remarks="Code of the check which found the issue, e.g. G01 (see the table glossary_graph_check)" size="2147483647" type="text" typeCode="12">
+            <parent column="code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="glossary_graph_check"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="check_title" nullable="true" remarks="Title of the check" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="severity" nullable="true" remarks="Severity of the issue: error or warning" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="road_code" nullable="true" remarks="Code of the road of the issue, if the issue concerns one road" size="2147483647" type="text" typeCode="12">
+            <parent column="code" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="road_graph" table="glossary_graph_check"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="edge_ids" nullable="true" remarks="Ids of the edges concerned by the issue" size="10" type="_int4" typeCode="2003"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="node_ids" nullable="true" remarks="Ids of the nodes concerned by the issue" size="10" type="_int4" typeCode="2003"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="marker_ids" nullable="true" remarks="Ids of the markers concerned by the issue" size="10" type="_int4" typeCode="2003"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="details" nullable="true" remarks="Details of the issue, depending on the check" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="fix_action" nullable="true" remarks="Action which can fix the issue automatically, if any (see the function fix_graph_issue)" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="10" name="fix_params" nullable="true" remarks="Parameters of the fix action" size="2147483647" type="jsonb" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="11" name="fix_status" nullable="true" remarks="Status of the last fix of the issue: success, skipped or error" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="12" name="fix_message" nullable="true" remarks="Message of the last fix of the issue" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="(now())::timestamp(0) without time zone" digits="6" id="13" name="checked_at" nullable="true" remarks="Date and time of the last check which found the issue" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="14" name="geom" nullable="true" remarks="Point locating the issue" size="2147483647" type="geometry" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="15" name="geom_detail" nullable="true" remarks="Lines showing the issue, if useful: edges, gap between two edges, etc." size="2147483647" type="geometry" typeCode="1111"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="graph_issues_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="graph_issues_geom_detail_idx" unique="false">
+            <column ascending="true" name="geom_detail"/>
+         </index>
+         <index name="graph_issues_geom_idx" unique="false">
+            <column ascending="true" name="geom"/>
+         </index>
+         <checkConstraint constraint="(fix_status = ANY (ARRAY['success'::text, 'skipped'::text, 'error'::text]))" name="graph_issues_fix_status_values"/>
       </table>
       <table name="managed_objects" remarks="Table listing all managed objects in the road graph system" schema="road_graph" type="TABLE">
          <column autoUpdated="true" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
@@ -2613,6 +2648,111 @@ END;]]></definition>
             <parameter mode="TABLE" name="geom_detail" type="geometry"/>
          </parameters>
       </routine>
+      <routine dataAccess="MODIFIES" deterministic="false" name="check_graph_duplicate_edges(_road_codes text[], _options jsonb)" returnType="TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)" securityType="INVOKER" type="FUNCTION">
+         <comment><![CDATA[Check G12 run by the function check_graph: find the duplicate edges, for example after a copy of an edge.
+
+Two edges are duplicates when they have the same end nodes, in the same or the opposite direction,
+and the same geometry: their Hausdorff distance is less than the option tolerance (0.5 m by default).
+
+An issue is returned for each kept edge, the edge with the lowest id, with its duplicates.
+The details give the kept edge, the duplicate edges, their road codes and the length of the kept edge.
+
+The issue can be fixed with the action delete_duplicate_edges, which deletes the duplicates.
+The duplicates of another road have no fix action: they must be checked manually.]]></comment>
+         <definition language="plpgsql"><![CDATA[DECLARE
+    -- Maximum distance between the geometries of two duplicate edges
+    tolerance real = Coalesce((_options->>'tolerance')::real, 0.5);
+BEGIN
+    RETURN QUERY
+    WITH
+    -- Pairs of edges with the same end nodes, in the same or the opposite direction,
+    -- and with the same geometry, less than the tolerance from each other
+    -- (two joins on the nodes instead of one with OR, to use the indexes)
+    same_nodes AS (
+        SELECT a.id AS kept_id, b.id AS duplicate_id, a.geom AS kept_geom, b.geom AS duplicate_geom
+        FROM road_graph.edges AS a
+        JOIN road_graph.edges AS b
+            ON b.start_node = a.start_node AND b.end_node = a.end_node AND b.id > a.id
+        WHERE (_road_codes IS NULL OR a.road_code = ANY(_road_codes) OR b.road_code = ANY(_road_codes))
+        UNION ALL
+        SELECT a.id, b.id, a.geom, b.geom
+        FROM road_graph.edges AS a
+        JOIN road_graph.edges AS b
+            ON b.start_node = a.end_node AND b.end_node = a.start_node AND b.id > a.id
+        WHERE (_road_codes IS NULL OR a.road_code = ANY(_road_codes) OR b.road_code = ANY(_road_codes))
+    ),
+    pairs AS (
+        SELECT s.kept_id, s.duplicate_id
+        FROM same_nodes AS s
+        WHERE ST_HausdorffDistance(s.kept_geom, s.duplicate_geom) <= tolerance
+    ),
+    -- Each duplicate is attached to the edge with the lowest id among the edges it duplicates
+    duplicates AS (
+        SELECT p.duplicate_id, min(p.kept_id) AS kept_id
+        FROM pairs AS p
+        GROUP BY p.duplicate_id
+    ),
+    -- One issue per kept edge, with its duplicates
+    issues AS (
+        SELECT
+            k.id AS kept_id, k.road_code, k.start_node, k.end_node, k.geom,
+            array_agg(d.id ORDER BY d.id) AS duplicate_ids,
+            array_agg(DISTINCT d.road_code ORDER BY d.road_code) AS duplicate_road_codes
+        FROM duplicates AS u
+        JOIN road_graph.edges AS k ON k.id = u.kept_id
+        JOIN road_graph.edges AS d ON d.id = u.duplicate_id
+        GROUP BY k.id, k.road_code, k.start_node, k.end_node, k.geom
+    )
+    SELECT
+        'G12'::text,
+        'Duplicate edges'::text,
+        'error'::text,
+        -- The road code of the issue, if all the edges have the same road
+        CASE WHEN i.duplicate_road_codes = ARRAY[i.road_code] THEN i.road_code END,
+        ARRAY[i.kept_id] || i.duplicate_ids,
+        ARRAY[i.start_node, i.end_node],
+        NULL::integer[],
+        jsonb_build_object(
+            'kept_edge_id', i.kept_id,
+            'duplicate_edge_ids', i.duplicate_ids,
+            'road_codes', (
+                SELECT jsonb_agg(DISTINCT c ORDER BY c)
+                FROM unnest(i.road_code || i.duplicate_road_codes) AS c
+            ),
+            'length', round(ST_Length(i.geom)::numeric, 2)
+        ),
+        -- The duplicates of another road must be checked manually, for example a common section drawn twice
+        CASE WHEN i.duplicate_road_codes = ARRAY[i.road_code] THEN 'delete_duplicate_edges' END,
+        CASE
+            WHEN i.duplicate_road_codes = ARRAY[i.road_code] THEN jsonb_build_object(
+                'edge_id', i.kept_id,
+                'duplicate_edge_ids', i.duplicate_ids,
+                'tolerance', tolerance
+            )
+        END,
+        ST_LineInterpolatePoint(i.geom, 0.5),
+        i.geom
+    FROM issues AS i
+    ORDER BY i.road_code, i.kept_id
+    ;
+END;]]></definition>
+         <parameters>
+            <parameter mode="IN" name="_road_codes" type="text[]"/>
+            <parameter mode="IN" name="_options" type="jsonb"/>
+            <parameter mode="TABLE" name="check_code" type="text"/>
+            <parameter mode="TABLE" name="check_title" type="text"/>
+            <parameter mode="TABLE" name="severity" type="text"/>
+            <parameter mode="TABLE" name="road_code" type="text"/>
+            <parameter mode="TABLE" name="edge_ids" type="integer[]"/>
+            <parameter mode="TABLE" name="node_ids" type="integer[]"/>
+            <parameter mode="TABLE" name="marker_ids" type="integer[]"/>
+            <parameter mode="TABLE" name="details" type="jsonb"/>
+            <parameter mode="TABLE" name="fix_action" type="text"/>
+            <parameter mode="TABLE" name="fix_params" type="jsonb"/>
+            <parameter mode="TABLE" name="geom" type="geometry"/>
+            <parameter mode="TABLE" name="geom_detail" type="geometry"/>
+         </parameters>
+      </routine>
       <routine dataAccess="MODIFIES" deterministic="false" name="check_graph_edge_links(_road_codes text[], _options jsonb)" returnType="TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)" securityType="INVOKER" type="FUNCTION">
          <comment><![CDATA[Check G06 run by the function check_graph: find the edges whose previous or next edge contradicts the geometry.
 
@@ -3996,6 +4136,7 @@ BEGIN
     TRUNCATE road_graph_editing.nodes CASCADE;
     TRUNCATE road_graph_editing.editing_sessions CASCADE;
     TRUNCATE road_graph_editing.glossary_road_class CASCADE;
+    TRUNCATE road_graph_editing.graph_issues RESTART IDENTITY;
 
     -- Re-insert glossary
     INSERT INTO road_graph_editing.glossary_road_class
@@ -4254,6 +4395,7 @@ BEGIN
     TRUNCATE road_graph_editing.edges CASCADE;
     TRUNCATE road_graph_editing.nodes CASCADE;
     TRUNCATE road_graph_editing.editing_sessions CASCADE;
+    TRUNCATE road_graph_editing.graph_issues RESTART IDENTITY;
 
     -- Set the sequences back to the maximum id in the main tables
     SELECT INTO _set_val
@@ -4693,6 +4835,73 @@ BEGIN
     RETURN jsonb_build_object(
         'status', 'success',
         'message', format('The edges have been split by the new node %s', node_id)
+    );
+END;]]></definition>
+         <parameters>
+            <parameter mode="IN" name="_params" type="jsonb"/>
+         </parameters>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="false" name="fix_graph_delete_duplicate_edges(_params jsonb)" returnType="jsonb" securityType="INVOKER" type="FUNCTION">
+         <comment><![CDATA[Action delete_duplicate_edges run by the function fix_graph_issue, to fix the issues of the check G12:
+delete the duplicates of an edge.
+
+The parameters give the kept edge, the duplicate edges and the tolerance:
+{"edge_id": 12, "duplicate_edge_ids": [13, 14], "tolerance": 0.5}.
+Only the edges which are still duplicates of the kept edge, with the same road code, are deleted, one by one:
+the trigger after_edge_delete links the previous and next edges of each deleted edge.
+
+It returns a JSON object with the keys status (success, skipped if there is no duplicate anymore, or error) and message.]]></comment>
+         <definition language="plpgsql"><![CDATA[DECLARE
+    kept_edge record;
+    duplicate_id integer;
+    deleted_ids integer[];
+    tolerance real = Coalesce((_params->>'tolerance')::real, 0.5);
+BEGIN
+    -- The kept edge may have been removed or modified by a previous fix
+    SELECT e.*
+    INTO kept_edge
+    FROM road_graph.edges AS e
+    WHERE e.id = (_params->>'edge_id')::integer
+    ;
+    IF kept_edge.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The edge %s does not exist anymore', _params->>'edge_id')
+        );
+    END IF;
+
+    -- Delete the duplicates which are still duplicates of the kept edge, one by one:
+    -- the trigger after_edge_delete links the previous and next edges of each deleted edge
+    FOR duplicate_id IN
+        SELECT d.id
+        FROM road_graph.edges AS d
+        WHERE d.id IN (SELECT jsonb_array_elements_text(_params->'duplicate_edge_ids')::integer)
+        AND d.road_code = kept_edge.road_code
+        AND (
+            (d.start_node = kept_edge.start_node AND d.end_node = kept_edge.end_node)
+            OR (d.start_node = kept_edge.end_node AND d.end_node = kept_edge.start_node)
+        )
+        AND ST_HausdorffDistance(d.geom, kept_edge.geom) <= tolerance
+        ORDER BY d.id DESC
+    LOOP
+        DELETE FROM road_graph.edges AS e
+        WHERE e.id = duplicate_id
+        ;
+        deleted_ids = deleted_ids || duplicate_id;
+    END LOOP;
+
+    IF deleted_ids IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format('The edge %s has no duplicate anymore', kept_edge.id)
+        );
+    END IF;
+    RETURN jsonb_build_object(
+        'status', 'success',
+        'message', format(
+            'The edges %s duplicating the edge %s have been deleted',
+            array_to_string(ARRAY(SELECT unnest(deleted_ids) ORDER BY 1), ', '), kept_edge.id
+        )
     );
 END;]]></definition>
          <parameters>
@@ -5453,6 +5662,82 @@ BEGIN
 END;]]></definition>
          <parameters>
             <parameter mode="IN" name="_params" type="jsonb"/>
+         </parameters>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="false" name="fix_stored_graph_issue(_issue_id integer, _fix_action text DEFAULT NULL::text, _fix_params jsonb DEFAULT NULL::jsonb, _refresh boolean DEFAULT true)" returnType="jsonb" securityType="INVOKER" type="FUNCTION">
+         <comment><![CDATA[Fix an issue stored in the table graph_issues of the editing session, with the function fix_graph_issue.
+
+The issue is fixed with its fix action and parameters, or with the given ones, for example when the user chooses another fix.
+The result is stored in the fields fix_status and fix_message of the issue.
+
+If _refresh is True and the fix did not fail, the roads of the issue are checked again with the function refresh_graph_issues:
+the fixed issue is deleted, and the new issues of these roads are added.
+
+It returns a JSON object with the keys status (success, skipped or error) and message.]]></comment>
+         <definition language="plpgsql"><![CDATA[DECLARE
+    issue record;
+    result jsonb;
+    issue_road_codes text[];
+BEGIN
+    SELECT g.*
+    INTO issue
+    FROM road_graph.graph_issues AS g
+    WHERE g.id = _issue_id
+    ;
+    IF issue.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format(
+                'The issue %s is not found anymore: it has been fixed, or the checks have been run again',
+                _issue_id
+            )
+        );
+    END IF;
+    IF Coalesce(_fix_action, issue.fix_action) IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', format('The issue %s has no fix action: it must be fixed manually', _issue_id)
+        );
+    END IF;
+
+    -- Fix the issue with its fix action, or with the given one, and store the result
+    result = road_graph.fix_graph_issue(
+        Coalesce(_fix_action, issue.fix_action),
+        Coalesce(_fix_params, issue.fix_params, '{}'::jsonb)
+    );
+    UPDATE road_graph.graph_issues AS g
+    SET
+        fix_action = Coalesce(_fix_action, g.fix_action),
+        fix_params = Coalesce(_fix_params, g.fix_params),
+        fix_status = result->>'status',
+        fix_message = result->>'message'
+    WHERE g.id = _issue_id
+    ;
+
+    -- Check again the roads of the issue, unless the fix failed: the fixed issue is deleted,
+    -- and the new issues of these roads are added, for example a useless node after merging two nodes
+    IF _refresh AND result->>'status' != 'error' THEN
+        SELECT array_agg(DISTINCT r.road_code ORDER BY r.road_code)
+        INTO issue_road_codes
+        FROM (
+            SELECT issue.road_code
+            UNION ALL
+            SELECT jsonb_array_elements_text(Coalesce(issue.details->'road_codes', '[]'::jsonb))
+        ) AS r
+        WHERE r.road_code IS NOT NULL
+        ;
+        IF issue_road_codes IS NOT NULL THEN
+            PERFORM road_graph.refresh_graph_issues(NULL, issue_road_codes);
+        END IF;
+    END IF;
+
+    RETURN result;
+END;]]></definition>
+         <parameters>
+            <parameter mode="IN" name="_issue_id" type="integer"/>
+            <parameter mode="IN" name="_fix_action" type="text"/>
+            <parameter mode="IN" name="_fix_params" type="jsonb"/>
+            <parameter mode="IN" name="_refresh" type="boolean"/>
          </parameters>
       </routine>
       <routine dataAccess="MODIFIES" deterministic="false" name="get_current_setting(setting_name text, default_value text)" returnType="text" securityType="INVOKER" type="FUNCTION">
@@ -8761,6 +9046,146 @@ END;]]></definition>
             <parameter mode="IN" name="_table_name" type="text"/>
             <parameter mode="IN" name="_feature_id_a" type="integer"/>
             <parameter mode="IN" name="_feature_id_b" type="integer"/>
+         </parameters>
+      </routine>
+      <routine dataAccess="MODIFIES" deterministic="false" name="refresh_graph_issues(_checks text[] DEFAULT NULL::text[], _road_codes text[] DEFAULT NULL::text[], _options jsonb DEFAULT NULL::jsonb)" returnType="integer" securityType="INVOKER" type="FUNCTION">
+         <comment><![CDATA[Run the checks of the road graph with the function check_graph, and update the issues stored in the table graph_issues of the editing session.
+
+The parameters are the ones of check_graph: the checks to run and the road codes, all of them if NULL, and the options of the checks.
+Only the issues in the polygon of the editing session are stored: the issues of the edges copied beyond it cannot be fixed.
+
+* the stored issues found again keep their id and their fix status, their details and fix action are updated,
+* the stored issues of these checks and roads which are not found anymore are deleted,
+* the new issues are added.
+
+It only works in the editing schema, with road_graph_editing.refresh_graph_issues.
+It returns the number of issues found.]]></comment>
+         <definition language="plpgsql"><![CDATA[DECLARE
+    schema_name text;
+    issues_count integer;
+BEGIN
+    -- The issues are stored in the editing session only:
+    -- the name of the schema of the table is replaced when the function is installed in the editing schema
+    SELECT n.nspname
+    INTO schema_name
+    FROM pg_class AS c
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE c.oid = 'road_graph.graph_issues'::regclass
+    ;
+    IF schema_name = 'road_graph' THEN
+        RAISE EXCEPTION 'The road graph issues are stored in the editing session only, '
+            'with the function road_graph_editing.refresh_graph_issues';
+    END IF;
+
+    WITH
+    -- Issues found by the checks, with a key identifying the same issue between two runs,
+    -- and a rank for the issues with the same key
+    found AS MATERIALIZED (
+        SELECT
+            i.*,
+            k.issue_key,
+            row_number() OVER (PARTITION BY k.issue_key ORDER BY i.id) AS issue_rank,
+            -- Lines of the detail geometry, NULL if there is none
+            CASE WHEN NOT ST_IsEmpty(d.lines) THEN d.lines END AS detail_lines
+        FROM road_graph.check_graph(_checks, _road_codes, _options) AS i
+        CROSS JOIN LATERAL (
+            SELECT md5(concat_ws(
+                '|', i.check_code, i.road_code, i.edge_ids::text, i.node_ids::text, i.marker_ids::text,
+                ST_AsText(ST_SnapToGrid(i.geom, 0.01))
+            )) AS issue_key
+        ) AS k
+        CROSS JOIN LATERAL (
+            SELECT ST_Multi(ST_CollectionExtract(i.geom_detail, 2)) AS lines
+        ) AS d
+        -- Only the issues in the polygon of the editing session: the edges copied with the session
+        -- go beyond it, but their issues outside the polygon cannot be fixed
+        WHERE NOT EXISTS (SELECT 1 FROM road_graph.editing_sessions AS s WHERE s.geom IS NOT NULL)
+        OR EXISTS (
+            SELECT 1
+            FROM road_graph.editing_sessions AS s
+            WHERE ST_Intersects(s.geom, i.geom)
+        )
+    ),
+    -- Stored issues, with the same key and rank.
+    -- Only the stored issues of the given checks and roads can be deleted
+    stored AS (
+        SELECT
+            g.id,
+            k.issue_key,
+            row_number() OVER (PARTITION BY k.issue_key ORDER BY g.id) AS issue_rank,
+            (
+                (_checks IS NULL OR g.check_code = ANY(_checks))
+                AND (
+                    _road_codes IS NULL
+                    OR g.road_code = ANY(_road_codes)
+                    OR Coalesce(g.details->'road_codes', '[]'::jsonb) ?| _road_codes
+                )
+            ) AS in_scope
+        FROM road_graph.graph_issues AS g
+        CROSS JOIN LATERAL (
+            SELECT md5(concat_ws(
+                '|', g.check_code, g.road_code, g.edge_ids::text, g.node_ids::text, g.marker_ids::text,
+                ST_AsText(ST_SnapToGrid(g.geom, 0.01))
+            )) AS issue_key
+        ) AS k
+    ),
+    -- Issues found and already stored
+    matched AS (
+        SELECT s.id AS stored_id, f.*
+        FROM found AS f
+        JOIN stored AS s USING (issue_key, issue_rank)
+    ),
+    -- Stored issues not found anymore
+    deleted AS (
+        DELETE FROM road_graph.graph_issues AS g
+        USING stored AS s
+        WHERE g.id = s.id
+        AND s.in_scope
+        AND NOT EXISTS (SELECT 1 FROM matched AS m WHERE m.stored_id = s.id)
+        RETURNING g.id
+    ),
+    -- Issues found again: their details and fix action are updated, their fix status is kept
+    updated AS (
+        UPDATE road_graph.graph_issues AS g
+        SET
+            check_title = m.check_title,
+            severity = m.severity,
+            details = m.details,
+            fix_action = m.fix_action,
+            fix_params = m.fix_params,
+            geom_detail = m.detail_lines,
+            checked_at = now()::timestamp(0)
+        FROM matched AS m
+        WHERE g.id = m.stored_id
+        RETURNING g.id
+    ),
+    -- New issues
+    inserted AS (
+        INSERT INTO road_graph.graph_issues (
+            check_code, check_title, severity, road_code, edge_ids, node_ids, marker_ids,
+            details, fix_action, fix_params, geom, geom_detail
+        )
+        SELECT
+            f.check_code, f.check_title, f.severity, f.road_code, f.edge_ids, f.node_ids, f.marker_ids,
+            f.details, f.fix_action, f.fix_params, f.geom, f.detail_lines
+        FROM found AS f
+        WHERE NOT EXISTS (
+            SELECT 1 FROM matched AS m WHERE m.issue_key = f.issue_key AND m.issue_rank = f.issue_rank
+        )
+        ORDER BY f.id
+        RETURNING id
+    )
+    -- The deletion is run even if its result is not used
+    SELECT (SELECT count(*) FROM updated) + (SELECT count(*) FROM inserted)
+    INTO issues_count
+    ;
+
+    RETURN issues_count;
+END;]]></definition>
+         <parameters>
+            <parameter mode="IN" name="_checks" type="text[]"/>
+            <parameter mode="IN" name="_road_codes" type="text[]"/>
+            <parameter mode="IN" name="_options" type="jsonb"/>
          </parameters>
       </routine>
       <routine dataAccess="MODIFIES" deterministic="false" name="reorder_multilinestring_parts(_multilinestring geometry, _road_code text)" returnType="geometry" securityType="INVOKER" type="FUNCTION">

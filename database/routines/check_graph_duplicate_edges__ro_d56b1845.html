@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>gis.road_graph</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="../favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="../bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="../bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="../bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="../bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="../bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="../bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='../fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='../fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="../bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="../bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="../schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="../bower/html5shiv/html5shiv.min.js"></script>
+        <script src="../bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="../index.html" class="navbar-brand"><b>gis</b></a><span class="navbar-brand" style="padding-left: 0">.road_graph</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="../index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="../columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="../constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="../relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="../orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="../anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="../routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>check_graph_duplicate_edges(_road_codes text[], _options jsonb)</h1><br />
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-text-o"></i>
+                            <h3 id="Description" class="box-title">Description</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body clearfix">
+                            <p><p>Check G12 run by the function check_graph: find the duplicate edges, for example after a copy of an edge.</p>
+<p>Two edges are duplicates when they have the same end nodes, in the same or the opposite direction, and the same geometry: their Hausdorff distance is less than the option tolerance (0.5 m by default).</p>
+<p>An issue is returned for each kept edge, the edge with the lowest id, with its duplicates. The details give the kept edge, the duplicate edges, their road codes and the length of the kept edge.</p>
+<p>The issue can be fixed with the action delete_duplicate_edges, which deletes the duplicates. The duplicates of another road have no fix action: they must be checked manually.</p></p>
+                        </div>
+                        <!-- /.box-body -->
+                    </div>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span>
+                            <h3 id="Columns" class="box-title">Parameters</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <table id="standard_table" class="table table-bordered table-striped dataTable" role="grid">
+                                <thead align='left'>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>_road_codes</td>
+                                    <td>text[]</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>_options</td>
+                                    <td>jsonb</td>
+                                    <td>IN</td>
+                                </tr>
+                                <tr>
+                                    <td>check_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>check_title</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>severity</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>road_code</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>edge_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>node_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>marker_ids</td>
+                                    <td>integer[]</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>details</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_action</td>
+                                    <td>text</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>fix_params</td>
+                                    <td>jsonb</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                <tr>
+                                    <td>geom_detail</td>
+                                    <td>geometry</td>
+                                    <td>TABLE</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <i class="fa fa-file-code-o"></i>
+                            <h3 id="RoutineDefinition" class="box-title">Definition</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                                <button type="button" class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="box-body">
+                            <textarea id="sql-script-codemirror" name="sql-script-codemirror" rows="" style="display: none;">DECLARE&#10;    -- Maximum distance between the geometries of two duplicate edges&#10;    tolerance real &#61; Coalesce((_options-&gt;&gt;&#39;tolerance&#39;)::real, 0.5);&#10;BEGIN&#10;    RETURN QUERY&#10;    WITH&#10;    -- Pairs of edges with the same end nodes, in the same or the opposite direction,&#10;    -- and with the same geometry, less than the tolerance from each other&#10;    -- (two joins on the nodes instead of one with OR, to use the indexes)&#10;    same_nodes AS (&#10;        SELECT a.id AS kept_id, b.id AS duplicate_id, a.geom AS kept_geom, b.geom AS duplicate_geom&#10;        FROM road_graph.edges AS a&#10;        JOIN road_graph.edges AS b&#10;            ON b.start_node &#61; a.start_node AND b.end_node &#61; a.end_node AND b.id &gt; a.id&#10;        WHERE (_road_codes IS NULL OR a.road_code &#61; ANY(_road_codes) OR b.road_code &#61; ANY(_road_codes))&#10;        UNION ALL&#10;        SELECT a.id, b.id, a.geom, b.geom&#10;        FROM road_graph.edges AS a&#10;        JOIN road_graph.edges AS b&#10;            ON b.start_node &#61; a.end_node AND b.end_node &#61; a.start_node AND b.id &gt; a.id&#10;        WHERE (_road_codes IS NULL OR a.road_code &#61; ANY(_road_codes) OR b.road_code &#61; ANY(_road_codes))&#10;    ),&#10;    pairs AS (&#10;        SELECT s.kept_id, s.duplicate_id&#10;        FROM same_nodes AS s&#10;        WHERE ST_HausdorffDistance(s.kept_geom, s.duplicate_geom) &lt;&#61; tolerance&#10;    ),&#10;    -- Each duplicate is attached to the edge with the lowest id among the edges it duplicates&#10;    duplicates AS (&#10;        SELECT p.duplicate_id, min(p.kept_id) AS kept_id&#10;        FROM pairs AS p&#10;        GROUP BY p.duplicate_id&#10;    ),&#10;    -- One issue per kept edge, with its duplicates&#10;    issues AS (&#10;        SELECT&#10;            k.id AS kept_id, k.road_code, k.start_node, k.end_node, k.geom,&#10;            array_agg(d.id ORDER BY d.id) AS duplicate_ids,&#10;            array_agg(DISTINCT d.road_code ORDER BY d.road_code) AS duplicate_road_codes&#10;        FROM duplicates AS u&#10;        JOIN road_graph.edges AS k ON k.id &#61; u.kept_id&#10;        JOIN road_graph.edges AS d ON d.id &#61; u.duplicate_id&#10;        GROUP BY k.id, k.road_code, k.start_node, k.end_node, k.geom&#10;    )&#10;    SELECT&#10;        &#39;G12&#39;::text,&#10;        &#39;Duplicate edges&#39;::text,&#10;        &#39;error&#39;::text,&#10;        -- The road code of the issue, if all the edges have the same road&#10;        CASE WHEN i.duplicate_road_codes &#61; ARRAY[i.road_code] THEN i.road_code END,&#10;        ARRAY[i.kept_id] || i.duplicate_ids,&#10;        ARRAY[i.start_node, i.end_node],&#10;        NULL::integer[],&#10;        jsonb_build_object(&#10;            &#39;kept_edge_id&#39;, i.kept_id,&#10;            &#39;duplicate_edge_ids&#39;, i.duplicate_ids,&#10;            &#39;road_codes&#39;, (&#10;                SELECT jsonb_agg(DISTINCT c ORDER BY c)&#10;                FROM unnest(i.road_code || i.duplicate_road_codes) AS c&#10;            ),&#10;            &#39;length&#39;, round(ST_Length(i.geom)::numeric, 2)&#10;        ),&#10;        -- The duplicates of another road must be checked manually, for example a common section drawn twice&#10;        CASE WHEN i.duplicate_road_codes &#61; ARRAY[i.road_code] THEN &#39;delete_duplicate_edges&#39; END,&#10;        CASE&#10;            WHEN i.duplicate_road_codes &#61; ARRAY[i.road_code] THEN jsonb_build_object(&#10;                &#39;edge_id&#39;, i.kept_id,&#10;                &#39;duplicate_edge_ids&#39;, i.duplicate_ids,&#10;                &#39;tolerance&#39;, tolerance&#10;            )&#10;        END,&#10;        ST_LineInterpolatePoint(i.geom, 0.5),&#10;        i.geom&#10;    FROM issues AS i&#10;    ORDER BY i.road_code, i.kept_id&#10;    ;&#10;END;</textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 7.0.2</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="../bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="../bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="../bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="../bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="../bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="../bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="../bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="../bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="../bower/pdfmake/pdfmake.min.js"></script>
+        <script src="../bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="../bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="../bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="../bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="../bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="../bower/codemirror/codemirror.js"></script>
+        <script src="../bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="../bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="routine.js"></script>
+        <script src="../schemaSpy.js"></script>
+    </body>
+</html>

@@ -78,7 +78,7 @@
                         <div class="col-md-12">
                             <div class="callout callout-info">
                                 <h4>SchemaSpy Analysis of gis.road_graph</h4>
-                                <p>Generated on Fri Nov 20 16:56 UTC 2026</p>
+                                <p>Generated on Fri Nov 20 18:01 UTC 2026</p>
                             </div>
                         </div>
                     </div>
@@ -94,7 +94,7 @@
                                 <span class="info-box-icon bg-aqua"><i class="fa fa-table"></i></span>
                                 <div class="info-box-content">
                                     <span class="info-box-text">TABLES</span>
-                                    <span class="info-box-number">9</span>
+                                    <span class="info-box-number">10</span>
                                 </div>
                                 <!-- /.info-box-content -->
                             </div>
@@ -118,7 +118,7 @@
                                 <span class="info-box-icon bg-green"><span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span></span>
                                 <div class="info-box-content">
                                     <span class="info-box-text">COLUMNS</span>
-                                    <span class="info-box-number">95</span>
+                                    <span class="info-box-number">111</span>
                                 </div>
                                 <!-- /.info-box-content -->
                             </div>
@@ -142,7 +142,7 @@
                                 <span class="info-box-icon bg-red-active"><i class="fa fa-question" aria-hidden="true"></i></span>
                                 <div class="info-box-content">
                                     <span class="info-box-text">Anomalies</span>
-                                    <span class="info-box-number">5</span>
+                                    <span class="info-box-number">7</span>
                                 </div>
                                 <!-- /.info-box-content -->
                             </div>
@@ -154,7 +154,7 @@
                                 <span class="info-box-icon bg-navy"><i class="fa fa-file-code-o" aria-hidden="true"></i></span>
                                 <div class="info-box-content">
                                     <span class="info-box-text">Routines</span>
-                                    <span class="info-box-number">72</span>
+                                    <span class="info-box-number">76</span>
                                 </div>
                                 <!-- /.info-box-content -->
                             </div>
@@ -225,12 +225,21 @@
                                     </tr>
                                     <tr class="tbl even" valign="top">
                                         <td class="detail"><a href="tables/glossary_graph_check.html">glossary_graph_check</a></td>
-                                        <td class="detail" align="right">5</td>
+                                        <td class="detail" align="right">7</td>
                                         <td class="detail" align="right">0</td>
                                         <td class="detail" align="right">8</td>
                                         <td class="detail" align="right">-1</td>
                                         <td class="detail" align="right">Table</td>
                                         <td class="comment detail" style="display: table-cell;"><p>Checks of the road graph run by the function check_graph. The rows are added by the plugin migrations: only the columns default_options and is_active should be modified.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/graph_issues.html">graph_issues</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">2</td>
+                                        <td class="detail" align="right">16</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>Issues of the road graph found by the checks, stored in the editing session only (road_graph_editing.graph_issues) by the function refresh_graph_issues. The table is emptied when the data is copied to a new editing session, and when the editing session is merged or dropped. The table of the production schema is not used.</p></td>
                                     </tr>
                                     <tr class="tbl even" valign="top">
                                         <td class="detail"><a href="tables/markers.html">markers</a></td>

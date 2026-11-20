@@ -1,6 +1,7 @@
 metadata
 managed_objects
 edges
+graph_issues
 markers
 editing_sessions
 roads

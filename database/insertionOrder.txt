@@ -4,6 +4,7 @@ glossary_road_class
 roads
 editing_sessions
 markers
+graph_issues
 edges
 managed_objects
 metadata
