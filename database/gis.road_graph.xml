@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<database name="gis" schema="road_graph" type="PostgreSQL - 17.11 (Debian 17.11-1.pgdg12+2)">
+<database name="gis" schema="road_graph" type="PostgreSQL - 17.12 (Debian 17.12-1.pgdg12+1)">
    <tables>
       <table name="edges" remarks="Road graph edges" schema="road_graph" type="TABLE">
          <column autoUpdated="true" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Unique integer ID (automatic)" size="10" type="int4" typeCode="4"/>
