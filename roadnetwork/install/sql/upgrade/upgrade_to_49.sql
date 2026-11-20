@@ -2,6 +2,8 @@
 --
 -- New check G12 finding the edges with the same end nodes and the same geometry, for example after a copy
 -- of an edge, and new fix action delete_duplicate_edges deleting the duplicates of the same road.
+--
+-- merge_editing_session_data: the table of the issues of the editing session is emptied after the merge.
 
 -- check_graph_duplicate_edges(text[], jsonb)
 CREATE OR REPLACE FUNCTION road_graph.check_graph_duplicate_edges(_road_codes text[], _options jsonb) RETURNS TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)
@@ -182,3 +184,139 @@ ON CONFLICT (code) DO UPDATE SET
     fix_actions = EXCLUDED.fix_actions,
     description = EXCLUDED.description
 ;
+
+
+-- merge_editing_session_data(integer)
+CREATE OR REPLACE FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'road_graph', 'public'
+    AS $$
+DECLARE
+    editing_session_record record;
+    sql_record record;
+    road_codes text[];
+    impacts jsonb;
+    managed_object record;
+    updated_objects_number integer;
+    _set_config text;
+    _toggle_triggers boolean;
+BEGIN
+    -- Get editing session record
+    SELECT INTO editing_session_record
+    *
+    FROM "road_graph".editing_sessions
+    WHERE id = _editing_session_id
+    ;
+
+    IF editing_session_record.id IS NULL THEN
+        RAISE EXCEPTION 'There is no editing session in the database with given id % !', _editing_session_id;
+    END IF;
+
+    IF editing_session_record.status != 'edited' THEN
+        RAISE EXCEPTION 'The given id % does not correspond to editing session with status ''edited'' !', _editing_session_id;
+    END IF;
+
+    -- Disable topology triggers
+    SELECT set_config('road.graph.disable.trigger', '1'::text, true)
+        INTO _set_config;
+    SELECT road_graph.toggle_foreign_key_constraints(FALSE)
+        INTO _toggle_triggers;
+
+    -- Get the road codes concerned by the editing session
+    SELECT INTO road_codes
+        "road_graph".get_updated_roads_from_editing_session(_editing_session_id)
+    ;
+
+    -- Get the impacts of the editing session on the roads, to update only the managed objects
+    -- which may be impacted by the modifications.
+    -- It must be calculated before the merge, since it compares the production and editing data.
+    -- Only the roads whose edges geometries or markers have changed are impacted:
+    -- the other edges have only been updated by the calculation of their references
+    SELECT INTO impacts
+        "road_graph".get_editing_session_impacts(_editing_session_id)
+    ;
+    SELECT INTO road_codes
+        array_agg(i->>'road_code')
+    FROM jsonb_array_elements(Coalesce(impacts, '[]'::jsonb)) AS i
+    ;
+
+    -- Create SQL to run for each edited data
+    FOR sql_record IN
+        SELECT
+            sql_text
+        FROM "road_graph".create_queries_from_editing_session(_editing_session_id)
+    LOOP
+       -- RAISE NOTICE 'SQL = %', sql_record.sql_text;
+       EXECUTE sql_record.sql_text;
+    END LOOP;
+
+    -- Re-enable triggers
+    SELECT set_config('road.graph.disable.trigger', '0'::text, true)
+    INTO _set_config;
+    SELECT road_graph.toggle_foreign_key_constraints(TRUE)
+        INTO _toggle_triggers;
+
+    -- Update the managed objects concerned by the editing session changes
+    IF road_codes IS NOT NULL AND array_length(road_codes, 1) > 0 THEN
+        -- Disable the trigger (to avoid calculate_managed_object_references to be executed)
+        SELECT set_config('road.graph.disable.trigger', '1'::text, true)
+        INTO _set_config;
+        -- Loop for each managed_object tables
+        FOR managed_object IN
+            SELECT o.*
+            FROM "road_graph".managed_objects AS o
+        LOOP
+            SELECT INTO updated_objects_number
+                road_graph.update_managed_objects_on_graph_change(
+                    managed_object.schema_name,
+                    managed_object.table_name,
+                    road_codes,
+                    impacts
+                )
+            ;
+            RAISE NOTICE 'Number of updated managed objects for "%"."%": %',
+                managed_object.schema_name,
+                managed_object.table_name,
+                Coalesce(updated_objects_number, 0)
+            ;
+        END LOOP;
+        -- Re-enable triggers
+        SELECT set_config('road.graph.disable.trigger', '0'::text, true)
+        INTO _set_config;
+
+    ELSE
+        -- No object has been updated: empty the list of the objects updated by the previous merge
+        UPDATE "road_graph".managed_objects
+        SET (
+            last_updated_objects_ids,
+            last_update
+        ) = (
+            ARRAY[]::integer[],
+            now()::timestamp(0)
+        );
+
+    END IF;
+
+    -- Truncate road_graph_editing tables
+    TRUNCATE road_graph_editing.roads CASCADE;
+    TRUNCATE road_graph_editing.markers CASCADE;
+    TRUNCATE road_graph_editing.edges CASCADE;
+    TRUNCATE road_graph_editing.nodes CASCADE;
+    TRUNCATE road_graph_editing.editing_sessions CASCADE;
+    TRUNCATE road_graph_editing.graph_issues RESTART IDENTITY;
+
+    -- Delete merged editing session
+    DELETE FROM "road_graph".editing_sessions
+    WHERE id = _editing_session_id
+    ;
+
+    -- Refresh the materialized view of the last updated managed objects
+    REFRESH MATERIALIZED VIEW CONCURRENTLY road_graph.vm_managed_objects;
+
+    RETURN True;
+END;
+$$;
+
+
+-- FUNCTION merge_editing_session_data(_editing_session_id integer)
+COMMENT ON FUNCTION road_graph.merge_editing_session_data(_editing_session_id integer) IS 'Copy data from the given editing session into the road_graph schema.';

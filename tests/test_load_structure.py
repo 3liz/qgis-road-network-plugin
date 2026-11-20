@@ -3512,9 +3512,15 @@ def test_merge_editing_session_updates_only_impacted_managed_objects(
     assert impacts[0]["start_marker_code"] == 2
     assert impacts[0]["marker_ranges"] == []
 
+    # The issues of the editing session are stored: the table is emptied by the merge
+    cursor.execute("SELECT road_graph_editing.refresh_graph_issues(ARRAY['G04'])")
+    assert fetch_one(cursor)[0] > 0
+
     cursor.execute("SELECT road_graph.merge_editing_session_data(%s)", (session_id,))
     cursor.execute(sql_trees)
     assert cursor.fetchall() == trees_before
+    cursor.execute("SELECT count(*) FROM road_graph_editing.graph_issues")
+    assert fetch_one(cursor)[0] == 0
 
     # No tree has been updated: the list of the trees updated by the previous merge is emptied
     sql_last_updated = """
