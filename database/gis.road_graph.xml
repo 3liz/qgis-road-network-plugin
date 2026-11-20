@@ -8766,6 +8766,7 @@ BEGIN
     TRUNCATE road_graph_editing.edges CASCADE;
     TRUNCATE road_graph_editing.nodes CASCADE;
     TRUNCATE road_graph_editing.editing_sessions CASCADE;
+    TRUNCATE road_graph_editing.graph_issues RESTART IDENTITY;
 
     -- Delete merged editing session
     DELETE FROM "road_graph".editing_sessions
