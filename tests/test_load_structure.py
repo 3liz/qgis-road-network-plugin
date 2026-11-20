@@ -5280,6 +5280,26 @@ def test_check_graph_edge_links(rollback_db_connection: psycopg.Connection):
     assert cursor.fetchall() == road_edges
     assert fix()["status"] == "skipped"
 
+    # A branch of the road, ending at the end node of the first edge, prevents to order its edges:
+    # the error of the fix gives the issue of the check G07, with its node
+    cursor.execute(
+        """
+        INSERT INTO road_graph_editing.edges (road_code, geom)
+        SELECT e.road_code, ST_MakeLine(ST_Translate(ST_EndPoint(e.geom), 10, 10), ST_EndPoint(e.geom))
+        FROM road_graph_editing.edges AS e
+        WHERE e.id = %s
+        RETURNING id
+        """,
+        (first_id,),
+    )
+    branch_id = fetch_one(cursor)[0]
+    cursor.execute("SELECT end_node FROM road_graph_editing.edges WHERE id = %s", (first_id,))
+    node_id = fetch_one(cursor)[0]
+    result = fix()
+    assert result["status"] == "error", result
+    assert f"fix first the issues G07 at the node {node_id} (edges " in result["message"]
+    assert str(branch_id) in result["message"]
+
 
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.

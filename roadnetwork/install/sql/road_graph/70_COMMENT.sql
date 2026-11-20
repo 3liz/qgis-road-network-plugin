@@ -470,6 +470,9 @@ The parameter _params must contain the road code: {"road_code": "D12"}.
 The wrong links of the road are found again with the check G06, then the expected previous and next edges are set,
 and the references of the road are calculated again.
 
+If the links are still inconsistent, for example because of reversed edges (G05) or of a branch of the road (G07),
+the error message gives these issues, with their nodes and edges.
+
 It returns a JSON object with the keys status (success, skipped if the links are consistent with the geometry,
 or error) and message.';
 

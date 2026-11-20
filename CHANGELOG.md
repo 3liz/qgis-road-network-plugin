@@ -8,6 +8,11 @@
   and site built for each language with a language selector (French for now), with the texts
   of the diagrams of the road graph checks. The pages which are not translated yet are displayed in English
 
+### Changed
+
+* **Road graph checks**: when the fix of a G06 issue fails, the error message gives the issues of the road
+  preventing to order its edges, with their nodes and edges, for example `G07 at the node 913 (edges 161, 163, 164)`
+
 ### Fixed
 
 * **QGIS project**: very slow displays and edits of the layers of the editing session on a remote database:
