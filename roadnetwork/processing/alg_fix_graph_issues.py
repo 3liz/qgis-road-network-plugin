@@ -11,18 +11,16 @@ from qgis.core import (
 
 from ..graph_issues import (
     EDITING_SCHEMA,
-    ISSUES_RUN_PROPERTY,
     fix_status_labels,
-    run_fix,
-    set_issue_fix_result,
+    is_issues_table_layer,
+    issue_road_codes,
+    refresh_issues,
+    run_stored_fix,
 )
 from ..plugin_tools.i18n import tr
 from ..plugin_tools.resources import plugin_name_normalized
 from .base_algorithm import BaseProcessingAlgorithm
 from .tools import get_connection_name
-
-# Fields needed in the input layer, created by the algorithm Check the road graph
-NEEDED_FIELDS = ("id", "schema_name", "check_code", "fix_action", "fix_params")
 
 
 class FixGraphIssues(BaseProcessingAlgorithm):
@@ -39,7 +37,7 @@ class FixGraphIssues(BaseProcessingAlgorithm):
         return tr("Fix the road graph issues")
 
     def flags(self):
-        # The issues layers of the project are updated with the result of the fixes
+        # The layers of the editing session are reloaded after the fixes
         return super().flags() | QgsProcessingAlgorithm.FlagNoThreading
 
     def group(self):
@@ -54,8 +52,9 @@ class FixGraphIssues(BaseProcessingAlgorithm):
             "in the editing session (database function road_graph_editing.fix_graph_issue)."
             "\n"
             "\n"
-            "Use one of the layers created by the algorithm Check the road graph on the schema "
-            "of the editing session. Check the option Selected features only to fix only some issues."
+            "Use one of the layers of the issues of the editing session, added to the project "
+            "by the algorithm Check the road graph. "
+            "Check the option Selected features only to fix only some issues."
             "\n"
             "\n"
             "Only the issues with a fix action are fixed: the others must be fixed manually. "
@@ -63,13 +62,14 @@ class FixGraphIssues(BaseProcessingAlgorithm):
             "An issue already fixed by a previous action is skipped."
             "\n"
             "\n"
-            "The result of each fix is stored in the fields fix_status and fix_message of the issues layers. "
+            "The result of each fix is stored in the fields fix_status and fix_message of the issues. "
             "If the layers of the editing session are in editing mode, "
             "the fixes are run in their transaction: "
             "save the modifications afterwards."
             "\n"
             "\n"
-            "Run the algorithm Check the road graph again afterwards to check the result."
+            "The roads of the issues are then checked again: the fixed issues are deleted, "
+            "and the new issues are added."
         )
 
     def initAlgorithm(self, config=None):
@@ -92,7 +92,9 @@ class FixGraphIssues(BaseProcessingAlgorithm):
             tr("Road graph issues"),
             [QgsProcessing.TypeVectorAnyGeometry],
         )
-        param.setHelp(tr("A layer created by the algorithm Check the road graph, on the editing session."))
+        param.setHelp(
+            tr("A layer of the issues of the editing session, added by the algorithm Check the road graph.")
+        )
         self.addParameter(param)
 
         # Outputs
@@ -105,14 +107,14 @@ class FixGraphIssues(BaseProcessingAlgorithm):
         if source is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
 
-        # Check the input layer has been created by the algorithm Check the road graph
-        missing_fields = [f for f in NEEDED_FIELDS if source.fields().indexOf(f) < 0]
-        if missing_fields:
+        # The input layer must display the table of the issues of the editing session
+        layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
+        if not is_issues_table_layer(layer):
             raise QgsProcessingException(
                 tr(
-                    "The input layer must be created by the algorithm Check the road graph. "
-                    "Missing fields: {}"
-                ).format(", ".join(missing_fields))
+                    "The issues must be fixed in the editing session: use a layer of the issues "
+                    "of the table {}.graph_issues, added by the algorithm Check the road graph."
+                ).format(EDITING_SCHEMA)
             )
 
         # Get the connection to the database
@@ -129,47 +131,36 @@ class FixGraphIssues(BaseProcessingAlgorithm):
         issues = []
         manual_count = 0
         for feature in source.getFeatures():
-            if feature["schema_name"] != EDITING_SCHEMA:
-                raise QgsProcessingException(
-                    tr(
-                        "The issues must be fixed in the editing session: "
-                        "run the algorithm Check the road graph on the schema {}."
-                    ).format(EDITING_SCHEMA)
-                )
             # Issue already fixed, for example with a right click
-            has_status = feature.fields().indexOf("fix_status") >= 0
-            if has_status and feature["fix_status"] in ("success", "skipped"):
+            if feature["fix_status"] in ("success", "skipped"):
                 continue
             if not feature["fix_action"]:
                 manual_count += 1
                 continue
             issues.append(
-                (feature["check_code"], feature["id"], feature["fix_action"], feature["fix_params"] or "{}")
+                (feature["check_code"], feature["id"], feature["fix_action"], issue_road_codes(feature))
             )
         issues.sort(key=lambda issue: (issue[0], issue[1]))
         if manual_count:
             feedback.pushInfo(tr("{} issue(s) must be fixed manually.").format(manual_count))
 
-        # The layer of the issues, to store the result of the fixes in the issues layers of the same run
-        layer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
-        run_id = layer.customProperty(ISSUES_RUN_PROPERTY) if layer else None
-        project = context.project() or QgsProject.instance()
-
-        # Fix each issue
+        # Fix each issue, without checking again its roads: they are checked once at the end
         # If the layers of the editing session are in editing mode, the fixes are run in their transaction
+        project = context.project() or QgsProject.instance()
         counts = {"success": 0, "skipped": 0, "error": 0}
+        checked_road_codes = set()
         status_labels = fix_status_labels()
-        for index, (check_code, issue_id, fix_action, fix_params) in enumerate(issues):
+        for index, (check_code, issue_id, fix_action, road_codes) in enumerate(issues):
             if feedback.isCanceled():
                 break
             feedback.setProgress(int(100 * index / len(issues)))
 
-            status, message = run_fix(connection_name, fix_action, fix_params, project)
+            status, message = run_stored_fix(connection_name, issue_id, project, refresh=False)
             if status not in counts:
                 status = "error"
             counts[status] += 1
-            if run_id:
-                set_issue_fix_result(project, run_id, issue_id, status, message, layers=[layer])
+            if status != "error":
+                checked_road_codes.update(road_codes)
 
             message = tr("{} - issue {} - {}: {} {}").format(
                 check_code, issue_id, fix_action, status_labels[status], message
@@ -179,14 +170,20 @@ class FixGraphIssues(BaseProcessingAlgorithm):
             else:
                 feedback.pushInfo(message)
 
+        # Check again the roads of the fixed issues
+        if checked_road_codes:
+            ok, error = refresh_issues(connection_name, project, None, sorted(checked_road_codes))
+            if ok:
+                feedback.pushInfo(tr("{} road(s) checked again.").format(len(checked_road_codes)))
+            else:
+                feedback.reportError(error)
+
         # Summary
         feedback.pushInfo(
             tr("{} issue(s) fixed, {} skipped, {} not fixed.").format(
                 counts["success"], counts["skipped"], counts["error"]
             )
         )
-        if counts["success"]:
-            feedback.pushInfo(tr("Run the algorithm Check the road graph again to check the result."))
 
         return {
             self.FIXED: counts["success"],

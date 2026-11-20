@@ -3748,6 +3748,7 @@ BEGIN
     TRUNCATE road_graph_editing.nodes CASCADE;
     TRUNCATE road_graph_editing.editing_sessions CASCADE;
     TRUNCATE road_graph_editing.glossary_road_class CASCADE;
+    TRUNCATE road_graph_editing.graph_issues RESTART IDENTITY;
 
     -- Re-insert glossary
     INSERT INTO road_graph_editing.glossary_road_class
@@ -4016,6 +4017,7 @@ BEGIN
     TRUNCATE road_graph_editing.edges CASCADE;
     TRUNCATE road_graph_editing.nodes CASCADE;
     TRUNCATE road_graph_editing.editing_sessions CASCADE;
+    TRUNCATE road_graph_editing.graph_issues RESTART IDENTITY;
 
     -- Set the sequences back to the maximum id in the main tables
     SELECT INTO _set_val
@@ -5273,6 +5275,85 @@ and calculate again their previous and next edges and the references of their ro
 
 It returns a JSON object with the keys status (success, skipped if the edges are not in the opposite direction
 of their road anymore, or error) and message.';
+
+
+-- fix_stored_graph_issue(integer, text, jsonb, boolean)
+CREATE FUNCTION road_graph.fix_stored_graph_issue(_issue_id integer, _fix_action text DEFAULT NULL::text, _fix_params jsonb DEFAULT NULL::jsonb, _refresh boolean DEFAULT true) RETURNS jsonb
+    LANGUAGE plpgsql
+    SET jit TO 'off'
+    AS $$
+DECLARE
+    issue record;
+    result jsonb;
+    issue_road_codes text[];
+BEGIN
+    SELECT g.*
+    INTO issue
+    FROM road_graph.graph_issues AS g
+    WHERE g.id = _issue_id
+    ;
+    IF issue.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'skipped',
+            'message', format(
+                'The issue %s is not found anymore: it has been fixed, or the checks have been run again',
+                _issue_id
+            )
+        );
+    END IF;
+    IF Coalesce(_fix_action, issue.fix_action) IS NULL THEN
+        RETURN jsonb_build_object(
+            'status', 'error',
+            'message', format('The issue %s has no fix action: it must be fixed manually', _issue_id)
+        );
+    END IF;
+
+    -- Fix the issue with its fix action, or with the given one, and store the result
+    result = road_graph.fix_graph_issue(
+        Coalesce(_fix_action, issue.fix_action),
+        Coalesce(_fix_params, issue.fix_params, '{}'::jsonb)
+    );
+    UPDATE road_graph.graph_issues AS g
+    SET
+        fix_action = Coalesce(_fix_action, g.fix_action),
+        fix_params = Coalesce(_fix_params, g.fix_params),
+        fix_status = result->>'status',
+        fix_message = result->>'message'
+    WHERE g.id = _issue_id
+    ;
+
+    -- Check again the roads of the issue, unless the fix failed: the fixed issue is deleted,
+    -- and the new issues of these roads are added, for example a useless node after merging two nodes
+    IF _refresh AND result->>'status' != 'error' THEN
+        SELECT array_agg(DISTINCT r.road_code ORDER BY r.road_code)
+        INTO issue_road_codes
+        FROM (
+            SELECT issue.road_code
+            UNION ALL
+            SELECT jsonb_array_elements_text(Coalesce(issue.details->'road_codes', '[]'::jsonb))
+        ) AS r
+        WHERE r.road_code IS NOT NULL
+        ;
+        IF issue_road_codes IS NOT NULL THEN
+            PERFORM road_graph.refresh_graph_issues(NULL, issue_road_codes);
+        END IF;
+    END IF;
+
+    RETURN result;
+END;
+$$;
+
+
+-- FUNCTION fix_stored_graph_issue(_issue_id integer, _fix_action text, _fix_params jsonb, _refresh boolean)
+COMMENT ON FUNCTION road_graph.fix_stored_graph_issue(_issue_id integer, _fix_action text, _fix_params jsonb, _refresh boolean) IS 'Fix an issue stored in the table graph_issues of the editing session, with the function fix_graph_issue.
+
+The issue is fixed with its fix action and parameters, or with the given ones, for example when the user chooses another fix.
+The result is stored in the fields fix_status and fix_message of the issue.
+
+If _refresh is True and the fix did not fail, the roads of the issue are checked again with the function refresh_graph_issues:
+the fixed issue is deleted, and the new issues of these roads are added.
+
+It returns a JSON object with the keys status (success, skipped or error) and message.';
 
 
 -- get_current_setting(text, text)
@@ -8635,6 +8716,150 @@ If the table has the references fields, the references of the feature A
 The lines connected to the features are not modified by the trigger trg_update_managed_object_linked_geometries.
 
 It returns a JSON object with the keys status (success or error) and message.';
+
+
+-- refresh_graph_issues(text[], text[], jsonb)
+CREATE FUNCTION road_graph.refresh_graph_issues(_checks text[] DEFAULT NULL::text[], _road_codes text[] DEFAULT NULL::text[], _options jsonb DEFAULT NULL::jsonb) RETURNS integer
+    LANGUAGE plpgsql
+    SET jit TO 'off'
+    AS $$
+DECLARE
+    schema_name text;
+    issues_count integer;
+BEGIN
+    -- The issues are stored in the editing session only:
+    -- the name of the schema of the table is replaced when the function is installed in the editing schema
+    SELECT n.nspname
+    INTO schema_name
+    FROM pg_class AS c
+    JOIN pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE c.oid = 'road_graph.graph_issues'::regclass
+    ;
+    IF schema_name = 'road_graph' THEN
+        RAISE EXCEPTION 'The road graph issues are stored in the editing session only, '
+            'with the function road_graph_editing.refresh_graph_issues';
+    END IF;
+
+    WITH
+    -- Issues found by the checks, with a key identifying the same issue between two runs,
+    -- and a rank for the issues with the same key
+    found AS MATERIALIZED (
+        SELECT
+            i.*,
+            k.issue_key,
+            row_number() OVER (PARTITION BY k.issue_key ORDER BY i.id) AS issue_rank,
+            -- Lines of the detail geometry, NULL if there is none
+            CASE WHEN NOT ST_IsEmpty(d.lines) THEN d.lines END AS detail_lines
+        FROM road_graph.check_graph(_checks, _road_codes, _options) AS i
+        CROSS JOIN LATERAL (
+            SELECT md5(concat_ws(
+                '|', i.check_code, i.road_code, i.edge_ids::text, i.node_ids::text, i.marker_ids::text,
+                ST_AsText(ST_SnapToGrid(i.geom, 0.01))
+            )) AS issue_key
+        ) AS k
+        CROSS JOIN LATERAL (
+            SELECT ST_Multi(ST_CollectionExtract(i.geom_detail, 2)) AS lines
+        ) AS d
+        -- Only the issues in the polygon of the editing session: the edges copied with the session
+        -- go beyond it, but their issues outside the polygon cannot be fixed
+        WHERE NOT EXISTS (SELECT 1 FROM road_graph.editing_sessions AS s WHERE s.geom IS NOT NULL)
+        OR EXISTS (
+            SELECT 1
+            FROM road_graph.editing_sessions AS s
+            WHERE ST_Intersects(s.geom, i.geom)
+        )
+    ),
+    -- Stored issues, with the same key and rank.
+    -- Only the stored issues of the given checks and roads can be deleted
+    stored AS (
+        SELECT
+            g.id,
+            k.issue_key,
+            row_number() OVER (PARTITION BY k.issue_key ORDER BY g.id) AS issue_rank,
+            (
+                (_checks IS NULL OR g.check_code = ANY(_checks))
+                AND (
+                    _road_codes IS NULL
+                    OR g.road_code = ANY(_road_codes)
+                    OR Coalesce(g.details->'road_codes', '[]'::jsonb) ?| _road_codes
+                )
+            ) AS in_scope
+        FROM road_graph.graph_issues AS g
+        CROSS JOIN LATERAL (
+            SELECT md5(concat_ws(
+                '|', g.check_code, g.road_code, g.edge_ids::text, g.node_ids::text, g.marker_ids::text,
+                ST_AsText(ST_SnapToGrid(g.geom, 0.01))
+            )) AS issue_key
+        ) AS k
+    ),
+    -- Issues found and already stored
+    matched AS (
+        SELECT s.id AS stored_id, f.*
+        FROM found AS f
+        JOIN stored AS s USING (issue_key, issue_rank)
+    ),
+    -- Stored issues not found anymore
+    deleted AS (
+        DELETE FROM road_graph.graph_issues AS g
+        USING stored AS s
+        WHERE g.id = s.id
+        AND s.in_scope
+        AND NOT EXISTS (SELECT 1 FROM matched AS m WHERE m.stored_id = s.id)
+        RETURNING g.id
+    ),
+    -- Issues found again: their details and fix action are updated, their fix status is kept
+    updated AS (
+        UPDATE road_graph.graph_issues AS g
+        SET
+            check_title = m.check_title,
+            severity = m.severity,
+            details = m.details,
+            fix_action = m.fix_action,
+            fix_params = m.fix_params,
+            geom_detail = m.detail_lines,
+            checked_at = now()::timestamp(0)
+        FROM matched AS m
+        WHERE g.id = m.stored_id
+        RETURNING g.id
+    ),
+    -- New issues
+    inserted AS (
+        INSERT INTO road_graph.graph_issues (
+            check_code, check_title, severity, road_code, edge_ids, node_ids, marker_ids,
+            details, fix_action, fix_params, geom, geom_detail
+        )
+        SELECT
+            f.check_code, f.check_title, f.severity, f.road_code, f.edge_ids, f.node_ids, f.marker_ids,
+            f.details, f.fix_action, f.fix_params, f.geom, f.detail_lines
+        FROM found AS f
+        WHERE NOT EXISTS (
+            SELECT 1 FROM matched AS m WHERE m.issue_key = f.issue_key AND m.issue_rank = f.issue_rank
+        )
+        ORDER BY f.id
+        RETURNING id
+    )
+    -- The deletion is run even if its result is not used
+    SELECT (SELECT count(*) FROM updated) + (SELECT count(*) FROM inserted)
+    INTO issues_count
+    ;
+
+    RETURN issues_count;
+END;
+$$;
+
+
+-- FUNCTION refresh_graph_issues(_checks text[], _road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.refresh_graph_issues(_checks text[], _road_codes text[], _options jsonb) IS 'Run the checks of the road graph with the function check_graph, and update the issues stored in the table graph_issues of the editing session.
+
+The parameters are the ones of check_graph: the checks to run and the road codes, all of them if NULL, and the options of the checks.
+Only the issues in the polygon of the editing session are stored: the issues of the edges copied beyond it cannot be fixed.
+
+* the stored issues found again keep their id and their fix status, their details and fix action are updated,
+* the stored issues of these checks and roads which are not found anymore are deleted,
+* the new issues are added.
+
+It only works in the editing schema, with road_graph_editing.refresh_graph_issues.
+It returns the number of issues found.';
 
 
 -- reorder_multilinestring_parts(geometry, text)

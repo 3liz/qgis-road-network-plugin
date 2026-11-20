@@ -8,6 +8,8 @@ from psycopg2 import sql as pg_sql
 
 from qgis.core import (
     QgsCoordinateReferenceSystem,
+    QgsProcessingAlgorithm,
+    QgsProcessingContext,
     QgsDataSourceUri,
     QgsFeature,
     QgsFeatureSink,
@@ -16,6 +18,7 @@ from qgis.core import (
     QgsGeometry,
     QgsProcessing,
     QgsProcessingException,
+    QgsProcessingFeedback,
     QgsProcessingParameterDefinition,
     QgsProcessingParameterEnum,
     QgsProcessingParameterFeatureSink,
@@ -28,14 +31,21 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QMetaType, QVariant
 
-from ..graph_issues import POST_PROCESSORS, IssuesLayerPostProcessor, check_titles
+from ..graph_issues import (
+    EDITING_SCHEMA,
+    POST_PROCESSORS,
+    IssuesLayerPostProcessor,
+    add_issues_layers,
+    check_titles,
+    refresh_issues,
+)
 from ..plugin_tools.i18n import tr
 from ..plugin_tools.resources import plugin_name_normalized
 from .base_algorithm import BaseProcessingAlgorithm
 from .tools import get_connection_name
 
 # Schemas which can be checked: the editing session first, since the issues must be fixed there
-GRAPH_CHECK_SCHEMAS = ["road_graph_editing", "road_graph"]
+GRAPH_CHECK_SCHEMAS = [EDITING_SCHEMA, "road_graph"]
 
 
 def split_list(value: str) -> list:
@@ -75,6 +85,10 @@ class CheckGraph(BaseProcessingAlgorithm):
     def displayName(self):
         return tr("Check the road graph")
 
+    def flags(self):
+        # The layers of the issues of the editing session are added to the project, or reloaded
+        return super().flags() | QgsProcessingAlgorithm.FlagNoThreading
+
     def group(self):
         return tr("Road graph checks")
 
@@ -98,9 +112,16 @@ class CheckGraph(BaseProcessingAlgorithm):
             "and the action which can fix it automatically, if any."
             "\n"
             "\n"
-            "The algorithm creates two layers: a point layer locating each issue, "
+            "The issues of the editing session are stored in the table road_graph_editing.graph_issues, "
+            "displayed by two layers added to the project: a point layer locating each issue, "
             "and a line layer showing the issues for which a line is useful "
-            "(edge, gap between two edges, etc.)."
+            "(edge, gap between two edges, etc.). Run the algorithm again to update them: "
+            "only the given checks and roads are updated, and the issues found again keep their id. "
+            "After each fix, the roads of the issue are checked again."
+            "\n"
+            "\n"
+            "The issues of the production schema are returned in two temporary layers, "
+            "only to get an overview: they cannot be fixed."
             "\n"
             "\n"
             "Each issue can be fixed with a right click on it, with the Identify Features tool: "
@@ -174,15 +195,22 @@ class CheckGraph(BaseProcessingAlgorithm):
         param.setFlags(param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
         self.addParameter(param)
 
-        # Output layers
+        # Output layers, only for the production schema:
+        # the issues of the editing session are stored in the table of the issues
         self.addParameter(
             QgsProcessingParameterFeatureSink(
-                self.OUTPUT_POINTS, tr("Road graph issues (points)"), QgsProcessing.TypeVectorPoint
+                self.OUTPUT_POINTS,
+                tr("Road graph issues (points)"),
+                QgsProcessing.TypeVectorPoint,
+                optional=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
-                self.OUTPUT_LINES, tr("Road graph issues (lines)"), QgsProcessing.TypeVectorLine
+                self.OUTPUT_LINES,
+                tr("Road graph issues (lines)"),
+                QgsProcessing.TypeVectorLine,
+                optional=True,
             )
         )
 
@@ -240,6 +268,12 @@ class CheckGraph(BaseProcessingAlgorithm):
         except QgsProviderConnectionException as e:
             raise QgsProcessingException(str(e))
         road_graph_crs = QgsCoordinateReferenceSystem(f"EPSG:{int(data[0][0])}")
+
+        # Editing session: update the table of the issues, displayed by the layers of the project
+        if schema == EDITING_SCHEMA:
+            return self.refreshIssues(
+                connection_name, road_graph_crs, checks, road_codes, options, context, feedback
+            )
 
         # Output layers
         fields = self.issueFields()
@@ -324,3 +358,43 @@ class CheckGraph(BaseProcessingAlgorithm):
                 context.layerToLoadOnCompletionDetails(dest_id).setPostProcessor(post_processor)
 
         return {self.OUTPUT_POINTS: dest_id_points, self.OUTPUT_LINES: dest_id_lines}
+
+    @staticmethod
+    def refreshIssues(
+        connection_name: str,
+        crs: QgsCoordinateReferenceSystem,
+        checks: list,
+        road_codes: list,
+        options: str,
+        context: QgsProcessingContext,
+        feedback: QgsProcessingFeedback,
+    ) -> dict:
+        """Update the table of the issues of the editing session, and add its layers to the project if needed.
+
+        :param connection_name: The name of the PostgreSQL connection
+        :param crs: The coordinate reference system of the road graph
+        :param checks: The codes of the checks to run, or an empty list for all the checks
+        :param road_codes: The codes of the roads to check, or an empty list for all the roads
+        :param options: The options of the checks, as a JSON string, or an empty string
+        :param context: The processing context
+        :param feedback: The processing feedback
+        :return: The results of the algorithm: no output layer
+        """
+        project = context.project() or QgsProject.instance()
+        ok, error = refresh_issues(
+            connection_name, project, checks or None, road_codes or None, options or None
+        )
+        if not ok:
+            raise QgsProcessingException(error)
+        points, _ = add_issues_layers(project, connection_name, crs)
+
+        # Summary: the issues of the table, read through the layer, in the transaction of the editing session
+        issues_count: dict[str, int] = {}
+        for feature in points.getFeatures():
+            issues_count[feature["check_code"]] = issues_count.get(feature["check_code"], 0) + 1
+        if not issues_count:
+            feedback.pushInfo(tr("No issue found."))
+        for check_code, count in sorted(issues_count.items()):
+            feedback.pushInfo(tr("{}: {} issue(s)").format(check_code, count))
+        feedback.pushInfo(tr("The issues are displayed by the layer {}.").format(points.name()))
+        return {}

@@ -51,6 +51,11 @@ ALTER TABLE ONLY road_graph.glossary_road_class
     ADD CONSTRAINT glossary_road_class_pkey PRIMARY KEY (id);
 
 
+-- graph_issues graph_issues_pkey
+ALTER TABLE ONLY road_graph.graph_issues
+    ADD CONSTRAINT graph_issues_pkey PRIMARY KEY (id);
+
+
 -- managed_objects managed_objects_pkey
 ALTER TABLE ONLY road_graph.managed_objects
     ADD CONSTRAINT managed_objects_pkey PRIMARY KEY (id);

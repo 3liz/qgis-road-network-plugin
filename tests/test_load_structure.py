@@ -5,6 +5,7 @@ import json
 import unittest
 
 from pathlib import Path
+from typing import Optional
 
 import psycopg
 import pytest
@@ -25,7 +26,15 @@ from qgis.core import (
 )
 
 from roadnetwork.actions import runner
-from roadnetwork.graph_issues import ISSUE_ACTIONS, ISSUES_RUN_PROPERTY, run_fix, setup_issues_layer
+from roadnetwork.graph_issues import (
+    ISSUE_ACTIONS,
+    ISSUES_RUN_PROPERTY,
+    editing_schema_layers,
+    id_list,
+    json_dict,
+    run_fix,
+    setup_issues_layer,
+)
 from roadnetwork.plugin_tools.feedback import LoggerProcessingFeedBack
 from roadnetwork.plugin_tools.resources import (
     available_migrations,
@@ -55,6 +64,7 @@ TABLES_FOR_CURRENT_VERSION = [
     "editing_sessions",
     "glossary_graph_check",
     "glossary_road_class",
+    "graph_issues",
     "managed_objects",
     "markers",
     "metadata",
@@ -3608,6 +3618,8 @@ def test_functions_search_path(rollback_db_connection: psycopg.Connection):
         # which trigger the JIT compilation of short queries
         "check_graph": "search_path=public | jit=off",
         "fix_graph_issue": "jit=off",
+        "fix_stored_graph_issue": "jit=off",
+        "refresh_graph_issues": "jit=off",
         "reorder_multilinestring_parts": "jit=off",
         "get_managed_object_geometry_from_references": "search_path=public",
         "get_merged_geom_from_table_and_ids": "search_path=public",
@@ -3774,13 +3786,19 @@ def test_check_graph_architecture(rollback_db_connection: psycopg.Connection):
 
 
 def test_check_graph_algorithms(processing_provider: Provider):
-    """The Processing algorithms Check the road graph and Fix the road graph issues
-    create the issues layers, and fix the issues of the editing session."""
+    """The Processing algorithm Check the road graph returns the issues of the production schema
+    in temporary layers, and stores the issues of the editing session in the table of the issues,
+    displayed by two layers added to the project. The algorithm Fix the road graph issues fixes them."""
+    project = QgsProject.instance()
+    check_algorithm = f"{processing_provider.id()}:check_graph"
+    fix_algorithm = f"{processing_provider.id()}:fix_graph_issues"
+
+    # Production schema: temporary layers
     output = processing.run(
-        f"{processing_provider.id()}:check_graph",
+        check_algorithm,
         {
             "CONNECTION_NAME": "test",
-            "SCHEMA": 0,
+            "SCHEMA": 1,
             "OUTPUT_POINTS": "TEMPORARY_OUTPUT",
             "OUTPUT_LINES": "TEMPORARY_OUTPUT",
         },
@@ -3810,7 +3828,7 @@ def test_check_graph_algorithms(processing_provider: Provider):
     assert points.fields().names() == expected_fields
     assert lines.fields().names() == expected_fields
     for feature in points.getFeatures():
-        assert feature["schema_name"] == "road_graph_editing"
+        assert feature["schema_name"] == "road_graph"
 
     # Set up of the issues layers, done when they are loaded in the project:
     # actions run by the plugin, translated labels of the values, style
@@ -3827,13 +3845,49 @@ def test_check_graph_algorithms(processing_provider: Provider):
     setup_issues_layer(points, "test", "run_1")
     assert len(points.actions().actions()) == 3
 
-    # Fix the issues of the editing session
-    output = processing.run(
-        f"{processing_provider.id()}:fix_graph_issues",
-        {"CONNECTION_NAME": "test", "INPUT": points},
-        feedback=LoggerProcessingFeedBack(),
-    )
-    assert output["ERRORS"] == 0
+    # The issues of the production schema cannot be fixed
+    with pytest.raises(QgsProcessingException, match="must be fixed in the editing session"):
+        processing.run(fix_algorithm, {"CONNECTION_NAME": "test", "INPUT": points})
+
+    # Editing session around an issue G01: the issues are stored in the table,
+    # displayed by two layers added to the project
+    connection = QgsProviderRegistry.instance().providerMetadata("postgres").findConnection("test")
+    data = connection.executeSql("""
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'Algorithms test', 'test', ST_Envelope(ST_Buffer(i.geom, 300))
+        FROM road_graph.check_graph(ARRAY['G01']) AS i
+        ORDER BY i.id
+        LIMIT 1
+        RETURNING id
+    """)
+    editing_session_id = data[0][0]
+    connection.executeSql(f"SELECT road_graph.copy_data_to_editing_session({editing_session_id})")
+    params = {"CONNECTION_NAME": "test", "SCHEMA": 0}
+    try:
+        output = processing.run(check_algorithm, params, feedback=LoggerProcessingFeedBack())
+        assert "OUTPUT_POINTS" not in output
+        layers = editing_schema_layers(project, "graph_issues")
+        assert len(layers) == 2
+        points = next(layer for layer in layers if layer.geometryType() == QgsWkbTypes.PointGeometry)
+        assert len(points.actions().actions()) == 3
+        issue_ids = sorted(feature["id"] for feature in points.getFeatures())
+        assert issue_ids
+
+        # A second run keeps the ids of the issues found again, and does not add the layers again
+        processing.run(check_algorithm, params, feedback=LoggerProcessingFeedBack())
+        assert len(editing_schema_layers(project, "graph_issues")) == 2
+        assert sorted(feature["id"] for feature in points.getFeatures()) == issue_ids
+
+        # Fix the issues of the editing session: the fixed issues are deleted by the new check of their roads
+        output = processing.run(
+            fix_algorithm,
+            {"CONNECTION_NAME": "test", "INPUT": points},
+            feedback=LoggerProcessingFeedBack(),
+        )
+        assert output["ERRORS"] == 0
+    finally:
+        project.removeMapLayers([layer.id() for layer in editing_schema_layers(project, "graph_issues")])
+        connection.executeSql(f"SELECT road_graph.drop_editing_session({editing_session_id})")
 
     # Invalid options
     with pytest.raises(QgsProcessingException, match="must be a JSON object"):
@@ -3973,10 +4027,10 @@ def test_check_graph_crossing_edges(rollback_db_connection: psycopg.Connection):
 
 
 def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest.MonkeyPatch):
-    """The actions of the issues layers fix an issue with a right click,
-    store the result in the issues layers, and select the edges of an issue.
-    The algorithm Fix the road graph issues skips the issues already fixed.
-    An editing session is created around an issue G01, then dropped at the end of the test."""
+    """The actions of the layers of the issues of the editing session fix an issue with a right click:
+    the roads of the issue are checked again, so the fixed issue is deleted. They also select the edges
+    of an issue. An editing session is created around an issue G01, then dropped at the end of the test:
+    the table of the issues is then empty."""
     metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
     connection = metadata.findConnection("test")
     project = QgsProject.instance()
@@ -4009,53 +4063,44 @@ def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest
     uri.setDataSource("road_graph_editing", "edges", "geom", "", "id")
     edges_layer = QgsVectorLayer(uri.uri(), "edges copie", "postgres")
     assert edges_layer.isValid()
+    project.addMapLayer(edges_layer)
 
-    points = lines = None
     try:
-        # Issues of the editing session
-        output = processing.run(
+        # Issues of the editing session, displayed by the layers added to the project
+        processing.run(
             f"{processing_provider.id()}:check_graph",
-            {
-                "CONNECTION_NAME": "test",
-                "SCHEMA": 0,
-                "CHECKS": "G01",
-                "OUTPUT_POINTS": "TEMPORARY_OUTPUT",
-                "OUTPUT_LINES": "TEMPORARY_OUTPUT",
-            },
+            {"CONNECTION_NAME": "test", "SCHEMA": 0, "CHECKS": "G01"},
             feedback=LoggerProcessingFeedBack(),
         )
-        points = output["OUTPUT_POINTS"]
-        lines = output["OUTPUT_LINES"]
-        setup_issues_layer(points, "test", "actions_test")
-        setup_issues_layer(lines, "test", "actions_test")
-        project.addMapLayers([points, lines, edges_layer])
-
-        # Issues inside the editing session polygon
-        data = connection.executeSql(f"""
-            SELECT ST_AsText(geom) FROM road_graph.editing_sessions WHERE id = {editing_session_id}
-        """)
-        polygon = QgsGeometry.fromWkt(data[0][0])
-        issues = [f for f in points.getFeatures() if polygon.intersects(f.geometry())]
-        touching = next(f for f in issues if json.loads(f["details"])["crossing_type"] == "touching")
-        crossings = [f for f in issues if json.loads(f["details"])["crossing_type"] == "crossing"]
+        points = next(
+            layer
+            for layer in editing_schema_layers(project, "graph_issues")
+            if layer.geometryType() == QgsWkbTypes.PointGeometry
+        )
+        issues = list(points.getFeatures())
+        touching = next(f for f in issues if json_dict(f["details"])["crossing_type"] == "touching")
+        crossings = [f for f in issues if json_dict(f["details"])["crossing_type"] == "crossing"]
         assert len(crossings) >= 2
 
-        def issue_values(layer: QgsVectorLayer, issue_id: int) -> list:
-            """Get the fix action, status and message of an issue."""
-            feature = next(f for f in layer.getFeatures() if f["id"] == issue_id)
+        def issue_values(issue_id: int) -> Optional[list]:
+            """Get the fix action, status and message of an issue, or None if it has been deleted."""
+            feature = next((f for f in points.getFeatures() if f["id"] == issue_id), None)
+            if feature is None:
+                return None
             return [feature["fix_action"], feature["fix_status"], feature["fix_message"]]
 
-        # Fix the touching issue: the result is stored in the points and lines layers
+        # Fix the touching issue: the roads of the issue are checked again, and the issue is deleted
         assert runner.run("fix_graph_issue", layer_id=points.id(), issue_id=touching["id"]) is None
-        values = issue_values(points, touching["id"])
-        assert values[0:2] == ["cut_edges", "success"], values
-        assert issue_values(lines, touching["id"])[1] == "success"
-        runner.run("fix_graph_issue", layer_id=points.id(), issue_id=touching["id"])
-        assert issue_values(points, touching["id"])[1] == "skipped"
+        assert issue_values(touching["id"]) is None
 
         # A crossing issue has no fix action: nothing is done
         runner.run("fix_graph_issue", layer_id=points.id(), issue_id=crossings[0]["id"])
-        assert issue_values(points, crossings[0]["id"]) == [None, None, None]
+        assert issue_values(crossings[0]["id"]) == [None, None, None]
+
+        # Select the edges of an issue
+        runner.run("select_graph_issue_edges", layer_id=points.id(), issue_id=crossings[1]["id"])
+        selected = sorted(f["id"] for f in edges_layer.selectedFeatures())
+        assert selected == sorted(id_list(crossings[1]["edge_ids"]))
 
         # Choose the fix of a crossing issue: mark only its second edge as a bridge
         answers = iter([1, 2])
@@ -4066,21 +4111,15 @@ def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest
 
         monkeypatch.setattr("roadnetwork.actions.graph_issues.QInputDialog.getItem", get_item)
         runner.run("choose_graph_issue_fix", layer_id=points.id(), issue_id=crossings[0]["id"])
-        values = issue_values(points, crossings[0]["id"])
-        assert values[0:2] == ["mark_as_bridge", "success"], values
-        edge_ids = [int(i) for i in crossings[0]["edge_ids"].split(",")]
+        assert issue_values(crossings[0]["id"]) is None
+        edge_ids = id_list(crossings[0]["edge_ids"])
         data = connection.executeSql(f"""
             SELECT no_intersection_cutting FROM road_graph_editing.edges
             WHERE id IN ({edge_ids[0]}, {edge_ids[1]}) ORDER BY id
         """)
         assert [row[0] for row in data] == [False, True]
 
-        # Select the edges of an issue
-        runner.run("select_graph_issue_edges", layer_id=points.id(), issue_id=crossings[1]["id"])
-        selected = sorted(f["id"] for f in edges_layer.selectedFeatures())
-        assert selected == sorted(int(i) for i in crossings[1]["edge_ids"].split(","))
-
-        # The algorithm skips the issues already fixed, and the issues without fix action
+        # The algorithm skips the issues without fix action
         output = processing.run(
             f"{processing_provider.id()}:fix_graph_issues",
             {"CONNECTION_NAME": "test", "INPUT": points},
@@ -4088,8 +4127,14 @@ def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest
         )
         assert output["ERRORS"] == 0
     finally:
-        project.removeMapLayers([layer.id() for layer in (points, lines, edges_layer) if layer is not None])
+        project.removeMapLayers(
+            [edges_layer.id()] + [layer.id() for layer in editing_schema_layers(project, "graph_issues")]
+        )
         connection.executeSql(f"SELECT road_graph.drop_editing_session({editing_session_id})")
+
+    # The table of the issues is emptied with the editing session
+    data = connection.executeSql("SELECT count(*) FROM road_graph_editing.graph_issues")
+    assert data[0][0] == 0
 
 
 def test_run_fix_editing_mode_without_transaction():

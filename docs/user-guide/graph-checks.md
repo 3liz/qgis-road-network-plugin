@@ -14,15 +14,18 @@ draw a large editing session polygon if needed.
 
 1. Create an editing session covering the area to check.
 2. Run the algorithm **Check the road graph** on the schema of the editing session.
-   It creates two layers: a **point** layer locating each issue,
+   The issues are stored in the table `road_graph_editing.graph_issues`, displayed by two layers
+   added to the project: a **point** layer locating each issue,
    and a **line** layer showing the issues for which a line is useful.
 3. Review the issues, and fix them:
     * one by one with a **right click** on the issue (see [Fix an issue with a right click](#fix-an-issue-with-a-right-click)),
     * or in batch: select the issues to fix automatically, then run the algorithm **Fix the road graph issues**
       with the option **Selected features only**. The issues already fixed are skipped,
     * or manually, for the issues without fix action (see the description of each check).
-4. Run the algorithm **Check the road graph** again to check the result.
-5. Merge the editing session.
+4. After each fix, the roads of the issue are **checked again**: the fixed issue disappears,
+   and the new issues of these roads appear. Refresh the map to see them.
+   After manual changes, run the algorithm **Check the road graph** again: the same layers are updated.
+5. Merge the editing session: the table of the issues is emptied.
 
 If the layers of the editing session are in **editing mode**, the fixes are run in their **transaction**:
 save the modifications of the layers afterwards, or cancel them. Else the fixes are saved at once.
@@ -35,8 +38,10 @@ If needed, close and open again the project to create the transaction groups.
 
 ## Algorithms
 
-The algorithm **Check the road graph** runs the checks on the schema of the editing session (or of the production,
-only to get an overview of the issues), for all the roads or only some of them, and creates the issues layers.
+The algorithm **Check the road graph** runs the checks on the schema of the editing session,
+for all the roads or only some of them, and updates the table of the issues: the issues found again keep their id.
+Only the issues inside the polygon of the editing session are kept.
+On the production schema, it creates two temporary layers, only to get an overview of the issues.
 The advanced parameter **Options of the checks** overrides the default options of the checks.
 
 ![Algorithm Check the road graph](../media/user-guide/processing_check_graph.png)
@@ -44,12 +49,13 @@ The advanced parameter **Options of the checks** overrides the default options o
 The algorithm **Fix the road graph issues** fixes the issues of one of these layers, in the order of their check codes,
 with their fix action. Check the option **Selected features only** to fix only the selected issues.
 The issues without fix action, and the issues already fixed, are skipped.
+The roads of the fixed issues are then checked again.
 
 ![Algorithm Fix the road graph issues](../media/user-guide/processing_fix_graph_issues.png)
 
 ## Fix an issue with a right click
 
-The layers created by the algorithm Check the road graph have three **actions**.
+The layers of the issues have three **actions**.
 Use the `Identify Features` tool and **right-click** on an issue in the map,
 or use the `Run Feature Action` tool of the `Attributes` toolbar:
 
@@ -75,8 +81,8 @@ For the action `mark_as_bridge`, choose then the edge which must not be connecte
 ![Choose the edge to mark](../media/user-guide/graph_checks_choose_edge.png)
 
 The result of the fix is stored in the fields `fix_status` (`Fixed`, `Already fixed` or `Not fixed`)
-and `fix_message` of the points and lines layers of the issues, and the fixed issues are displayed in grey.
-The edges layers of the editing session are refreshed.
+and `fix_message` of the issue. The roads of the issue are then checked again: the fixed issue is deleted,
+and the issues which could not be fixed keep their error message. The layers of the editing session are refreshed.
 
 The titles of the checks and of the actions, the labels of the fix actions and statuses and the messages
 are translated in the language of QGIS. The detailed messages returned by the database are in English.

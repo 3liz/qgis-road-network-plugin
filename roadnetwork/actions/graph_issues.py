@@ -1,4 +1,6 @@
-"""Actions of the layers of the road graph issues, created by the algorithm Check the road graph.
+"""Actions of the layers of the road graph issues, added by the algorithm Check the road graph:
+the layers of the table of the issues of the editing session,
+or the temporary layers of the production schema.
 
 These lines are added to the layers by the algorithm, for example:
 
@@ -33,7 +35,11 @@ from ..graph_issues import (
     editing_schema_layers,
     fix_action_labels,
     fix_status_labels,
+    id_list,
+    is_issues_table_layer,
+    json_dict,
     run_fix,
+    run_stored_fix,
     set_issue_fix_result,
 )
 from ..plugin_tools.i18n import tr
@@ -50,7 +56,9 @@ def get_issue(layer_id: str, issue_id: int, action_name: str) -> Optional[tuple]
     :return: The layer and the feature, or None if they are not found
     """
     layer = QgsProject.instance().mapLayer(layer_id)
-    if not isinstance(layer, QgsVectorLayer) or not layer.customProperty(ISSUES_RUN_PROPERTY):
+    if not isinstance(layer, QgsVectorLayer) or not (
+        is_issues_table_layer(layer) or layer.customProperty(ISSUES_RUN_PROPERTY)
+    ):
         display_error_message(
             action_name,
             tr("The layer {} is not a layer created by the algorithm Check the road graph").format(layer_id),
@@ -63,7 +71,8 @@ def get_issue(layer_id: str, issue_id: int, action_name: str) -> Optional[tuple]
         display_error_message(action_name, tr("The issue {} has not been found").format(issue_id))
         return None
 
-    if feature["schema_name"] != EDITING_SCHEMA:
+    # The temporary layers of the production schema have a field schema_name
+    if feature.fields().indexOf("schema_name") >= 0 and feature["schema_name"] != EDITING_SCHEMA:
         display_message(
             action_name,
             tr(
@@ -95,6 +104,9 @@ def fix_and_report(
 ):
     """Fix an issue, store the result in the issues layers and display it.
 
+    The issues of the table of the editing session are fixed with the function fix_stored_graph_issue,
+    which stores the result and checks again the roads of the issue.
+
     :param layer: The issues layer
     :param feature: The feature of the issue
     :param fix_action: The fix action
@@ -102,17 +114,25 @@ def fix_and_report(
     :param store_action: True to store the fix action and its parameters in the issue, if chosen by the user
     """
     project = QgsProject.instance()
-    status, message = run_fix(connection_name(layer), fix_action, fix_params, project)
-
-    set_issue_fix_result(
-        project,
-        layer.customProperty(ISSUES_RUN_PROPERTY),
-        feature["id"],
-        status,
-        message,
-        fix_action if store_action else None,
-        fix_params if store_action else None,
-    )
+    if is_issues_table_layer(layer):
+        status, message = run_stored_fix(
+            connection_name(layer),
+            feature["id"],
+            project,
+            fix_action if store_action else None,
+            fix_params if store_action else None,
+        )
+    else:
+        status, message = run_fix(connection_name(layer), fix_action, fix_params, project)
+        set_issue_fix_result(
+            project,
+            layer.customProperty(ISSUES_RUN_PROPERTY),
+            feature["id"],
+            status,
+            message,
+            fix_action if store_action else None,
+            fix_params if store_action else None,
+        )
 
     title = tr("Issue {} - {}").format(feature["id"], fix_status_labels().get(status, status))
     if status == "success":
@@ -146,7 +166,7 @@ def fix_graph_issue(layer_id: str, issue_id: int):
         )
         return
 
-    fix_and_report(layer, feature, feature["fix_action"], feature["fix_params"])
+    fix_and_report(layer, feature, feature["fix_action"], json.dumps(json_dict(feature["fix_params"])))
 
 
 def choose_graph_issue_fix(layer_id: str, issue_id: int):
@@ -171,7 +191,7 @@ def choose_graph_issue_fix(layer_id: str, issue_id: int):
         # The check code is quoted as a SQL literal
         data = connection.executeSql(
             "SELECT array_to_string(fix_actions, ',') "  # nosec B608
-            "FROM \"road_graph\".glossary_graph_check WHERE code = {}".format(
+            'FROM "road_graph".glossary_graph_check WHERE code = {}'.format(
                 quote_literal(feature["check_code"])
             )
         )
@@ -204,10 +224,10 @@ def choose_graph_issue_fix(layer_id: str, issue_id: int):
     fix_action = fix_actions[items.index(item)]
 
     # Choose the edge to mark as not connected: one of the edges, or all of them
-    params = json.loads(feature["fix_params"] or "{}")
+    params = json_dict(feature["fix_params"])
     edge_ids = params.get("edge_ids") or []
     if fix_action == "mark_as_bridge" and len(edge_ids) > 1:
-        road_codes = json.loads(feature["details"] or "{}").get("road_codes") or []
+        road_codes = json_dict(feature["details"]).get("road_codes") or []
         edge_items = [tr("All the edges")] + [
             tr("Edge {} - road {}").format(edge_id, road_codes[i] if i < len(road_codes) else "")
             for i, edge_id in enumerate(edge_ids)
@@ -241,7 +261,7 @@ def select_graph_issue_edges(layer_id: str, issue_id: int):
         return
     _, feature = issue
 
-    edge_ids = [int(i) for i in (feature["edge_ids"] or "").split(",") if i.strip()]
+    edge_ids = id_list(feature["edge_ids"])
     if not edge_ids:
         display_message(action_name, tr("This issue has no edge."), Qgis.MessageLevel.Info)
         return

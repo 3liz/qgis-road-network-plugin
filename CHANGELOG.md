@@ -4,28 +4,22 @@
 
 ### Added
 
-* **Documentation**: translation of the pages on Transifex, in the same project as the plugin interface,
-  and site built for each language with a language selector (French for now), with the texts
-  of the diagrams of the road graph checks. The pages which are not translated yet are displayed in English
+* **Documentation**: translation on Transifex, with a language selector (French for now)
 
 ### Changed
 
-* **Road graph checks**: when the fix of a G06 issue fails, the error message gives the issues of the road
-  preventing to order its edges, with their nodes and edges, for example `G07 at the node 913 (edges 161, 163, 164)`
+* **Road graph checks**: the issues of the editing session are stored in a table, displayed by two layers,
+  and the roads of an issue are checked again after each fix
+* **Road graph checks**: the error of a G06 fix gives the blocking G05 and G07 issues
+* **Editing sessions**: the merge displays the number of merged objects per road graph table
+  and of updated objects per managed object table
 
 ### Fixed
 
-* **QGIS project**: very slow displays and edits of the layers of the editing session on a remote database:
-  the join of the editing edges with the roads was not cached in memory, and QGIS queried the roads
-  for each edge displayed, through the single connection of the transaction group. To fix an existing project,
-  check `Cache join layer in memory` in the join of the layer `edges copie` with `roads copie`
-* **Road graph checks**: the fixes failed when the layers of the editing session were in editing mode
-  without transaction, for example when the transaction groups of the project had not been created yet.
-  They are now saved at once if the layers have no modifications waiting to be saved, and the error message
-  gives the layers with such modifications. The transaction is also found on any layer of the editing session
-* **Roundabouts**: the action `Finalize the roundabout` failed with the error `Argument to ST_Y() must have
-  type POINT` when the circle was not cut by any edge, for example when the edges crossing it are marked
-  as not connected (`no_intersection_cutting`). The error message now explains it, with the ids of these edges
+* **QGIS project**: slow editing layers on a remote database, the join `edges copie` / `roads copie`
+  is now cached in memory
+* **Road graph checks**: fixes failing when the editing layers are in editing mode without transaction
+* **Roundabouts**: clear error when the circle is not cut by any edge (`no_intersection_cutting`)
 
 
 ## 0.7.1 - 2026-11-15

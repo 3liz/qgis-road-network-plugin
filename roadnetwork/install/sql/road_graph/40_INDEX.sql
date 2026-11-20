@@ -49,6 +49,14 @@ CREATE INDEX edges_start_node_idx ON road_graph.edges USING btree (start_node);
 CREATE INDEX editing_sessions_geom_idx ON road_graph.editing_sessions USING gist (geom);
 
 
+-- graph_issues_geom_detail_idx
+CREATE INDEX graph_issues_geom_detail_idx ON road_graph.graph_issues USING gist (geom_detail);
+
+
+-- graph_issues_geom_idx
+CREATE INDEX graph_issues_geom_idx ON road_graph.graph_issues USING gist (geom);
+
+
 -- managed_objects_geometry_type_idx
 CREATE INDEX managed_objects_geometry_type_idx ON road_graph.managed_objects USING btree (geometry_type);
 

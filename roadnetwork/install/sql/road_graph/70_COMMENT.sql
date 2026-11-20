@@ -489,6 +489,18 @@ It returns a JSON object with the keys status (success, skipped if the edges are
 of their road anymore, or error) and message.';
 
 
+-- FUNCTION fix_stored_graph_issue(_issue_id integer, _fix_action text, _fix_params jsonb, _refresh boolean)
+COMMENT ON FUNCTION road_graph.fix_stored_graph_issue(_issue_id integer, _fix_action text, _fix_params jsonb, _refresh boolean) IS 'Fix an issue stored in the table graph_issues of the editing session, with the function fix_graph_issue.
+
+The issue is fixed with its fix action and parameters, or with the given ones, for example when the user chooses another fix.
+The result is stored in the fields fix_status and fix_message of the issue.
+
+If _refresh is True and the fix did not fail, the roads of the issue are checked again with the function refresh_graph_issues:
+the fixed issue is deleted, and the new issues of these roads are added.
+
+It returns a JSON object with the keys status (success, skipped or error) and message.';
+
+
 -- FUNCTION get_current_setting(setting_name text, default_value text)
 COMMENT ON FUNCTION road_graph.get_current_setting(setting_name text, default_value text) IS 'Get a PostgreSQL current setting, with a default value if the setting is not set or is invalid.
 The function is used to have a single point of maintenance for getting settings.';
@@ -648,6 +660,20 @@ If the table has the references fields, the references of the feature A
 The lines connected to the features are not modified by the trigger trg_update_managed_object_linked_geometries.
 
 It returns a JSON object with the keys status (success or error) and message.';
+
+
+-- FUNCTION refresh_graph_issues(_checks text[], _road_codes text[], _options jsonb)
+COMMENT ON FUNCTION road_graph.refresh_graph_issues(_checks text[], _road_codes text[], _options jsonb) IS 'Run the checks of the road graph with the function check_graph, and update the issues stored in the table graph_issues of the editing session.
+
+The parameters are the ones of check_graph: the checks to run and the road codes, all of them if NULL, and the options of the checks.
+Only the issues in the polygon of the editing session are stored: the issues of the edges copied beyond it cannot be fixed.
+
+* the stored issues found again keep their id and their fix status, their details and fix action are updated,
+* the stored issues of these checks and roads which are not found anymore are deleted,
+* the new issues are added.
+
+It only works in the editing schema, with road_graph_editing.refresh_graph_issues.
+It returns the number of issues found.';
 
 
 -- FUNCTION reorder_multilinestring_parts(_multilinestring geometry, _road_code text)
@@ -872,6 +898,74 @@ COMMENT ON COLUMN road_graph.glossary_graph_check.description IS 'Description of
 
 -- glossary_road_class
 COMMENT ON TABLE road_graph.glossary_road_class IS 'Glossary for the column road_scale of the table roads';
+
+
+-- graph_issues
+COMMENT ON TABLE road_graph.graph_issues IS 'Issues of the road graph found by the checks, stored in the editing session only (road_graph_editing.graph_issues) by the function refresh_graph_issues. The table is emptied when the data is copied to a new editing session, and when the editing session is merged or dropped. The table of the production schema is not used.';
+
+
+-- graph_issues.id
+COMMENT ON COLUMN road_graph.graph_issues.id IS 'Unique identifier of the issue. It is kept while the issue is found again by the checks.';
+
+
+-- graph_issues.check_code
+COMMENT ON COLUMN road_graph.graph_issues.check_code IS 'Code of the check which found the issue, e.g. G01 (see the table glossary_graph_check)';
+
+
+-- graph_issues.check_title
+COMMENT ON COLUMN road_graph.graph_issues.check_title IS 'Title of the check';
+
+
+-- graph_issues.severity
+COMMENT ON COLUMN road_graph.graph_issues.severity IS 'Severity of the issue: error or warning';
+
+
+-- graph_issues.road_code
+COMMENT ON COLUMN road_graph.graph_issues.road_code IS 'Code of the road of the issue, if the issue concerns one road';
+
+
+-- graph_issues.edge_ids
+COMMENT ON COLUMN road_graph.graph_issues.edge_ids IS 'Ids of the edges concerned by the issue';
+
+
+-- graph_issues.node_ids
+COMMENT ON COLUMN road_graph.graph_issues.node_ids IS 'Ids of the nodes concerned by the issue';
+
+
+-- graph_issues.marker_ids
+COMMENT ON COLUMN road_graph.graph_issues.marker_ids IS 'Ids of the markers concerned by the issue';
+
+
+-- graph_issues.details
+COMMENT ON COLUMN road_graph.graph_issues.details IS 'Details of the issue, depending on the check';
+
+
+-- graph_issues.fix_action
+COMMENT ON COLUMN road_graph.graph_issues.fix_action IS 'Action which can fix the issue automatically, if any (see the function fix_graph_issue)';
+
+
+-- graph_issues.fix_params
+COMMENT ON COLUMN road_graph.graph_issues.fix_params IS 'Parameters of the fix action';
+
+
+-- graph_issues.fix_status
+COMMENT ON COLUMN road_graph.graph_issues.fix_status IS 'Status of the last fix of the issue: success, skipped or error';
+
+
+-- graph_issues.fix_message
+COMMENT ON COLUMN road_graph.graph_issues.fix_message IS 'Message of the last fix of the issue';
+
+
+-- graph_issues.checked_at
+COMMENT ON COLUMN road_graph.graph_issues.checked_at IS 'Date and time of the last check which found the issue';
+
+
+-- graph_issues.geom
+COMMENT ON COLUMN road_graph.graph_issues.geom IS 'Point locating the issue';
+
+
+-- graph_issues.geom_detail
+COMMENT ON COLUMN road_graph.graph_issues.geom_detail IS 'Lines showing the issue, if useful: edges, gap between two edges, etc.';
 
 
 -- managed_objects
