@@ -1665,6 +1665,9 @@ The road of the roundabout must exist in the <code>roads</code> layer with the r
 </ul>
 <p>The action is cancelled with a warning if the layer is not in editing mode,
 or if the road type of the selected edge is not <code>roundabout</code>.
+It fails with an error if the circle is not connected to any road: the edges crossing it
+must not be marked as not connected (see <a href="#edges-which-must-not-be-cut">Edges which must not be cut</a>),
+otherwise they are not cut by the circle. Uncheck their field <code>no_intersection_cutting</code> and draw the circle again.
 You may have to refresh the map canvas to see the changes.</p>
 <h2 id="edges-which-must-not-be-cut">Edges which must not be cut<a class="headerlink" href="#edges-which-must-not-be-cut" title="Permanent link">#</a></h2>
 <p>By default, the database <strong>trigger functions</strong> keep the graph topology up to date while you edit:</p>

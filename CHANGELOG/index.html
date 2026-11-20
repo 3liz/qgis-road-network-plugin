@@ -2391,6 +2391,13 @@
   the join of the editing edges with the roads was not cached in memory, and QGIS queried the roads
   for each edge displayed, through the single connection of the transaction group. To fix an existing project,
   check <code>Cache join layer in memory</code> in the join of the layer <code>edges copie</code> with <code>roads copie</code></li>
+<li><strong>Road graph checks</strong>: the fixes failed when the layers of the editing session were in editing mode
+  without transaction, for example when the transaction groups of the project had not been created yet.
+  They are now saved at once if the layers have no modifications waiting to be saved, and the error message
+  gives the layers with such modifications. The transaction is also found on any layer of the editing session</li>
+<li><strong>Roundabouts</strong>: the action <code>Finalize the roundabout</code> failed with the error <code>Argument to ST_Y() must have
+  type POINT</code> when the circle was not cut by any edge, for example when the edges crossing it are marked
+  as not connected (<code>no_intersection_cutting</code>). The error message now explains it, with the ids of these edges</li>
 </ul>
 <h2 id="071-2026-11-15">0.7.1 - 2026-11-15<a class="headerlink" href="#071-2026-11-15" title="Permanent link">#</a></h2>
 <h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>

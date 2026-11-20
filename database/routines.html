@@ -571,6 +571,17 @@
                                         <td><p>Update the given table geometries based on the references. This function needs the table to be listed in the table road_graph.managed_objects. The objects whose geometry cannot be calculated are not updated, and a warning is raised. The parameter _impacts, returned by the function get_editing_session_impacts, allows to update only the objects which may be impacted by the modifications of an editing session. All the objects of the given roads are updated if it is NULL.</p></td>
                                     </tr>
                                     <tr>
+                                        <td><a href="routines/check_graph_edge_links__road_co_1f32fd2a.html">check_graph_edge_links(_road_codes text[], _options jsonb)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Check G06 run by the function check_graph: find the edges whose previous or next edge contradicts the geometry.</p>
+<p>The previous and next edges (fields previous_edge_id and next_edge_id) give the order of the edges of the road, used to calculate the references. The next edge of an edge is wrong when it does not start at the end node of the edge, whereas another edge of the road starts there, or when it is connected to another edge, or to the edge in the opposite direction. The previous edge is checked the same way. The other links, across a gap of the road, for example on both sides of a roundabout, are kept. The roundabouts are ignored. The expected link is the connected edge, or no link: a gap between two close nodes is fixed by the check G03.</p>
+<p>An issue is returned for each road. The details give the number of edges and, for each edge, its previous and next edges and the expected ones. The issue can be fixed with the action relink_edges, which sets the expected previous and next edges of the road, then calculates again the references of the road.</p></td>
+                                    </tr>
+                                    <tr>
                                         <td><a href="routines/get_upper_roundabout_node_to_de_f8905d65.html">get_upper_roundabout_node_to_delete(_road_code text)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -596,17 +607,6 @@
                                         <td>trigger</td>
                                         <td>INVOKER</td>
                                         <td><p>Fonction qui arrondit la précision des coordonnées à 0.1 soit 10cm si ce n&rsquo;est pas déjà fait lors d&rsquo;une création ou d&rsquo;une modification de géométrie. Elle est préfixée par aa_ pour être lancée avant les autres trigger, car l&rsquo;ordre alphabétique compte.</p></td>
-                                    </tr>
-                                    <tr>
-                                        <td><a href="routines/check_graph_edge_links__road_co_1f32fd2a.html">check_graph_edge_links(_road_codes text[], _options jsonb)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>TABLE(check_code text, check_title text, severity text, road_code text, edge_ids integer[], node_ids integer[], marker_ids integer[], details jsonb, fix_action text, fix_params jsonb, geom geometry, geom_detail geometry)</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Check G06 run by the function check_graph: find the edges whose previous or next edge contradicts the geometry.</p>
-<p>The previous and next edges (fields previous_edge_id and next_edge_id) give the order of the edges of the road, used to calculate the references. The next edge of an edge is wrong when it does not start at the end node of the edge, whereas another edge of the road starts there, or when it is connected to another edge, or to the edge in the opposite direction. The previous edge is checked the same way. The other links, across a gap of the road, for example on both sides of a roundabout, are kept. The roundabouts are ignored. The expected link is the connected edge, or no link: a gap between two close nodes is fixed by the check G03.</p>
-<p>An issue is returned for each road. The details give the number of edges and, for each edge, its previous and next edges and the expected ones. The issue can be fixed with the action relink_edges, which sets the expected previous and next edges of the road, then calculates again the references of the road.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/add_managed_objects_triggers___4f979f05.html">add_managed_objects_triggers()</a></td>
@@ -640,7 +640,8 @@
                                         <td>false</td>
                                         <td>boolean</td>
                                         <td>INVOKER</td>
-                                        <td><p>Clean a roundabout digitized by QGIS circle tool: * delete the edges inside the roundabout * remove the circle node added add 12 o&rsquo;clock * add a marker for this roundabout if not already present</p></td>
+                                        <td><p>Clean a roundabout digitized by QGIS circle tool: * delete the edges inside the roundabout * remove the circle node added add 12 o&rsquo;clock * add a marker for this roundabout if not already present</p>
+<p>An exception is raised if the roundabout is not connected to any other road, for example when the edges crossing the circle are marked as not connected (no_intersection_cutting), and are therefore not cut by it.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/check_graph_markers_order__road_bc2ddc2b.html">check_graph_markers_order(_road_codes text[], _options jsonb)</a></td>
