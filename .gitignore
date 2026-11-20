@@ -70,3 +70,6 @@ docs/media/user-guide/*.mp4
 
 # Translations of the documentation, downloaded from Transifex (docs_tools/transifex_docs.py)
 docs/**/*.fr.md
+
+# Diagrams translated from the texts downloaded from Transifex
+docs/media/**/*.fr.svg

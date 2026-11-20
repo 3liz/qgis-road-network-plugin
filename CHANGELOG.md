@@ -5,8 +5,8 @@
 ### Added
 
 * **Documentation**: translation of the pages on Transifex, in the same project as the plugin interface,
-  and site built for each language with a language selector (French for now).
-  The pages which are not translated yet are displayed in English
+  and site built for each language with a language selector (French for now), with the texts
+  of the diagrams of the road graph checks. The pages which are not translated yet are displayed in English
 
 ### Fixed
 

@@ -77,6 +77,11 @@ and keeps the translations of the strings which have not changed.
   of the English headings, so that the links to a section (`graph-checks.md#g01-crossing-edges-without-node`)
   work in every language.
 
+* The texts of the diagrams of the road graph checks are the resource `docs-graph-checks-diagrams`
+  (key-value JSON file format). They are extracted by `.docker/graph_checks_diagrams.py --extract`,
+  and the translated diagrams are written next to the English ones (`graph_checks_g01.fr.svg`, not versioned),
+  mkdocs-static-i18n using them in the pages of the language.
+
 The list of the translated pages is in `docs_tools/transifex_docs.py`.
 Translators must keep the Markdown syntax, the URLs of the links and the code unchanged.
 

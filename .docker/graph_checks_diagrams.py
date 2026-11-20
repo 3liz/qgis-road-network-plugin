@@ -8,9 +8,23 @@ Usage, from the repository root:
     python3 .docker/graph_checks_diagrams.py docs/media/user-guide
 
 or with `make graph-checks-screenshots`.
+
+The texts of the diagrams are translated on Transifex with the documentation
+(see docs_tools/transifex_docs.py):
+
+    # Write the English texts in a JSON file {text: text}
+    python3 .docker/graph_checks_diagrams.py --extract texts.json
+    # Write the diagrams of a language, for example graph_checks_g01.fr.svg,
+    # with the translations {text: translation}
+    python3 .docker/graph_checks_diagrams.py docs/media/user-guide --language fr --translations texts.fr.json
+
+The translated diagrams are used by mkdocs-static-i18n for the pages of the language.
 """
 
+import argparse
+import json
 import math
+import re
 import sys
 
 from itertools import pairwise
@@ -25,6 +39,25 @@ MUTED = "#424242"
 WIDTH = 900
 HEIGHT = 250
 
+# Translations of the texts, {English text: translation}, and English texts used by the diagrams
+TRANSLATIONS: dict[str, str] = {}
+TEXTS: dict[str, str] = {}
+
+
+def tr(text: str) -> str:
+    """Translation of a text of a diagram.
+
+    The texts without words, the codes of the roads and the names of the fix actions
+    (for example "PR 0", "D12_G", "cut_edges", "2 m") are not translated.
+
+    :param text: The English text
+    :return: The translated text, or the English text if it has no translation
+    """
+    if not re.search(r"[a-z]{3,}", text) or re.fullmatch(r"\w*_\w*", text):
+        return text
+    TEXTS[text] = text
+    return TRANSLATIONS.get(text) or text
+
 
 class Panel:
     """A panel of a diagram: a title, and drawings in a local coordinate system."""
@@ -36,7 +69,7 @@ class Panel:
         :param x0: The horizontal position of the panel in the diagram
         :param width: The width of the panel
         """
-        self.title = title
+        self.title = tr(title)
         self.x0 = x0
         self.width = width
         self.items = []
@@ -143,6 +176,12 @@ class Panel:
         :param anchor: The text anchor: start, middle or end
         :param weight: The font weight
         """
+        text = tr(text)
+        # Smaller font if the text is wider than the panel, for example when translated:
+        # the width of a character is about half of the font size
+        available = self.width - 16
+        if len(text) * size * 0.52 > available:
+            size = round(available / (len(text) * 0.52), 1)
         self.items.append(
             f'<text x="{self.x0 + x}" y="{y}" font-size="{size}" fill="{color}" text-anchor="{anchor}" '
             f'font-weight="{weight}">{text}</text>'
@@ -512,11 +551,22 @@ def link(p: Panel, x1: float, x2: float, y: float, height: float, color: str):
 
 
 def main() -> int:
-    """Write the diagrams in the directory given as argument.
+    """Write the diagrams in the directory given as argument, or extract their texts.
 
     :return: The exit code
     """
-    output_dir = Path(sys.argv[1])
+    parser = argparse.ArgumentParser(description="Diagrams of the road graph checks")
+    parser.add_argument("output_dir", nargs="?", type=Path, help="Directory of the diagrams")
+    parser.add_argument("--language", help="Language of the diagrams, added as suffix to the file names")
+    parser.add_argument("--translations", type=Path, help="JSON file of the translations {text: translation}")
+    parser.add_argument("--extract", type=Path, help="Write the English texts in this JSON file {text: text}")
+    args = parser.parse_args()
+    if not args.output_dir and not args.extract:
+        parser.error("the output directory or the option --extract is required")
+    if args.translations:
+        TRANSLATIONS.update(json.loads(args.translations.read_text(encoding="utf-8")))
+    suffix = f".{args.language}" if args.language else ""
+
     for name, function in (
         ("g01", g01),
         ("g02", g02),
@@ -530,7 +580,11 @@ def main() -> int:
         ("g10", g10),
         ("g11", g11),
     ):
-        (output_dir / f"graph_checks_{name}.svg").write_text(function())
+        content = function()
+        if args.output_dir:
+            (args.output_dir / f"graph_checks_{name}{suffix}.svg").write_text(content, encoding="utf-8")
+    if args.extract:
+        args.extract.write_text(json.dumps(TEXTS, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     return 0
 
 
