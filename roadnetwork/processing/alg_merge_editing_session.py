@@ -1,8 +1,10 @@
 from typing import Any
 
 from psycopg2 import connect
+from psycopg2.extensions import connection as PgConnection
 from psycopg2 import sql as pg_sql
 from qgis.core import (
+    QgsAbstractDatabaseProviderConnection,
     QgsDataSourceUri,
     QgsProcessingContext,
     QgsProcessingException,
@@ -19,6 +21,9 @@ from ..plugin_tools.i18n import tr
 from ..plugin_tools.resources import plugin_name_normalized
 from .base_algorithm import BaseProcessingAlgorithm
 from .tools import get_connection_name
+
+# Road graph tables merged from the editing session, in the order of the summary
+GRAPH_TABLES = ("roads", "edges", "nodes", "markers")
 
 
 class MergeEditingSession(BaseProcessingAlgorithm):
@@ -126,6 +131,102 @@ class MergeEditingSession(BaseProcessingAlgorithm):
 
         return super(MergeEditingSession, self).checkParameterValues(parameters, context)
 
+    def getGraphMergeCounts(
+        self, connection: QgsAbstractDatabaseProviderConnection, pg_conn: PgConnection, session_id: int
+    ) -> dict[str, dict[str, int]]:
+        """Get the number of road graph objects to merge, per table and operation.
+
+        The counts are read from the logged ids of the editing session,
+        which must be done before the merge since the editing session is then deleted.
+
+        @param connection: The QGIS PostgreSQL provider connection
+        @param pg_conn: The psycopg2 connection, used to build the SQL query
+        @param session_id: The id of the editing session
+        @return: The counts per table and operation (I, U, D), for example {"edges": {"I": 3, "U": 1}}
+        """
+        sql = (
+            pg_sql.SQL("""
+            SELECT i.item, o.value AS op, count(*) AS nb
+            FROM
+                road_graph.editing_sessions AS s,
+                unnest(ARRAY['roads', 'edges', 'nodes', 'markers']) AS i(item),
+                jsonb_each_text(Coalesce(s.logged_ids->i.item, '{{}}'::jsonb)) AS o
+            WHERE s.id = {session_id}
+            GROUP BY i.item, o.value
+        """)
+            .format(
+                session_id=pg_sql.Literal(session_id),
+            )
+            .as_string(pg_conn)
+        )
+        try:
+            data = connection.executeSql(sql)
+        except QgsProviderConnectionException as e:
+            raise QgsProcessingException(str(e))
+
+        # Build the counts for each table, with all the tables even without changes
+        counts: dict[str, dict[str, int]] = {item: {} for item in GRAPH_TABLES}
+        for item, op, nb in data:
+            counts[item][op] = int(nb)
+
+        return counts
+
+    def getUpdatedManagedObjectsCounts(
+        self, connection: QgsAbstractDatabaseProviderConnection
+    ) -> list[tuple[str, str, int]]:
+        """Get the number of managed objects updated by the last merge, per table.
+
+        @param connection: The QGIS PostgreSQL provider connection
+        @return: The list of the schema name, table name and number of updated objects
+        """
+        sql = """
+            SELECT
+                schema_name, table_name,
+                Coalesce(cardinality(last_updated_objects_ids), 0) AS nb
+            FROM road_graph.managed_objects
+            ORDER BY schema_name, table_name
+        """
+        try:
+            data = connection.executeSql(sql)
+        except QgsProviderConnectionException as e:
+            raise QgsProcessingException(str(e))
+
+        return [(schema_name, table_name, int(nb)) for schema_name, table_name, nb in data]
+
+    def getMergeSummary(
+        self,
+        graph_counts: dict[str, dict[str, int]],
+        managed_objects_counts: list[tuple[str, str, int]],
+    ) -> list[str]:
+        """Build the lines of the summary of the merged objects.
+
+        @param graph_counts: The counts of the road graph objects per table and operation
+        @param managed_objects_counts: The counts of the updated managed objects per table
+        @return: The lines of the summary
+        """
+        lines = [tr("Merged objects of the road graph")]
+
+        # One line per road graph table, with the detail per operation
+        for item in GRAPH_TABLES:
+            ops = graph_counts.get(item, {})
+            total = sum(ops.values())
+            if total == 0:
+                lines.append(f"* {item}: 0")
+                continue
+            detail = tr("inserted {}, updated {}, deleted {}").format(
+                ops.get("I", 0), ops.get("U", 0), ops.get("D", 0)
+            )
+            lines.append(f"* {item}: {total} ({detail})")
+
+        # One line per managed object table
+        lines.append(tr("Updated managed objects"))
+        if not managed_objects_counts:
+            lines.append(tr("* No managed object table"))
+        for schema_name, table_name, nb in managed_objects_counts:
+            lines.append(f'* "{schema_name}"."{table_name}": {nb}')
+
+        return lines
+
     def reloadEdgeJoin(self):
         """
         Reload the join between edges and roads
@@ -187,6 +288,13 @@ class MergeEditingSession(BaseProcessingAlgorithm):
             pg_conn.close()
             return {}
 
+        # Count the road graph objects to merge, before the editing session is deleted
+        try:
+            graph_counts = self.getGraphMergeCounts(connection, pg_conn, int(editing_session[0]))
+        except QgsProcessingException:
+            pg_conn.close()
+            raise
+
         # Merge road_graph_editing data to road_graph schema
         feedback.pushInfo(
             tr("Merge the 'road_graph_editing' data to the production schema 'road_graph'").upper()
@@ -222,6 +330,13 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         feedback.pushInfo(tr("Data inside the 'road_graph_editing' tables have been deleted"))
         feedback.pushInfo("")
 
+        # Display the number of merged objects and of updated managed objects
+        managed_objects_counts = self.getUpdatedManagedObjectsCounts(connection)
+        summary = self.getMergeSummary(graph_counts, managed_objects_counts)
+        for line in summary:
+            feedback.pushInfo(line)
+        feedback.pushInfo("")
+
         # Reload layers
         QgsProject.instance().reloadAllLayers()
 
@@ -232,6 +347,7 @@ class MergeEditingSession(BaseProcessingAlgorithm):
         msg = tr(
             "Editing session data has been successfully merged for the given area into the road_graph schema"
         )
+        msg += "\n" + "\n".join(summary)
         status = 1
 
         return {self.OUTPUT_STATUS: status, self.OUTPUT_STRING: msg}
