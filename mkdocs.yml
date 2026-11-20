@@ -34,6 +34,45 @@ nav:
 plugins:
   - search
   # - git-revision-date-localized
+  # Translated pages: page.fr.md next to page.md, downloaded from Transifex (see docs_tools/transifex_docs.py)
+  # The pages which are not translated are displayed in English
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: fr
+          name: Français
+          build: true
+          nav_translations:
+            Home: Accueil
+            Concepts: Concepts
+            Installation: Installation
+            User Guide: Guide utilisateur
+            Introduction: Introduction
+            Import data: Importer les données
+            QGIS project and tools: Projet QGIS et outils
+            Processing algorithms: Algorithmes de traitement
+            Road graph editing: Édition du graphe routier
+            Check and fix the road graph: Vérifier et corriger le graphe routier
+            Managed objects: Objets gérés
+            Changelog: Journal des modifications
+            Contribution: Contribuer
+            Database: Base de données
+            Useful functions: Fonctions utiles
+            Tables and fields: Tables et champs
+            Database structure: Structure de la base de données
+            Appendix: Annexes
+            Training plan (French): Plan de formation
+
+# Keep the anchors of the English headings in the translated pages
+hooks:
+  - docs_tools/i18n_anchors.py
 
 markdown_extensions:
   - toc:

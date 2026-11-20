@@ -152,6 +152,20 @@ graph-checks-screenshots: start-db
 	$(UV) python .docker/graph_checks_diagrams.py docs/media/user-guide
 	$(MAKE) stop-db
 
+# Translation of the documentation with Transifex
+# The API token is given by the environment variable TRANSIFEX_TOKEN
+# Send the English pages
+doc-transifex-push:
+	$(UV) python docs_tools/transifex_docs.py push
+
+# Download the translated pages (page.fr.md next to page.md), not versioned
+doc-transifex-pull:
+	$(UV) python docs_tools/transifex_docs.py pull
+
+# Percentage of translated and reviewed strings of each page
+doc-transifex-status:
+	$(UV) python docs_tools/transifex_docs.py status
+
 #
 # Update the project's environment
 #

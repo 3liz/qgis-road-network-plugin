@@ -67,3 +67,6 @@ docs/database
 .test-migration-*
 
 docs/media/user-guide/*.mp4
+
+# Translations of the documentation, downloaded from Transifex (docs_tools/transifex_docs.py)
+docs/**/*.fr.md

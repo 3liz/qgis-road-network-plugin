@@ -7,6 +7,7 @@ on:
     paths:
       - '**.py'
       - '**.ui'
+      - 'docs/**.md'
   workflow_dispatch:
 
 jobs:
@@ -32,3 +33,9 @@ jobs:
 
       - name: Push to Transifex
         run: qt-transifex -vv push --transifex-token "${{ secrets.TRANSIFEX_TOKEN }}"
+
+      # English pages of the documentation, see docs_tools/transifex_docs.py
+      - name: Push the documentation to Transifex
+        run: python docs_tools/transifex_docs.py push
+        env:
+          TRANSIFEX_TOKEN: ${{ secrets.TRANSIFEX_TOKEN }}
