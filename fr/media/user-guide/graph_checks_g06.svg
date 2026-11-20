@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="250" viewBox="0 0 900 250" font-family="Arial, Helvetica, sans-serif">
+  <rect width="900" height="250" fill="#ffffff"/>
+  <line x1="450.0" y1="12" x2="450.0" y2="238" stroke="#e0e0e0" stroke-width="2"/>
+  <text x="225.0" y="28" font-size="15" font-weight="bold" fill="#212121" text-anchor="middle">Anomalie</text>
+  <polyline points="30.0,160 160.0,160" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="104.0,160.0 87.8,165.4 87.8,154.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <polyline points="160.0,160 290.0,160" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="234.0,160.0 217.8,165.4 217.8,154.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <polyline points="290.0,160 420.0,160" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="364.0,160.0 347.8,165.4 347.8,154.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <circle cx="30.0" cy="160" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="160.0" cy="160" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="290.0" cy="160" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="420.0" cy="160" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <text x="95.0" y="185" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">e1</text>
+  <text x="225.0" y="185" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">e2</text>
+  <text x="355.0" y="185" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">e3</text>
+  <path d="M 95.0 148 C 95.0 65, 355.0 65, 355.0 148" fill="none" stroke="#e53935" stroke-width="2"/>
+  <path d="M 350.0 138 L 355.0 149 L 360.0 138 z" fill="#e53935" stroke="#e53935"/>
+  <text x="225.0" y="58" font-size="12.5" fill="#e53935" text-anchor="middle" font-weight="bold">tronçon suivant de e1 = e3</text>
+  <text x="225.0" y="215" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">le tronçon suivant de e1 ne part pas de son nœud de fin,</text>
+  <text x="225.0" y="233" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">alors que e2 en part : l'ordre de la route est faux</text>
+  <text x="675.0" y="28" font-size="15" font-weight="bold" fill="#212121" text-anchor="middle">relink_edges</text>
+  <polyline points="480.0,160 610.0,160" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="554.0,160.0 537.8,165.4 537.8,154.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <polyline points="610.0,160 740.0,160" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="684.0,160.0 667.8,165.4 667.8,154.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <polyline points="740.0,160 870.0,160" fill="none" stroke="#9e9e9e" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="814.0,160.0 797.8,165.4 797.8,154.6" fill="#ffffff" stroke="#9e9e9e" stroke-width="2"/>
+  <circle cx="480.0" cy="160" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="610.0" cy="160" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="740.0" cy="160" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <circle cx="870.0" cy="160" r="6" fill="#ffffff" stroke="#424242" stroke-width="2"/>
+  <text x="545.0" y="185" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">e1</text>
+  <text x="675.0" y="185" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">e2</text>
+  <text x="805.0" y="185" font-size="13" fill="#424242" text-anchor="middle" font-weight="normal">e3</text>
+  <path d="M 545.0 148 C 545.0 100, 675.0 100, 675.0 148" fill="none" stroke="#1565c0" stroke-width="2"/>
+  <path d="M 670.0 138 L 675.0 149 L 680.0 138 z" fill="#1565c0" stroke="#1565c0"/>
+  <path d="M 675.0 148 C 675.0 100, 805.0 100, 805.0 148" fill="none" stroke="#1565c0" stroke-width="2"/>
+  <path d="M 800.0 138 L 805.0 149 L 810.0 138 z" fill="#1565c0" stroke="#1565c0"/>
+  <text x="675.0" y="80" font-size="12.5" fill="#1565c0" text-anchor="middle" font-weight="bold">tronçon suivant de e1 = e2, tronçon suivant de e2 = e3</text>
+  <text x="675.0" y="215" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">les tronçons précédent et suivant sont définis par les nœuds,</text>
+  <text x="675.0" y="233" font-size="12.5" fill="#212121" text-anchor="middle" font-weight="normal">puis les références de la route sont recalculées</text>
+</svg>

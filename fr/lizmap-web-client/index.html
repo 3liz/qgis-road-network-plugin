@@ -1,0 +1,2271 @@
+
+<!doctype html>
+<html lang="fr" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="RoadNetwork plugin">
+      
+      
+        <meta name="author" content="3Liz">
+      
+      
+        <link rel="canonical" href="https://docs.3liz.org/qgis-road-network-plugin/fr/lizmap-web-client/">
+      
+      
+        <link rel="prev" href="../database-guide/structure/">
+      
+      
+        <link rel="next" href="../appendix/training-plan/">
+      
+      
+        
+          <link rel="alternate" href="../../lizmap-web-client/" hreflang="en">
+        
+          <link rel="alternate" href="./" hreflang="fr">
+        
+      
+      
+      <link rel="icon" href="../../icon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Lizmap Web Client - RoadNetwork plugin</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/default.min.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#lizmap-web-client-tools" class="md-skip">
+          Aller au contenu
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="En-tête">
+    <a href="../" title="RoadNetwork plugin" class="md-header__button md-logo" aria-label="RoadNetwork plugin" data-md-component="logo">
+      
+  <img src="../../icon.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RoadNetwork plugin
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Lizmap Web Client
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Sélectionner la langue">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="../../lizmap-web-client/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="fr" class="md-select__link">
+              Français
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Rechercher" placeholder="Rechercher" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Recherche">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Effacer" aria-label="Effacer" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initialisation de la recherche
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/3liz/qgis-road-network-plugin/" title="Aller au dépôt" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Onglets" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../" class="md-tabs__link">
+        
+  
+  
+    
+  
+  docs.3liz.org
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Accueil
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../concepts/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Concepts
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../installation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Installation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user-guide/" class="md-tabs__link">
+          
+  
+  
+  Guide utilisateur
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Journal des modifications
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contribuer
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../database-guide/functions/" class="md-tabs__link">
+          
+  
+  
+  Base de données
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Lizmap Web Client
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../appendix/training-plan/" class="md-tabs__link">
+          
+  
+  
+  Annexes
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../" title="RoadNetwork plugin" class="md-nav__button md-logo" aria-label="RoadNetwork plugin" data-md-component="logo">
+      
+  <img src="../../icon.png" alt="logo">
+
+    </a>
+    RoadNetwork plugin
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/3liz/qgis-road-network-plugin/" title="Aller au dépôt" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    docs.3liz.org
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Accueil
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide utilisateur
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide utilisateur
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Importer les données
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/qgis-project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projet QGIS et outils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithmes de traitement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/graph-editing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Édition du graphe routier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/graph-checks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vérifier et corriger le graphe routier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/managed-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Objets gérés
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Journal des modifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contribuer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base de données
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Base de données
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-guide/functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fonctions utiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-guide/tables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tables et champs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-guide/structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Structure de la base de données
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lizmap Web Client
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lizmap Web Client
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table des matières">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table des matières
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fonctionnalités
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fonctionnalités">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#road-network-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Panneau Graphe routier
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Panneau Graphe routier">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-the-references-of-a-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Obtenir les références d'un point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-the-references-when-hovering-the-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Afficher les références au survol de la carte
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#center-the-map-on-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Centrer la carte sur des références
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-geometry-from-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Créer une géométrie à partir des références
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Créer une géométrie à partir des références">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boutons
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#snap-a-drawn-geometry-to-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accrocher une géométrie dessinée à la route
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#split-a-line-at-a-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Découper une ligne en un point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#merge-two-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fusionner deux lignes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-publish-the-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Publier les couches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-create-the-database-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Créer la fonction de base de données
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-create-the-actions-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Créer le fichier des actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-configure-the-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Configurer le script
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-add-the-files-to-lizmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Ajouter les fichiers dans Lizmap
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#translate-the-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Traduire l'interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Traduire l&#39;interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#texts-of-the-actions-and-of-the-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textes des actions et de la base de données
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Annexes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Annexes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/training-plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plan de formation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table des matières">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table des matières
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fonctionnalités
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fonctionnalités">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#road-network-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Panneau Graphe routier
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Panneau Graphe routier">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-the-references-of-a-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Obtenir les références d'un point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#show-the-references-when-hovering-the-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Afficher les références au survol de la carte
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#center-the-map-on-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Centrer la carte sur des références
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-geometry-from-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Créer une géométrie à partir des références
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Créer une géométrie à partir des références">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boutons
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#snap-a-drawn-geometry-to-the-road" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accrocher une géométrie dessinée à la route
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#split-a-line-at-a-point" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Découper une ligne en un point
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#merge-two-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fusionner deux lignes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-publish-the-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Publier les couches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-create-the-database-function" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Créer la fonction de base de données
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-create-the-actions-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Créer le fichier des actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-configure-the-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Configurer le script
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-add-the-files-to-lizmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Ajouter les fichiers dans Lizmap
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#translate-the-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Traduire l'interface
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Traduire l&#39;interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#texts-of-the-actions-and-of-the-database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textes des actions et de la base de données
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="lizmap-web-client-tools">Outils pour Lizmap Web Client<a class="headerlink" href="#lizmap-web-client-tools" title="Permanent link">#</a></h1>
+<p>Le réseau routier peut être publié avec <a href="https://docs.lizmap.com/">Lizmap Web Client</a> (LWC).
+Un script JavaScript, <a href="../../media/road_network.js">road_network.js</a>, ajoute des outils à la carte web
+pour que les utilisateurs puissent travailler avec les <strong>références linéaires</strong> (route, PR, abscisse, décalage et côté)
+directement dans le navigateur.</p>
+<p>Ces outils s'appuient sur les <a href="https://docs.lizmap.com/current/en/publish/configuration/action_popup.html">actions Lizmap</a> :
+chaque outil appelle une action nommée, qui exécute la fonction PostgreSQL <code>lizmap_get_data(json)</code>.
+Cette fonction appelle les fonctions <code>road_graph</code> de l'extension
+et renvoie le résultat en GeoJSON.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>L'interface est écrite en anglais et peut être <a href="#translate-the-interface">traduite</a>.
+Cette page donne les libellés de l'interface en français.</p>
+</div>
+<h2 id="features">Fonctionnalités<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
+<p>Le script ajoute quatre outils :</p>
+<table>
+<thead>
+<tr>
+<th>Outil</th>
+<th>Emplacement</th>
+<th>Actions Lizmap utilisées</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#road-network-panel">Panneau Graphe routier</a></td>
+<td>Mini-dock <em>Graphe routier</em></td>
+<td><code>get_references_from_point</code>, <code>get_road_point_from_reference</code></td>
+</tr>
+<tr>
+<td><a href="#create-a-geometry-from-references">Créer une géométrie à partir des références</a></td>
+<td>Formulaire d'édition</td>
+<td><code>get_references_from_point</code>, <code>get_road_point_from_reference</code>, <code>get_road_substring_from_references</code>, <code>get_edge_start_or_end_tip_from_references</code></td>
+</tr>
+<tr>
+<td><a href="#split-a-line-at-a-point">Découper une ligne</a></td>
+<td>Popup de l'entité</td>
+<td><code>split_line_by_point</code></td>
+</tr>
+<tr>
+<td><a href="#merge-two-lines">Fusionner deux lignes</a></td>
+<td>Popup de l'entité</td>
+<td><code>merge_selected_lines</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="road-network-panel">Panneau Graphe routier<a class="headerlink" href="#road-network-panel" title="Permanent link">#</a></h3>
+<p>Le script ajoute un mini-dock nommé <strong>Graphe routier</strong>.
+Il s'ouvre au chargement de la carte.</p>
+<p><img alt="Panneau du dock Lizmap" src="../../media/lizmap/lizmap_dock_panel.png" /></p>
+<p>Le panneau contient un formulaire avec ces champs :</p>
+<table>
+<thead>
+<tr>
+<th>Libellé</th>
+<th>Signification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Route</td>
+<td>Code de la route, par exemple <code>D1</code>. La liste des valeurs provient de la couche <code>roads</code>.</td>
+</tr>
+<tr>
+<td>PR</td>
+<td>Code du point de repère (borne)</td>
+</tr>
+<tr>
+<td>Abscisse</td>
+<td>Distance en mètres depuis le PR</td>
+</tr>
+<tr>
+<td>Cumul</td>
+<td>Distance cumulée en mètres depuis le début de la route (lecture seule)</td>
+</tr>
+<tr>
+<td>Décalage</td>
+<td>Distance en mètres depuis l'axe de la route</td>
+</tr>
+<tr>
+<td>Côté</td>
+<td>Côté de la route : <em>Gauche</em> ou <em>Droite</em></td>
+</tr>
+</tbody>
+</table>
+<h4 id="get-the-references-of-a-point">Obtenir les références d'un point<a class="headerlink" href="#get-the-references-of-a-point" title="Permanent link">#</a></h4>
+<p>Lorsque le panneau est ouvert, <strong>cliquez sur la carte</strong>. Le script lance l'action
+<code>get_references_from_point</code> avec le point cliqué. Les références renvoyées
+remplissent le formulaire, et le point est affiché sur la carte.</p>
+<h4 id="show-the-references-when-hovering-the-map">Afficher les références au survol de la carte<a class="headerlink" href="#show-the-references-when-hovering-the-map" title="Permanent link">#</a></h4>
+<p>Cochez <strong>Activer le calcul au survol</strong>.
+Lorsque la souris se déplace sur la carte, une infobulle affiche les références
+du point sous le curseur, par exemple <code>D1 - PR 3 + 250m (2m G)</code>.
+Les valeurs du formulaire sont aussi mises à jour.</p>
+<p>Pour limiter le nombre de requêtes vers le serveur :</p>
+<ul>
+<li>le script envoie au plus une requête toutes les 200 ms,</li>
+<li>aucune requête n'est envoyée pendant que l'utilisateur déplace la carte.</li>
+</ul>
+<p>Cette option n'est pas disponible lorsque le formulaire d'édition est ouvert.</p>
+<h4 id="center-the-map-on-references">Centrer la carte sur des références<a class="headerlink" href="#center-the-map-on-references" title="Permanent link">#</a></h4>
+<p>Saisissez une route, un PR, une abscisse, un décalage et un côté dans le formulaire,
+puis cliquez sur <strong>Centrer</strong>. Le script lance l'action
+<code>get_road_point_from_reference</code> et centre la carte sur le point renvoyé.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Le clic et le survol ne fonctionnent qu'à l'échelle 1:50 000 ou plus grande. À une échelle plus petite,
+un message demande à l'utilisateur de zoomer.</p>
+</div>
+<h3 id="create-a-geometry-from-references">Créer une géométrie à partir des références<a class="headerlink" href="#create-a-geometry-from-references" title="Permanent link">#</a></h3>
+<p>Lorsque l'utilisateur ouvre le formulaire d'édition Lizmap d'une couche de <strong>points</strong> ou de <strong>lignes</strong>,
+le script ajoute une section repliable au-dessus du formulaire :
+<strong>Créer la géométrie depuis des références</strong>.</p>
+<p><img alt="Création de la géométrie à partir des références dans l'édition Lizmap" src="../../media/lizmap/lizmap_editing_geometry_from_references.png" /></p>
+<p>Les champs dépendent du type de géométrie de la couche :</p>
+<ul>
+<li><strong>Couche de points</strong> : route, PR, abscisse, décalage et côté.</li>
+<li><strong>Couche de lignes</strong> : route, PR et abscisse de début (<em>PR début</em>, <em>Abscisse début</em>),
+  PR et abscisse de fin (<em>PR fin</em>, <em>Abscisse fin</em>), décalage et côté.</li>
+</ul>
+<p>Si le formulaire d'édition contient un champ nommé <code>road_code</code>, sa valeur est copiée
+dans le champ <strong>Route</strong>.</p>
+<h4 id="buttons">Boutons<a class="headerlink" href="#buttons" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Bouton</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Créer</strong></td>
+<td>Calcule la géométrie à partir des références et remplace la géométrie de l'entité modifiée. Pour une couche de points, le script lance <code>get_road_point_from_reference</code>. Pour une couche de lignes, il lance <code>get_road_substring_from_references</code>. Si les références de début sont après les références de fin, le script les inverse.</td>
+</tr>
+<tr>
+<td><strong>Réinitialiser</strong></td>
+<td>Supprime la géométrie dessinée et réinitialise les champs des références.</td>
+</tr>
+<tr>
+<td><strong>Tronçon</strong>, ligne du début</td>
+<td>Place les références de début au début du tronçon situé aux références de début.</td>
+</tr>
+<tr>
+<td><strong>Route</strong>, ligne du début</td>
+<td>Place les références de début au début de la route.</td>
+</tr>
+<tr>
+<td><strong>Tronçon</strong>, ligne de fin</td>
+<td>Place les références de fin à la fin du tronçon situé aux références de fin.</td>
+</tr>
+<tr>
+<td><strong>Route</strong>, ligne de fin</td>
+<td>Place les références de fin à la fin de la route.</td>
+</tr>
+</tbody>
+</table>
+<p>Les boutons <strong>Tronçon</strong> et <strong>Route</strong> ne sont disponibles que pour les couches de lignes.
+Ils lancent l'action <code>get_edge_start_or_end_tip_from_references</code>.
+Ensuite, la géométrie de la ligne est recalculée.</p>
+<h4 id="snap-a-drawn-geometry-to-the-road">Accrocher une géométrie dessinée à la route<a class="headerlink" href="#snap-a-drawn-geometry-to-the-road" title="Permanent link">#</a></h4>
+<p>Lorsque l'utilisateur dessine ou modifie la géométrie avec les outils de dessin de Lizmap,
+le script :</p>
+<ol>
+<li>lance <code>get_references_from_point</code> pour le point, ou pour le premier et le dernier
+   sommet de la ligne,</li>
+<li>remplit les champs des références avec les valeurs renvoyées,</li>
+<li>remplace la géométrie dessinée par la géométrie calculée à partir de ces références.</li>
+</ol>
+<p>Ainsi, la géométrie suit toujours la route. Si le champ de la route a une valeur,
+seule cette route est utilisée pour trouver les références.</p>
+<p>Si aucune référence n'est trouvée au bout de 2 secondes, un message indique à l'utilisateur que la
+géométrie n'a pas pu être créée. La cause la plus fréquente est un point situé à plus de
+50 m de la route.</p>
+<p>Lorsque l'entité est enregistrée, le panneau <strong>Graphe routier</strong> s'ouvre à nouveau.</p>
+<h3 id="split-a-line-at-a-point">Découper une ligne en un point<a class="headerlink" href="#split-a-line-at-a-point" title="Permanent link">#</a></h3>
+<p>Cet outil ajoute un bouton à la popup des entités d'une couche de lignes.
+Il découpe une ligne en deux entités en un point.</p>
+<p>Le bouton ne s'affiche que si l'utilisateur peut <strong>modifier la géométrie</strong> et
+<strong>créer des entités</strong> dans cette couche, dans la configuration de l'édition Lizmap.
+Ces droits peuvent être modifiés avec la constante <code>ROAD_SPLIT_NEEDED_RIGHTS</code> du script
+(voir <a href="#4-configure-the-script">Configurer le script</a>).</p>
+<ol>
+<li>Ouvrez le panneau <strong>Graphe routier</strong> et cliquez sur la ligne à l'endroit où elle doit être découpée.
+   Un point rouge s'affiche sur la carte.</li>
+<li>Dans la popup de la ligne, cliquez sur le bouton. Son libellé est le <code>title</code>
+   de l'action <code>split_line_by_point</code>.</li>
+<li>Confirmez l'opération.</li>
+</ol>
+<p>Le script envoie le point rouge à l'action <code>split_line_by_point</code>.
+La fonction de base de données <code>road_graph.split_table_linestring_feature_by_point</code>
+découpe la ligne, et la couche est rafraîchie.</p>
+<p>Les deux lignes suivent le <strong>sens de la route</strong>, même si la ligne a été dessinée
+dans le sens inverse : l'entité d'origine garde la première partie,
+et la nouvelle entité reçoit la seconde partie. Leurs références de début et de fin
+sont calculées dans le sens de la route.</p>
+<p>Le bouton de popup par défaut de cette action est masqué, car il n'envoie pas
+le point cliqué.</p>
+<h3 id="merge-two-lines">Fusionner deux lignes<a class="headerlink" href="#merge-two-lines" title="Permanent link">#</a></h3>
+<p>Cet outil ajoute un bouton à la popup des entités d'une couche de lignes.
+Il fusionne deux entités d'une même couche en une seule entité.</p>
+<p>Le bouton ne s'affiche que si l'utilisateur peut <strong>modifier la géométrie</strong> et
+<strong>créer des entités</strong> dans cette couche, dans la configuration de l'édition Lizmap.
+Le droit de supprimer des entités n'est pas requis par défaut, même si la seconde entité est supprimée.
+Ces droits peuvent être modifiés avec la constante <code>ROAD_MERGE_NEEDED_RIGHTS</code> du script
+(voir <a href="#4-configure-the-script">Configurer le script</a>).</p>
+<ol>
+<li>Dans la popup de la première ligne, cliquez sur <strong>Choisir cet objet pour fusion</strong>. Le libellé du bouton devient
+   <strong>Objet choisi pour la fusion</strong>.
+   Pour annuler, cliquez à nouveau sur ce bouton.</li>
+<li>Cliquez sur la seconde ligne sur la carte. Dans sa popup, cliquez sur
+   <strong>Fusionner avec l'objet choisi</strong>.</li>
+<li>Confirmez l'opération.</li>
+</ol>
+<p>Le script lance l'action <code>merge_selected_lines</code> avec les identifiants des deux entités.
+La fonction de base de données <code>road_graph.merge_table_linestring_features</code> les fusionne
+et la couche est rafraîchie. La popup n'affiche alors que l'entité fusionnée.</p>
+<p>L'entité fusionnée est l'<strong>entité choisie en premier</strong> : elle garde les valeurs de ses champs,
+et la seconde entité est supprimée. Ses références sont calculées à partir de la ligne fusionnée,
+dans le sens de la route.</p>
+<p>Une fois qu'une première entité est choisie, le bouton de fusion ne s'affiche que pour les entités
+de la même couche.</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">#</a></h2>
+<h3 id="1-publish-the-layers">1. Publier les couches<a class="headerlink" href="#1-publish-the-layers" title="Permanent link">#</a></h3>
+<p>Dans le projet QGIS :</p>
+<ul>
+<li>ajoutez la couche <code>road_graph.edges</code>. Les actions sur les références utilisent cette couche.</li>
+<li>ajoutez la couche <code>road_graph.roads</code> et publiez-la en <strong>WFS</strong>
+  (<em>Propriétés du projet</em> &gt; <em>QGIS Server</em> &gt; <em>Capacités WFS</em>).
+  Le script l'utilise pour remplir la liste des routes. La couche doit avoir
+  les champs <code>id</code>, <code>road_code</code> et <code>road_order</code>.</li>
+<li>pour les outils de découpe et de fusion, ajoutez les couches de lignes que les utilisateurs peuvent modifier.</li>
+</ul>
+<h3 id="2-create-the-database-function">2. Créer la fonction de base de données<a class="headerlink" href="#2-create-the-database-function" title="Permanent link">#</a></h3>
+<p>Créez la fonction <code>public.lizmap_get_data(json)</code> dans la base de données.
+Le fichier <a href="../../media/lizmap_get_data_example.sql">lizmap_get_data_example.sql</a>
+donne un exemple complet pour toutes les actions.</p>
+<p>La fonction utilise la projection <code>EPSG:2154</code>. Modifiez-la si vos données utilisent
+une autre projection.</p>
+<h3 id="3-create-the-actions-file">3. Créer le fichier des actions<a class="headerlink" href="#3-create-the-actions-file" title="Permanent link">#</a></h3>
+<p>Créez un fichier portant le nom du projet QGIS, avec l'extension <code>.action</code>.
+Par exemple, pour <code>road_network.qgs</code>, créez <code>road_network.qgs.action</code>
+dans le même dossier.</p>
+<p>Le fichier <a href="../../media/lizmap_action_file_example.json">lizmap_action_file_example.json</a>
+donne un exemple complet. Adaptez-le :</p>
+<ul>
+<li>remplacez <code>edges_7df8a321_25e8_4a67_9bf8_796e4782e147</code> par l'identifiant de votre couche <code>edges</code>,</li>
+<li>remplacez <code>demo_painting_26eb3c57_3374_41a5_8628_391caa42f33a</code> par les identifiants des
+  couches de lignes pour les outils de découpe et de fusion. Faites-le dans <code>layers</code> et dans <code>callbacks</code>.</li>
+</ul>
+<p>Les noms des actions ne doivent pas changer, car le script les utilise.</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Portée</th>
+<th>Options</th>
+<th>Entité renvoyée</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_references_from_point</code></td>
+<td><code>layer</code></td>
+<td><code>road_code</code>, <code>vertex_number</code></td>
+<td>Point avec <code>road_code</code>, <code>marker_code</code>, <code>abscissa</code>, <code>cumulative</code>, <code>offset</code>, <code>side</code>, <code>vertex_number</code></td>
+</tr>
+<tr>
+<td><code>get_road_point_from_reference</code></td>
+<td><code>layer</code></td>
+<td><code>road_code</code>, <code>marker_code</code>, <code>abscissa</code>, <code>offset</code>, <code>side</code></td>
+<td>Point avec les références</td>
+</tr>
+<tr>
+<td><code>get_road_substring_from_references</code></td>
+<td><code>layer</code></td>
+<td><code>road_code</code>, <code>start_marker_code</code>, <code>start_abscissa</code>, <code>end_marker_code</code>, <code>end_abscissa</code>, <code>offset</code>, <code>side</code></td>
+<td>Multilinestring avec les références de début et de fin</td>
+</tr>
+<tr>
+<td><code>get_edge_start_or_end_tip_from_references</code></td>
+<td><code>layer</code></td>
+<td><code>road_code</code>, <code>marker_code</code>, <code>abscissa</code>, <code>start_or_end</code> (<code>start</code> ou <code>end</code>), <code>tip_type</code> (<code>edge</code> ou <code>road</code>)</td>
+<td>Point avec <code>marker_code</code>, <code>abscissa</code>, <code>start_or_end</code></td>
+</tr>
+<tr>
+<td><code>split_line_by_point</code></td>
+<td><code>feature</code></td>
+<td>aucune (le point cliqué est envoyé en WKT)</td>
+<td>Le point cliqué, <code>message</code> et <code>message_detail</code></td>
+</tr>
+<tr>
+<td><code>merge_selected_lines</code></td>
+<td><code>layer</code></td>
+<td><code>feature_id_a</code>, <code>feature_id_b</code></td>
+<td><code>message</code> et <code>message_detail</code>, sans géométrie</td>
+</tr>
+</tbody>
+</table>
+<p><code>vertex_number</code> indique au script où placer le résultat :
+<code>-1</code> pour le panneau, <code>0</code> pour le point de début et <code>1</code> pour le point de fin
+de la géométrie modifiée.</p>
+<h3 id="4-configure-the-script">4. Configurer le script<a class="headerlink" href="#4-configure-the-script" title="Permanent link">#</a></h3>
+<p>Ouvrez <a href="../../media/road_network.js">road_network.js</a> et modifiez la
+section <code>CONFIGURATION</code> en haut du fichier :</p>
+<table>
+<thead>
+<tr>
+<th>Constante</th>
+<th>Valeur par défaut</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROAD_MIN_SCALE</code></td>
+<td><code>50000</code></td>
+<td>Plus petit dénominateur d'échelle pour les outils de clic et de survol</td>
+</tr>
+<tr>
+<td><code>ROAD_ROADS_LAYER_NAME</code></td>
+<td><code>roads</code></td>
+<td>Nom WFS de la couche <code>roads</code></td>
+</tr>
+<tr>
+<td><code>ROAD_EDGES_LAYER_ID</code></td>
+<td><code>edges_7df8a321_...</code></td>
+<td>Identifiant QGIS de la couche <code>edges</code></td>
+</tr>
+<tr>
+<td><code>ROAD_ORDER_FIELD</code></td>
+<td><code>road_order</code></td>
+<td>Champ utilisé pour trier la liste des routes</td>
+</tr>
+<tr>
+<td><code>ROAD_SPLIT_NEEDED_RIGHTS</code></td>
+<td><code>['createFeature', 'modifyGeometry']</code></td>
+<td>Droits d'édition nécessaires sur une couche de lignes pour afficher le bouton de découpe</td>
+</tr>
+<tr>
+<td><code>ROAD_MERGE_NEEDED_RIGHTS</code></td>
+<td><code>['createFeature', 'modifyGeometry']</code></td>
+<td>Droits d'édition nécessaires sur une couche de lignes pour afficher le bouton de fusion. Ajoutez <code>'deleteFeature'</code> pour exiger aussi le droit de supprimer des entités</td>
+</tr>
+</tbody>
+</table>
+<p>Les droits d'édition sont les capacités de la couche dans la configuration de l'édition Lizmap :
+<code>createFeature</code> (créer des entités), <code>modifyAttribute</code> (modifier les attributs),
+<code>modifyGeometry</code> (modifier la géométrie) et <code>deleteFeature</code> (supprimer des entités).</p>
+<p>Ne modifiez pas le code situé sous le commentaire <code>END CONFIGURATION</code>.</p>
+<h3 id="5-add-the-files-to-lizmap">5. Ajouter les fichiers dans Lizmap<a class="headerlink" href="#5-add-the-files-to-lizmap" title="Permanent link">#</a></h3>
+<p>Suivez la documentation de Lizmap :
+<a href="https://docs.lizmap.com/current/en/publish/customization/javascript.html">Adding your own JavaScript</a>.</p>
+<ol>
+<li>Autorisez le JavaScript pour le répertoire dans l'administration de Lizmap
+   (<em>Autoriser les thèmes/codes JavaScript pour ce répertoire</em>).</li>
+<li>Copiez <a href="../../media/road_network.js">road_network.js</a>,
+   <a href="../../media/road_network.css">road_network.css</a> et
+   <a href="../../media/road_network.csv">road_network.csv</a> dans le dossier du répertoire :<ul>
+<li><code>media/js/&lt;project_name&gt;/</code> pour utiliser les outils dans un seul projet,</li>
+<li><code>media/js/default/</code> pour les utiliser dans tous les projets du répertoire.</li>
+</ul>
+</li>
+<li>Rechargez la carte dans le navigateur.</li>
+</ol>
+<h2 id="translate-the-interface">Traduire l'interface<a class="headerlink" href="#translate-the-interface" title="Permanent link">#</a></h2>
+<p>Les textes de l'interface sont écrits en anglais dans le script.
+Les traductions sont stockées dans un fichier CSV situé à côté du script.
+Ce fichier a le même nom que le script, avec l'extension <code>.csv</code> :
+<code>road_network.csv</code> pour <code>road_network.js</code>.</p>
+<p>Au chargement de la carte, le script :</p>
+<ol>
+<li>récupère la langue de l'interface, depuis l'attribut <code>lang</code> de la page
+   ou depuis la langue du navigateur,</li>
+<li>télécharge le fichier CSV,</li>
+<li>affiche les textes traduits. Un texte sans traduction est affiché en anglais.</li>
+</ol>
+<p>Si le fichier CSV n'est pas trouvé, l'interface est affichée en anglais.</p>
+<p>La première ligne du fichier contient les codes des langues. La première colonne
+contient le texte anglais, exactement tel qu'il est écrit dans le script.
+Chaque autre colonne contient les traductions pour une langue :</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code>en,fr
+Road network,Graphe routier
+Road,Route
+&quot;Please zoom in to at least 1:{scale} to display the references&quot;,&quot;Veuillez zoomer au moins au 1/{scale} pour afficher les références&quot;
+</code></pre></div></td></tr></table></div>
+<p>Pour ajouter une langue, ajoutez une colonne avec son code à deux lettres, par exemple <code>de</code> ou <code>es</code>.</p>
+<p>Règles pour les valeurs :</p>
+<ul>
+<li>encadrez une valeur par des guillemets doubles si elle contient une virgule, un guillemet double ou un retour à la ligne,</li>
+<li>doublez les guillemets doubles à l'intérieur d'une valeur : <code>""</code>,</li>
+<li>conservez les variables entre accolades, par exemple <code>{scale}</code>, et ne les traduisez pas.
+  Elles sont remplacées par des valeurs lors de l'affichage du texte. Elles peuvent être déplacées dans la phrase.</li>
+</ul>
+<h3 id="texts-of-the-actions-and-of-the-database">Textes des actions et de la base de données<a class="headerlink" href="#texts-of-the-actions-and-of-the-database" title="Permanent link">#</a></h3>
+<p>Le même fichier CSV traduit aussi :</p>
+<ul>
+<li>les propriétés <code>title</code> et <code>confirm</code> des actions, dans le fichier <code>.qgs.action</code>.
+  Écrivez-les en anglais, et ajoutez-les au fichier CSV.</li>
+<li>les messages renvoyés par la fonction <code>lizmap_get_data</code>, dans le champ <code>message</code>.
+  Lizmap les affiche en haut de la carte, et le script les remplace
+  par leur traduction.</li>
+</ul>
+<p>Un message peut contenir une partie variable, par exemple le détail d'une erreur
+renvoyée par la base de données. Dans ce cas, la fonction <code>lizmap_get_data</code> doit aussi renvoyer
+cette partie variable dans un champ <code>message_detail</code>, et le message doit se terminer par celle-ci :</p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>message</code></td>
+<td><code>An error occurred while splitting the line: The point is not close enough to the feature (distance 12 &gt; 5m)</code></td>
+</tr>
+<tr>
+<td><code>message_detail</code></td>
+<td><code>The point is not close enough to the feature (distance 12 &gt; 5m)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Dans le fichier CSV, la partie variable est remplacée par la variable <code>{detail}</code> :</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>&quot;An error occurred while splitting the line: {detail}&quot;,&quot;Une erreur s&#39;est produite lors de la découpe de la ligne : {detail}&quot;
+</code></pre></div></td></tr></table></div>
+<p>La partie variable elle-même n'est pas traduite.</p>
+<p>Si vous modifiez un texte dans le fichier <code>.qgs.action</code> ou dans la fonction <code>lizmap_get_data</code>,
+modifiez-le aussi dans le fichier CSV. Sinon, le texte est affiché sans traduction.</p>
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
+<ul>
+<li>Le script a été écrit pour une version précise de Lizmap Web Client.
+  Il peut ne pas fonctionner avec une autre version.</li>
+<li>Les outils ne prennent en charge que les couches de <strong>points</strong> et de <strong>lignes</strong>.</li>
+<li>Les références de début et de fin d'une ligne doivent être sur la même route.</li>
+<li>Les outils de découpe et de fusion ne sont pas disponibles pour la couche <code>edges</code>.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Retour en haut de la page
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      <span class="copyleft">&copy;</span> 3Liz
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/3LIZ_news" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M459.4 151.7c.3 4.5.3 9.1.3 13.6 0 138.7-105.6 298.6-298.6 298.6-59.5 0-114.7-17.2-161.1-47.1 8.4 1 16.6 1.3 25.3 1.3 49.1 0 94.2-16.6 130.3-44.8-46.1-1-84.8-31.2-98.1-72.8 6.5 1 13 1.6 19.8 1.6 9.4 0 18.8-1.3 27.6-3.6-48.1-9.7-84.1-52-84.1-103v-1.3c14 7.8 30.2 12.7 47.4 13.3-28.3-18.8-46.8-51-46.8-87.4 0-19.5 5.2-37.4 14.3-53C87.4 130.8 165 172.4 252.1 176.9c-1.6-7.8-2.6-15.9-2.6-24C249.5 95.1 296.3 48 354.4 48c30.2 0 57.5 12.7 76.7 33.1 23.7-4.5 46.5-13.3 66.6-25.3-7.8 24.4-24.4 44.8-46.1 57.8 21.1-2.3 41.6-8.1 60.4-16.2-14.3 20.8-32.2 39.3-52.6 54.3"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/company/3liz" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/3liz/" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://hub.docker.com/u/3liz" target="_blank" rel="noopener" title="hub.docker.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M349.9 236.3h-66.1v-59.4h66.1zm0-204.3h-66.1v60.7h66.1zm78.2 144.8H362v59.4h66.1zm-156.3-72.1h-66.1v60.1h66.1zm78.1 0h-66.1v60.1h66.1zm276.8 100c-14.4-9.7-47.6-13.2-73.1-8.4-3.3-24-16.7-44.9-41.1-63.7l-14-9.3-9.3 14c-18.4 27.8-23.4 73.6-3.7 103.8-8.7 4.7-25.8 11.1-48.4 10.7H2.4c-8.7 50.8 5.8 116.8 44 162.1 37.1 43.9 92.7 66.2 165.4 66.2 157.4 0 273.9-72.5 328.4-204.2 21.4.4 67.6.1 91.3-45.2 1.5-2.5 6.6-13.2 8.5-17.1zm-511.1-27.9h-66v59.4h66.1v-59.4zm78.1 0h-66.1v59.4h66.1zm78.1 0h-66.1v59.4h66.1zm-78.1-72.1h-66.1v60.1h66.1z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.youtube.com/channel/UCYYW2CTWR_84kB6pt2zCWbQ" target="_blank" rel="noopener" title="www.youtube.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M549.7 124.1c-6.2-23.7-24.8-42.3-48.3-48.6C458.9 64 288.1 64 288.1 64S117.3 64 74.7 75.5c-23.5 6.3-42 24.9-48.3 48.6C15 167 15 256.4 15 256.4s0 89.4 11.4 132.3c6.3 23.6 24.8 41.5 48.3 47.8C117.3 448 288.1 448 288.1 448s170.8 0 213.4-11.5c23.5-6.3 42-24.2 48.3-47.8 11.4-42.9 11.4-132.3 11.4-132.3s0-89.4-11.4-132.3zM232.2 337.6V175.2l142.7 81.2z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.top"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copi\u00e9 dans le presse-papier", "clipboard.copy": "Copier dans le presse-papier", "search.result.more.one": "1 de plus sur cette page", "search.result.more.other": "# de plus sur cette page", "search.result.none": "Aucun document trouv\u00e9", "search.result.one": "1 document trouv\u00e9", "search.result.other": "# documents trouv\u00e9s", "search.result.placeholder": "Taper pour d\u00e9marrer la recherche", "search.result.term.missing": "Non trouv\u00e9", "select.version": "S\u00e9lectionner la version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@8.6.4/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -5272,12 +5272,16 @@ The parameter _params must contain the road code: {"road_code": "D12"}.
 The wrong links of the road are found again with the check G06, then the expected previous and next edges are set,
 and the references of the road are calculated again.
 
+If the links are still inconsistent, for example because of reversed edges (G05) or of a branch of the road (G07),
+the error message gives these issues, with their nodes and edges.
+
 It returns a JSON object with the keys status (success, skipped if the links are consistent with the geometry,
 or error) and message.]]></comment>
          <definition language="plpgsql"><![CDATA[DECLARE
     issue record;
     link record;
     relinked_ids integer[];
+    blocking_issues text;
 BEGIN
     IF _params->>'road_code' IS NULL THEN
         RETURN jsonb_build_object(
@@ -5323,10 +5327,32 @@ BEGIN
     -- Check the links are now consistent with the geometry.
     -- If not, the exception cancels the changes of this fix (see fix_graph_issue)
     IF EXISTS (SELECT 1 FROM road_graph.check_graph_edge_links(ARRAY[issue.road_code], NULL)) THEN
+        -- Issues of the road preventing to order its edges: reversed edges (G05) and branches (G07)
+        SELECT string_agg(
+            format(
+                '%s%s (edges %s)',
+                b.check_code,
+                CASE WHEN b.node_ids IS NOT NULL THEN format(' at the node %s', array_to_string(b.node_ids, ', ')) END,
+                array_to_string(b.edge_ids, ', ')
+            ),
+            ', ' ORDER BY b.check_code, b.edge_ids
+        )
+        INTO blocking_issues
+        FROM (
+            SELECT r.check_code, r.node_ids, r.edge_ids
+            FROM road_graph.check_graph_reversed_edges(ARRAY[issue.road_code], NULL) AS r
+            UNION ALL
+            SELECT r.check_code, r.node_ids, r.edge_ids
+            FROM road_graph.check_graph_road_branches(ARRAY[issue.road_code], NULL) AS r
+        ) AS b
+        ;
         RAISE EXCEPTION
-            'The previous and next edges of the road % are still inconsistent with the geometry: '
-            'fix the issues of the checks G05 and G07 first',
-            issue.road_code;
+            'The previous and next edges of the road % are still inconsistent with the geometry: %',
+            issue.road_code,
+            CASE
+                WHEN blocking_issues IS NOT NULL THEN format('fix first the issues %s', blocking_issues)
+                ELSE 'fix the issues of the checks G05 and G07 first'
+            END;
     END IF;
 
     RETURN jsonb_build_object(

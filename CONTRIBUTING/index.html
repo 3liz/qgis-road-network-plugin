@@ -18,6 +18,10 @@
       
       
         
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../fr/CONTRIBUTING/" hreflang="fr">
+        
       
       
       <link rel="icon" href="../icon.png">
@@ -115,6 +119,32 @@
       
     
     
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../fr/CONTRIBUTING/" hreflang="fr" class="md-select__link">
+              Français
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
     
     
       
@@ -1149,6 +1179,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#translation-of-the-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Translation of the documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1220,6 +1261,51 @@ of the script, then reference the image in the documentation.</p>
 the files in <code>roadnetwork/processing</code> are modified on the <code>main</code> branch,
 and opens a pull request if the screenshots have changed.
 It can also be run manually from the <code>Actions</code> tab.</p>
+<h3 id="translation-of-the-documentation">Translation of the documentation<a class="headerlink" href="#translation-of-the-documentation" title="Permanent link">#</a></h3>
+<p>The documentation is written in English and translated on <a href="https://app.transifex.com/3liz-1/road-network/">Transifex</a>,
+in the same project as the plugin interface. Each page is a resource named <code>docs-&lt;path of the page&gt;</code>,
+for example <code>docs-user-guide-graph-checks</code>, with the Markdown file format:
+Transifex splits it into strings (paragraphs, headings, list items, table cells),
+and keeps the translations of the strings which have not changed.</p>
+<ul>
+<li>The English pages are sent to Transifex by the GitHub workflow <code>.github/workflows/transifex.yml</code>
+  when the pages are modified on the <code>main</code> branch.</li>
+<li>The translated pages are downloaded by the GitHub workflow <code>.github/workflows/publish-doc.yml</code>
+  before building the documentation, every time it is published and every Monday.
+  They are saved next to the English pages, with the language as suffix (<code>graph-checks.fr.md</code>),
+  and are not versioned. The pages with less than 50 % of translated strings are displayed in English.</li>
+<li>The MkDocs plugin <a href="https://ultrabug.github.io/mkdocs-static-i18n/">mkdocs-static-i18n</a> builds
+  the site of each language (<code>/fr/</code> for French), with a language selector.
+  The titles of the menu are translated in <code>mkdocs.yml</code> (<code>nav_translations</code>).</li>
+<li>
+<p>The hook <code>docs_tools/i18n_anchors.py</code> gives to the headings of the translated pages the anchors
+  of the English headings, so that the links to a section (<code>graph-checks.md#g01-crossing-edges-without-node</code>)
+  work in every language.</p>
+</li>
+<li>
+<p>The texts of the diagrams of the road graph checks are the resource <code>docs-graph-checks-diagrams</code>
+  (key-value JSON file format). They are extracted by <code>.docker/graph_checks_diagrams.py --extract</code>,
+  and the translated diagrams are written next to the English ones (<code>graph_checks_g01.fr.svg</code>, not versioned),
+  mkdocs-static-i18n using them in the pages of the language.</p>
+</li>
+</ul>
+<p>The list of the translated pages is in <code>docs_tools/transifex_docs.py</code>.
+Translators must keep the Markdown syntax, the URLs of the links and the code unchanged.</p>
+<p>To work locally, with the Transifex API token in the environment variable <code>TRANSIFEX_TOKEN</code>:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># Send the English pages</span>
+make<span class="w"> </span>doc-transifex-push
+<span class="c1"># Percentage of translated and reviewed strings of each page</span>
+make<span class="w"> </span>doc-transifex-status
+<span class="c1"># Download the translated pages, then display the site</span>
+make<span class="w"> </span>doc-transifex-pull
+mkdocs<span class="w"> </span>serve
+</code></pre></div></td></tr></table></div>
 
 
 

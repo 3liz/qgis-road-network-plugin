@@ -663,6 +663,7 @@
                                         <td>INVOKER</td>
                                         <td><p>Action relink_edges run by the function fix_graph_issue, to fix the issues of the check G06: set the previous and next edges of the edges of a road from the geometry.</p>
 <p>The parameter _params must contain the road code: {&ldquo;road_code&rdquo;: &ldquo;D12&rdquo;}. The wrong links of the road are found again with the check G06, then the expected previous and next edges are set, and the references of the road are calculated again.</p>
+<p>If the links are still inconsistent, for example because of reversed edges (G05) or of a branch of the road (G07), the error message gives these issues, with their nodes and edges.</p>
 <p>It returns a JSON object with the keys status (success, skipped if the links are consistent with the geometry, or error) and message.</p></td>
                                     </tr>
                                     <tr>
