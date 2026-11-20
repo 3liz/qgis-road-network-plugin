@@ -25,7 +25,7 @@ from qgis.core import (
 )
 
 from roadnetwork.actions import runner
-from roadnetwork.graph_issues import ISSUE_ACTIONS, ISSUES_RUN_PROPERTY, setup_issues_layer
+from roadnetwork.graph_issues import ISSUE_ACTIONS, ISSUES_RUN_PROPERTY, run_fix, setup_issues_layer
 from roadnetwork.plugin_tools.feedback import LoggerProcessingFeedBack
 from roadnetwork.plugin_tools.resources import (
     available_migrations,
@@ -4029,6 +4029,69 @@ def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest
         assert output["ERRORS"] == 0
     finally:
         project.removeMapLayers([layer.id() for layer in (points, lines, edges_layer) if layer is not None])
+        connection.executeSql(f"SELECT road_graph.drop_editing_session({editing_session_id})")
+
+
+def test_run_fix_editing_mode_without_transaction():
+    """The fixes of the issues are saved at once when the layers of the editing session are in editing mode
+    without transaction, unless these layers have modifications which are not saved yet.
+    An editing session is created around two issues G01, then dropped at the end of the test."""
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection = metadata.findConnection("test")
+    project = QgsProject.instance()
+
+    # Editing session around two touching issues G01 close to each other
+    data = connection.executeSql("""
+        WITH touching AS (
+            SELECT i.geom
+            FROM road_graph.check_graph(ARRAY['G01']) AS i
+            WHERE i.details->>'crossing_type' = 'touching'
+        )
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'Run fix test', 'test', ST_Envelope(ST_Buffer(a.geom, 300))
+        FROM touching AS a
+        WHERE (SELECT count(*) FROM touching AS b WHERE ST_DWithin(a.geom, b.geom, 250)) >= 2
+        LIMIT 1
+        RETURNING id
+    """)
+    editing_session_id = data[0][0]
+    connection.executeSql(f"SELECT road_graph.copy_data_to_editing_session({editing_session_id})")
+
+    # Edges layer of the editing session in editing mode, without transaction
+    uri = QgsDataSourceUri(connection.uri())
+    uri.setDataSource("road_graph_editing", "edges", "geom", "", "id")
+    edges_layer = QgsVectorLayer(uri.uri(), "edges copie", "postgres")
+    assert edges_layer.isValid()
+    project.addMapLayer(edges_layer)
+    try:
+        assert edges_layer.startEditing()
+        assert edges_layer.dataProvider().transaction() is None
+
+        # Touching issues of the editing session
+        data = connection.executeSql("""
+            SELECT i.fix_action, i.fix_params::text
+            FROM road_graph_editing.check_graph(ARRAY['G01']) AS i
+            JOIN road_graph.editing_sessions AS s ON ST_Intersects(s.geom, i.geom)
+            WHERE s.label = 'Run fix test' AND i.details->>'crossing_type' = 'touching'
+            ORDER BY i.id
+        """)
+        assert len(data) >= 2
+
+        # Without modification of the layer, the fix is saved at once
+        status, message = run_fix("test", data[0][0], data[0][1], project)
+        assert status == "success", message
+
+        # With a modification which is not saved, the fix is refused, and the layer is named
+        feature = next(edges_layer.getFeatures())
+        index = edges_layer.fields().indexOf("id_source")
+        assert edges_layer.changeAttributeValue(feature.id(), index, "modified")
+        assert edges_layer.isModified()
+        status, message = run_fix("test", data[1][0], data[1][1], project)
+        assert status == "error"
+        assert "edges copie" in message
+    finally:
+        edges_layer.rollBack()
+        project.removeMapLayer(edges_layer.id())
         connection.executeSql(f"SELECT road_graph.drop_editing_session({editing_session_id})")
 
 

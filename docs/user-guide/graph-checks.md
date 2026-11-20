@@ -27,6 +27,12 @@ draw a large editing session polygon if needed.
 If the layers of the editing session are in **editing mode**, the fixes are run in their **transaction**:
 save the modifications of the layers afterwards, or cancel them. Else the fixes are saved at once.
 
+The transaction is created by QGIS when the transaction mode of the project is `Automatic transaction groups`
+(Project properties, Data sources). If the layers are in editing mode without transaction, for example
+when the editing mode has been started before the transaction groups were created, the fixes are saved at once,
+unless the layers have modifications which are not saved yet: save or cancel them first.
+If needed, close and open again the project to create the transaction groups.
+
 ## Algorithms
 
 The algorithm **Check the road graph** runs the checks on the schema of the editing session (or of the production,

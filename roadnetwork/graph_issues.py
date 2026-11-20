@@ -133,8 +133,9 @@ def editing_schema_layers(project: QgsProject, table: Optional[str] = None) -> l
 def run_fix(connection_name: str, fix_action: str, fix_params: str, project: QgsProject) -> tuple:
     """Fix an issue of the road graph in the editing session.
 
-    If the layers of the editing schema are in editing mode, the fix is run in their transaction:
-    the user can then save or cancel it. Else it is run and committed with the given connection.
+    If the layers of the editing schema are in editing mode with a transaction, the fix is run in it:
+    the user can then save or cancel it. Else it is run and committed with the given connection,
+    unless some layers in editing mode without transaction have modifications which are not saved yet.
 
     :param connection_name: The name of the PostgreSQL connection
     :param fix_action: The fix action, e.g. cut_edges
@@ -146,18 +147,30 @@ def run_fix(connection_name: str, fix_action: str, fix_params: str, project: Qgs
     action_literal = "'{}'".format(fix_action.replace("'", "''"))
     params_literal = "'{}'::jsonb".format((fix_params or "{}").replace("'", "''"))
 
-    # Layers of the editing schema in editing mode: run the fix in their transaction
+    # Layers of the editing schema in editing mode: run the fix in their transaction, if one of them has one
     editing_layers = [layer for layer in editing_schema_layers(project) if layer.isEditable()]
-    if editing_layers:
-        transaction = editing_layers[0].dataProvider().transaction()
-        if transaction is None:
+    transaction = next(
+        (
+            layer.dataProvider().transaction()
+            for layer in editing_layers
+            if layer.dataProvider().transaction() is not None
+        ),
+        None,
+    )
+    if transaction is None:
+        # Layers in editing mode without transaction: their modifications are kept by QGIS until saved.
+        # The fix cannot be run beside them: saving them afterwards could overwrite it, or fail.
+        # Without modification, the fix is run with the connection below, and the layers are reloaded
+        modified_layers = [layer.name() for layer in editing_layers if layer.isModified()]
+        if modified_layers:
             return (
                 "error",
                 tr(
-                    "The layers of the editing session are in editing mode without transaction: "
-                    "save the modifications and stop the editing mode before fixing the issues."
-                ),
+                    "The layers {} of the editing session have modifications which are not saved: "
+                    "save or cancel them before fixing the issues."
+                ).format(", ".join(modified_layers)),
             )
+    else:
         # The status is raised as an exception when it is not success:
         # the transaction is rolled back to its savepoint, and the message gives the status
         sql = f"""

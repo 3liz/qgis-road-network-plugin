@@ -8,6 +8,10 @@
   the join of the editing edges with the roads was not cached in memory, and QGIS queried the roads
   for each edge displayed, through the single connection of the transaction group. To fix an existing project,
   check `Cache join layer in memory` in the join of the layer `edges copie` with `roads copie`
+* **Road graph checks**: the fixes failed when the layers of the editing session were in editing mode
+  without transaction, for example when the transaction groups of the project had not been created yet.
+  They are now saved at once if the layers have no modifications waiting to be saved, and the error message
+  gives the layers with such modifications. The transaction is also found on any layer of the editing session
 
 
 ## 0.7.1 - 2026-11-15
