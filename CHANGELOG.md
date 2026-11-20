@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed
+
+* **QGIS project**: very slow displays and edits of the layers of the editing session on a remote database:
+  the join of the editing edges with the roads was not cached in memory, and QGIS queried the roads
+  for each edge displayed, through the single connection of the transaction group. To fix an existing project,
+  check `Cache join layer in memory` in the join of the layer `edges copie` with `roads copie`
+
+
 ## 0.7.1 - 2026-11-15
 
 ### Summary

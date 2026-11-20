@@ -1137,7 +1137,7 @@
       </resourceMetadata>
       <provider encoding="">postgres</provider>
       <vectorjoins>
-        <join cascadedDelete="0" customPrefix="roads_" dynamicForm="0" editable="0" hasCustomPrefix="1" joinFieldName="road_code" joinLayerId="roads_888c78ae_d774_46de_810c_0ff6be4d29f8" memoryCache="0" targetFieldName="road_code" upsertOnEdit="0">
+        <join cascadedDelete="0" customPrefix="roads_" dynamicForm="0" editable="0" hasCustomPrefix="1" joinFieldName="road_code" joinLayerId="roads_888c78ae_d774_46de_810c_0ff6be4d29f8" memoryCache="1" targetFieldName="road_code" upsertOnEdit="0">
           <joinFieldsSubset>
             <field name="road_type"></field>
             <field name="road_class"></field>
