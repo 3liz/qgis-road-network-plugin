@@ -12,6 +12,9 @@
   without transaction, for example when the transaction groups of the project had not been created yet.
   They are now saved at once if the layers have no modifications waiting to be saved, and the error message
   gives the layers with such modifications. The transaction is also found on any layer of the editing session
+* **Roundabouts**: the action `Finalize the roundabout` failed with the error `Argument to ST_Y() must have
+  type POINT` when the circle was not cut by any edge, for example when the edges crossing it are marked
+  as not connected (`no_intersection_cutting`). The error message now explains it, with the ids of these edges
 
 
 ## 0.7.1 - 2026-11-15

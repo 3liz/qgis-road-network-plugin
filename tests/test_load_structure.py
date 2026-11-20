@@ -1203,6 +1203,66 @@ def test_create_roundabout(processing_provider: Provider):
     assert [edges[3][10], edges[3][11]] == [7817, None]
 
 
+def test_roundabout_not_connected(rollback_db_connection: psycopg.Connection):
+    """The roundabout cannot be finalized if its circle is not cut by any edge:
+    the error gives the edges crossing it which are marked as not connected (no_intersection_cutting).
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Road of the roundabout, and the crossing of the roads D138 and D152 used by test_create_roundabout
+    cursor.execute("""
+        INSERT INTO road_graph.roads (road_code, road_type, road_class)
+        VALUES ('R002', 'roundabout', 'Départementale')
+    """)
+    cursor.execute("""
+        SELECT geom
+        FROM road_graph.markers
+        WHERE road_code = 'D138' AND code = 8 AND abscissa BETWEEN 970 AND 990
+    """)
+    crossing = fetch_one(cursor)[0]
+
+    # The edges crossing the circle are marked as not connected, so they are not cut by it
+    cursor.execute(
+        """
+        UPDATE road_graph.edges
+        SET no_intersection_cutting = True
+        WHERE ST_DWithin(geom, %s::geometry, 20)
+        RETURNING id
+        """,
+        (crossing,),
+    )
+    marked_ids = sorted(row[0] for row in cursor.fetchall())
+    assert len(marked_ids) == 4
+    cursor.execute(
+        """
+        INSERT INTO road_graph.edges (road_code, geom)
+        VALUES ('R002', ST_ExteriorRing(ST_Buffer(%s::geometry, 10)))
+        """,
+        (crossing,),
+    )
+    with pytest.raises(
+        psycopg.errors.RaiseException,
+        match="The roundabout R002 is not connected to any other road.* The edges {} cross it".format(
+            ", ".join(str(i) for i in marked_ids)
+        ),
+    ):
+        cursor.execute("SELECT road_graph.clean_digitized_roundabout('R002')")
+    rollback_db_connection.rollback()
+
+    # Circle crossing no road at all
+    cursor.execute("""
+        INSERT INTO road_graph.roads (road_code, road_type, road_class)
+        VALUES ('R002', 'roundabout', 'Départementale')
+    """)
+    cursor.execute("""
+        INSERT INTO road_graph.edges (road_code, geom)
+        SELECT 'R002', ST_ExteriorRing(ST_Buffer(ST_Translate(ST_Centroid(ST_Extent(geom)), 0, 100000), 10))
+        FROM road_graph.edges
+    """)
+    with pytest.raises(psycopg.errors.RaiseException, match="Draw the circle again so that it crosses"):
+        cursor.execute("SELECT road_graph.clean_digitized_roundabout('R002')")
+
+
 def test_move_road_marker():
     """Move a marker and see if the edges are correctly updated."""
 

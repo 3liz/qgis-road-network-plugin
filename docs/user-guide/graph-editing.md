@@ -147,6 +147,9 @@ This layer action of the `edges copie` layer runs the database function `clean_d
 
 The action is cancelled with a warning if the layer is not in editing mode,
 or if the road type of the selected edge is not `roundabout`.
+It fails with an error if the circle is not connected to any road: the edges crossing it
+must not be marked as not connected (see [Edges which must not be cut](#edges-which-must-not-be-cut)),
+otherwise they are not cut by the circle. Uncheck their field `no_intersection_cutting` and draw the circle again.
 You may have to refresh the map canvas to see the changes.
 
 ## Edges which must not be cut

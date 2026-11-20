@@ -330,6 +330,9 @@ COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'C
 * delete the edges inside the roundabout
 * remove the circle node added add 12 o''clock
 * add a marker for this roundabout if not already present
+
+An exception is raised if the roundabout is not connected to any other road, for example when the edges
+crossing the circle are marked as not connected (no_intersection_cutting), and are therefore not cut by it.
 ';
 
 

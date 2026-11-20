@@ -3572,8 +3572,48 @@ DECLARE
     delete_result bool;
     merge_edges_result bool;
     left_node_geom geometry(Point, 2154);
+    not_cut_edge_ids text;
 BEGIN
     raise_notice = coalesce(current_setting('road.graph.raise.notice', true), 'no');
+
+    -- The circle must be cut by the edges of the roads crossing it:
+    -- stop with a clear message if none of its nodes is shared with another road,
+    -- for example if the crossing edges are marked as not connected (no_intersection_cutting)
+    IF NOT EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        JOIN road_graph.edges AS f
+            ON f.road_code != _road_code
+            AND (
+                f.start_node IN (e.start_node, e.end_node)
+                OR f.end_node IN (e.start_node, e.end_node)
+            )
+        WHERE e.road_code = _road_code
+    ) THEN
+        -- Edges crossing the circle but marked as not connected
+        SELECT string_agg(f.id::text, ', ' ORDER BY f.id)
+        INTO not_cut_edge_ids
+        FROM road_graph.edges AS e
+        JOIN road_graph.edges AS f
+            ON f.road_code != _road_code
+            AND ST_Intersects(e.geom, f.geom)
+        WHERE e.road_code = _road_code
+        AND Coalesce(f.no_intersection_cutting, False)
+        ;
+        RAISE EXCEPTION 'The roundabout % is not connected to any other road: '
+            'its circle must cross the edges of the roads, which are then cut by a node. %',
+            _road_code,
+            CASE
+                WHEN not_cut_edge_ids IS NOT NULL
+                THEN format(
+                    'The edges %s cross it but are marked as not connected (no_intersection_cutting): '
+                    'uncheck this field, then draw the circle again.',
+                    not_cut_edge_ids
+                )
+                ELSE 'Draw the circle again so that it crosses the roads.'
+            END
+        ;
+    END IF;
 
     -- Delete the edges inside the roundabout
     -- and update the roads remainging around the roundabout
@@ -3668,6 +3708,9 @@ COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'C
 * delete the edges inside the roundabout
 * remove the circle node added add 12 o''clock
 * add a marker for this roundabout if not already present
+
+An exception is raised if the roundabout is not connected to any other road, for example when the edges
+crossing the circle are marked as not connected (no_intersection_cutting), and are therefore not cut by it.
 ';
 
 
