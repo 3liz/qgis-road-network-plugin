@@ -59,7 +59,10 @@ MEMORY_LAYERS = {
 }
 
 # Parameters of some algorithms, besides the connection: algorithm name: {parameter: layer name}
+# The template layers are given explicitly: else the first layer of the project with the right geometry type
+# is selected, for example the issues layer instead of the markers template
 LAYER_PARAMETERS = {
+    "import_data": {"INPUT_EDGES": "source_edges", "INPUT_MARKERS": "source_markers"},
     "fix_graph_issues": {"INPUT": "Road graph issues (points)"},
 }
 
