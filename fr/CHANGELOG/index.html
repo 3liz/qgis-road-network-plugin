@@ -1154,8 +1154,30 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#080-2026-11-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.8.0 - 2026-11-22
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.8.0 - 2026-11-22">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#added" class="md-nav__link">
@@ -1208,7 +1230,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary" class="md-nav__link">
+  <a href="#summary_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1258,7 +1280,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_1" class="md-nav__link">
+  <a href="#summary_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1308,7 +1330,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_2" class="md-nav__link">
+  <a href="#summary_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1369,7 +1391,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_3" class="md-nav__link">
+  <a href="#summary_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1419,7 +1441,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_4" class="md-nav__link">
+  <a href="#summary_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1458,7 +1480,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_5" class="md-nav__link">
+  <a href="#summary_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -1519,7 +1541,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#summary_6" class="md-nav__link">
+  <a href="#summary_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         Summary
@@ -2437,6 +2459,21 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">#</a></h1>
 <h2 id="unreleased">Unreleased<a class="headerlink" href="#unreleased" title="Permanent link">#</a></h2>
+<h2 id="080-2026-11-22">0.8.0 - 2026-11-22<a class="headerlink" href="#080-2026-11-22" title="Permanent link">#</a></h2>
+<h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>
+<p><strong>Highlights</strong></p>
+<ul>
+<li><strong>Road graph checks</strong>: the issues of the editing session are kept in two layers, updated after each fix,
+  and the new check G12 finds the duplicate edges</li>
+<li><strong>Documentation</strong>: available in French</li>
+</ul>
+<p><strong>Upgrade notes</strong></p>
+<ul>
+<li>Run the algorithm <code>Upgrade database structure</code> to upgrade the database (migrations 46 to 49)</li>
+<li>Run the algorithm <code>Check the road graph</code> on the editing session to add the issues layers to the project,
+  then save the project</li>
+<li>For a project created before, check <code>Cache join layer in memory</code> in the join of <code>edges copie</code> with <code>roads copie</code></li>
+</ul>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">#</a></h3>
 <ul>
 <li><strong>Road graph checks</strong>: new check G12, duplicate edges, with an automatic fix</li>
@@ -2458,7 +2495,7 @@
 <li><strong>Roundabouts</strong>: clear error when the circle is not cut by any edge (<code>no_intersection_cutting</code>)</li>
 </ul>
 <h2 id="071-2026-11-15">0.7.1 - 2026-11-15<a class="headerlink" href="#071-2026-11-15" title="Permanent link">#</a></h2>
-<h3 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">#</a></h3>
+<h3 id="summary_1">Summary<a class="headerlink" href="#summary_1" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>Performance</strong>: faster editing of long roads, the references being only calculated again downstream
@@ -2493,7 +2530,7 @@
   22 s instead of 48 s for 4,000 lines (migration <code>upgrade_to_45.sql</code>)</li>
 </ul>
 <h2 id="070-2026-11-15">0.7.0 - 2026-11-15<a class="headerlink" href="#070-2026-11-15" title="Permanent link">#</a></h2>
-<h3 id="summary_1">Summary<a class="headerlink" href="#summary_1" title="Permanent link">#</a></h3>
+<h3 id="summary_2">Summary<a class="headerlink" href="#summary_2" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>Road graph checks</strong>: ten checks find the issues of the road graph, for example after an import:
@@ -2557,7 +2594,7 @@
   and the edge linking them, if any, is deleted. Before, this edge was left as a loop on the node</li>
 </ul>
 <h2 id="064-2026-11-12">0.6.4 - 2026-11-12<a class="headerlink" href="#064-2026-11-12" title="Permanent link">#</a></h2>
-<h3 id="summary_2">Summary<a class="headerlink" href="#summary_2" title="Permanent link">#</a></h3>
+<h3 id="summary_3">Summary<a class="headerlink" href="#summary_3" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>Managed objects</strong>: the split and merge of lines in Lizmap now give the right references, even for lines
@@ -2615,7 +2652,7 @@
   They are now ordered in the direction of the road, like the geometry created from them</li>
 </ul>
 <h2 id="063-2026-10-30">0.6.3 - 2026-10-30<a class="headerlink" href="#063-2026-10-30" title="Permanent link">#</a></h2>
-<h3 id="summary_3">Summary<a class="headerlink" href="#summary_3" title="Permanent link">#</a></h3>
+<h3 id="summary_4">Summary<a class="headerlink" href="#summary_4" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>Performance</strong>: merging an editing session is much faster on long roads: only the managed objects
@@ -2653,7 +2690,7 @@
   offset or cumulative distance <code>0</code>, instead of an empty field</li>
 </ul>
 <h2 id="062-2026-10-30">0.6.2 - 2026-10-30<a class="headerlink" href="#062-2026-10-30" title="Permanent link">#</a></h2>
-<h3 id="summary_4">Summary<a class="headerlink" href="#summary_4" title="Permanent link">#</a></h3>
+<h3 id="summary_5">Summary<a class="headerlink" href="#summary_5" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>Performance</strong>: editing long roads is much faster, for example adding an edge crossing a road
@@ -2676,7 +2713,7 @@
   and explain how to correct the whole road graph after a first import with an editing session covering all the data</li>
 </ul>
 <h2 id="061-2026-10-29">0.6.1 - 2026-10-29<a class="headerlink" href="#061-2026-10-29" title="Permanent link">#</a></h2>
-<h3 id="summary_5">Summary<a class="headerlink" href="#summary_5" title="Permanent link">#</a></h3>
+<h3 id="summary_6">Summary<a class="headerlink" href="#summary_6" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>GPS tracks</strong>: new Processing algorithm to get the road sections followed by the lines of a layer,
@@ -2707,7 +2744,7 @@
 <li><strong>SQL</strong>: the search of the next edge of an edge could fail if two edges of the same road started at the same node</li>
 </ul>
 <h2 id="060-2026-10-28">0.6.0 - 2026-10-28<a class="headerlink" href="#060-2026-10-28" title="Permanent link">#</a></h2>
-<h3 id="summary_6">Summary<a class="headerlink" href="#summary_6" title="Permanent link">#</a></h3>
+<h3 id="summary_7">Summary<a class="headerlink" href="#summary_7" title="Permanent link">#</a></h3>
 <p><strong>Highlights</strong></p>
 <ul>
 <li><strong>GPS tracks</strong>: snap a GPS track, for example from a GPX file, on the road graph,
