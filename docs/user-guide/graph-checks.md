@@ -118,8 +118,8 @@ Each check below is illustrated by a diagram of the issue and of its fix.
 | [G12](#g12-duplicate-edges) | Duplicate edges, for example after a copy of an edge | `delete_duplicate_edges` |
 
 To fix an issue with another action than the proposed one, or to choose the action of an issue without action,
-toggle the editing mode of the point layer created by the algorithm Check the road graph,
-and change the field `fix_action` (and `fix_params` if needed) before running the algorithm Fix the road graph issues.
+use the action **Choose the fix of this issue…**. Before running the algorithm Fix the road graph issues,
+you can also change the field `fix_action` (and `fix_params` if needed) of the issues layer, and save it.
 
 ### G01: Crossing edges without node
 

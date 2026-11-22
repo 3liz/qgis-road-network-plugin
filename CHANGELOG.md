@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.8.0 - 2026-11-22
+
+### Summary
+
+**Highlights**
+
+* **Road graph checks**: the issues of the editing session are kept in two layers, updated after each fix,
+  and the new check G12 finds the duplicate edges
+* **Documentation**: available in French
+
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migrations 46 to 49)
+* Run the algorithm `Check the road graph` on the editing session to add the issues layers to the project,
+  then save the project
+* For a project created before, check `Cache join layer in memory` in the join of `edges copie` with `roads copie`
+
 ### Added
 
 * **Road graph checks**: new check G12, duplicate edges, with an automatic fix
