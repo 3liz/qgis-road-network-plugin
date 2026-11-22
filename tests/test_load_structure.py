@@ -12,6 +12,7 @@ import pytest
 
 from qgis import processing
 from qgis.core import (
+    QgsCoordinateReferenceSystem,
     QgsFeature,
     QgsGeometry,
     QgsPointXY,
@@ -42,6 +43,7 @@ from roadnetwork.plugin_tools.resources import (
 )
 from roadnetwork.processing.database import CreateDatabaseStructure, UpgradeDatabaseStructure
 from roadnetwork.processing.provider import Provider
+from roadnetwork.processing.tools import createAdministrationProjectFromTemplate
 
 # This list must not be changed
 # as it correspond to the list of tables
@@ -289,6 +291,40 @@ def test_reset_test_data(processing_provider: Provider, data: Path):
             connection.executeSql(sql)
         except QgsProviderConnectionException as e:
             raise QgsProcessingException(str(e))
+
+
+def test_create_administration_project(tmp_path: Path):
+    """The administration project created for another coordinate reference system than the template
+    has this system for the project and the PostgreSQL layers, and extents calculated from the database.
+    Only the base map in Lambert 93 keeps its own system."""
+    project_file = tmp_path / "admin.qgs"
+    crs = QgsCoordinateReferenceSystem("EPSG:5490")
+    assert createAdministrationProjectFromTemplate("test", crs, str(project_file))
+
+    # The only mentions of EPSG:2154 are in the Lambert 93 base map
+    content = project_file.read_text()
+    lines = [line for line in content.splitlines() if "2154" in line]
+    assert lines
+    base_map_marks = ("PLANIGNV2.L93", "Lambert-93", "<srid>2154", "EPSG:2154</authid>")
+    assert all(any(mark in line for mark in base_map_marks) for line in lines), lines
+    assert content.count("<authid>EPSG:2154</authid>") == 1
+    assert "srid=5490" in content
+    assert "<authid>EPSG:5490</authid>" in content
+
+    # Extent of the map: the edges of the test data, transformed into the system of the project
+    project = QgsProject()
+    assert project.read(str(project_file))
+    assert project.crs().authid() == "EPSG:5490"
+    extent = project.viewSettings().defaultViewExtent()
+    assert not extent.isEmpty()
+    assert extent.xMinimum() != 392930.12776692741317675
+
+    # Lizmap configuration
+    config = json.loads((tmp_path / "admin.qgs.cfg").read_text())
+    assert config["options"]["projection"]["ref"] == "EPSG:5490"
+    assert config["options"]["initialExtent"] == pytest.approx(
+        [extent.xMinimum(), extent.yMinimum(), extent.xMaximum(), extent.yMaximum()]
+    )
 
 
 def test_create_editing_session(processing_provider: Provider):

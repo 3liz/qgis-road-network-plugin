@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+
+* **Administration project**: coordinate reference system and extents of the project and of its layers
+  when it is created for another system than EPSG:2154
+
 ## 0.8.0 - 2026-11-22
 
 ### Summary
