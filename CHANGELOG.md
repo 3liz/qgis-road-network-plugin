@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.8.2 - 2026-11-23
+
+### Summary
+
+**Upgrade notes**
+
+* Run the algorithm `Upgrade database structure` to upgrade the database (migrations 50 and 51)
+* Create the administration project again, or copy the new action of the layer `edges copie`
+  in the existing project, to merge the 2 selected edges
+
 ### Added
 
 * **Editing**: action Merge the 2 selected edges, which keeps the node if other edges use it
