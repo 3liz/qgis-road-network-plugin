@@ -1689,7 +1689,9 @@ The road of the roundabout must exist in the <code>roads</code> layer with the r
 <p><img alt="Action Finalize the roundabout" src="../../media/user-guide/qgis_create_roundabout.gif" /></p>
 <p>This layer action of the <code>edges copie</code> layer runs the database function <code>clean_digitized_roundabout</code>, which:</p>
 <ul>
-<li><strong>deletes the pieces of edges inside the roundabout</strong>, and updates the previous and next edges of the remaining roads,</li>
+<li><strong>deletes the pieces of edges inside the roundabout</strong>, and updates the previous and next edges of the remaining roads.
+  The edges marked as not to be cut at the intersections (<code>no_intersection_cutting</code>) are kept:
+  they are at another level, for example a road passing under the roundabout,</li>
 <li><strong>deletes the node</strong> created by QGIS at the <strong>top of the circle</strong>, by merging the two edges around it,</li>
 <li><strong>adds a marker <code>0</code></strong> for this roundabout, on its westernmost node, if it does not already exist.</li>
 </ul>

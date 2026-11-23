@@ -103,15 +103,6 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td><a href="routines/get_merged_geom_from_table_and__3cb04418.html">get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[])</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>geometry</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Compute the union geometry of all the features from a table and given feature ids</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/drop_editing_session__editing_s_663cd9ea.html">drop_editing_session(_editing_session_id integer)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -119,6 +110,15 @@
                                         <td>boolean</td>
                                         <td>DEFINER</td>
                                         <td><p>Delete the given editing session and truncate all the table of the road_graph_editing schema</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/get_merged_geom_from_table_and__3cb04418.html">get_merged_geom_from_table_and_ids(_schema_name text, _table_name text, _ids integer[])</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>geometry</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Compute the union geometry of all the features from a table and given feature ids</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/after_edge_delete___3a8c1b0b.html">after_edge_delete()</a></td>
@@ -679,7 +679,7 @@
                                         <td>false</td>
                                         <td>boolean</td>
                                         <td>INVOKER</td>
-                                        <td><p>Clean a roundabout digitized by QGIS circle tool: * delete the edges inside the roundabout * remove the circle node added add 12 o&rsquo;clock * add a marker for this roundabout if not already present</p>
+                                        <td><p>Clean a roundabout digitized by QGIS circle tool: * delete the edges inside the roundabout, except the edges marked as not to be cut at the intersections (no_intersection_cutting), which are at another level, for example a road passing under the roundabout * remove the circle node added add 12 o&rsquo;clock * add a marker for this roundabout if not already present</p>
 <p>An exception is raised if the roundabout is not connected to any other road, for example when the edges crossing the circle are marked as not connected (no_intersection_cutting), and are therefore not cut by it.</p></td>
                                     </tr>
                                     <tr>
@@ -706,15 +706,6 @@
 <p>It returns a JSON object with the keys status (success, skipped if the links are consistent with the geometry, or error) and message.</p></td>
                                     </tr>
                                     <tr>
-                                        <td><a href="routines/create_queries_from_editing_ses_6aa2bef3.html">create_queries_from_editing_session(_editing_session_id integer)</a></td>
-                                        <td>FUNCTION</td>
-                                        <td>plpgsql</td>
-                                        <td>false</td>
-                                        <td>TABLE(sql_text text)</td>
-                                        <td>INVOKER</td>
-                                        <td><p>Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session</p></td>
-                                    </tr>
-                                    <tr>
                                         <td><a href="routines/fix_graph_cut_edges__params_jso_73b952f4.html">fix_graph_cut_edges(_params jsonb)</a></td>
                                         <td>FUNCTION</td>
                                         <td>plpgsql</td>
@@ -735,6 +726,15 @@
                                         <td><p>Action extend_edge run by the function fix_graph_issue, to fix the issues of the check G02: extend an edge from its free end to the point to join on another edge.</p>
 <p>The parameter _params must contain the edge id, the side of the free end (start or end), the free end and the point to join as EWKT: {&ldquo;edge_id&rdquo;: 12, &ldquo;side&rdquo;: &ldquo;end&rdquo;, &ldquo;point&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;, &ldquo;target&rdquo;: &ldquo;SRID=2154;POINT(x y)&rdquo;}. When the point to join is the start or end point of the other edge, the free end is connected to its node, and the node of the free end is deleted. Else, when the free end is less than 50 cm from the other edge, the node of the free end is moved to the point to join. Else, the point to join is added at the free end of the edge, and the triggers move the node of the free end to this point. In the two last cases, the triggers split the other edge there. If the free end is not connected to another edge afterwards, an exception is raised: the function fix_graph_issue cancels the changes and returns an error.</p>
 <p>It returns a JSON object with the keys status (success, or skipped if the edge does not end at the given point anymore, or is already connected there) and message.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/create_queries_from_editing_ses_6aa2bef3.html">create_queries_from_editing_session(_editing_session_id integer)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>TABLE(sql_text text)</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Build SQL queries to run from the editing_sessions.logged_ids column content for the given editing session</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/before_editing_sessions_update__bd574145.html">before_editing_sessions_update()</a></td>
