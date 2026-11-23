@@ -943,6 +943,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#merge-two-edges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge two edges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#impacts-of-the-modifications-on-the-references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1514,6 +1525,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#merge-two-edges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Merge two edges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#impacts-of-the-modifications-on-the-references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1727,7 +1749,9 @@ It can be changed at any time, for example before drawing or modifying a road wh
   even when such a node is moved,</li>
 <li><strong>is split</strong> when the <strong>start or end point</strong> of a drawn or moved edge is located on it,
   far enough from its own start and end points: for example a <strong>new access road arriving in the middle of a highway edge</strong>.
-  This makes sense since the two roads are really connected at this point.</li>
+  This makes sense since the two roads are really connected at this point.
+  It is <strong>not split</strong> if the drawn or moved edge has also <code>no_intersection_cutting</code> set to <code>True</code>:
+  for example a road starting on a <strong>bridge</strong> above a highway, which is not connected to it.</li>
 </ul>
 <p>The value of the field is kept when an edge is split: the new parts have the same value.</p>
 <p>The diagram below shows when an edge is split:</p>
@@ -1735,7 +1759,9 @@ It can be changed at any time, for example before drawing or modifying a road wh
     A[A node is created or moved on an edge,&lt;br&gt;or a drawn or modified edge crosses it] --&gt; B{Field No intersection cutting&lt;br&gt;of this edge, or of the drawn edge}
     B --&gt;|False| C[The edge is split]
     B --&gt;|True| D{Is the node the start or end point&lt;br&gt;of the edge being drawn or moved?}
-    D --&gt;|Yes, e.g. a new access road&lt;br&gt;arriving on a highway| C
+    D --&gt;|Yes| F{Field No intersection cutting&lt;br&gt;of the drawn edge}
+    F --&gt;|False, e.g. a new access road&lt;br&gt;arriving on a highway| C
+    F --&gt;|True, e.g. a road starting&lt;br&gt;on a bridge above it| E
     D --&gt;|No, e.g. a road crossing&lt;br&gt;under a bridge| E[The edge is not split]</div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
@@ -1743,6 +1769,19 @@ It can be changed at any time, for example before drawing or modifying a road wh
 set the field to <code>True</code> for the new edge, or for the crossed highway and access roads edges:
 no node will be created at these intersections, and only the roads really connected will be split.</p>
 </div>
+<h2 id="merge-two-edges">Merge two edges<a class="headerlink" href="#merge-two-edges" title="Permanent link">#</a></h2>
+<p>To merge two edges of the same road following each other, for example the two parts of a road
+which has been cut at an intersection without physical reality, <strong>select the two edges</strong> in the layer <code>edges copie</code>
+of the editing session in editing mode, then run the action <strong>Merge the 2 selected edges</strong>,
+with the <code>Run Feature Action</code> tool or from the attribute table.</p>
+<p>The edge with the lowest id is kept, and gets the geometry of the other one. The node between the two edges is kept
+if other edges use it, for example a road starting on a bridge above the merged road, or other roads crossing there:
+the merged edge then gets <code>no_intersection_cutting</code> set to <code>True</code>, so that this node does not split it again.
+For a road starting on a bridge, set also <code>no_intersection_cutting</code> to <code>True</code> for its first edge:
+moving its start point along the merged edge will not split it.</p>
+<p>The action is cancelled with a message if two edges of the same road following each other are not selected.
+The administration projects created before this action do not have it:
+create the administration project again, or copy the action from a new project.</p>
 <h2 id="impacts-of-the-modifications-on-the-references">Impacts of the modifications on the references<a class="headerlink" href="#impacts-of-the-modifications-on-the-references" title="Permanent link">#</a></h2>
 <p>The <strong>references</strong> of each edge, at its start and end points, are calculated automatically
 by the database trigger functions (see <a href="../../database-guide/tables/#edges">Tables and fields</a>):</p>

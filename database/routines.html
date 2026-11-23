@@ -339,7 +339,7 @@
                                         <td>TABLE(node_id integer, node_geom geometry, is_created boolean)</td>
                                         <td>INVOKER</td>
                                         <td><p>Get the node of the given start or end point of an edge: the closest node less than 0.5 m from it, or the node with the lowest id if several nodes are at the same distance.</p>
-<p>If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place). Used by the trigger function before_edge_insert_or_update.</p></td>
+<p>If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place). The edges under the created node are split, even if they must not be cut at the intersections, unless the edge of the node must not be cut itself (session variable road.graph.edge.no.intersection.cutting). Used by the trigger function before_edge_insert_or_update.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/fix_graph_move_marker__params_j_1e870605.html">fix_graph_move_marker(_params jsonb)</a></td>
@@ -687,6 +687,17 @@
                                         <td>INVOKER</td>
                                         <td><p>Clean a roundabout digitized by QGIS circle tool: * delete the edges inside the roundabout, except the edges marked as not to be cut at the intersections (no_intersection_cutting), which are at another level, for example a road passing under the roundabout * remove the circle node added add 12 o&rsquo;clock * add a marker for this roundabout if not already present</p>
 <p>An exception is raised if the roundabout is not connected to any other road, for example when the edges crossing the circle are marked as not connected (no_intersection_cutting), and are therefore not cut by it.</p></td>
+                                    </tr>
+                                    <tr>
+                                        <td><a href="routines/merge_two_edges__edge_id_a_inte_837f89cc.html">merge_two_edges(_edge_id_a integer, _edge_id_b integer)</a></td>
+                                        <td>FUNCTION</td>
+                                        <td>plpgsql</td>
+                                        <td>false</td>
+                                        <td>text</td>
+                                        <td>INVOKER</td>
+                                        <td><p>Merge two edges of the same road following each other, used by the action Merge the 2 selected edges.</p>
+<p>The edge with the lowest id is kept, and gets the geometry of the other edge (see merge_edges). The node between the edges is kept if it is used by other edges, for example a road starting on a bridge above the merged road: the merged edge is then marked as not to be cut at the intersections (no_intersection_cutting). An exception is raised if the edges do not exist, do not have the same road, or do not follow each other.</p>
+<p>It returns the message describing the merge.</p></td>
                                     </tr>
                                     <tr>
                                         <td><a href="routines/check_graph_markers_order__road_bc2ddc2b.html">check_graph_markers_order(_road_codes text[], _options jsonb)</a></td>
