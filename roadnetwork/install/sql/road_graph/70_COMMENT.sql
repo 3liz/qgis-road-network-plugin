@@ -340,7 +340,8 @@ The issue can be fixed with the action delete_node, which deletes the node: the 
 
 -- FUNCTION clean_digitized_roundabout(_road_code text)
 COMMENT ON FUNCTION road_graph.clean_digitized_roundabout(_road_code text) IS 'Clean a roundabout digitized by QGIS circle tool:
-* delete the edges inside the roundabout
+* delete the edges inside the roundabout, except the edges marked as not to be cut at the intersections
+  (no_intersection_cutting), which are at another level, for example a road passing under the roundabout
 * remove the circle node added add 12 o''clock
 * add a marker for this roundabout if not already present
 

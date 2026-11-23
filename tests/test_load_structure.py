@@ -1249,6 +1249,57 @@ def test_create_roundabout(processing_provider: Provider):
     assert [edges[3][10], edges[3][11]] == [7817, None]
 
 
+def test_roundabout_keeps_not_cut_edges(rollback_db_connection: psycopg.Connection):
+    """Finalizing a roundabout deletes the edges of the other roads inside it, except the edges
+    marked as not to be cut at the intersections, which are at another level.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Road of the roundabout, and the crossing of the roads D138 and D152 used by test_create_roundabout
+    cursor.execute("""
+        INSERT INTO road_graph.roads (road_code, road_type, road_class)
+        VALUES ('R003', 'roundabout', 'Départementale'), ('R004', 'road', 'Départementale')
+    """)
+    cursor.execute("""
+        SELECT geom
+        FROM road_graph.markers
+        WHERE road_code = 'D138' AND code = 8 AND abscissa BETWEEN 970 AND 990
+    """)
+    crossing = fetch_one(cursor)[0]
+
+    # Two short edges entirely inside the future roundabout, one of them not to be cut, without the triggers
+    cursor.execute("SET LOCAL road.graph.disable.trigger = '1'")
+    cursor.execute(
+        """
+        INSERT INTO road_graph.edges (road_code, no_intersection_cutting, geom)
+        SELECT 'R004', v.not_cut, ST_MakeLine(ST_Translate(p.geom, -4, v.dy), ST_Translate(p.geom, 4, v.dy))
+        FROM (SELECT %s::geometry AS geom) AS p, (VALUES (True, 6), (False, -6)) AS v(not_cut, dy)
+        RETURNING id, no_intersection_cutting
+        """,
+        (crossing,),
+    )
+    inside_ids = {row[1]: row[0] for row in cursor.fetchall()}
+    cursor.execute("SET LOCAL road.graph.disable.trigger = '0'")
+
+    # Roundabout around the crossing, then finalized
+    cursor.execute(
+        """
+        INSERT INTO road_graph.edges (road_code, geom)
+        VALUES ('R003', ST_ExteriorRing(ST_Buffer(%s::geometry, 15)))
+        """,
+        (crossing,),
+    )
+    cursor.execute("SELECT road_graph.clean_digitized_roundabout('R003')")
+    assert fetch_one(cursor)[0] is True
+
+    # The edge not to be cut is kept, the other one is deleted
+    cursor.execute(
+        "SELECT id FROM road_graph.edges WHERE id = ANY(%s) ORDER BY id",
+        (list(inside_ids.values()),),
+    )
+    assert [row[0] for row in cursor.fetchall()] == [inside_ids[True]]
+
+
 def test_roundabout_not_connected(rollback_db_connection: psycopg.Connection):
     """The roundabout cannot be finalized if its circle is not cut by any edge:
     the error gives the edges crossing it which are marked as not connected (no_intersection_cutting).

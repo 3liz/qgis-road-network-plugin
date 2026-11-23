@@ -141,7 +141,9 @@ To create a roundabout in the editing session:
 
 This layer action of the `edges copie` layer runs the database function `clean_digitized_roundabout`, which:
 
-* **deletes the pieces of edges inside the roundabout**, and updates the previous and next edges of the remaining roads,
+* **deletes the pieces of edges inside the roundabout**, and updates the previous and next edges of the remaining roads.
+  The edges marked as not to be cut at the intersections (`no_intersection_cutting`) are kept:
+  they are at another level, for example a road passing under the roundabout,
 * **deletes the node** created by QGIS at the **top of the circle**, by merging the two edges around it,
 * **adds a marker `0`** for this roundabout, on its westernmost node, if it does not already exist.
 

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+* **Roundabouts**: finalizing a roundabout keeps the edges inside it marked as not to be cut at the intersections
+
+
 ## 0.8.1 - 2026-11-22
 
 ### Fixed
