@@ -587,6 +587,8 @@ COMMENT ON FUNCTION road_graph.get_or_create_edge_node(_point geometry, _create 
 or the node with the lowest id if several nodes are at the same distance.
 
 If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place).
+The edges under the created node are split, even if they must not be cut at the intersections,
+unless the edge of the node must not be cut itself (session variable road.graph.edge.no.intersection.cutting).
 Used by the trigger function before_edge_insert_or_update.';
 
 
@@ -694,6 +696,17 @@ If the table has the references fields, the references of the feature A
 The lines connected to the features are not modified by the trigger trg_update_managed_object_linked_geometries.
 
 It returns a JSON object with the keys status (success or error) and message.';
+
+
+-- FUNCTION merge_two_edges(_edge_id_a integer, _edge_id_b integer)
+COMMENT ON FUNCTION road_graph.merge_two_edges(_edge_id_a integer, _edge_id_b integer) IS 'Merge two edges of the same road following each other, used by the action Merge the 2 selected edges.
+
+The edge with the lowest id is kept, and gets the geometry of the other edge (see merge_edges).
+The node between the edges is kept if it is used by other edges, for example a road starting on a bridge
+above the merged road: the merged edge is then marked as not to be cut at the intersections (no_intersection_cutting).
+An exception is raised if the edges do not exist, do not have the same road, or do not follow each other.
+
+It returns the message describing the merge.';
 
 
 -- FUNCTION refresh_graph_issues(_checks text[], _road_codes text[], _options jsonb)

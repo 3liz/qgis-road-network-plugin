@@ -3684,6 +3684,11 @@
         <actionsetting action="from qgis.utils import plugins&#xA;plugins['roadnetwork'].run_action(&#xA;    'finalize_roundabout',&#xA;    layer_id='[% @layer_id %]',&#xA;    road_code='[% road_code %]',&#xA;    road_type='[% roads_road_type %]',&#xA;)&#xA;" capture="1" icon="" id="{d99a0c18-74e3-4171-a80d-298a37b309af}" isEnabledOnlyWhenEditable="0" name="Finalize the roundabout : delete internal edges and merge top edges" notificationMessage="" shortTitle="Finalize the roundabout" type="1">
           <actionScope id="Feature"></actionScope>
         </actionsetting>
+        <actionsetting action="from qgis.utils import plugins&#xA;plugins['roadnetwork'].run_action(&#xA;    'merge_selected_edges',&#xA;    layer_id='[% @layer_id %]',&#xA;)&#xA;" capture="1" icon="" id="{8a026f9f-dee6-4b41-9cc3-1e14c1bc51c5}" isEnabledOnlyWhenEditable="0" name="Merge the 2 selected edges of the same road" notificationMessage="" shortTitle="Merge the 2 selected edges" type="1">
+          <actionScope id="Layer"></actionScope>
+          <actionScope id="Feature"></actionScope>
+          <actionScope id="Canvas"></actionScope>
+        </actionsetting>
       </attributeactions>
       <attributetableconfig actionWidgetStyle="dropDown" sortExpression="&quot;road_code&quot;" sortOrder="1">
         <columns>

@@ -47,6 +47,7 @@ def test_actions_names():
         "display_edited_data",
         "drop_editing_session",
         "finalize_roundabout",
+        "merge_selected_edges",
         "fix_graph_issue",
         "choose_graph_issue_fix",
         "select_graph_issue_edges",

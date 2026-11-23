@@ -12,6 +12,7 @@ from .methods import (
     display_edited_data,
     drop_editing_session,
     finalize_roundabout,
+    merge_selected_edges,
 )
 from .tools import display_error_message
 
@@ -20,6 +21,7 @@ ACTIONS = (
     display_edited_data,
     drop_editing_session,
     finalize_roundabout,
+    merge_selected_edges,
     fix_graph_issue,
     choose_graph_issue_fix,
     select_graph_issue_edges,
@@ -51,6 +53,7 @@ def run(name: str, **kwargs: Any) -> RunActionError | None:
         - display_edited_data
         - drop_editing_session
         - finalize_roundabout
+        - merge_selected_edges
         - fix_graph_issue
         - choose_graph_issue_fix
         - select_graph_issue_edges

@@ -12,6 +12,7 @@ import pytest
 
 from qgis import processing
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsFeature,
     QgsGeometry,
@@ -4230,6 +4231,67 @@ def test_graph_issues_actions(processing_provider: Provider, monkeypatch: pytest
     assert data[0][0] == 0
 
 
+def test_merge_selected_edges_action():
+    """The action Merge the 2 selected edges merges the selected edges of the editing session layer,
+    in the transaction of the layers. An editing session is created around two consecutive edges of a road,
+    then dropped at the end of the test."""
+    metadata = QgsProviderRegistry.instance().providerMetadata("postgres")
+    connection = metadata.findConnection("test")
+    project = QgsProject.instance()
+
+    # Two consecutive edges of a road, joined by a node without any other edge
+    data = connection.executeSql("""
+        SELECT a.id, b.id
+        FROM road_graph.edges AS a
+        JOIN road_graph.edges AS b ON b.id = a.next_edge_id AND b.start_node = a.end_node
+        WHERE (SELECT count(*) FROM road_graph.edges AS e WHERE a.end_node IN (e.start_node, e.end_node)) = 2
+        AND ST_Length(a.geom) > 50 AND ST_Length(b.geom) > 50
+        ORDER BY a.id
+        LIMIT 1
+    """)
+    first_id, second_id = data[0]
+    data = connection.executeSql(f"""
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'Merge action test', 'test', ST_Envelope(ST_Buffer(e.geom, 300))
+        FROM road_graph.edges AS e
+        WHERE e.id = {first_id}
+        RETURNING id
+    """)
+    editing_session_id = data[0][0]
+    connection.executeSql(f"SELECT road_graph.copy_data_to_editing_session({editing_session_id})")
+
+    # Edges layer of the editing session, in editing mode with a transaction
+    uri = QgsDataSourceUri(connection.uri())
+    uri.setDataSource("road_graph_editing", "edges", "geom", "", "id")
+    edges_layer = QgsVectorLayer(uri.uri(), "edges copie", "postgres")
+    assert edges_layer.isValid()
+    transaction_mode = project.transactionMode()
+    project.setTransactionMode(Qgis.TransactionMode.AutomaticGroups)
+    project.addMapLayer(edges_layer)
+    try:
+        assert edges_layer.startEditing()
+        assert edges_layer.dataProvider().transaction() is not None
+
+        # Only one selected edge: nothing is done
+        edges_layer.selectByExpression(f'"id" = {first_id}')
+        assert runner.run("merge_selected_edges", layer_id=edges_layer.id()) is None
+        assert next(edges_layer.getFeatures(f'"id" = {second_id}'), None) is not None
+
+        # The two edges are merged into the edge with the lowest id
+        edges_layer.selectByExpression(f'"id" IN ({first_id}, {second_id})')
+        runner.run("merge_selected_edges", layer_id=edges_layer.id())
+        assert next(edges_layer.getFeatures(f'"id" = {max(first_id, second_id)}'), None) is None
+        assert next(edges_layer.getFeatures(f'"id" = {min(first_id, second_id)}'), None) is not None
+        assert edges_layer.selectedFeatureCount() == 0
+        assert edges_layer.commitChanges()
+    finally:
+        if edges_layer.isEditable():
+            edges_layer.rollBack()
+        project.removeMapLayer(edges_layer.id())
+        project.setTransactionMode(transaction_mode)
+        connection.executeSql(f"SELECT road_graph.drop_editing_session({editing_session_id})")
+
+
 def test_run_fix_editing_mode_without_transaction():
     """The fixes of the issues are saved at once when the layers of the editing session are in editing mode
     without transaction, unless these layers have modifications which are not saved yet.
@@ -5531,6 +5593,112 @@ def test_check_graph_edge_links_across_gap(rollback_db_connection: psycopg.Conne
     # Farther than the tolerance, the missing link is not an issue
     assert first_id not in expected_links('{"G06": {"gap_tolerance": 0.001}}')
     fix_and_check()
+
+
+def test_merge_two_edges_keeping_node(rollback_db_connection: psycopg.Connection):
+    """Two edges of a road are merged, the node between them being kept for another road starting there,
+    marked as not to be cut at the intersections, like a road starting on a bridge above the merged road.
+    Moving the end of this other road along the merged edge does not split it anymore.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # T junction: two consecutive edges of a road, and an edge of another road at their node
+    cursor.execute("""
+        SELECT n.id, a.road_code, a.id, b.id, c.road_code, c.id
+        FROM road_graph.nodes AS n
+        JOIN road_graph.edges AS a ON a.end_node = n.id
+        JOIN road_graph.edges AS b
+            ON b.start_node = n.id AND b.road_code = a.road_code AND a.next_edge_id = b.id
+        JOIN road_graph.edges AS c ON n.id IN (c.start_node, c.end_node) AND c.road_code != a.road_code
+        JOIN road_graph.roads AS r ON r.road_code = c.road_code AND r.road_type = 'road'
+        WHERE (SELECT count(*) FROM road_graph.edges AS e WHERE n.id IN (e.start_node, e.end_node)) = 3
+        AND ST_Length(a.geom) > 50 AND ST_Length(b.geom) > 50 AND ST_Length(c.geom) > 50
+        ORDER BY n.id
+        LIMIT 1
+    """)
+    node_id, road_code, first_id, second_id, other_road_code, other_id = fetch_one(cursor)
+    cursor.execute(
+        """
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'Merge test', 'test', ST_Envelope(ST_Buffer(n.geom, 500))
+        FROM road_graph.nodes AS n
+        WHERE n.id = %s
+        RETURNING id
+        """,
+        (node_id,),
+    )
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (fetch_one(cursor)[0],))
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s", (road_code,))
+    edge_count = fetch_one(cursor)[0]
+
+    # Two different edges of the same road must be given
+    merge_sql = "SELECT road_graph_editing.merge_two_edges(%s, %s)"
+    with (
+        pytest.raises(psycopg.errors.RaiseException, match="do not have the same road"),
+        rollback_db_connection.transaction(),
+    ):
+        cursor.execute(merge_sql, (first_id, other_id))
+    with (
+        pytest.raises(psycopg.errors.RaiseException, match="Two different existing edges"),
+        rollback_db_connection.transaction(),
+    ):
+        cursor.execute(merge_sql, (first_id, first_id))
+
+    # The other road is marked as not to be cut, then the two edges are merged: the node is kept
+    cursor.execute(
+        "UPDATE road_graph_editing.edges SET no_intersection_cutting = True WHERE id = %s",
+        (other_id,),
+    )
+    cursor.execute(merge_sql, (first_id, second_id))
+    assert f"The node {node_id} is kept" in fetch_one(cursor)[0]
+    kept_id = min(first_id, second_id)
+    cursor.execute(
+        "SELECT id, no_intersection_cutting FROM road_graph_editing.edges WHERE id IN (%s, %s)",
+        (first_id, second_id),
+    )
+    assert cursor.fetchall() == [(kept_id, True)]
+    cursor.execute(
+        "SELECT %s IN (start_node, end_node) FROM road_graph_editing.edges WHERE id = %s",
+        (node_id, other_id),
+    )
+    assert fetch_one(cursor)[0] is True
+
+    # No issue of the checks at the node for the two roads
+    cursor.execute(
+        """
+        SELECT check_code FROM road_graph_editing.check_graph(NULL, %s) AS i
+        WHERE ST_DWithin(i.geom, (SELECT geom FROM road_graph_editing.nodes WHERE id = %s), 1)
+        """,
+        ([road_code, other_road_code], node_id),
+    )
+    assert cursor.fetchall() == []
+
+    # Moving the end of the other road 10 m along the merged edge does not split it:
+    # both edges must not be cut at the intersections
+    cursor.execute(
+        """
+        SELECT ST_LineInterpolatePoint(
+            k.geom, ST_LineLocatePoint(k.geom, n.geom) + 10 / ST_Length(k.geom)
+        )
+        FROM road_graph_editing.edges AS k, road_graph_editing.nodes AS n
+        WHERE k.id = %s AND n.id = %s
+        """,
+        (kept_id, node_id),
+    )
+    point = fetch_one(cursor)[0]
+    cursor.execute(
+        """
+        UPDATE road_graph_editing.edges AS e
+        SET geom = CASE
+            WHEN e.start_node = %(node)s THEN ST_SetPoint(e.geom, 0, %(point)s::geometry)
+            ELSE ST_SetPoint(e.geom, ST_NPoints(e.geom) - 1, %(point)s::geometry)
+        END
+        WHERE e.id = %(other)s
+        """,
+        {"node": node_id, "point": point, "other": other_id},
+    )
+    cursor.execute("SELECT count(*) FROM road_graph_editing.edges WHERE road_code = %s", (road_code,))
+    assert fetch_one(cursor)[0] == edge_count - 1
 
 
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):

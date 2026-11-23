@@ -566,8 +566,11 @@ BEGIN
         THEN
             -- Update upstream node if needed
             -- Declare that the node is the extremity of the edge:
-            -- the edges under it will be split, even if their field no_intersection_cutting is True
-            SET LOCAL road.graph.node.edge.extremity = 'yes';
+            -- the edges under it will be split, even if their field no_intersection_cutting is True,
+            -- unless the edge itself must not be cut at the intersections
+            IF NOT Coalesce(NEW.no_intersection_cutting, False) THEN
+                SET LOCAL road.graph.node.edge.extremity = 'yes';
+            END IF;
             UPDATE road_graph.nodes AS n
             SET geom = ST_StartPoint(NEW.geom)
             WHERE n.id = NEW.start_node
@@ -581,8 +584,11 @@ BEGIN
         THEN
             -- Update downstream node if needed
             -- Declare that the node is the extremity of the edge:
-            -- the edges under it will be split, even if their field no_intersection_cutting is True
-            SET LOCAL road.graph.node.edge.extremity = 'yes';
+            -- the edges under it will be split, even if their field no_intersection_cutting is True,
+            -- unless the edge itself must not be cut at the intersections
+            IF NOT Coalesce(NEW.no_intersection_cutting, False) THEN
+                SET LOCAL road.graph.node.edge.extremity = 'yes';
+            END IF;
             UPDATE road_graph.nodes AS n
             SET geom = ST_EndPoint(NEW.geom)
             WHERE n.id = NEW.end_node
@@ -1478,6 +1484,15 @@ BEGIN
         -- If not found, create them: only for INSERT,
         -- or for UPDATE if the start_node or end_node value has been deleted
 
+        -- The extremities of an edge not to be cut at the intersections do not split the edges
+        -- not to be cut either, for example a road starting on a bridge above another road
+        -- (see get_or_create_edge_node)
+        PERFORM set_config(
+            'road.graph.edge.no.intersection.cutting',
+            CASE WHEN Coalesce(NEW.no_intersection_cutting, False) THEN 'yes' ELSE 'no' END,
+            true
+        );
+
         -- upstream node
         SELECT INTO extremity_node *
         FROM road_graph.get_or_create_edge_node(
@@ -1529,6 +1544,7 @@ BEGIN
                 ;
             END IF;
         END IF;
+        PERFORM set_config('road.graph.edge.no.intersection.cutting', 'no', true);
     END IF;
 
     -- Calculate previous_edge_id and next_edge_id values
@@ -6325,9 +6341,13 @@ BEGIN
     IF _create THEN
         -- Declare that the node is the extremity of an edge:
         -- the edges under it will be split, even if their field no_intersection_cutting is True
-        -- (for example a new access road arriving in the middle of a highway edge)
+        -- (for example a new access road arriving in the middle of a highway edge),
+        -- unless the edge itself must not be cut at the intersections (see before_edge_insert_or_update):
+        -- for example a road starting on a bridge above another road
         -- The variable is used by the trigger function after_node_insert_or_update
-        SET LOCAL road.graph.node.edge.extremity = 'yes';
+        IF road_graph.get_current_setting('road.graph.edge.no.intersection.cutting', 'no') != 'yes' THEN
+            SET LOCAL road.graph.node.edge.extremity = 'yes';
+        END IF;
         WITH new_node AS (
             INSERT INTO road_graph.nodes
             (geom)
@@ -6356,6 +6376,8 @@ COMMENT ON FUNCTION road_graph.get_or_create_edge_node(_point geometry, _create 
 or the node with the lowest id if several nodes are at the same distance.
 
 If there is no node and _create is True, the node is created (its id can be NULL if a node already exists at the same place).
+The edges under the created node are split, even if they must not be cut at the intersections,
+unless the edge of the node must not be cut itself (session variable road.graph.edge.no.intersection.cutting).
 Used by the trigger function before_edge_insert_or_update.';
 
 
@@ -9005,6 +9027,81 @@ If the table has the references fields, the references of the feature A
 The lines connected to the features are not modified by the trigger trg_update_managed_object_linked_geometries.
 
 It returns a JSON object with the keys status (success or error) and message.';
+
+
+-- merge_two_edges(integer, integer)
+CREATE FUNCTION road_graph.merge_two_edges(_edge_id_a integer, _edge_id_b integer) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    edge_a record;
+    edge_b record;
+    node_id integer;
+    kept_id integer;
+    is_node_kept boolean;
+BEGIN
+    -- The two edges must exist, be different, have the same road and share a node,
+    -- the end of one edge being the start of the other one
+    SELECT e.* INTO edge_a FROM road_graph.edges AS e WHERE e.id = _edge_id_a;
+    SELECT e.* INTO edge_b FROM road_graph.edges AS e WHERE e.id = _edge_id_b;
+    IF edge_a.id IS NULL OR edge_b.id IS NULL OR edge_a.id = edge_b.id THEN
+        RAISE EXCEPTION 'Two different existing edges must be given: % and %', _edge_id_a, _edge_id_b;
+    END IF;
+    IF edge_a.road_code != edge_b.road_code THEN
+        RAISE EXCEPTION 'The edges % and % do not have the same road: % and %',
+            edge_a.id, edge_b.id, edge_a.road_code, edge_b.road_code;
+    END IF;
+    IF edge_a.end_node = edge_b.start_node AND edge_a.start_node != edge_b.end_node THEN
+        node_id = edge_a.end_node;
+    ELSIF edge_b.end_node = edge_a.start_node AND edge_b.start_node != edge_a.end_node THEN
+        node_id = edge_b.end_node;
+    ELSE
+        RAISE EXCEPTION 'The edges % and % must follow each other: '
+            'the end node of one edge must be the start node of the other one',
+            edge_a.id, edge_b.id;
+    END IF;
+
+    -- The node is kept if it is used by other edges, for example another road starting there:
+    -- the merged edge must then not be cut at the intersections, else the node would split it again
+    is_node_kept = EXISTS (
+        SELECT 1
+        FROM road_graph.edges AS e
+        WHERE e.id NOT IN (edge_a.id, edge_b.id)
+        AND node_id IN (e.start_node, e.end_node)
+    );
+    IF is_node_kept THEN
+        UPDATE road_graph.edges AS e
+        SET no_intersection_cutting = True
+        WHERE e.id IN (edge_a.id, edge_b.id)
+        AND NOT Coalesce(e.no_intersection_cutting, False)
+        ;
+    END IF;
+
+    -- Merge the edges: the edge with the lowest id is kept
+    PERFORM road_graph.merge_edges(edge_a.id, edge_b.id);
+    kept_id = least(edge_a.id, edge_b.id);
+
+    IF is_node_kept THEN
+        RETURN format(
+            'The edges %s and %s have been merged into the edge %s. The node %s is kept for the other edges: '
+            'the edge %s is marked as not to be cut at the intersections',
+            edge_a.id, edge_b.id, kept_id, node_id, kept_id
+        );
+    END IF;
+    RETURN format('The edges %s and %s have been merged into the edge %s', edge_a.id, edge_b.id, kept_id);
+END;
+$$;
+
+
+-- FUNCTION merge_two_edges(_edge_id_a integer, _edge_id_b integer)
+COMMENT ON FUNCTION road_graph.merge_two_edges(_edge_id_a integer, _edge_id_b integer) IS 'Merge two edges of the same road following each other, used by the action Merge the 2 selected edges.
+
+The edge with the lowest id is kept, and gets the geometry of the other edge (see merge_edges).
+The node between the edges is kept if it is used by other edges, for example a road starting on a bridge
+above the merged road: the merged edge is then marked as not to be cut at the intersections (no_intersection_cutting).
+An exception is raised if the edges do not exist, do not have the same road, or do not follow each other.
+
+It returns the message describing the merge.';
 
 
 -- refresh_graph_issues(text[], text[], jsonb)

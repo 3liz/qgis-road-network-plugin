@@ -2,10 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+* **Editing**: action Merge the 2 selected edges, which keeps the node if other edges use it
+
 ### Changed
 
 * **Road graph checks**: G06 links the edges on both sides of a gap of the road, for example a roundabout,
   instead of emptying the link
+* **Editing**: the start or end of an edge not to be cut at the intersections does not split the edges
+  not to be cut either
 * **Roundabouts**: finalizing a roundabout keeps the edges inside it marked as not to be cut at the intersections
 
 

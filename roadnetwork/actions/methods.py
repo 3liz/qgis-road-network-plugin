@@ -4,6 +4,7 @@ import processing
 
 from qgis.core import (
     Qgis,
+    QgsDataSourceUri,
     QgsExpressionContextUtils,
     QgsProject,
     QgsVectorLayer,
@@ -72,6 +73,72 @@ def finalize_roundabout(layer_id: str, road_code: str, road_type: str):
 
     display_message(
         tr("The roundabout {} has been successfully finalized").format(road_code),
+        tr("You may have to refresh the map canvas to see the changes"),
+        Qgis.MessageLevel.Success,
+    )
+    layer.triggerRepaint()
+
+
+def merge_selected_edges(layer_id: str):
+    """Merge the 2 selected edges of the edges layer of the editing session.
+
+    The edges must have the same road and follow each other. The node between them is kept
+    if it is used by other edges, and the merged edge is then marked as not to be cut at the intersections
+    (database function road_graph_editing.merge_two_edges).
+
+    These lines are included in the QGIS project, in the layer "edges copie".
+
+        from qgis.utils import plugins
+        plugins['roadnetwork'].run_action(
+            'merge_selected_edges',
+            layer_id='[% @layer_id %]',
+        )
+
+    :param layer_id: The id of the edges layer of the editing session
+    """
+    action_name = tr("Cannot merge the selected edges")
+
+    layer = get_postgres_layer(layer_id, action_name)
+    if layer is None:
+        # Error message already displayed
+        return
+
+    if QgsDataSourceUri(layer.source()).schema() != "road_graph_editing":
+        display_message(
+            action_name,
+            tr("The edges must be merged in the editing session: use the edges layer of the editing session"),
+            Qgis.MessageLevel.Warning,
+        )
+        return
+
+    if not layer.isEditable():
+        display_message(
+            action_name,
+            tr("You must first activate the editing mode on the layer {}").format(layer.name()),
+            Qgis.MessageLevel.Warning,
+        )
+        return
+
+    # Exactly two edges must be selected
+    edge_ids = sorted(int(feature["id"]) for feature in layer.selectedFeatures())
+    if len(edge_ids) != 2:
+        display_message(
+            action_name,
+            tr("Select exactly 2 edges of the same road following each other ({} selected)").format(
+                len(edge_ids)
+            ),
+            Qgis.MessageLevel.Warning,
+        )
+        return
+
+    # Merge the edges in the transaction of the layer: the database function checks them
+    sql = "SELECT road_graph_editing.merge_two_edges({}, {})".format(*edge_ids)
+    if not execute_sql_in_layer_transaction(layer, sql, action_name):
+        return
+
+    layer.removeSelection()
+    display_message(
+        tr("The edges {} and {} have been merged").format(*edge_ids),
         tr("You may have to refresh the map canvas to see the changes"),
         Qgis.MessageLevel.Success,
     )

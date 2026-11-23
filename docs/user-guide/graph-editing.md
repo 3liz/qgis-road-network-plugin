@@ -184,6 +184,8 @@ An edge with `no_intersection_cutting` set to `True`:
 * **is split** when the **start or end point** of a drawn or moved edge is located on it,
   far enough from its own start and end points: for example a **new access road arriving in the middle of a highway edge**.
   This makes sense since the two roads are really connected at this point.
+  It is **not split** if the drawn or moved edge has also `no_intersection_cutting` set to `True`:
+  for example a road starting on a **bridge** above a highway, which is not connected to it.
 
 The value of the field is kept when an edge is split: the new parts have the same value.
 
@@ -194,7 +196,9 @@ graph TD
     A[A node is created or moved on an edge,<br>or a drawn or modified edge crosses it] --> B{Field No intersection cutting<br>of this edge, or of the drawn edge}
     B -->|False| C[The edge is split]
     B -->|True| D{Is the node the start or end point<br>of the edge being drawn or moved?}
-    D -->|Yes, e.g. a new access road<br>arriving on a highway| C
+    D -->|Yes| F{Field No intersection cutting<br>of the drawn edge}
+    F -->|False, e.g. a new access road<br>arriving on a highway| C
+    F -->|True, e.g. a road starting<br>on a bridge above it| E
     D -->|No, e.g. a road crossing<br>under a bridge| E[The edge is not split]
 ```
 
@@ -202,6 +206,23 @@ graph TD
     Before drawing a new road which crosses a **highway interchange** without being connected to it,
     set the field to `True` for the new edge, or for the crossed highway and access roads edges:
     no node will be created at these intersections, and only the roads really connected will be split.
+
+## Merge two edges
+
+To merge two edges of the same road following each other, for example the two parts of a road
+which has been cut at an intersection without physical reality, **select the two edges** in the layer `edges copie`
+of the editing session in editing mode, then run the action **Merge the 2 selected edges**,
+with the `Run Feature Action` tool or from the attribute table.
+
+The edge with the lowest id is kept, and gets the geometry of the other one. The node between the two edges is kept
+if other edges use it, for example a road starting on a bridge above the merged road, or other roads crossing there:
+the merged edge then gets `no_intersection_cutting` set to `True`, so that this node does not split it again.
+For a road starting on a bridge, set also `no_intersection_cutting` to `True` for its first edge:
+moving its start point along the merged edge will not split it.
+
+The action is cancelled with a message if two edges of the same road following each other are not selected.
+The administration projects created before this action do not have it:
+create the administration project again, or copy the action from a new project.
 
 ## Impacts of the modifications on the references
 
