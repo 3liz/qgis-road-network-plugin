@@ -1942,14 +1942,21 @@ or after modifications made without the triggers. The references of the whole ro
 <li>does not start at the end node of the edge, whereas another edge of the road starts there,</li>
 <li>or is connected to another edge, or to the edge in the opposite direction.</li>
 </ul>
-<p>The previous edge is checked the same way. The other links, across a gap of the road, for example on both sides
-of a roundabout, are kept. The roundabouts are ignored. The field <code>details</code> gives the number of edges and,
+<p>The previous edge is checked the same way. The roundabouts are ignored.</p>
+<p>When the road is interrupted, for example by a roundabout, the last edge before the gap and the first edge after it
+do not touch each other: only their link gives the order of the road. The last edge before the gap is linked to:</p>
+<ul>
+<li>for a wrong link, the first edge of the piece of road of the linked edge,</li>
+<li>for a missing link, the closest piece of road starting less than the option <code>gap_tolerance</code> (<strong>150 m</strong> by default)
+  from the end of the edge, if this piece is not before the edge in the order of the road.</li>
+</ul>
+<p>The other links across a gap are kept. The field <code>details</code> gives the number of edges and,
 for each edge, its previous and next edges (<code>previous_edge_id</code>, <code>next_edge_id</code>) and the expected ones
 (<code>expected_previous_edge_id</code>, <code>expected_next_edge_id</code>).</p>
 <p>Fix action:</p>
 <ul>
 <li><code>relink_edges</code>: set the expected previous and next edges of the road: the edges connected by the nodes,
-  or no link. Then the references of the road are calculated again.</li>
+  the edges on the other side of a gap, or no link. Then the references of the road are calculated again.</li>
 </ul>
 <p>Fix the issues of the checks <a href="#g03-nodes-close-to-each-other">G03</a> and
 <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a> before: two close nodes or a reversed edge
