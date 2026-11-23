@@ -941,7 +941,7 @@
   <a href="#g07-road-with-branches" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G07 : Route avec des branches
+        G07: Road with branches
       
     </span>
   </a>
@@ -952,7 +952,7 @@
   <a href="#g08-parallel-edges-of-the-same-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G08 : Tronçons parallèles d'une même route
+        G08: Parallel edges of the same road
       
     </span>
   </a>
@@ -963,7 +963,7 @@
   <a href="#g09-short-edge" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G09 : Tronçon court
+        G09: Short edge
       
     </span>
   </a>
@@ -974,7 +974,7 @@
   <a href="#g10-first-marker-not-at-the-start-of-the-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G10 : Première borne qui n'est pas au début de la route
+        G10: First marker not at the start of the road
       
     </span>
   </a>
@@ -985,7 +985,7 @@
   <a href="#g11-markers-not-in-the-order-of-the-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G11 : Bornes qui ne sont pas dans l'ordre de la route
+        G11: Markers not in the order of the road
       
     </span>
   </a>
@@ -996,7 +996,7 @@
   <a href="#g12-duplicate-edges" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G12 : Tronçons en double
+        G12: Duplicate edges
       
     </span>
   </a>
@@ -1012,7 +1012,7 @@
   <a href="#configuration-of-the-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration des contrôles
+        Configuration of the checks
       
     </span>
   </a>
@@ -1023,7 +1023,7 @@
   <a href="#database-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fonctions de la base de données
+        Database functions
       
     </span>
   </a>
@@ -1522,7 +1522,7 @@
   <a href="#g07-road-with-branches" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G07 : Route avec des branches
+        G07: Road with branches
       
     </span>
   </a>
@@ -1533,7 +1533,7 @@
   <a href="#g08-parallel-edges-of-the-same-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G08 : Tronçons parallèles d'une même route
+        G08: Parallel edges of the same road
       
     </span>
   </a>
@@ -1544,7 +1544,7 @@
   <a href="#g09-short-edge" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G09 : Tronçon court
+        G09: Short edge
       
     </span>
   </a>
@@ -1555,7 +1555,7 @@
   <a href="#g10-first-marker-not-at-the-start-of-the-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G10 : Première borne qui n'est pas au début de la route
+        G10: First marker not at the start of the road
       
     </span>
   </a>
@@ -1566,7 +1566,7 @@
   <a href="#g11-markers-not-in-the-order-of-the-road" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G11 : Bornes qui ne sont pas dans l'ordre de la route
+        G11: Markers not in the order of the road
       
     </span>
   </a>
@@ -1577,7 +1577,7 @@
   <a href="#g12-duplicate-edges" class="md-nav__link">
     <span class="md-ellipsis">
       
-        G12 : Tronçons en double
+        G12: Duplicate edges
       
     </span>
   </a>
@@ -1593,7 +1593,7 @@
   <a href="#configuration-of-the-checks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration des contrôles
+        Configuration of the checks
       
     </span>
   </a>
@@ -1604,7 +1604,7 @@
   <a href="#database-functions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fonctions de la base de données
+        Database functions
       
     </span>
   </a>
@@ -1942,119 +1942,126 @@ ou après des modifications faites sans les triggers. Les références de toute 
 <li>ne commence pas au nœud de fin du tronçon, alors qu'un autre tronçon de la route y commence,</li>
 <li>ou est raccordé à un autre tronçon, ou au tronçon de sens opposé.</li>
 </ul>
-<p>Le tronçon précédent est vérifié de la même façon. Les autres liens, à travers une interruption de la route, par exemple de part et d'autre
-d'un giratoire, sont conservés. Les giratoires sont ignorés. Le champ <code>details</code> donne le nombre de tronçons et,
-pour chaque tronçon, ses tronçons précédent et suivant (<code>previous_edge_id</code>, <code>next_edge_id</code>) et ceux attendus
+<p>The previous edge is checked the same way. The roundabouts are ignored.</p>
+<p>When the road is interrupted, for example by a roundabout, the last edge before the gap and the first edge after it
+do not touch each other: only their link gives the order of the road. The last edge before the gap is linked to:</p>
+<ul>
+<li>for a wrong link, the first edge of the piece of road of the linked edge,</li>
+<li>for a missing link, the closest piece of road starting less than the option <code>gap_tolerance</code> (<strong>150 m</strong> by default)
+  from the end of the edge, if this piece is not before the edge in the order of the road.</li>
+</ul>
+<p>The other links across a gap are kept. The field <code>details</code> gives the number of edges and,
+for each edge, its previous and next edges (<code>previous_edge_id</code>, <code>next_edge_id</code>) and the expected ones
 (<code>expected_previous_edge_id</code>, <code>expected_next_edge_id</code>).</p>
-<p>Action de correction :</p>
+<p>Fix action:</p>
 <ul>
-<li><code>relink_edges</code> : définit les tronçons précédent et suivant attendus de la route : les tronçons raccordés par les nœuds,
-  ou aucun lien. Puis les références de la route sont recalculées.</li>
+<li><code>relink_edges</code>: set the expected previous and next edges of the road: the edges connected by the nodes,
+  the edges on the other side of a gap, or no link. Then the references of the road are calculated again.</li>
 </ul>
-<p>Corrigez d'abord les anomalies des contrôles <a href="#g03-nodes-close-to-each-other">G03</a> et
-<a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a> : deux nœuds proches ou un tronçon inversé
-cassent les liens. Les contrôles suivants utilisent l'ordre des tronçons.</p>
-<h3 id="g07-road-with-branches">G07 : Route avec des branches<a class="headerlink" href="#g07-road-with-branches" title="Permanent link">#</a></h3>
-<p><img alt="G07 : anomalie et correction" src="../../media/user-guide/graph_checks_g07.svg" /></p>
-<p>Une route doit être une ligne : ses tronçons se suivent, sans branches. Les bretelles d'un échangeur ou d'un giratoire,
-ou les deux chaussées d'une route, doivent avoir leur propre code de route. Sinon l'ordre des tronçons de la route,
-et donc les références, ne peuvent pas être calculés.</p>
-<p>Le contrôle renvoie une anomalie pour chaque nœud ayant <strong>plus de deux tronçons d'une même route</strong>. Les giratoires sont ignorés.
-La <strong>ligne principale</strong> de la route au nœud est donnée par le tronçon qui arrive au nœud et le tronçon qui en part
-qui sont les plus alignés : les autres tronçons sont les <strong>branches</strong>. Le champ <code>details</code> donne le nombre de tronçons
-au nœud (<code>edge_count</code>), et les identifiants des tronçons de la ligne principale (<code>main_edge_ids</code>) et des branches
-(<code>branch_edge_ids</code>). La ligne de l'anomalie montre les branches.</p>
-<p>Il n'y a pas d'action de correction : donnez un autre code de route aux tronçons des branches, par exemple une nouvelle route
-pour une bretelle. Vérifiez la ligne principale proposée par le contrôle, surtout quand les tronçons ne sont pas dans le sens de la route
-(contrôle <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</p>
-<h3 id="g08-parallel-edges-of-the-same-road">G08 : Tronçons parallèles d'une même route<a class="headerlink" href="#g08-parallel-edges-of-the-same-road" title="Permanent link">#</a></h3>
-<p><img alt="G08 : anomalie et correction" src="../../media/user-guide/graph_checks_g08.svg" /></p>
-<p>Les deux chaussées d'une route doivent avoir leur propre code de route. Quand elles utilisent le même code sans être connectées,
-le contrôle <a href="#g07-road-with-branches">G07</a> ne les trouve pas.</p>
-<p>Le contrôle renvoie une anomalie, avec la gravité <code>warning</code>, pour chaque paire de tronçons d'une même route,
-non raccordés par un nœud, qui <strong>se longent</strong> :</p>
+<p>Fix the issues of the checks <a href="#g03-nodes-close-to-each-other">G03</a> and
+<a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a> before: two close nodes or a reversed edge
+break the links. The next checks use the order of the edges.</p>
+<h3 id="g07-road-with-branches">G07: Road with branches<a class="headerlink" href="#g07-road-with-branches" title="Permanent link">#</a></h3>
+<p><img alt="G07: issue and fix" src="../../media/user-guide/graph_checks_g07.svg" /></p>
+<p>A road must be a line: its edges follow each other, without branches. The ramps of an interchange or of a roundabout,
+or the two carriageways of a road, must have their own road code. Else the order of the edges of the road,
+and so the references, cannot be calculated.</p>
+<p>The check returns one issue for each node with <strong>more than two edges of the same road</strong>. The roundabouts are ignored.
+The <strong>main line</strong> of the road at the node is given by the edge arriving at the node and the edge leaving it
+which are the most aligned: the other edges are the <strong>branches</strong>. The field <code>details</code> gives the number of edges
+at the node (<code>edge_count</code>), and the ids of the edges of the main line (<code>main_edge_ids</code>) and of the branches
+(<code>branch_edge_ids</code>). The line of the issue shows the branches.</p>
+<p>There is no fix action: give another road code to the edges of the branches, for example a new road
+for a ramp. Check the main line proposed by the check, especially when the edges are not in the direction of the road
+(check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</p>
+<h3 id="g08-parallel-edges-of-the-same-road">G08: Parallel edges of the same road<a class="headerlink" href="#g08-parallel-edges-of-the-same-road" title="Permanent link">#</a></h3>
+<p><img alt="G08: issue and fix" src="../../media/user-guide/graph_checks_g08.svg" /></p>
+<p>The two carriageways of a road must have their own road code. When they use the same code without being connected,
+the check <a href="#g07-road-with-branches">G07</a> does not find them.</p>
+<p>The check returns one issue, with the severity <code>warning</code>, for each pair of edges of the same road,
+not connected by a node, which <strong>run along each other</strong>:</p>
 <ul>
-<li>à moins de l'option <code>tolerance</code> l'un de l'autre, <strong>30 m</strong> par défaut,</li>
-<li>sur au moins l'option <code>min_length</code>, <strong>10 m</strong> par défaut.</li>
+<li>less than the option <code>tolerance</code> from each other, <strong>30 m</strong> by default,</li>
+<li>along at least the option <code>min_length</code>, <strong>10 m</strong> by default.</li>
 </ul>
-<p>Les tronçons qui ne font que se rapprocher sont ignorés, par exemple les tronçons d'une route de part et d'autre d'un giratoire :
-chaque tronçon doit longer l'autre sur au moins la longueur minimale. Les giratoires sont ignorés.
-Le champ <code>details</code> donne la <code>distance</code> entre les tronçons et la longueur sur laquelle ils sont parallèles
-(<code>parallel_length</code>). La ligne de l'anomalie montre les parties parallèles des tronçons.</p>
-<p>Il n'y a pas d'action de correction : donnez un autre code de route à l'une des chaussées. Une route qui revient près d'elle-même,
-par exemple un virage en épingle, peut aussi être trouvée : dans ce cas, il n'y a rien à corriger.</p>
-<h3 id="g09-short-edge">G09 : Tronçon court<a class="headerlink" href="#g09-short-edge" title="Permanent link">#</a></h3>
-<p><img alt="G09 : anomalie et correction" src="../../media/user-guide/graph_checks_g09.svg" /></p>
-<p>Un tronçon très court vient souvent de la numérisation : par exemple deux intersections à quelques décimètres l'une de l'autre
-au lieu d'un carrefour, ou un petit morceau de route laissé au bout d'un tronçon.</p>
-<p>Le contrôle renvoie une anomalie pour chaque tronçon plus court que l'option <code>min_length</code>, <strong>3 m</strong> par défaut.
-Les tronçons des <strong>giratoires</strong>, et les tronçons qui arrivent à un giratoire ou qui en partent, sont souvent courts :
-ils sont ignorés, sauf s'ils sont réduits à un point (moins de 10 cm, la précision des coordonnées).
-La gravité est <code>error</code> pour un tronçon réduit à un point, sinon <code>warning</code>.
-Le champ <code>details</code> donne la <code>length</code>, le nombre d'autres tronçons aux nœuds de début et de fin
-(<code>start_edge_count</code> et <code>end_edge_count</code>), et <code>is_roundabout_edge</code>.</p>
-<p>Action de correction :</p>
+<p>The edges which only approach each other are ignored, for example the edges of a road on both sides of a roundabout:
+each edge must run along the other one on at least the minimum length. The roundabouts are ignored.
+The field <code>details</code> gives the <code>distance</code> between the edges and the length along which they are parallel
+(<code>parallel_length</code>). The line of the issue shows the parallel parts of the edges.</p>
+<p>There is no fix action: give another road code to one of the carriageways. A road which comes back near itself,
+for example a hairpin bend, can also be found: in this case, there is nothing to fix.</p>
+<h3 id="g09-short-edge">G09: Short edge<a class="headerlink" href="#g09-short-edge" title="Permanent link">#</a></h3>
+<p><img alt="G09: issue and fix" src="../../media/user-guide/graph_checks_g09.svg" /></p>
+<p>A very short edge often comes from the digitizing: for example two junctions a few decimeters from each other
+instead of a crossroads, or a small piece of road left at the end of an edge.</p>
+<p>The check returns one issue for each edge shorter than the option <code>min_length</code>, <strong>3 m</strong> by default.
+The edges of the <strong>roundabouts</strong>, and the edges arriving at a roundabout or leaving it, are often short:
+they are ignored, unless they are reduced to a point (less than 10 cm, the precision of the coordinates).
+The severity is <code>error</code> for an edge reduced to a point, else <code>warning</code>.
+The field <code>details</code> gives the <code>length</code>, the number of other edges at the start and end nodes
+(<code>start_edge_count</code> and <code>end_edge_count</code>), and <code>is_roundabout_edge</code>.</p>
+<p>Fix action:</p>
 <ul>
-<li><code>collapse_edge</code> : supprime le tronçon et fusionne ses deux nœuds dans le <strong>nœud à conserver</strong> : le nœud qui a le plus de tronçons,
-  ou sinon le nœud qui a le plus petit identifiant, qui est le premier nœud de <code>node_ids</code>.
-  À l'autre nœud, le tronçon suivant ou précédent de la <strong>même route</strong> est prolongé avec la géométrie du tronçon court
-  jusqu'au nœud à conserver : la géométrie et la longueur de la route sont conservées.
-  Les points de début et de fin des tronçons des <strong>autres routes</strong> sont déplacés vers le nœud à conserver :
-  leur dernier segment est réorienté, de moins que la longueur du tronçon court.</li>
+<li><code>collapse_edge</code>: delete the edge and merge its two nodes into the <strong>node to keep</strong>: the node with the most edges,
+  or else the node with the lowest id, which is the first node of <code>node_ids</code>.
+  At the other node, the next or previous edge of the <strong>same road</strong> is extended with the geometry of the short edge
+  up to the node to keep: the geometry and the length of the road are kept.
+  The start and end points of the edges of the <strong>other roads</strong> are moved to the node to keep:
+  their last segment is redirected, by less than the length of the short edge.</li>
 </ul>
-<p>Le seul tronçon d'une route n'a pas d'action de correction : la route n'aurait plus aucun tronçon.</p>
-<h3 id="g10-first-marker-not-at-the-start-of-the-road">G10 : Première borne qui n'est pas au début de la route<a class="headerlink" href="#g10-first-marker-not-at-the-start-of-the-road" title="Permanent link">#</a></h3>
-<p><img alt="G10 : anomalie et correction" src="../../media/user-guide/graph_checks_g10.svg" /></p>
-<p>La <strong>première borne</strong> d'une route est la borne qui a le plus petit code et la plus petite abscisse : c'est souvent la borne 0,
-mais ce peut être une borne virtuelle avec un code plus élevé. Elle doit être au <strong>point de début du premier tronçon</strong> de la route,
-le tronçon sans tronçon précédent. Quand elle est quelques centimètres après, le début de la route n'a pas de référence.</p>
-<p>Le contrôle renvoie une anomalie pour chaque route dont la première borne est à plus de 5 cm du début de la route.
-Les giratoires sont ignorés. La gravité est <code>error</code> si le début du premier tronçon n'a pas de référence, sinon <code>warning</code>.
-Le champ <code>details</code> donne les <code>marker_code</code>, <code>marker_abscissa</code> et <code>is_virtual</code> de la borne, sa <code>distance</code>
-au début de la route, sa position le long du premier tronçon (<code>position_on_edge</code>), et <code>has_start_reference</code>.</p>
-<p>Action de correction :</p>
+<p>The only edge of a road has no fix action: the road would not have any edge anymore.</p>
+<h3 id="g10-first-marker-not-at-the-start-of-the-road">G10: First marker not at the start of the road<a class="headerlink" href="#g10-first-marker-not-at-the-start-of-the-road" title="Permanent link">#</a></h3>
+<p><img alt="G10: issue and fix" src="../../media/user-guide/graph_checks_g10.svg" /></p>
+<p>The <strong>first marker</strong> of a road is the marker with the lowest code and abscissa: it is often the marker 0,
+but it can be a virtual marker with a higher code. It must be at the <strong>start point of the first edge</strong> of the road,
+the edge without previous edge. When it is a few centimeters after it, the start of the road has no reference.</p>
+<p>The check returns one issue for each road whose first marker is more than 5 cm from the start of the road.
+The roundabouts are ignored. The severity is <code>error</code> if the start of the first edge has no reference, else <code>warning</code>.
+The field <code>details</code> gives the <code>marker_code</code>, <code>marker_abscissa</code> and <code>is_virtual</code> of the marker, its <code>distance</code>
+to the start of the road, its position along the first edge (<code>position_on_edge</code>), and <code>has_start_reference</code>.</p>
+<p>Fix action:</p>
 <ul>
-<li><code>move_marker</code> : déplace la borne au début de la route. Les références de la route sont recalculées.
-  Elle n'est proposée que si la borne est à moins de l'option <code>tolerance</code> du début de la route,
-  <strong>1 m</strong> par défaut. Au-delà, vérifiez la route manuellement : la borne peut être juste, et le premier tronçon faux,
-  par exemple quand la route est dans le sens inverse (contrôle <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</li>
+<li><code>move_marker</code>: move the marker to the start of the road. The references of the road are calculated again.
+  It is only proposed when the marker is less than the option <code>tolerance</code> from the start of the road,
+  <strong>1 m</strong> by default. Farther, check the road manually: the marker may be right, and the first edge wrong,
+  for example when the road is in the opposite direction (check <a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a>).</li>
 </ul>
-<h3 id="g11-markers-not-in-the-order-of-the-road">G11 : Bornes qui ne sont pas dans l'ordre de la route<a class="headerlink" href="#g11-markers-not-in-the-order-of-the-road" title="Permanent link">#</a></h3>
-<p><img alt="G11 : anomalie et correction" src="../../media/user-guide/graph_checks_g11.svg" /></p>
-<p>Triées par code et abscisse, les bornes d'une route doivent se suivre le long de la route :
-sinon, les références calculées à partir d'elles sont fausses.</p>
-<p>La <strong>position</strong> de chaque borne le long de sa route est la longueur cumulée de la route à son tronçon le plus proche,
-à moins de l'option <code>marker_tolerance</code> de celui-ci, <strong>50 m</strong> par défaut. Le contrôle conserve la plus longue séquence
-de bornes dans l'ordre de la route, deux bornes pouvant être à la même position (tolérance de 1 m),
-par exemple une borne virtuelle et la borne du code suivant avec la même référence.
-Il renvoie une anomalie pour chaque autre borne (<code>issue_type</code> : <code>order</code>), et pour chaque borne éloignée de sa route
-(<code>far_from_road</code>) ou dont le tronçon le plus proche n'a pas de référence (<code>edge_without_reference</code>). Les giratoires sont ignorés.</p>
-<p>Le champ <code>details</code> donne le code, l'abscisse, le type et la <code>position</code> de la borne, et le code et la position
-des bornes précédente et suivante dans l'ordre de la route.</p>
-<p>Il n'y a pas d'action de correction : déplacez la borne, ou modifiez son code. Corrigez d'abord les anomalies du contrôle
-<a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a> : un tronçon inversé modifie les positions des bornes.</p>
-<h3 id="g12-duplicate-edges">G12 : Tronçons en double<a class="headerlink" href="#g12-duplicate-edges" title="Permanent link">#</a></h3>
-<p><img alt="G12 : anomalie et correction" src="../../media/user-guide/graph_checks_g12.svg" /></p>
-<p>Deux tronçons sont <strong>en double</strong> quand ils ont les mêmes nœuds de début et de fin, dans le même sens ou en sens inverse,
-et la même géométrie : leur distance de Hausdorff est inférieure à l'option <code>tolerance</code>, <strong>0,5 m</strong> par défaut.
-Cela arrive par exemple après une copie d'un tronçon. Les doublons créent aussi des anomalies
-<a href="#g07-road-with-branches">G07</a>, et souvent <a href="#g06-previous-and-next-edges-inconsistent-with-the-geometry">G06</a> :
-bien que ce contrôle soit numéroté en dernier, corrigez ses anomalies en premier.</p>
-<p>Le contrôle renvoie une anomalie pour chaque tronçon ayant des doublons : le tronçon gardé est celui de plus petit identifiant.
-Le champ <code>details</code> donne le <code>kept_edge_id</code>, les <code>duplicate_edge_ids</code>, leurs <code>road_codes</code> et la <code>length</code>.</p>
-<p>Action de correction :</p>
+<h3 id="g11-markers-not-in-the-order-of-the-road">G11: Markers not in the order of the road<a class="headerlink" href="#g11-markers-not-in-the-order-of-the-road" title="Permanent link">#</a></h3>
+<p><img alt="G11: issue and fix" src="../../media/user-guide/graph_checks_g11.svg" /></p>
+<p>Sorted by code and abscissa, the markers of a road must follow each other along the road:
+else, the references calculated from them are wrong.</p>
+<p>The <strong>position</strong> of each marker along its road is the cumulative length of the road at its closest edge,
+less than the option <code>marker_tolerance</code> from it, <strong>50 m</strong> by default. The check keeps the longest sequence
+of markers in the order of the road, two markers being allowed at the same position (1 m tolerance),
+for example a virtual marker and the marker of the next code with the same reference.
+It returns one issue for each other marker (<code>issue_type</code>: <code>order</code>), and for each marker far from its road
+(<code>far_from_road</code>) or whose closest edge has no reference (<code>edge_without_reference</code>). The roundabouts are ignored.</p>
+<p>The field <code>details</code> gives the code, abscissa, type and <code>position</code> of the marker, and the code and position
+of the previous and next markers in the order of the road.</p>
+<p>There is no fix action: move the marker, or change its code. Fix the issues of the check
+<a href="#g05-edges-in-the-opposite-direction-of-the-road">G05</a> before: a reversed edge changes the positions of the markers.</p>
+<h3 id="g12-duplicate-edges">G12: Duplicate edges<a class="headerlink" href="#g12-duplicate-edges" title="Permanent link">#</a></h3>
+<p><img alt="G12: issue and fix" src="../../media/user-guide/graph_checks_g12.svg" /></p>
+<p>Two edges are <strong>duplicates</strong> when they have the same end nodes, in the same or the opposite direction,
+and the same geometry: their Hausdorff distance is less than the option <code>tolerance</code>, <strong>0.5 m</strong> by default.
+It happens for example after a copy of an edge. The duplicates also create issues
+<a href="#g07-road-with-branches">G07</a>, and often <a href="#g06-previous-and-next-edges-inconsistent-with-the-geometry">G06</a>:
+although this check is numbered last, fix its issues first.</p>
+<p>The check returns one issue for each edge with duplicates: the kept edge is the edge with the lowest id.
+The field <code>details</code> gives the <code>kept_edge_id</code>, the <code>duplicate_edge_ids</code>, their <code>road_codes</code> and the <code>length</code>.</p>
+<p>Fix action:</p>
 <ul>
-<li><code>delete_duplicate_edges</code> : supprime les doublons, un par un : les tronçons précédent et suivant de chaque tronçon supprimé
-  sont reliés entre eux. Elle n'est proposée que si tous les tronçons ont la même route. Les doublons d'une autre route,
-  par exemple un tronc commun de deux routes dessiné deux fois, doivent être vérifiés manuellement.</li>
+<li><code>delete_duplicate_edges</code>: delete the duplicates, one by one: the previous and next edges of each deleted edge
+  are linked together. It is only proposed when all the edges have the same road. The duplicates of another road,
+  for example a common section of two roads drawn twice, must be checked manually.</li>
 </ul>
-<h2 id="configuration-of-the-checks">Configuration des contrôles<a class="headerlink" href="#configuration-of-the-checks" title="Permanent link">#</a></h2>
-<p>Les contrôles sont listés dans la table <code>road_graph.glossary_graph_check</code>, avec pour chaque contrôle :
-son code, son titre, sa gravité, sa fonction, ses actions de correction et sa description.
-Les lignes sont ajoutées par les migrations du plugin. L'administrateur peut modifier deux colonnes :</p>
+<h2 id="configuration-of-the-checks">Configuration of the checks<a class="headerlink" href="#configuration-of-the-checks" title="Permanent link">#</a></h2>
+<p>The checks are listed in the table <code>road_graph.glossary_graph_check</code>, with for each check:
+its code, title, severity, function, fix actions and description.
+The rows are added by the plugin migrations. The administrator can modify two columns:</p>
 <ul>
-<li><code>default_options</code> : les options par défaut du contrôle, par exemple sa tolérance en mètres,</li>
-<li><code>is_active</code> : décochez-la pour ne plus lancer le contrôle par défaut. Il est quand même lancé s'il est demandé explicitement.</li>
+<li><code>default_options</code>: the default options of the check, for example its tolerance in meters,</li>
+<li><code>is_active</code>: uncheck it to stop running the check by default. It is still run if it is explicitly asked.</li>
 </ul>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -2064,14 +2071,14 @@ Les lignes sont ajoutées par les migrations du plugin. L'administrateur peut mo
 <span class="k">SET</span><span class="w"> </span><span class="n">default_options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">default_options</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;{&quot;crossing_fix_action&quot;: &quot;mark_as_bridge&quot;}&#39;</span>
 <span class="k">WHERE</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G01&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<p>Les contrôles sont toujours lus dans le schéma de production, même quand la session d'édition est vérifiée.</p>
-<h2 id="database-functions">Fonctions de la base de données<a class="headerlink" href="#database-functions" title="Permanent link">#</a></h2>
-<p>Les algorithmes utilisent les fonctions suivantes de la base de données, qui peuvent aussi être utilisées directement en SQL.
-Elles sont installées dans le schéma de production <code>road_graph</code> et dans le schéma d'édition <code>road_graph_editing</code>.</p>
+<p>The checks are always read from the production schema, even when the editing session is checked.</p>
+<h2 id="database-functions">Database functions<a class="headerlink" href="#database-functions" title="Permanent link">#</a></h2>
+<p>The algorithms use the following database functions, which can also be used directly in SQL.
+They are installed in the production schema <code>road_graph</code> and in the editing schema <code>road_graph_editing</code>.</p>
 <ul>
-<li><code>road_graph.check_graph(_checks, _road_codes, _options)</code> : lance les contrôles et renvoie une ligne par anomalie.
-  Tous les contrôles actifs sont lancés si <code>_checks</code> vaut <code>NULL</code>, et toutes les routes sont vérifiées si <code>_road_codes</code> vaut <code>NULL</code>.
-  Le paramètre <code>_options</code> remplace les options par défaut des contrôles, avec le code du contrôle comme clé.</li>
+<li><code>road_graph.check_graph(_checks, _road_codes, _options)</code>: run the checks and return one line per issue.
+  All the active checks are run if <code>_checks</code> is <code>NULL</code>, and all the roads are checked if <code>_road_codes</code> is <code>NULL</code>.
+  The parameter <code>_options</code> overrides the default options of the checks, with the check code as key.</li>
 </ul>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -2094,9 +2101,9 @@ Elles sont installées dans le schéma de production <code>road_graph</code> et 
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <ul>
-<li><code>road_graph_editing.fix_graph_issue(_fix_action, _params)</code> : corrige une anomalie avec son action de correction et ses paramètres.
-  Elle ne fonctionne que dans le schéma d'édition. Elle renvoie un objet JSON avec les clés <code>status</code>
-  (<code>success</code>, <code>skipped</code> si l'anomalie a déjà été corrigée, ou <code>error</code>) et <code>message</code>.</li>
+<li><code>road_graph_editing.fix_graph_issue(_fix_action, _params)</code>: fix an issue with its fix action and parameters.
+  It only works in the editing schema. It returns a JSON object with the keys <code>status</code>
+  (<code>success</code>, <code>skipped</code> if the issue has already been fixed, or <code>error</code>) and <code>message</code>.</li>
 </ul>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
