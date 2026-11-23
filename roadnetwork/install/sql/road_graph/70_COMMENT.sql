@@ -215,9 +215,17 @@ COMMENT ON FUNCTION road_graph.check_graph_edge_links(_road_codes text[], _optio
 The previous and next edges (fields previous_edge_id and next_edge_id) give the order of the edges of the road,
 used to calculate the references. The next edge of an edge is wrong when it does not start at the end node
 of the edge, whereas another edge of the road starts there, or when it is connected to another edge,
-or to the edge in the opposite direction. The previous edge is checked the same way. The other links,
-across a gap of the road, for example on both sides of a roundabout, are kept. The roundabouts are ignored.
-The expected link is the connected edge, or no link: a gap between two close nodes is fixed by the check G03.
+or to the edge in the opposite direction. The previous edge is checked the same way. The roundabouts are ignored.
+
+When the road is interrupted, for example by a roundabout, the last edge before the gap is linked to the first edge
+of the piece of road after it:
+
+* a wrong link across the gap is replaced by a link to the first edge of the piece of the linked edge,
+* a missing link is set to the closest piece of road starting less than the option gap_tolerance (150 m by default)
+  from the end of the edge, if the edge is also the closest end for this piece, and if this piece is not before
+  the edge in the order of the road, for example for a short road ending near its start.
+
+The other links across a gap are kept. A gap between two close nodes is fixed by the check G03.
 
 An issue is returned for each road. The details give the number of edges and, for each edge,
 its previous and next edges and the expected ones.

@@ -4,6 +4,8 @@
 
 ### Changed
 
+* **Road graph checks**: G06 links the edges on both sides of a gap of the road, for example a roundabout,
+  instead of emptying the link
 * **Roundabouts**: finalizing a roundabout keeps the edges inside it marked as not to be cut at the intersections
 
 

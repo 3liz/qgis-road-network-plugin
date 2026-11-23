@@ -299,15 +299,23 @@ The check returns one issue for each road with edges whose next edge:
 * does not start at the end node of the edge, whereas another edge of the road starts there,
 * or is connected to another edge, or to the edge in the opposite direction.
 
-The previous edge is checked the same way. The other links, across a gap of the road, for example on both sides
-of a roundabout, are kept. The roundabouts are ignored. The field `details` gives the number of edges and,
+The previous edge is checked the same way. The roundabouts are ignored.
+
+When the road is interrupted, for example by a roundabout, the last edge before the gap and the first edge after it
+do not touch each other: only their link gives the order of the road. The last edge before the gap is linked to:
+
+* for a wrong link, the first edge of the piece of road of the linked edge,
+* for a missing link, the closest piece of road starting less than the option `gap_tolerance` (**150 m** by default)
+  from the end of the edge, if this piece is not before the edge in the order of the road.
+
+The other links across a gap are kept. The field `details` gives the number of edges and,
 for each edge, its previous and next edges (`previous_edge_id`, `next_edge_id`) and the expected ones
 (`expected_previous_edge_id`, `expected_next_edge_id`).
 
 Fix action:
 
 * `relink_edges`: set the expected previous and next edges of the road: the edges connected by the nodes,
-  or no link. Then the references of the road are calculated again.
+  the edges on the other side of a gap, or no link. Then the references of the road are calculated again.
 
 Fix the issues of the checks [G03](#g03-nodes-close-to-each-other) and
 [G05](#g05-edges-in-the-opposite-direction-of-the-road) before: two close nodes or a reversed edge

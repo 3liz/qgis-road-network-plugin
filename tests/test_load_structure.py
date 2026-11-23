@@ -5439,6 +5439,100 @@ def test_check_graph_edge_links(rollback_db_connection: psycopg.Connection):
     assert str(branch_id) in result["message"]
 
 
+def test_check_graph_edge_links_across_gap(rollback_db_connection: psycopg.Connection):
+    """Check G06: links across a gap of the road. In an editing session, an edge of a road is deleted
+    without the triggers, which leaves a gap between the previous and next edges. The link across the gap
+    is set to the first edge after the gap, when it is wrong or missing.
+    The changes are rolled back at the end of the test."""
+    cursor = rollback_db_connection.cursor()
+
+    # Four consecutive edges of a road, the second one shorter than the gap tolerance (150 m),
+    # and an editing session around the road
+    cursor.execute("""
+        SELECT a.road_code, a.id, b.id, c.id, d.id
+        FROM road_graph.edges AS a
+        JOIN road_graph.edges AS b ON b.id = a.next_edge_id AND b.start_node = a.end_node
+        JOIN road_graph.edges AS c ON c.id = b.next_edge_id AND c.start_node = b.end_node
+        JOIN road_graph.edges AS d ON d.id = c.next_edge_id AND d.start_node = c.end_node
+        JOIN road_graph.roads AS r ON r.road_code = a.road_code AND r.road_type = 'road'
+        WHERE ST_Length(b.geom) < 150
+        ORDER BY a.id
+        LIMIT 1
+    """)
+    road_code, first_id, gap_id, after_id, last_id = fetch_one(cursor)
+    cursor.execute(
+        """
+        INSERT INTO road_graph.editing_sessions (label, author, geom)
+        SELECT 'G06 gap test', 'test', ST_Envelope(ST_Buffer(ST_Collect(e.geom), 100))
+        FROM road_graph.edges AS e
+        WHERE e.road_code = %s
+        RETURNING id
+        """,
+        (road_code,),
+    )
+    cursor.execute("SELECT road_graph.copy_data_to_editing_session(%s)", (fetch_one(cursor)[0],))
+
+    def set_links(next_id: Optional[int]):
+        """Delete the edge of the gap if needed, and set the link across the gap, without the triggers."""
+        cursor.execute("SET LOCAL road.graph.disable.trigger = '1'")
+        cursor.execute("DELETE FROM road_graph_editing.edges WHERE id = %s", (gap_id,))
+        links_sql = "UPDATE road_graph_editing.edges SET {} = %s WHERE id = %s"
+        cursor.execute(links_sql.format("next_edge_id"), (next_id, first_id))
+        cursor.execute(links_sql.format("previous_edge_id"), (None, after_id))
+        cursor.execute("SET LOCAL road.graph.disable.trigger = '0'")
+
+    def expected_links(options: Optional[str] = None) -> dict:
+        """Expected next and previous edges of the edges of the issue of the road, by edge id."""
+        cursor.execute(
+            "SELECT details FROM road_graph_editing.check_graph(ARRAY['G06'], %s, %s)",
+            ([road_code], options),
+        )
+        rows = cursor.fetchall()
+        if not rows:
+            return {}
+        return {
+            link["edge_id"]: (link["expected_previous_edge_id"], link["expected_next_edge_id"])
+            for link in rows[0][0]["links"]
+        }
+
+    def fix_and_check():
+        """Fix the issue, then check the links across the gap and the references after it."""
+        cursor.execute(
+            "SELECT road_graph_editing.fix_graph_issue('relink_edges', %s)",
+            (json.dumps({"road_code": road_code}),),
+        )
+        result = fetch_one(cursor)[0]
+        assert result["status"] == "success", result
+        cursor.execute(
+            "SELECT next_edge_id FROM road_graph_editing.edges WHERE id = %s",
+            (first_id,),
+        )
+        assert fetch_one(cursor)[0] == after_id
+        cursor.execute(
+            "SELECT previous_edge_id, start_marker FROM road_graph_editing.edges WHERE id = %s",
+            (after_id,),
+        )
+        previous_id, start_marker = fetch_one(cursor)
+        assert previous_id == first_id
+        assert start_marker is not None
+
+    # Wrong link across the gap, to the edge after the first edge of the piece: set to this first edge
+    set_links(last_id)
+    links = expected_links()
+    assert links[first_id][1] == after_id
+    assert links[after_id][0] == first_id
+    fix_and_check()
+
+    # Missing link across the gap: set to the piece starting near the end of the edge
+    set_links(None)
+    links = expected_links()
+    assert links[first_id][1] == after_id
+    assert links[after_id][0] == first_id
+    # Farther than the tolerance, the missing link is not an issue
+    assert first_id not in expected_links('{"G06": {"gap_tolerance": 0.001}}')
+    fix_and_check()
+
+
 def test_check_graph_useless_nodes(rollback_db_connection: psycopg.Connection):
     """Check G04: useless nodes, without edge or between two edges of the same road.
     The issues are fixed in an editing session created around one of them.
